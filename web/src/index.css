@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans text-gray-100 antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Textos secundarios: gris metálico del logo */
+.text-secondary {
+  color: #9A9D9F;
+}
+
+/* Botones con glow cian sutil (misma mística que el icono) */
+.btn-glow {
+  box-shadow: 0 0 20px rgba(144, 171, 181, 0.35);
+}
+.btn-glow:hover {
+  box-shadow: 0 0 24px rgba(144, 171, 181, 0.45);
+}
+
+/* Al pasar el mouse por el logo, los nodos cian brillan un poco más (drop-shadow) */
+.logo-cyan-hover img {
+  filter: drop-shadow(0 0 2px rgba(144, 171, 181, 0.3));
+}
+.logo-cyan-hover:hover img {
+  filter: drop-shadow(0 0 6px rgba(144, 171, 181, 0.6)) drop-shadow(0 0 12px rgba(144, 171, 181, 0.35));
+}

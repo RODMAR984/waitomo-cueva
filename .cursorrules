@@ -1,0 +1,403 @@
+# FITENGINE — MASTER SPEC
+
+by Waitomo
+
+Documento definitivo para desarrollo de FitEngine con Cursor.
+
+Este documento contiene:
+
+• visión del producto
+• arquitectura SaaS multi-tenant
+• modelo de datos completo
+• políticas de seguridad SQL
+• lógica de negocio de Waitomo
+• archivos del proyecto a modificar
+• reglas de desarrollo para el agente de código
+
+Este documento es la fuente única de verdad del proyecto.
+
+---
+
+# 1. VISIÓN DEL PRODUCTO
+
+FitEngine es una plataforma SaaS multi-tenant para gimnasios y coaches.
+
+El objetivo es unificar:
+
+• gestión de gimnasios físicos
+• programación de entrenamiento online
+• venta de programas de entrenamiento
+
+en una sola aplicación.
+
+FitEngine combina funcionalidades de:
+
+Mindbody — gestión de gimnasios
+Trainerize — seguimiento y programación
+Fitr.training — venta de programas
+
+---
+
+# 2. CLIENTE PILOTO
+
+Waitomo Training es el primer gimnasio que usa la plataforma.
+
+Waitomo sirve para validar el producto, probar funcionalidades y diseñar la UX.
+
+Antes de abrir FitEngine al mercado, Waitomo debe funcionar al 100%.
+
+---
+
+# 2b. MARCA Y LOGO (REGLA — ver docs/BRAND_AND_LOGO_SPEC.md)
+
+Jerarquía: WAITOMO (paraguas/marca conceptual) → FitEngine (plataforma/producto) → organizaciones (gyms).
+
+Identidad de la app: siempre FitEngine (icono, splash, login). Opcional "by WAITOMO". El icono de la app es SIEMPRE el logo FitEngine; nunca el logo de la organización.
+
+Logo de la organización (organization.logo_url): solo dentro de la app para identificar al gym. Dónde SÍ: Home header, perfil de usuario, pantalla de configuración del admin. Dónde NO: icono de app, splash, pantalla de login, branding de plataforma.
+
+Splash: FitEngine (grande) + "by WAITOMO" (más pequeño). Login: FitEngine; gym logo no aparece. Footer de atribución en configuración: "FitEngine by WAITOMO © 2026" (discreto).
+
+---
+
+# 3. MODELO MULTI-TENANT
+
+FitEngine es un SaaS multi-tenant.
+
+Cada gimnasio o coach es una organización.
+
+Todas las tablas del sistema deben incluir:
+
+organization_id UUID
+
+El aislamiento se garantiza mediante Row Level Security (RLS).
+
+---
+
+# 4. TABLA CENTRAL — ORGANIZATIONS
+
+id uuid primary key
+name text
+type text ('gym' | 'coach')
+logo_url text
+accent_color text
+owner_id uuid
+active boolean default true
+plan_fitengine text
+features jsonb
+created_at timestamp default now()
+
+Ejemplo features:
+{
+  "reservations": true,
+  "onlinePrograms": false,
+  "videoLibrary": true
+}
+
+---
+
+# 5. TABLA PROFILES
+
+id uuid primary key
+email text
+role text
+organization_id uuid
+name text
+avatar_url text
+created_at timestamp
+
+Roles: client / coach / planner / admin / superadmin
+
+---
+
+# 6. TABLA PLANS
+
+id uuid primary key
+organization_id uuid
+title text
+subtitle text
+description text
+image_url text
+mode text ('class' | 'program')
+active boolean
+order integer
+created_at timestamp
+
+---
+
+# 7. TABLA ABONOS
+
+id uuid primary key
+plan_id uuid
+organization_id uuid
+title text
+description text
+price integer
+type text ('classes' | 'unlimited' | 'total' | 'program')
+class_count integer
+active boolean
+created_at timestamp
+
+---
+
+# 8. TABLA MEMBERSHIPS
+
+id uuid primary key
+user_id uuid
+abono_id uuid
+organization_id uuid
+status text ('active' | 'expired' | 'paused' | 'cancelled')
+start_date date
+end_date date
+remaining_classes integer
+created_at timestamp
+
+remaining_classes = NULL significa acceso ilimitado.
+
+---
+
+# 9. TABLA TRANSACTIONS
+
+id uuid primary key
+organization_id uuid
+user_id uuid
+abono_id uuid
+membership_id uuid
+amount integer
+currency text
+provider text ('mercadopago' | 'stripe' | 'manual')
+status text ('pending' | 'approved' | 'rejected' | 'refunded')
+external_payment_id text
+created_at timestamp
+
+---
+
+# 10. TABLA CLASSES
+
+id uuid primary key
+organization_id uuid
+plan_id uuid
+coach_id uuid
+start_time timestamp
+end_time timestamp
+capacity integer
+active boolean
+created_at timestamp
+
+---
+
+# 11. TABLA RESERVATIONS
+
+id uuid primary key
+class_id uuid
+user_id uuid
+organization_id uuid
+status text ('confirmed' | 'cancelled' | 'attended')
+created_at timestamp
+
+---
+
+# 12. POLÍTICAS RLS
+
+Aplicar en TODAS las tablas con organization_id:
+
+ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY org_isolation_select
+ON plans FOR SELECT
+USING (
+  organization_id = (
+    SELECT organization_id FROM profiles
+    WHERE id = auth.uid()
+  )
+);
+
+CREATE POLICY org_isolation_insert
+ON plans FOR INSERT
+WITH CHECK (
+  organization_id = (
+    SELECT organization_id FROM profiles
+    WHERE id = auth.uid()
+  )
+);
+
+---
+
+# 13. FLUJO DE LOGIN Y AUTHCONTEXT
+
+Pasos en orden:
+
+1. login(email, password)
+2. fetchProfile(userId)       → obtiene role, organization_id
+3. fetchOrganization(org_id)  → obtiene type, accent_color, features
+4. guardar todo en AuthContext
+5. navigateByRole()
+
+AuthContext debe exponer:
+
+user                      — usuario Supabase Auth
+profile                   — fila de profiles
+role                      — string del rol
+organization              — objeto completo
+organization.id
+organization.type         — 'gym' | 'coach'
+organization.accent_color
+organization.features     — jsonb feature flags
+
+Módulos condicionales:
+
+organization.type === 'gym'
+  → todos los módulos activos
+
+organization.type === 'coach'
+  → sin reservas
+  → sin calendario grupal
+  → sin admin de gym
+
+---
+
+# 14. LÓGICA DE ABONOS — WAITOMO
+
+Actividades de clases:
+Cross Training / Olympic Lifting / Yoga / Stretching / Hyrox / Open Box
+
+Cada actividad tiene:
+
+4 clases/mes   → type='classes', class_count=4
+8 clases/mes   → type='classes', class_count=8
+12 clases/mes  → type='classes', class_count=12
+Pase Libre     → type='unlimited', remaining_classes=null
+
+---
+
+# 15. PASE TOTAL
+
+Plan propio con card y PlanDetailScreen propios.
+
+Incluye: todas las actividades ilimitadas
+NO incluye: Ciclo Evolución ni Open Box con planificación
+
+type='total', remaining_classes=null
+
+---
+
+# 16. CICLO EVOLUCIÓN
+
+Plan separado. Flujo propio via RegistroEvolucion.
+NO pasa por AbonosPasesScreen.
+Política PARTITIONED en planPolicy.js.
+
+Niveles:
+Rookie  (1-2 días/semana)
+Scaled  (3-4 días/semana)
+Atleta  (5-6 días/semana)
+
+---
+
+# 17. ADD-ON OPEN BOX
+
+Add-on de planificación sobre Open Box o Pase Total activo.
+No es un plan independiente.
+
+---
+
+# 18. ARCHIVOS A MODIFICAR
+
+AuthContext.js
+→ agregar fetchOrganization() al flujo de login
+→ exponer organization completo en el contexto (ver sección 13)
+
+PlanSelectorScreen.js
+→ eliminar array plans[] hardcodeado
+→ SELECT * FROM plans WHERE organization_id = ? AND active = true ORDER BY order
+
+PlanDetailScreen.js
+→ description dinámica desde DB
+
+AbonosPasesScreen.js
+→ eliminar array abonos[] hardcodeado
+→ SELECT * FROM abonos WHERE plan_id = ? AND active = true
+
+AdminScreen.js
+→ agregar navegación a GymConfigScreen, AdminPlanesScreen, AdminAbonosScreen
+
+planPolicy.js
+→ agregar pase_total: 'SHARED'
+
+App.js
+→ registrar GymConfigScreen, AdminPlanesScreen, AdminAbonosScreen en Stack.Navigator
+
+---
+
+# 19. PANTALLAS NUEVAS A CREAR
+
+GymConfigScreen.js
+→ nombre, logo (Supabase Storage), color de acento
+→ solo superadmin de la org
+
+AdminPlanesScreen.js
+→ CRUD planes: crear, editar, activar/desactivar, reordenar
+
+AdminAbonosScreen.js
+→ CRUD abonos por plan: precio, tipo, clases incluidas
+
+---
+
+# 20. REGLAS DE DESARROLLO
+
+ESTILO
+- Dark mode only
+- Nunca colores hardcodeados — siempre tokens de colors.js
+- Pantallas nuevas: BackgroundWrapper + useMemo para estilos + tokens dark
+
+LENGUAJE
+- Solo JavaScript — sin TypeScript
+
+SUPABASE
+- Siempre try/catch en queries
+- Nunca queries sin organization_id
+- RLS activo en cada tabla nueva desde el día 1
+
+NAVEGACIÓN
+- No cambiar estructura de navegación salvo que se pida
+- No tocar AdminScreen.js ni AuthContext.js salvo que se pida
+
+RESERVAS
+- Siempre validar: membership activa + remaining_classes > 0 o null
+
+DEBUG
+- console.log permitido durante desarrollo
+
+---
+
+# 21. ROADMAP
+
+FASE 1 — Waitomo funcional (EN CURSO)
+abonos, reservas, memberships, pagos,
+ciclo evolución 3 niveles, pase total, open box add-on
+
+FASE 2 — Multi-tenant
+tabla organizations, RLS, organization_id en tablas existentes,
+migrar Waitomo, fetchOrganization en AuthContext
+
+FASE 3 — Planes dinámicos
+eliminar hardcodeos, fetch desde Supabase
+
+FASE 4 — Panel admin gym
+GymConfigScreen, AdminPlanesScreen, AdminAbonosScreen, Storage
+
+FASE 5 — FitEngine Coach
+módulos condicionales, alumnos remotos, programas online
+
+FASE 6 — Lanzamiento SaaS
+fitengine.app, onboarding, trial 14 días, Google Play primero
+
+---
+
+# 22. OBJETIVO FINAL
+
+Escalar desde 1 gimnasio (Waitomo) hasta 100+ sin cambiar la arquitectura.
+
+FitEngine debe ser: modular, seguro, multi-tenant, escalable.
+
+Este documento es la fuente única de verdad del proyecto.
