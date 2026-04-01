@@ -52,11 +52,13 @@ Antes de abrir FitEngine al mercado, Waitomo debe funcionar al 100%.
 
 Jerarquía: WAITOMO (paraguas/marca conceptual) → FitEngine (plataforma/producto) → organizaciones (gyms).
 
-Identidad de la app: siempre FitEngine (icono, splash, login). Opcional "by WAITOMO". El icono de la app es SIEMPRE el logo FitEngine; nunca el logo de la organización.
+Identidad de la app: siempre FitEngine (icono, splash, welcome, login). Opcional "by WAITOMO". El icono de la app es SIEMPRE el logo FitEngine; nunca el logo de la organización.
 
-Logo de la organización (organization.logo_url): solo dentro de la app para identificar al gym. Dónde SÍ: Home header, perfil de usuario, pantalla de configuración del admin. Dónde NO: icono de app, splash, pantalla de login, branding de plataforma.
+Logo FitEngine (assets/logo-fitengine.svg): Splash, Welcome global, Login (mismo SVG; import condicional; fallback texto). Icono de app = PNG generado desde ese logo. Mapa completo en BRAND_AND_LOGO_SPEC.md §0.
 
-Splash: FitEngine (grande) + "by WAITOMO" (más pequeño). Login: FitEngine; gym logo no aparece. Footer de atribución en configuración: "FitEngine by WAITOMO © 2026" (discreto).
+Logo de la organización (organization.logo_url): solo dentro de la app para identificar al gym. Dónde SÍ: Home header, perfil de usuario, pantalla de configuración del admin. Dónde NO: icono de app, splash, welcome, pantalla de login, branding de plataforma.
+
+Splash: FitEngine (logo) + "by WAITOMO". Welcome: logo + subtítulo. Login: logo + "powered by WAITOMO". Footer de atribución en configuración: "FitEngine by WAITOMO © 2026" (discreto).
 
 ---
 
@@ -345,10 +347,13 @@ AdminAbonosScreen.js
 
 # 20. REGLAS DE DESARROLLO
 
+Waitomo queda como la dejamos: app independiente con todo lo que le habíamos hecho (flujos, pantallas, reservas, pagos, ciclo evolución, etc.). Es la org piloto de referencia; no se desarma.
+
 ESTILO
-- Dark mode only
-- Nunca colores hardcodeados — siempre tokens de colors.js
-- Pantallas nuevas: BackgroundWrapper + useMemo para estilos + tokens dark
+- Soporte completo dark / light / auto — nunca "dark only"
+- Nunca colores hardcodeados — siempre tokens de `t` via `useThemeContext()`
+- Pantallas nuevas: BackgroundWrapper + useMemo para estilos + tokens del modo activo
+- `t.brand` es el color de acento activo — puede ser el cian de Waitomo o el accent_color de otra org
 
 LENGUAJE
 - Solo JavaScript — sin TypeScript
@@ -370,31 +375,153 @@ DEBUG
 
 ---
 
-# 21. ROADMAP
+# 20b. SISTEMA DE TEMAS
 
-FASE 1 — Waitomo funcional (EN CURSO)
-abonos, reservas, memberships, pagos,
-ciclo evolución 3 niveles, pase total, open box add-on
+THEMECONTEXT
+- Expone: mode ('dark' | 'light' | 'auto'), isDark, setMode, t (tokens del modo efectivo)
+- auto = claro 6–22h, oscuro el resto
+- Persiste en Supabase (profiles.theme_mode) y AsyncStorage
+- Usar siempre t.bg, t.text, t.brand, t.boxBg, etc. — nunca valores de colors.js directo en pantallas
 
-FASE 2 — Multi-tenant
-tabla organizations, RLS, organization_id en tablas existentes,
-migrar Waitomo, fetchOrganization en AuthContext
+WAITOMO (org piloto)
+- Identidad visual completa y fija: cian #00ffff, fondo #050a0d, estética bioluminiscente
+- Sus tokens están definidos en theme/colors.js y NO se modifican para otros gyms
+- Waitomo es la referencia de diseño de FitEngine, no el default genérico
 
-FASE 3 — Planes dinámicos
-eliminar hardcodeos, fetch desde Supabase
+BRANDING MULTI-ORG (Nivel 3 — Pro controlado)
+- Cada organización puede personalizar dentro de límites controlados
+- Los campos en tabla organizations son:
+    accent_color   text        — hex del color principal del gym (ej: '#e63946')
+    theme_preset   text        — 'dark_vivid' | 'dark_minimal' | 'light_clean' | 'light_warm'
+    background_type text       — 'solid' | 'gradient' | 'image'
+    background_url  text       — solo si background_type = 'image' (Supabase Storage)
 
-FASE 4 — Panel admin gym
-GymConfigScreen, AdminPlanesScreen, AdminAbonosScreen, Storage
+- El sistema de diseño (layout, tipografía, border-radius, estructura) NUNCA cambia
+- Solo cambian: color de acento, preset base y fondo — nada más
+- getThemeTokens(mode, orgBranding) recibe el branding de la org e inyecta accent_color sobre el preset elegido
+- BackgroundWrapper lee background_type y background_url de la org para renderizar el fondo correcto
+- Waitomo usa sus propios tokens fijos — no pasa por este sistema de branding dinámico
 
-FASE 5 — FitEngine Coach
-módulos condicionales, alumnos remotos, programas online
-
-FASE 6 — Lanzamiento SaaS
-fitengine.app, onboarding, trial 14 días, Google Play primero
+REGLA CLAVE
+- Vos controlás el sistema de diseño
+- El gym elige dentro de opciones que vos habilitás
+- Nunca fuentes custom, nunca múltiples colores libres, nunca border-radius custom
 
 ---
 
-# 22. OBJETIVO FINAL
+# 20c. REFERENCIA RÁPIDA — REGLAS Y RUTAS
+
+REGLAS (resumen)
+- Estilo: dark/light/auto, tokens `t` (useThemeContext), nunca colores hardcodeados.
+- Lenguaje: solo JavaScript.
+- Supabase: try/catch, siempre organization_id, RLS en tablas nuevas.
+- Navegación: no cambiar estructura ni tocar AdminScreen.js / AuthContext.js salvo que se pida.
+- Reservas: validar membership activa + remaining_classes > 0 o null.
+
+RUTAS CANÓNICAS (usar estos nombres en navigation.navigate / reset)
+Entrada: Splash | Welcome | Login | AdminLogin | CreaCuentaStaff
+Cliente: Client | ClientTabs | Perfil | Config | Seguridad
+Planes: PlanSelector | PlanDetail
+Registro/Pago: RegistroInicial | RegistroCompleto | AbonosPases | Pago | DetalleAbono
+Agenda: Calendario | TrabajoDelDia | Historial | Progreso
+Otros: Novedades | ChatCanales | Chat | Reserva | ReservaClase | FreeClassRequest
+Admin: Admin | AdminLite | AdminFinanzas | AdminNovedades | GymConfig | AdminPlanes | AdminAbonos | AsignarCoaches
+
+(Alias legacy: WelcomeScreen, HomeScreen, LoginScreen, etc. existen pero preferir los nombres cortos arriba.)
+
+Fase 6: WelcomeGymScreen (entrada por org_id / deep link), onboarding owner "Configurá tu espacio", join?org=<org_id>.
+
+---
+
+# 21. ROADMAP
+
+FASE 1 — Waitomo funcional ✅
+abonos, reservas, memberships, pagos,
+ciclo evolución 3 niveles, pase total, open box add-on
+
+FASE 2 — Multi-tenant ✅
+tabla organizations, RLS, organization_id en tablas existentes,
+migrar Waitomo, fetchOrganization en AuthContext
+
+FASE 3 — Planes dinámicos ✅
+eliminar hardcodeos, fetch desde Supabase
+
+FASE 4 — Panel admin gym ✅
+GymConfigScreen, AdminPlanesScreen, AdminAbonosScreen, Storage
+
+FASE 5 — FitEngine Coach (SIGUIENTE)
+módulos condicionales, alumnos remotos, programas online
+Paso 1 hecho: Admin usa organization.type; botón GymConfig muestra "Mi configuración" si type === 'coach', "Configuración del gym" si gym.
+
+FASE 6 — Lanzamiento SaaS + Onboarding Multi-Org (ver # 22)
+
+---
+
+# 22. FASE 6 — LANZAMIENTO SAAS + ONBOARDING MULTI-ORG
+
+## 6a — Creación de organizaciones (gym / coach)
+
+Modelo:
+- Toda organización (gym o coach) es un "organization"
+- No existen sistemas separados para gym vs coach
+- organization.type = "gym" | "coach"
+
+Flujo de onboarding del owner:
+1. Splash → Welcome global con opción "Soy cliente" y opción "Soy gym / coach"
+2. Registro del owner: email, password, nombre
+3. Pantalla "Configurá tu espacio": name, type (gym|coach), logo_url (upload), accent_color (picker), background_image (opcional), city (opcional)
+4. Al confirmar: createOrganization(...), crear usuario con role owner y organization_id, redirigir a AdminScreen
+5. AdminScreen genera automáticamente: QR de invitación, link fitengine.app/join?org=<org_id>
+
+Restricciones: 1 usuario owner = 1 organización; branding editable luego desde GymConfigScreen; no hay múltiples orgs por usuario.
+
+## 6b — Acceso de clientes por QR / deep link
+
+Modelo: app por invitación; cada gym comparte QR o link; no hay buscador público; sin org_id no hay acceso; todo cliente pertenece a una organización. Link: fitengine.app/join?org=<org_id>
+
+Deep linking: getInitialURL al abrir; org_id → pendingOrgId; AuthContext procesa y setOrganization; sin sesión → WelcomeGymScreen con branding del gym; con sesión → Home del gym.
+
+WelcomeGymScreen: fondo del gym (background_image o accent_color), logo org, "Bienvenido a [Nombre]" / "Entrená con [Nombre]", botón Crear cuenta (org_id seteado), botón Ya tengo cuenta → Login → home.
+
+Branding: Splash SIEMPRE FitEngine neutro; WelcomeGymScreen = primer momento donde aparece el gym (accent_color, logo_url, background_type); Login/Registro mantienen branding del gym.
+
+Restricciones: sin org_id no hay acceso; profiles.organization_id al registrarse; 1 usuario = 1 organización.
+
+## 6c — Pendiente
+
+fitengine.app dominio y landing; trial 14 días por organización; Google Play primero, luego App Store.
+
+---
+
+# 22d. AUTH ROUTING Y ONBOARDING GYM (2026)
+
+Documento detallado para otra sesión de IA o dev: **`docs/AUTH_ROUTING.md`**.
+
+Reglas rápidas:
+
+• **`profiles.organization_id`** puede ser org seed (p. ej. Waitomo); **no** prueba que el usuario haya terminado **Configura tu espacio**.
+
+• Criterio de “gym propio cargado”: **`ownedOrganizations`** en `AuthContext` (memberships staff + merge por `organizations.owner_id`).
+
+• **Login** y **WelcomeGlobal**: si rol es `coach` o `admin` y **`ownedOrganizations` está vacío** → **ConfiguraTuEspacio** antes que **AdminLite**.
+
+• **Registro owner**: `signUp` debe enviar `role` + `signup_intent` en `user_metadata` para el trigger `handle_new_user` (ver `RegistroOwnerScreen.js`).
+
+---
+
+# 23. FLUJO GIT TRAS TAREAS EN COMPOSER (REGLA)
+
+Después de cada modificación exitosa o tarea completada en Composer (Ctrl+I), ejecutar automáticamente en el proyecto:
+
+1. git add .
+2. git commit -m "AI update"
+3. git push
+
+(Salvo que el usuario indique lo contrario o la tarea sea solo de lectura.)
+
+---
+
+# 24. OBJETIVO FINAL
 
 Escalar desde 1 gimnasio (Waitomo) hasta 100+ sin cambiar la arquitectura.
 

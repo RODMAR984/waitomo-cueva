@@ -3,7 +3,7 @@
 // ✅ Facebook eliminado (muerto)
 // ✅ Navega automáticamente cuando AuthContext levanta session/profile
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,22 +20,37 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import LogoCompleto from '../components/LogoCompleto';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
-import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { fitengineLogoColors as fe } from '../theme/colors';
+import { supabase } from '../supabaseClient';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
+const normalizeEmail = (s) => String(s || '').trim().toLowerCase();
+
 export default function LoginScreen() {
-  const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const navigation = useNavigation();
   const route = useRoute();
-  const { fromRegistro, forStaff } = route?.params || {};
+  const { fromRegistro, forStaff, prefillEmail } = route?.params || {};
 
-  const { login, requestPasswordReset, signInWithProvider, logout, role: contextRole, loading, profile, session } =
-    useAuth();
+  const {
+    login,
+    requestPasswordReset,
+    signInWithProvider,
+    logout,
+    role: contextRole,
+    loading,
+    profile,
+    session,
+    persistActiveAppMode,
+    initialProfileSyncDone,
+    ownedOrganizations,
+    authNavigationReady,
+  } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +59,36 @@ export default function LoginScreen() {
   const [oauthSubmitting, setOauthSubmitting] = useState(false);
   // Cuando entraste por staff pero la cuenta es cliente: mostrar opción clara en vez de mandar al panel cliente
   const [showStaffAccessChoice, setShowStaffAccessChoice] = useState(false);
+
+  useEffect(() => {
+    if (prefillEmail) setEmail(String(prefillEmail).trim());
+  }, [prefillEmail]);
+
+  // Cuando cambia el usuario de la sesión (login nuevo / restaurado), alinear el campo email con esa sesión.
+  // No tocar si viene prefillEmail por ruta. Así sessionMatchesInputEmail puede ser true y el flujo normal sigue.
+  const lastSessionUserIdRef = useRef(null);
+  useEffect(() => {
+    if (prefillEmail) return;
+    const uid = session?.user?.id;
+    if (!uid) {
+      lastSessionUserIdRef.current = null;
+      return;
+    }
+    if (lastSessionUserIdRef.current === uid) return;
+    lastSessionUserIdRef.current = uid;
+    const s = session?.user?.email;
+    if (s) setEmail(s);
+  }, [session?.user?.id, session?.user?.email, prefillEmail]);
+
+  // Si el usuario escribe otro correo que el de la sesión activa, NO auto-navegar al panel de esa sesión
+  // (evita: login falla con "Invalid credentials" pero seguís con token viejo y te manda a ClientTabs del usuario anterior).
+  const sessionMatchesInputEmail = useMemo(() => {
+    if (!session?.user?.id) return true;
+    const s = normalizeEmail(session.user?.email);
+    const e = normalizeEmail(email);
+    if (!e) return false;
+    return s === e;
+  }, [session?.user?.id, session?.user?.email, email]);
 
   // evita setState después de navegar (unmounted)
   const isMountedRef = useRef(true);
@@ -75,56 +120,58 @@ export default function LoginScreen() {
       StyleSheet.create({
         kav: { flex: 1, padding: 20, paddingTop: 60 },
         panel: {
-          backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
+          backgroundColor: fe.panelBg,
+          borderColor: fe.panelBorder,
           borderRadius: 16,
           borderWidth: 1,
           padding: 20,
         },
         title: {
-          color: t.subText,
+          color: fe.subText,
           fontSize: 22,
           fontWeight: 'bold',
           marginBottom: 20,
           textAlign: 'center',
         },
         input: {
-          backgroundColor: t.inputBg,
-          borderColor: t.overlayBorder,
+          backgroundColor: fe.inputBg,
+          borderColor: fe.inputBorder,
           borderRadius: 10,
           borderWidth: 1,
-          color: t.text,
+          color: fe.text,
           marginBottom: 15,
           padding: 12,
         },
         button: {
           alignItems: 'center',
-          ...t.buttonPrimary,
+          backgroundColor: fe.buttonBg,
+          borderColor: fe.buttonBorder,
+          borderWidth: 1,
           borderRadius: 10,
           marginTop: 10,
           padding: 16,
         },
         buttonText: {
-          ...t.buttonPrimaryText,
+          color: fe.buttonText,
           fontWeight: 'bold',
           textAlign: 'center',
         },
         linkText: {
-          color: t.subText,
+          color: fe.subText,
           marginTop: 16,
           textAlign: 'center',
           textDecorationLine: 'underline',
           fontSize: 13,
         },
         smallLink: {
-          color: t.subText,
+          color: fe.subText,
           marginTop: 10,
           textAlign: 'center',
           fontSize: 12,
           textDecorationLine: 'underline',
         },
         separatorText: {
-          color: t.subText,
+          color: fe.subText,
           marginTop: 20,
           marginBottom: 6,
           textAlign: 'center',
@@ -132,57 +179,97 @@ export default function LoginScreen() {
         },
         socialButton: {
           alignItems: 'center',
-          ...t.buttonPrimary,
+          backgroundColor: fe.buttonBg,
+          borderColor: fe.buttonBorder,
+          borderWidth: 1,
           borderRadius: 10,
           marginTop: 10,
           padding: 16,
         },
         socialButtonText: {
-          ...t.buttonPrimaryText,
+          color: fe.buttonText,
           fontWeight: 'bold',
           textAlign: 'center',
         },
       }),
-    [t],
+    [],
   );
 
-  const navigateByRole = (effectiveRole) => {
-    const finalRole = effectiveRole || contextRole || 'cliente';
+  /**
+   * Coach/admin: NO usar solo profile.organization_id — la migración seed puede asignar Waitomo
+   * y parece "completo". Criterio: ¿hay al menos una org en contexto donde el usuario es staff/dueño?
+   * (ownedOrganizations). Hasta que carguen memberships, authNavigationReady es false → no decidir.
+   */
+  const navigateByRole = useCallback(
+    (effectiveRole) => {
+      const finalRole = effectiveRole || contextRole || 'cliente';
+      const orgId = profile?.organization_id || null;
 
-    if (finalRole === 'superadmin') {
-      navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
-      return;
-    }
+      if (finalRole === 'superadmin') {
+        navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
+        return;
+      }
 
-    if (finalRole === 'coach' || finalRole === 'admin') {
-      navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
-      return;
-    }
+      if (finalRole === 'coach' || finalRole === 'admin') {
+        if (!authNavigationReady) {
+          return;
+        }
+        const hasOwnGymInContext =
+          Array.isArray(ownedOrganizations) && ownedOrganizations.length > 0;
+        if (!hasOwnGymInContext) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'ConfiguraTuEspacio', params: { email } }],
+          });
+          return;
+        }
+        navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
+        return;
+      }
 
-    if (!profile) {
-      navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
-      return;
-    }
+      // Entró por flujo staff/org pero aún no terminó de crear/configurar su organización
+      if (forStaff && (!profile || !orgId)) {
+        navigation.reset({ index: 0, routes: [{ name: 'ConfiguraTuEspacio', params: { email } }] });
+        return;
+      }
 
-    navigation.reset({ index: 0, routes: [{ name: 'ClientTabs' }] });
-  };
+      if (!profile) {
+        navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
+        return;
+      }
+
+      navigation.reset({ index: 0, routes: [{ name: 'ClientTabs' }] });
+    },
+    [
+      navigation,
+      email,
+      profile,
+      contextRole,
+      forStaff,
+      ownedOrganizations,
+      authNavigationReady,
+    ],
+  );
 
   const isStaffRole = (r) => r === 'superadmin' || r === 'coach' || r === 'admin';
 
-  // Google OAuth sin perfil en BD → ir a completar perfil (RegistroInicial).
+  // OAuth / sesión sin fila en profiles → RegistroInicial. NO disparar mientras el sync post-login
+  // aún trae profile=null (carrera: iba a RegistroInicial antes de que llegue el perfil existente).
   useEffect(() => {
     if (!session?.user?.id || profile != null || loading || submitting) return;
     if (forStaff) return;
+    if (initialProfileSyncDone === false) return;
     navigation.reset({
       index: 0,
       routes: [{ name: 'RegistroInicial', params: { fromOAuth: true } }],
     });
-  }, [session?.user?.id, profile, loading, submitting, forStaff, navigation]);
+  }, [session?.user?.id, profile, loading, submitting, forStaff, navigation, initialProfileSyncDone]);
 
   // Auto-navegación cuando session/profile ya están (email o google con perfil completo)
   // Si entraste por STAFF: solo mandar a Admin/AdminLite si el rol es staff; si es cliente, mostrar opción (no mandar al panel cliente sin avisar)
   useEffect(() => {
     if (!session?.user?.id) return;
+    if (!sessionMatchesInputEmail) return;
     if (loading || submitting) return;
     if (!(profile || postAuthGateOpen)) return;
 
@@ -199,8 +286,19 @@ export default function LoginScreen() {
 
     setShowStaffAccessChoice(false);
     navigateByRole(contextRole);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, loading, submitting, profile, contextRole, postAuthGateOpen, forStaff]);
+  }, [
+    session?.user?.id,
+    sessionMatchesInputEmail,
+    loading,
+    submitting,
+    profile,
+    contextRole,
+    postAuthGateOpen,
+    forStaff,
+    navigateByRole,
+    authNavigationReady,
+    ownedOrganizations,
+  ]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -215,6 +313,13 @@ export default function LoginScreen() {
         password,
       });
 
+      // Intención cliente vs staff (misma cuenta; se persiste por user id de Supabase, no por nombre de org)
+      if (persistActiveAppMode && loggedUser?.id) {
+        try {
+          await persistActiveAppMode(forStaff ? 'staff' : 'client', loggedUser.id);
+        } catch (_) {}
+      }
+
       const effectiveRole = loggedProfile?.role || 'cliente';
       if (forStaff && !isStaffRole(effectiveRole)) {
         setShowStaffAccessChoice(true);
@@ -223,6 +328,28 @@ export default function LoginScreen() {
       navigateByRole(effectiveRole);
     } catch (error) {
       console.log('Error login Supabase:', error);
+      const msg = String(error?.message || '');
+      const invalidCreds =
+        error?.code === 'invalid_credentials' ||
+        msg.includes('Invalid login credentials') ||
+        msg.toLowerCase().includes('invalid login');
+
+      // Otra sesión activa + intentás entrar con otro mail y falla → cerrar sesión vieja para no ver el panel equivocado
+      if (invalidCreds && session?.user?.email) {
+        const attempted = normalizeEmail(email);
+        const current = normalizeEmail(session.user.email);
+        if (attempted && attempted !== current) {
+          try {
+            if (logout) await logout();
+          } catch (_) {}
+          Alert.alert(
+            'Credenciales incorrectas',
+            'Había una sesión con otro correo. La cerramos para que puedas iniciar con la cuenta correcta. Volvé a ingresar email y contraseña.',
+          );
+          return;
+        }
+      }
+
       const message =
         error?.message ||
         'No se pudo iniciar sesión. Revisá los datos o intentá de nuevo.';
@@ -290,6 +417,13 @@ export default function LoginScreen() {
     }, 12000);
     try {
       await signInWithProvider(provider);
+      const { data: sessData } = await supabase.auth.getSession();
+      const uid = sessData?.session?.user?.id;
+      if (persistActiveAppMode && uid) {
+        try {
+          await persistActiveAppMode(forStaff ? 'staff' : 'client', uid);
+        } catch (_) {}
+      }
     } catch (e) {
       if (forStaff) AsyncStorage.removeItem(OAUTH_SIGNUP_STAFF_KEY);
       console.log(`❌ [LoginScreen] ${provider} OAuth error =>`, e?.message || e);
@@ -320,17 +454,17 @@ export default function LoginScreen() {
   const disabledReset = isSendingReset || disabled;
 
   return (
-    <BackgroundWrapper screen="Welcome">
+    <BackgroundWrapper screen="neutral">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.kav}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1, justifyContent: 'center' }}>
-            {/* Marca plataforma: FitEngine (spec Brand & Logo) */}
+            {/* Marca plataforma: logo completo (triangulo + texto) */}
             <View style={{ alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: t.text, fontSize: 24, fontWeight: '800' }}>FitEngine</Text>
-              <Text style={{ color: t.subText, fontSize: 12, marginTop: 2 }}>powered by WAITOMO</Text>
+              <LogoCompleto height={50} />
+              <Text style={{ color: fe.subText, fontSize: 12, marginTop: 4 }}>powered by WAITOMO</Text>
             </View>
             <View style={styles.panel}>
               {showStaffAccessChoice ? (
@@ -360,7 +494,7 @@ export default function LoginScreen() {
 
               <TextInput
                 placeholder={tStr('login_email')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={fe.placeholder}
                 style={styles.input}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -370,7 +504,7 @@ export default function LoginScreen() {
 
               <PasswordInput
                 placeholder={tStr('login_password')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={fe.placeholder}
                 style={styles.input}
                 containerStyle={{ marginBottom: 15 }}
                 value={password}
@@ -433,7 +567,7 @@ export default function LoginScreen() {
             </View>
             {/* Footer atribución (spec): discreto */}
             <View style={{ alignItems: 'center', marginTop: 16, paddingBottom: 24 }}>
-              <Text style={{ color: t.subText, fontSize: 11, opacity: 0.8 }}>FitEngine by WAITOMO</Text>
+              <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.8 }}>FitEngine by WAITOMO</Text>
             </View>
           </View>
         </TouchableWithoutFeedback>
