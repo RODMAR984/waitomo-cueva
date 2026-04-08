@@ -1,8 +1,11 @@
-// components/BackgroundWrapper.js - VERSIÓN CON ROTACIÓN PARA TRABAJO DEL DIA + ADMIN
-// forceDarkOverlay: solo WelcomeScreen lo pasa; Login y demás respetan el tema.
+// components/BackgroundWrapper.js - VERSIÓN CON ROTACIÓN + #20b branding multi-org
+// Si la org (no Waitomo) tiene background_type/background_url, los usa. Waitomo = comportamiento fijo.
 import React from 'react';
-import { ImageBackground, View, StyleSheet } from 'react-native';
+import { ImageBackground, View, StyleSheet, Dimensions } from 'react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { isWaitomoOrg, hexToRgba } from '../theme/colors';
 import {
   IMAGENES_POR_PLAN as planImages,
   IMAGEN_WELCOME as welcomeImage,
@@ -62,6 +65,7 @@ export default function BackgroundWrapper({
   forceDarkOverlay = false,
 }) {
   const { t } = useThemeContext();
+  const { organization } = useAuth() || {};
   const screenLower = String(screen).toLowerCase().trim();
   const isWelcome = screenLower.includes('welcome');
   const overlayColor = forceDarkOverlay ? 'rgba(0,0,0,0.24)' : t.screenOverlay;
@@ -72,14 +76,76 @@ export default function BackgroundWrapper({
     screenLower.includes('clientscreen') ||
     screenLower.includes('clienttabs');
 
-  // Elegimos índice aleatorio SOLO una vez por montaje
+  const useOrgBackground = organization && !isWaitomoOrg(organization);
+  const orgBgType = useOrgBackground ? (organization.background_type || 'solid') : null;
+  const orgBgUrl = useOrgBackground ? organization.background_url : null;
+
+  // Siempre antes de cualquier return: misma cantidad de hooks en todos los renders.
   const [randomIndex] = React.useState(() => {
     if (!isTrabajoODiaOAdmin || TRABAJO_DIA_BACKGROUNDS.length === 0) return 0;
     const baseSeed = typeof seed === 'number' ? seed : Date.now();
     return Math.abs(baseSeed) % TRABAJO_DIA_BACKGROUNDS.length;
   });
 
-  // PRIMERO: TRABAJO DEL DIA Y ADMIN - ROTACIÓN ENTRE TODAS LAS IMÁGENES
+  // Pantallas globales FitEngine: fondo oscuro neutro, sin imágenes de Waitomo (Fase 6)
+  const isNeutralFitEngine =
+    screenLower === 'neutral' || screenLower === 'fitengine' || screenLower === 'fitengineglobal';
+  if (isNeutralFitEngine) {
+    return (
+      <View style={[styles.flex, style, { backgroundColor: '#050a0d' }]}>
+        {children}
+      </View>
+    );
+  }
+
+  // #20b: org no-Waitomo con fondo custom — solid o image
+  if (useOrgBackground && orgBgType === 'solid') {
+    return (
+      <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
+        {children}
+      </View>
+    );
+  }
+  // Velo fuerte: fotos muy claras/blancas no “apagan” la UI encima
+  const orgImageScrim = 'rgba(0,0,0,0.58)';
+  const orgImageScrimStyle = { ...StyleSheet.absoluteFillObject, backgroundColor: orgImageScrim };
+
+  if (useOrgBackground && orgBgType === 'image' && orgBgUrl) {
+    return (
+      <ImageBackground
+        source={{ uri: orgBgUrl }}
+        style={[styles.flex, style]}
+        imageStyle={imageStyle}
+        resizeMode="cover"
+      >
+        <View style={orgImageScrimStyle} />
+        <View style={overlayStyle} />
+        {children}
+      </ImageBackground>
+    );
+  }
+  if (useOrgBackground && orgBgType === 'gradient') {
+    const accent = organization?.accent_color || '#818cf8';
+    const { width: gw, height: gh } = Dimensions.get('window');
+    const gradId = `orgGrad-${String(organization?.id || 'x').replace(/[^a-zA-Z0-9]/g, '')}`;
+    return (
+      <View style={[styles.flex, style]}>
+        <Svg width={gw} height={gh} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <SvgLinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={accent} stopOpacity="1" />
+              <Stop offset="1" stopColor={hexToRgba(accent, 0.35)} stopOpacity="1" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect width={gw} height={gh} fill={`url(#${gradId})`} />
+        </Svg>
+        <View style={overlayStyle} />
+        {children}
+      </View>
+    );
+  }
+
+  // PRIMERO: TRABAJO DEL DIA Y ADMIN - ROTACIÓN ENTRE TODAS LAS IMÁGENES (Waitomo / sin org)
   if (isTrabajoODiaOAdmin) {
     const source = TRABAJO_DIA_BACKGROUNDS[randomIndex];
 
@@ -116,7 +182,11 @@ export default function BackgroundWrapper({
   const source = isWelcome ? welcomeImage : (planImages[key] || welcomeImage);
 
   if (!source) {
-    return <View style={[styles.flex, style]}>{children}</View>;
+    return (
+      <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
+        {children}
+      </View>
+    );
   }
 
   // Welcome: zoom ligero en la imagen para efecto “recortado” (mano + kettlebell más protagonistas)
