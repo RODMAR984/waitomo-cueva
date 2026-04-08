@@ -1,12 +1,14 @@
-// contexts/ThemeContext.js — Waitomo Claro / Oscuro / Automático
-// - mode: 'light' | 'dark' | 'auto'
-// - auto: claro 6–22h, oscuro resto
-// - Expone: theme, mode, setMode, isDark, t (tokens del modo efectivo)
+// contexts/ThemeContext.js — Waitomo Claro / Oscuro / Automático (#20b)
+// - mode: 'light' | 'dark' | 'auto' (auto = claro 6–22h, oscuro resto)
+// - Persiste en AsyncStorage y en Supabase (profiles.theme_mode)
+// - t = getThemeTokens(effectiveMode, organization) — Waitomo fijo, otras orgs con accent_color + preset
 
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { DarkTheme as NavDarkTheme, DefaultTheme as NavLightTheme } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getThemeTokens } from '../theme/colors';
+import { useAuth } from './AuthContext';
+import { supabase } from '../supabaseClient';
 
 const STORAGE_KEY = 'themeMode';
 
@@ -25,13 +27,17 @@ const ThemeContext = createContext({
 });
 
 export const ThemeProvider = ({ children }) => {
+  const { profile, organization } = useAuth() || {};
   const [mode, setModeState] = useState('dark');
 
   const effectiveMode = useMemo(() => getEffectiveMode(mode), [mode]);
   const isDark = effectiveMode === 'dark';
-  const t = useMemo(() => getThemeTokens(effectiveMode), [effectiveMode]);
+  const t = useMemo(
+    () => getThemeTokens(effectiveMode, organization),
+    [effectiveMode, organization],
+  );
 
-  // Cargar modo guardado al montar
+  // Cargar modo: primero AsyncStorage, luego si hay profile.theme_mode lo aplicamos y sincronizamos
   useEffect(() => {
     (async () => {
       try {
@@ -42,6 +48,15 @@ export const ThemeProvider = ({ children }) => {
       }
     })();
   }, []);
+
+  // Cuando carga el profile, preferir theme_mode de Supabase
+  useEffect(() => {
+    const profileMode = profile?.theme_mode;
+    if (profileMode === 'light' || profileMode === 'dark' || profileMode === 'auto') {
+      setModeState(profileMode);
+      AsyncStorage.setItem(STORAGE_KEY, profileMode).catch(() => {});
+    }
+  }, [profile?.id, profile?.theme_mode]);
 
   // Cuando cambia la hora y el modo es auto, re-render con effectiveMode actualizado (cada minuto)
   const [, setTick] = useState(0);
@@ -59,7 +74,14 @@ export const ThemeProvider = ({ children }) => {
     } catch {
       // sin-op
     }
-  }, []);
+    if (profile?.id) {
+      try {
+        await supabase.from('profiles').update({ theme_mode: newMode }).eq('id', profile.id);
+      } catch {
+        // sin-op
+      }
+    }
+  }, [profile?.id]);
 
   const theme = useMemo(() => {
     const colorsNav = {

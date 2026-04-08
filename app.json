@@ -32,6 +32,10 @@
       "expo-asset",
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+
+    "extra": {
+      "waitomoOrganizationId": ""
+    }
   }
 }

@@ -2,6 +2,8 @@
 // - Sin literales en JSX: usá estos tokens en todas las screens
 // - Botones unificados: outline (fondo translúcido + borde y texto en color), no bloque sólido
 
+import { isWaitomoOrg } from '../config/waitomo';
+
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
   const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
@@ -11,10 +13,135 @@ const hexToRgba = (hex, alpha = 1) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
+/** Mezcla dos hex #RRGGBB (t=0 → a, t=1 → b) */
+const mixHex = (hexA, hexB, t) => {
+  const parse = (h) => {
+    const c = String(h || '').replace('#', '');
+    const full = c.length === 3 ? c.split('').map((x) => x + x).join('') : c;
+    if (full.length !== 6) return [255, 255, 255];
+    return [
+      parseInt(full.slice(0, 2), 16),
+      parseInt(full.slice(2, 4), 16),
+      parseInt(full.slice(4, 6), 16),
+    ];
+  };
+  const [r1, g1, b1] = parse(hexA);
+  const [r2, g2, b2] = parse(hexB);
+  const ch = (a, b) => Math.round(a + (b - a) * t);
+  const r = ch(r1, r2);
+  const g = ch(g1, g2);
+  const b = ch(b1, b2);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
+
+const HEX6_OPT = /^#?([0-9A-Fa-f]{6})$/;
+const normalizeTextColor = (raw) => {
+  const s = String(raw || '').trim();
+  const m = s.match(HEX6_OPT);
+  if (!m) return null;
+  return `#${m[1]}`;
+};
+
+const clamp01 = (n) => Math.min(1, Math.max(0, Number(n) || 0));
+
+const hexToRgb = (hex) => {
+  const normalized = normalizeTextColor(hex);
+  if (!normalized) return null;
+  const clean = normalized.replace('#', '');
+  return {
+    r: parseInt(clean.slice(0, 2), 16) || 0,
+    g: parseInt(clean.slice(2, 4), 16) || 0,
+    b: parseInt(clean.slice(4, 6), 16) || 0,
+  };
+};
+
+const relativeLuminance = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0;
+  const toLinear = (c) => {
+    const srgb = c / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  const r = toLinear(rgb.r);
+  const g = toLinear(rgb.g);
+  const b = toLinear(rgb.b);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/**
+ * Ajusta color custom para mantener contraste por modo.
+ * Mismo hex configurado por el gym puede verse diferente en dark/light para legibilidad.
+ */
+const adaptTextColorForMode = (hex, isDark, kind = 'primary') => {
+  const normalized = normalizeTextColor(hex);
+  if (!normalized) return null;
+  const lum = relativeLuminance(normalized);
+
+  if (isDark) {
+    if (kind === 'primary' && lum < 0.5) return mixHex(normalized, '#ffffff', clamp01((0.5 - lum) * 1.7));
+    if (kind === 'secondary' && lum < 0.42) return mixHex(normalized, '#e2e8f0', clamp01((0.42 - lum) * 1.35));
+    return normalized;
+  }
+
+  if (kind === 'primary' && lum > 0.45) return mixHex(normalized, '#0f172a', clamp01((lum - 0.45) * 1.7));
+  if (kind === 'secondary' && lum > 0.56) return mixHex(normalized, '#334155', clamp01((lum - 0.56) * 1.25));
+  return normalized;
+};
+
+/** Color de fuente opcional: columna legacy o `features.text_color` (sin migración extra). */
+export function resolveOrgTextColor(org) {
+  if (!org) return null;
+  const fromFeatures =
+    org.features && typeof org.features === 'object' && org.features !== null
+      ? org.features.text_color
+      : null;
+  return normalizeTextColor(org.text_color ?? fromFeatures);
+}
+
+/** Secundario (subtítulos, ayudas): `features.text_secondary_color`. */
+export function resolveOrgSecondaryTextColor(org) {
+  if (!org) return null;
+  const fromFeatures =
+    org.features && typeof org.features === 'object' && org.features !== null
+      ? org.features.text_secondary_color
+      : null;
+  return normalizeTextColor(org.text_secondary_color ?? fromFeatures);
+}
+
 // Cian y gris del logo FitEngine (logo-navbar) — nodos cian y letras metálicas
 export const logoColors = {
   cian: '#90ABB5',       // nodos cian del logo → primary/glow
   metallicGrey: '#9A9D9F', // gris letras → textos secundarios
+};
+
+// Colores extraídos del SVG del logo FitEngine (logo-fitengine.svg) — SOLO para pantallas
+// Login / Welcome / Splash (identidad FitEngine). NO usar cyan Waitomo ni overlay Waitomo.
+export const fitengineLogoColors = {
+  primary: '#86C4C7',        // teal del logo (path fill en SVG)
+  primaryLight: '#A2C6CA',   // teal claro
+  metallic: '#9A9D9F',      // gris metálico texto secundario
+  background: '#050a0d',     // fondo oscuro
+  text: '#f4f8f9',
+  subText: '#9A9D9F',
+  buttonBg: 'rgba(134, 196, 199, 0.18)',
+  buttonBorder: '#86C4C7',
+  buttonText: '#86C4C7',
+  panelBg: 'rgba(134, 196, 199, 0.12)',
+  panelBorder: 'rgba(134, 196, 199, 0.45)',
+  inputBg: 'rgba(134, 196, 199, 0.15)',
+  inputBorder: 'rgba(134, 196, 199, 0.5)',
+  placeholder: '#7a8a8e',
+};
+
+// Tokens fijos de identidad FitEngine (pantallas globales: splash/welcome/login).
+// No dependen de organization/accent/preset.
+export const fitengineUiTokens = {
+  bg: fitengineLogoColors.background,
+  text: fitengineLogoColors.text,
+  subText: fitengineLogoColors.subText,
+  overlayBorder: fitengineLogoColors.panelBorder,
+  inputBg: fitengineLogoColors.inputBg,
+  logoCian: fitengineLogoColors.primary,
 };
 
 export const colors = {
@@ -112,8 +239,11 @@ export const waitomo = {
   },
 };
 
-// Tokens por modo para ThemeContext y pantallas (mismo shape en dark/light)
-function getThemeTokens(mode) {
+// Waitomo: identidad fija — no pasa por branding dinámico (#20b)
+// isWaitomoOrg viene de config/waitomo.js (UUID), no por nombre de org.
+
+// Tokens base por modo (Waitomo fijo — #20b)
+function getThemeTokensBase(mode) {
   const isDark = mode !== 'light';
   if (isDark) {
     return {
@@ -158,7 +288,6 @@ function getThemeTokens(mode) {
       },
     };
   }
-  // Modo claro: card y filas cyan suave; bordes cyan prendidos; texto tipo brand legible (cyan oscuro)
   const cyan = colors.brand.primary;
   const lightCyanCard = '#d4eef4';
   const lightCyanRow = '#d8f0f5';
@@ -207,4 +336,250 @@ function getThemeTokens(mode) {
   };
 }
 
-export { hexToRgba, getThemeTokens };
+/**
+ * Presets multi-org: vivid vs minimal vs clean vs warm deben notarse sin depender solo del acento.
+ * Tipografía: `features.text_color` + opcional `features.text_secondary_color` (sin mezclas arbitrarias).
+ */
+function getThemeTokensWithBranding(mode, org) {
+  const isDark = mode !== 'light';
+  const accent = (org?.accent_color || '#00dddd').toString().trim() || '#00dddd';
+  const presetRaw = org?.theme_preset || 'dark_vivid';
+  const primaryCustom = resolveOrgTextColor(org);
+  const secondaryCustom = resolveOrgSecondaryTextColor(org);
+
+  const darkKey = presetRaw === 'dark_minimal' ? 'dark_minimal' : 'dark_vivid';
+  const lightKey = presetRaw === 'light_warm' ? 'light_warm' : 'light_clean';
+
+  const applyTypographyOverride = (base) => {
+    const neutral = isDark ? '#94a3b8' : '#64748b';
+    const neutralSoft = isDark ? '#64748b' : '#94a3b8';
+    if (!primaryCustom && !secondaryCustom) return base;
+    const next = { ...base };
+    const primaryEffective = adaptTextColorForMode(primaryCustom, isDark, 'primary');
+    const secondaryEffective = adaptTextColorForMode(secondaryCustom, isDark, 'secondary');
+    if (primaryCustom) {
+      next.text = primaryEffective || primaryCustom;
+    }
+    if (secondaryCustom) {
+      next.subText = secondaryEffective || secondaryCustom;
+      next.placeholder = mixHex(next.subText, neutralSoft, 0.38);
+      next.place = next.placeholder;
+      next.empty = mixHex(next.subText, neutralSoft, 0.32);
+      next.segmentInactiveText = mixHex(next.subText, neutral, 0.28);
+    } else if (primaryCustom) {
+      next.subText = mixHex(next.text, neutral, 0.42);
+      next.placeholder = mixHex(next.text, neutralSoft, 0.52);
+      next.place = next.placeholder;
+      next.empty = mixHex(next.text, neutralSoft, 0.45);
+      next.segmentInactiveText = mixHex(next.text, neutral, 0.32);
+    }
+    return next;
+  };
+
+  if (isDark) {
+    // Oscuro vivo: acento en paneles, subtextos fríos (cian), mucho contraste
+    const vivid = {
+      bg: '#020617',
+      text: '#f8fafc',
+      subText: '#38bdf8',
+      placeholder: '#22d3ee',
+      place: '#22d3ee',
+      empty: '#a5f3fc',
+      border: accent,
+      brand: accent,
+      overlayBg: hexToRgba(accent, 0.32),
+      overlayBorder: hexToRgba(accent, 0.62),
+      boxBg: hexToRgba(accent, 0.34),
+      inputBg: hexToRgba(accent, 0.22),
+      faint: hexToRgba('#38bdf8', 0.1),
+      faintStrong: hexToRgba('#38bdf8', 0.18),
+      primaryText: colors.buttons.primaryText.color,
+      onBrand: colors.dark.buttonText,
+      brand2: accent,
+      danger: colors.brand.danger,
+      buttonPrimary: {
+        backgroundColor: hexToRgba(accent, 0.26),
+        borderColor: accent,
+        borderWidth: 2,
+      },
+      buttonPrimaryText: colors.buttons.primaryText,
+      buttonDanger: colors.buttons.danger,
+      buttonDangerText: colors.buttons.dangerText,
+      activeTabBg: hexToRgba(accent, 0.4),
+      inactiveTabBg: hexToRgba(accent, 0.2),
+      borderStrong: accent,
+      screenOverlay: 'rgba(0,0,0,0.42)',
+      segmentInactiveBg: hexToRgba(accent, 0.14),
+      segmentInactiveText: '#e0f2fe',
+      brandText: accent,
+      brandTextShadow: hexToRgba(accent, 0.6),
+      metallicGrey: logoColors.metallicGrey,
+      logoCian: accent,
+      buttonGlow: {
+        shadowColor: accent,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.55,
+        shadowRadius: 14,
+        elevation: 8,
+      },
+    };
+
+    // Oscuro minimal: casi monocromo zinc, acento solo en acciones; sin “neon” en textos
+    const minimal = {
+      bg: '#18181b',
+      text: '#fafafa',
+      subText: '#a1a1aa',
+      placeholder: '#71717a',
+      place: '#71717a',
+      empty: '#a1a1aa',
+      border: 'rgba(255,255,255,0.1)',
+      brand: accent,
+      overlayBg: 'rgba(255,255,255,0.035)',
+      overlayBorder: 'rgba(255,255,255,0.09)',
+      boxBg: 'rgba(255,255,255,0.045)',
+      inputBg: 'rgba(255,255,255,0.055)',
+      faint: 'rgba(255,255,255,0.03)',
+      faintStrong: 'rgba(255,255,255,0.07)',
+      primaryText: colors.buttons.primaryText.color,
+      onBrand: colors.dark.buttonText,
+      brand2: accent,
+      danger: colors.brand.danger,
+      buttonPrimary: {
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        borderColor: hexToRgba(accent, 0.55),
+        borderWidth: 1,
+      },
+      buttonPrimaryText: colors.buttons.primaryText,
+      buttonDanger: colors.buttons.danger,
+      buttonDangerText: colors.buttons.dangerText,
+      activeTabBg: hexToRgba(accent, 0.12),
+      inactiveTabBg: 'rgba(255,255,255,0.04)',
+      borderStrong: 'rgba(255,255,255,0.14)',
+      screenOverlay: 'rgba(0,0,0,0.22)',
+      segmentInactiveBg: 'rgba(255,255,255,0.05)',
+      segmentInactiveText: '#d4d4d8',
+      brandText: accent,
+      brandTextShadow: 'rgba(0,0,0,0.35)',
+      metallicGrey: logoColors.metallicGrey,
+      logoCian: accent,
+      buttonGlow: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.35,
+        shadowRadius: 6,
+        elevation: 2,
+      },
+    };
+
+    const base = darkKey === 'dark_minimal' ? minimal : vivid;
+    return applyTypographyOverride(base);
+  }
+
+  // Claro limpio: frío, tarjetas blancas, sombra “SaaS”
+  const clean = {
+    bg: '#eef2f7',
+    text: '#0f172a',
+    subText: '#334155',
+    placeholder: '#64748b',
+    place: '#64748b',
+    empty: '#64748b',
+    border: '#cbd5e1',
+    brand: accent,
+    overlayBorder: '#e2e8f0',
+    overlayBg: 'rgba(255,255,255,0.75)',
+    boxBg: '#ffffff',
+    inputBg: '#ffffff',
+    faint: 'rgba(15,23,42,0.035)',
+    faintStrong: 'rgba(15,23,42,0.07)',
+    primaryText: colors.buttons.primaryTextLight.color,
+    onBrand: colors.light.buttonText,
+    brand2: accent,
+    danger: colors.brand.danger,
+    buttonPrimary: {
+      backgroundColor: hexToRgba(accent, 0.38),
+      borderColor: accent,
+      borderWidth: 1.5,
+    },
+    buttonPrimaryText: colors.buttons.primaryTextLight,
+    buttonDanger: colors.buttons.danger,
+    buttonDangerText: colors.buttons.dangerText,
+    activeTabBg: hexToRgba(accent, 0.28),
+    inactiveTabBg: '#ffffff',
+    borderStrong: accent,
+    screenOverlay: 'rgba(15,23,42,0.06)',
+    segmentInactiveBg: '#f1f5f9',
+    segmentInactiveText: '#475569',
+    brandText: accent,
+    brandTextShadow: 'rgba(15,23,42,0.08)',
+    metallicGrey: logoColors.metallicGrey,
+    logoCian: accent,
+    buttonGlow: {
+      shadowColor: 'rgba(15,23,42,0.12)',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 1,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+  };
+
+  // Claro cálido: crema, bordes melocotón, jerarquía marrón
+  const warm = {
+    bg: '#faf5f0',
+    text: '#431407',
+    subText: '#7c2d12',
+    placeholder: '#9a3412',
+    place: '#9a3412',
+    empty: '#9a3412',
+    border: '#fdba74',
+    brand: accent,
+    overlayBorder: '#fed7aa',
+    overlayBg: hexToRgba(accent, 0.08),
+    boxBg: '#fffdfb',
+    inputBg: '#ffffff',
+    faint: 'rgba(124,45,18,0.06)',
+    faintStrong: 'rgba(124,45,18,0.1)',
+    primaryText: colors.buttons.primaryTextLight.color,
+    onBrand: colors.light.buttonText,
+    brand2: accent,
+    danger: colors.brand.danger,
+    buttonPrimary: {
+      backgroundColor: hexToRgba(accent, 0.36),
+      borderColor: accent,
+      borderWidth: 1.5,
+    },
+    buttonPrimaryText: colors.buttons.primaryTextLight,
+    buttonDanger: colors.buttons.danger,
+    buttonDangerText: colors.buttons.dangerText,
+    activeTabBg: hexToRgba(accent, 0.26),
+    inactiveTabBg: '#fff7ed',
+    borderStrong: accent,
+    screenOverlay: 'rgba(124,45,18,0.06)',
+    segmentInactiveBg: '#ffedd5',
+    segmentInactiveText: '#9a3412',
+    brandText: accent,
+    brandTextShadow: 'rgba(124,45,18,0.1)',
+    metallicGrey: logoColors.metallicGrey,
+    logoCian: accent,
+    buttonGlow: {
+      shadowColor: accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.22,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+  };
+
+  const base = lightKey === 'light_warm' ? warm : clean;
+  return applyTypographyOverride(base);
+}
+
+/**
+ * Tokens del modo efectivo. Si no hay org o es Waitomo → tokens fijos Waitomo.
+ * Si hay otra org → preset + accent_color (#20b).
+ */
+function getThemeTokens(mode, orgBranding = null) {
+  if (!orgBranding || isWaitomoOrg(orgBranding)) return getThemeTokensBase(mode);
+  return getThemeTokensWithBranding(mode, orgBranding);
+}
+
+export { hexToRgba, getThemeTokens, getThemeTokensBase, isWaitomoOrg };

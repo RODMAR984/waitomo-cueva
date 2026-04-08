@@ -262,11 +262,13 @@ export default function AdminScreen(props) {
   const isLite = mode === 'lite';
 
   const { bloques, saveBloques, refreshTrigger } = useTrainingData();
-  const { currentUser, rolesByUser, isSuperAdmin, logout, profile } = useAuth();
+  const { currentUser, rolesByUser, isSuperAdmin, logout, profile, organization } = useAuth();
   const myId = currentUser?.id || null;
   const myRole = rolesByUser?.[myId];
   const isSA = !!(myId && isSuperAdmin(myId));
   const isCoach = myRole === 'coach';
+  const isOrgCoach = organization?.type === 'coach';
+  const isOrgGym = organization?.type === 'gym' || !organization?.type;
   const coachPlanActual = profile?.plan_actual ? String(profile.plan_actual) : null;
 
   const handleLogout = async () => {
@@ -277,7 +279,7 @@ export default function AdminScreen(props) {
     } finally {
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Welcome' }],
+        routes: [{ name: 'WelcomeGlobal' }],
       });
     }
   };
@@ -1007,14 +1009,14 @@ export default function AdminScreen(props) {
               </TouchableOpacity>
             )}
 
-            {!isLite && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('GymConfig')}
-                style={styles.financeBtn}
-              >
-                <Text style={styles.financeBtnText}>🏢 Configuración del gym</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('GymConfig')}
+              style={styles.financeBtn}
+            >
+              <Text style={styles.financeBtnText}>
+                🏢 {isOrgCoach ? tStr('admin_mi_configuracion') : 'Configuración del gym'}
+              </Text>
+            </TouchableOpacity>
 
             {!isLite && (
               <TouchableOpacity

@@ -159,16 +159,16 @@ const handleChangePassword = async () => {
   const resetToWelcome = () => {
     try {
       if (typeof navigationRef?.resetRoot === 'function') {
-        navigationRef.resetRoot({ index: 0, routes: [{ name: 'Welcome' }] });
+        navigationRef.resetRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
         return;
       }
       const nav = navigation.getParent?.() ?? navigation;
       if (nav?.reset) {
-        nav.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+        nav.reset({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
         return;
       }
     } catch (_) {}
-    navigation.navigate('Welcome');
+    navigation.navigate('WelcomeGlobal');
   };
 
   const handleEliminarCuenta = () => {

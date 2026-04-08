@@ -1,23 +1,22 @@
-// SplashScreen — Brand & Logo spec: plataforma = FitEngine (grande) + by WAITOMO (más pequeño).
-// Se muestra al abrir la app y pasa a Welcome tras un breve delay o al tocar.
+// SplashScreen — Logo completo (triangulo + texto). Fondo #050a0d.
 
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getThemeTokens } from '../theme/colors';
+import { fitengineLogoColors as fe } from '../theme/colors';
+import LogoCompleto from '../components/LogoCompleto';
 
 const SPLASH_DURATION_MS = 2200;
 
 export default function SplashScreen() {
   const navigation = useNavigation();
-  const t = getThemeTokens('dark');
   const goneRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       if (goneRef.current) return;
       goneRef.current = true;
-      navigation.replace('Welcome');
+      navigation.replace('WelcomeGlobal');
     }, SPLASH_DURATION_MS);
     return () => clearTimeout(timer);
   }, [navigation]);
@@ -25,14 +24,18 @@ export default function SplashScreen() {
   const goToWelcome = () => {
     if (goneRef.current) return;
     goneRef.current = true;
-    navigation.replace('Welcome');
+    navigation.replace('WelcomeGlobal');
   };
 
   return (
-    <TouchableOpacity activeOpacity={1} onPress={goToWelcome} style={[styles.container, { backgroundColor: t.background }]}>
+    <TouchableOpacity
+      activeOpacity={1}
+      onPress={goToWelcome}
+      style={[styles.container, { backgroundColor: fe.background }]}
+    >
       <View style={styles.center}>
-        <Text style={[styles.fitEngine, { color: t.text }]}>FitEngine</Text>
-        <Text style={[styles.byWaitomo, { color: t.subText }]}>by WAITOMO</Text>
+        <LogoCompleto height={155} style={styles.logo} />
+        <Text style={[styles.byWaitomo, { color: fe.subText }]}>by WAITOMO</Text>
       </View>
     </TouchableOpacity>
   );
@@ -46,6 +49,9 @@ const styles = StyleSheet.create({
   },
   center: {
     alignItems: 'center',
+  },
+  logo: {
+    marginBottom: 4,
   },
   fitEngine: {
     fontSize: 36,

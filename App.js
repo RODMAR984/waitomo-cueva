@@ -18,6 +18,8 @@ import { PlanProvider } from './contexts/PlanContext';
 
 // Screens
 import WelcomeScreen from './screens/WelcomeScreen';
+import WelcomeGlobalScreen from './screens/WelcomeGlobalScreen';
+import WelcomeDualChoiceScreen from './screens/WelcomeDualChoiceScreen';
 import HomeScreen from './screens/HomeScreen';
 
 import ClientScreen from './screens/ClientScreen';
@@ -71,6 +73,8 @@ import SplashScreen from './screens/SplashScreen';
 import LoginScreen from './screens/LoginScreen';
 import CreaCuentaStaffScreen from './screens/CreaCuentaStaffScreen';
 import AdminLoginScreen from './screens/AdminLoginScreen';
+import RegistroOwnerScreen from './screens/RegistroOwnerScreen';
+import ConfiguraTuEspacioScreen from './screens/ConfiguraTuEspacioScreen';
 
 // Imágenes generales (fondos dinámicos)
 import { registerGeneralImages } from './utils/getRandomGeneralImage';
@@ -140,13 +144,16 @@ function AuthGate({ children }) {
         const routeName = navigationRef.getCurrentRoute()?.name || '';
         const isEntryScreen =
           routeName === 'Splash' ||
+          routeName === 'WelcomeGlobal' ||
           routeName === 'Welcome' ||
           routeName === 'WelcomeScreen' ||
           routeName === 'Login' ||
-          routeName === 'LoginScreen';
+          routeName === 'LoginScreen' ||
+          routeName === 'RegistroOwner' ||
+          routeName === 'ConfiguraTuEspacio';
         if (isEntryScreen) return;
         try {
-          navigationRef.resetRoot({ index: 0, routes: [{ name: 'Welcome' }] });
+          navigationRef.resetRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
         } catch (e) {
           // no romper
         }
@@ -186,10 +193,32 @@ function AppContent() {
     [t, styles]
   );
   return (
-    <AuthProvider>
-      <PlanProvider>
-        <TrainingDataProvider>
-          <NavigationContainer ref={navigationRef} theme={theme}>
+    <PlanProvider>
+      <TrainingDataProvider>
+          <NavigationContainer
+            ref={navigationRef}
+            theme={theme}
+            onReady={() => {
+              try {
+                const r = navigationRef.getCurrentRoute?.();
+                // eslint-disable-next-line no-console
+                console.log('ROUTING_DEBUG NavigationContainer onReady', {
+                  route: r?.name,
+                  params: r?.params,
+                });
+              } catch (_) {}
+            }}
+            onStateChange={() => {
+              try {
+                const r = navigationRef.getCurrentRoute?.();
+                // eslint-disable-next-line no-console
+                console.log('ROUTING_DEBUG stateChange', {
+                  route: r?.name,
+                  params: r?.params,
+                });
+              } catch (_) {}
+            }}
+          >
             <AuthGate>
                 <Stack.Navigator
                   initialRouteName="Splash"
@@ -197,6 +226,8 @@ function AppContent() {
                 >
                   {/* Entrada pública */}
                   <Stack.Screen name="Splash" component={SplashScreen} />
+                  <Stack.Screen name="WelcomeGlobal" component={WelcomeGlobalScreen} />
+                  <Stack.Screen name="WelcomeDualChoice" component={WelcomeDualChoiceScreen} />
                   <Stack.Screen name="Welcome" component={WelcomeScreen} />
                   {/* Alias legacy */}
                   <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
@@ -214,6 +245,12 @@ function AppContent() {
 
                   <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
                   <Stack.Screen name="AdminLoginScreen" component={AdminLoginScreen} />
+                  <Stack.Screen
+                    name="RegistroOwner"
+                    component={RegistroOwnerScreen}
+                    options={{ contentStyle: { backgroundColor: t.bg, flex: 1, overflow: 'hidden' } }}
+                  />
+                  <Stack.Screen name="ConfiguraTuEspacio" component={ConfiguraTuEspacioScreen} />
 
                   {/* Cliente */}
                   <Stack.Screen name="Client" component={ClientScreen} />
@@ -395,8 +432,7 @@ function AppContent() {
               </AuthGate>
             </NavigationContainer>
           </TrainingDataProvider>
-        </PlanProvider>
-      </AuthProvider>
+      </PlanProvider>
   );
 }
 
@@ -405,10 +441,12 @@ export default function App() {
     supabaseHealthCheck();
   }, []);
   return (
-    <ThemeProvider>
-      <LocaleProvider>
-        <AppContent />
-      </LocaleProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <LocaleProvider>
+          <AppContent />
+        </LocaleProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

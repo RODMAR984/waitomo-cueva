@@ -48,7 +48,7 @@ export default function LoginScreen() {
     session,
     persistActiveAppMode,
     initialProfileSyncDone,
-    ownedOrganizations,
+    needsFitEngineSpaceSetup,
     authNavigationReady,
   } = useAuth();
 
@@ -59,6 +59,13 @@ export default function LoginScreen() {
   const [oauthSubmitting, setOauthSubmitting] = useState(false);
   // Cuando entraste por staff pero la cuenta es cliente: mostrar opción clara en vez de mandar al panel cliente
   const [showStaffAccessChoice, setShowStaffAccessChoice] = useState(false);
+  // Staff: no saltar a AdminLite solo porque la sesión restauró el perfil (Welcome → Login forStaff).
+  // Solo navegar cuando el usuario eligió OAuth, "Continuar al panel" o handleLogin (contraseña).
+  const [allowStaffAutoNav, setAllowStaffAutoNav] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user?.id) setAllowStaffAutoNav(false);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (prefillEmail) setEmail(String(prefillEmail).trim());
@@ -196,9 +203,8 @@ export default function LoginScreen() {
   );
 
   /**
-   * Coach/admin: NO usar solo profile.organization_id — la migración seed puede asignar Waitomo
-   * y parece "completo". Criterio: ¿hay al menos una org en contexto donde el usuario es staff/dueño?
-   * (ownedOrganizations). Hasta que carguen memberships, authNavigationReady es false → no decidir.
+   * Coach/admin FitEngine: org propia = owner_id del usuario, no ser staff en Waitomo u otro gym.
+   * needsFitEngineSpaceSetup engloba intent gym_owner y “sin org ajena empleado”.
    */
   const navigateByRole = useCallback(
     (effectiveRole) => {
@@ -214,9 +220,7 @@ export default function LoginScreen() {
         if (!authNavigationReady) {
           return;
         }
-        const hasOwnGymInContext =
-          Array.isArray(ownedOrganizations) && ownedOrganizations.length > 0;
-        if (!hasOwnGymInContext) {
+        if (needsFitEngineSpaceSetup) {
           navigation.reset({
             index: 0,
             routes: [{ name: 'ConfiguraTuEspacio', params: { email } }],
@@ -246,7 +250,7 @@ export default function LoginScreen() {
       profile,
       contextRole,
       forStaff,
-      ownedOrganizations,
+      needsFitEngineSpaceSetup,
       authNavigationReady,
     ],
   );
@@ -259,11 +263,21 @@ export default function LoginScreen() {
     if (!session?.user?.id || profile != null || loading || submitting) return;
     if (forStaff) return;
     if (initialProfileSyncDone === false) return;
+    if (!authNavigationReady) return;
     navigation.reset({
       index: 0,
       routes: [{ name: 'RegistroInicial', params: { fromOAuth: true } }],
     });
-  }, [session?.user?.id, profile, loading, submitting, forStaff, navigation, initialProfileSyncDone]);
+  }, [
+    session?.user?.id,
+    profile,
+    loading,
+    submitting,
+    forStaff,
+    navigation,
+    initialProfileSyncDone,
+    authNavigationReady,
+  ]);
 
   // Auto-navegación cuando session/profile ya están (email o google con perfil completo)
   // Si entraste por STAFF: solo mandar a Admin/AdminLite si el rol es staff; si es cliente, mostrar opción (no mandar al panel cliente sin avisar)
@@ -276,6 +290,7 @@ export default function LoginScreen() {
     if (forStaff) {
       if (isStaffRole(contextRole)) {
         setShowStaffAccessChoice(false);
+        if (!allowStaffAutoNav) return;
         navigateByRole(contextRole);
         return;
       }
@@ -297,7 +312,8 @@ export default function LoginScreen() {
     forStaff,
     navigateByRole,
     authNavigationReady,
-    ownedOrganizations,
+    needsFitEngineSpaceSetup,
+    allowStaffAutoNav,
   ]);
 
   const handleLogin = async () => {
@@ -424,6 +440,7 @@ export default function LoginScreen() {
           await persistActiveAppMode(forStaff ? 'staff' : 'client', uid);
         } catch (_) {}
       }
+      if (forStaff) setAllowStaffAutoNav(true);
     } catch (e) {
       if (forStaff) AsyncStorage.removeItem(OAUTH_SIGNUP_STAFF_KEY);
       console.log(`❌ [LoginScreen] ${provider} OAuth error =>`, e?.message || e);
@@ -491,6 +508,34 @@ export default function LoginScreen() {
               <Text style={styles.title}>
                 {forStaff ? tStr('login_title_staff') : tStr('login_title')}
               </Text>
+
+              {forStaff &&
+                session?.user?.id &&
+                isStaffRole(contextRole) &&
+                !allowStaffAutoNav &&
+                (profile || postAuthGateOpen) && (
+                  <>
+                    <Text
+                      style={{
+                        color: fe.subText,
+                        fontSize: 13,
+                        textAlign: 'center',
+                        marginBottom: 10,
+                      }}
+                    >
+                      {tStr('login_session_active_staff')}
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.button, { marginBottom: 14 }]}
+                      onPress={() => setAllowStaffAutoNav(true)}
+                      disabled={disabled}
+                    >
+                      <Text style={styles.buttonText}>
+                        {tStr('login_continue_staff_panel')}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
 
               <TextInput
                 placeholder={tStr('login_email')}

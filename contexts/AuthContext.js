@@ -9,13 +9,21 @@ import React, {
   useState,
   useMemo,
   useEffect,
+  useLayoutEffect,
   useRef,
+  useCallback,
 } from 'react';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../supabaseClient';
 import * as Linking from 'expo-linking';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  readActiveAppMode,
+  writeActiveAppMode,
+  clearActiveAppMode,
+} from '../utils/activeAppModeStorage';
+import { imageUriToArrayBuffer } from '../utils/imageUriToArrayBuffer';
 
 // No llamar aquí: al cargar la app "completa" una sesión pendiente y la siguiente openAuthSessionAsync
 // devuelve esa URL al instante (sesión fantasma). Se llama solo dentro de signInWithProvider.
@@ -31,6 +39,50 @@ const STORAGE_KEYS = {
 // Columnas profiles (incluye preferencias: theme_mode, notif_*; Fase 2: organization_id)
 const PROFILE_COLS =
   'id,created_at,role,username,full_name,phone,plan_actual,edad,peso,objetivos,lesiones,avatar_url,apto_medico_url,observaciones,sexo,theme_mode,notif_messages,notif_trabajo_dia,notif_novedades,notif_plan_pago,organization_id';
+
+/**
+ * Cuentas creadas antes del signUp con role: coach + signup_intent: quedaron con profiles.role = cliente.
+ * Si auth.user_metadata ya indica staff y el perfil sigue en cliente, alineamos con PATCH (una vez por sync).
+ */
+async function healProfileRoleFromUserMetadata(userId, accessToken, row, userMetadata) {
+  if (!userId || !accessToken || !row?.id) return row;
+  const meta = userMetadata || {};
+  const mr = String(meta.role || '').toLowerCase();
+  const intent = String(meta.signup_intent || '').toLowerCase();
+  const wantsStaff =
+    intent === 'gym_owner' ||
+    intent === 'gym' ||
+    mr === 'coach' ||
+    mr === 'admin' ||
+    mr === 'superadmin';
+  if (!wantsStaff) return row;
+  if (String(row.role || '').toLowerCase() !== 'cliente') return row;
+
+  const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({ role: 'coach' }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    console.log('🟠 healProfileRoleFromUserMetadata PATCH', res.status, t.slice(0, 200));
+    return row;
+  }
+  const json = await res.json().catch(() => null);
+  const patched = Array.isArray(json) ? json[0] : json;
+  if (patched?.id) {
+    // eslint-disable-next-line no-console
+    console.log('ROUTING_DEBUG healProfileRole: cliente → coach (user_metadata staff)');
+    return { ...row, ...patched, role: patched.role || 'coach' };
+  }
+  return { ...row, role: 'coach' };
+}
 
 // -------------------------
 // Helpers: project ref + keys reales supabase
@@ -159,14 +211,36 @@ const setPlanActualStorage = async (planId) => {
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
+  const profileRef = useRef(null);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
   const [organization, setOrganization] = useState(null);
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(false);
   const [userPlans, setUserPlans] = useState([]);
   const [activePlanId, setActivePlanId] = useState(null);
+  /** Orgs donde auth.uid() es owner (coach / gym propio). RLS: policy "Owners read...". */
+  const [ownedOrganizations, setOwnedOrganizations] = useState([]);
+  /** Memberships activas (user + organization + role) para routing serio multi-org. */
+  const [organizationMemberships, setOrganizationMemberships] = useState([]);
+  const [ownedOrgsLoading, setOwnedOrgsLoading] = useState(false);
+  /** Misma persona cliente en un gym + coach en otra org: modo activo en el dispositivo. */
+  const [activeAppMode, setActiveAppModeState] = useState(null);
+  /** false con sesión hasta leer AsyncStorage (evita ir a ClientTabs antes de tiempo). */
+  const [activeAppModeHydrated, setActiveAppModeHydrated] = useState(true);
+  /**
+   * true = ya terminó el primer sync de perfil para la sesión actual (o no hay usuario).
+   * Evita que pantallas interpreten `profile===null` como "sin cuenta" mientras el fetch sigue en vuelo.
+   */
+  const [initialProfileSyncDone, setInitialProfileSyncDone] = useState(true);
 
   const ensureProfileInFlightRef = useRef(new Map());
   const lastFetchedUserIdRef = useRef(null);
+  /** Evita solapar varios fetchProfile por onAuthStateChange + restore a la vez. */
+  const profileSyncInFlightRef = useRef(null);
+  /** Evita spamear consola con el mismo "omitido en curso" en cada callback duplicado. */
+  const profileSyncConcurrentSkipLoggedRef = useRef(false);
   const lastAvatarCleanupUserIdRef = useRef(null);
   const justLoggedOutAtRef = useRef(null);
   /** URL inicial OAuth (waitomo://#...) con la que se abrió la app; si luego openAuthSessionAsync devuelve esta misma URL, la rechazamos como sesión fantasma */
@@ -318,15 +392,7 @@ export const AuthProvider = ({ children }) => {
         setActivePlanId(pAct);
         await setPlanActualStorage(pAct);
 
-        // Fase 2: cargar organización del usuario
-        if (row?.organization_id) {
-          fetchOrganization(row.organization_id).then((org) => {
-            if (org) setOrganization(org);
-          }).catch(() => {});
-        } else {
-          setOrganization(null);
-        }
-
+        // Organización: se resuelve en useEffect (dual hat + activeAppMode + organization_id)
         return row;
       }
 
@@ -347,7 +413,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('organizations')
-        .select('id,name,type,logo_url,accent_color,owner_id,active,plan_fitengine,features,created_at')
+        .select('id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at')
         .eq('id', orgId)
         .maybeSingle();
       if (error) {
@@ -360,6 +426,388 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   };
+
+  const staffRoles = useMemo(() => new Set(['owner', 'coach', 'admin', 'superadmin']), []);
+  const hasStaffMembership = useMemo(
+    () => (organizationMemberships || []).some((m) => m?.active && staffRoles.has(m?.role)),
+    [organizationMemberships, staffRoles]
+  );
+  const hasClientMembership = useMemo(
+    () => (organizationMemberships || []).some((m) => m?.active && m?.role === 'cliente'),
+    [organizationMemberships]
+  );
+
+  /** Orgs donde vos sos el dueño (FitEngine propio). NO incluye ser coach/cliente en Waitomo u otro club. */
+  const organizationsOwnedByUser = useMemo(() => {
+    const uid = session?.user?.id;
+    if (!uid || !Array.isArray(organizationMemberships)) return [];
+    const out = [];
+    const seen = new Set();
+    for (const m of organizationMemberships) {
+      const org = m?.organization;
+      if (!org?.id || seen.has(org.id)) continue;
+      if (String(org.owner_id || '') === String(uid)) {
+        seen.add(org.id);
+        out.push(org);
+      }
+    }
+    return out;
+  }, [session?.user?.id, organizationMemberships]);
+
+  const isDualHatUser = useMemo(() => {
+    if (!session?.user?.id || !profile?.organization_id) return false;
+    if (!organizationsOwnedByUser?.length) return false;
+    const profileOrgId = profile.organization_id;
+    return organizationsOwnedByUser.some((o) => o.id !== profileOrgId);
+  }, [session?.user?.id, profile?.organization_id, organizationsOwnedByUser]);
+
+  /**
+   * Coach/admin: panel FitEngine solo si ya existe org con owner_id = vos.
+   * Ser coach/staff en Waitomo u otro club NO completa el espacio propio: antes mandábamos a AdminLite por ownedOrgsCount≥1 y estaba mal.
+   * Excepción explícita (metadata): empleado solo en gym ajeno → no forzar ConfiguraTuEspacio.
+   */
+  const needsFitEngineSpaceSetup = useMemo(() => {
+    const r = String(role || '').toLowerCase();
+    if (r !== 'coach' && r !== 'admin') return false;
+    if (organizationsOwnedByUser?.length > 0) return false;
+    const meta = session?.user?.user_metadata || {};
+    if (meta.fitengine_staff_only === true) return false;
+    const intent = String(meta.signup_intent || '').toLowerCase();
+    if (intent === 'staff_employee' || intent === 'gym_employee') return false;
+    return true;
+  }, [role, organizationsOwnedByUser, session?.user?.user_metadata]);
+
+  const resolveEffectiveOrganizationId = useCallback(() => {
+    if (!session?.user?.id) return null;
+    if (!isDualHatUser) return profile?.organization_id || null;
+    if (!activeAppMode) return null;
+    if (activeAppMode === 'client') return profile?.organization_id || null;
+    const primaryOwned =
+      organizationsOwnedByUser.find((o) => o.id !== profile.organization_id) ||
+      organizationsOwnedByUser[0];
+    return primaryOwned?.id || profile?.organization_id || null;
+  }, [
+    session?.user?.id,
+    profile?.organization_id,
+    organizationsOwnedByUser,
+    activeAppMode,
+    isDualHatUser,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function applyOrg() {
+      const orgId = resolveEffectiveOrganizationId();
+      if (!orgId) {
+        if (!cancelled) setOrganization(null);
+        return;
+      }
+      const org = await fetchOrganization(orgId);
+      if (cancelled) return;
+      if (org) setOrganization(org);
+      else setOrganization(null);
+    }
+    applyOrg();
+    return () => {
+      cancelled = true;
+    };
+  }, [resolveEffectiveOrganizationId]);
+
+  // Antes del primer paint con sesión: marcar carga de orgs propias (si no, WelcomeGlobal navega con owned=[]).
+  useLayoutEffect(() => {
+    if (session?.user?.id) {
+      setOwnedOrgsLoading(true);
+      setActiveAppModeHydrated(false);
+    } else {
+      setOwnedOrgsLoading(false);
+      setActiveAppModeHydrated(true);
+    }
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setOwnedOrganizations([]);
+      setOrganizationMemberships([]);
+      setOwnedOrgsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setOwnedOrgsLoading(true);
+    (async () => {
+      try {
+        // Ruta principal (modelo serio): memberships por usuario
+        const { data: memberships, error: membershipsError } = await supabase
+          .from('organization_memberships')
+          .select(
+            'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at)'
+          )
+          .eq('user_id', session.user.id)
+          .eq('active', true);
+
+        if (!membershipsError && Array.isArray(memberships)) {
+          const mapped = memberships
+            .filter((m) => !!m?.organization_id)
+            .map((m) => ({
+              id: m.id,
+              organization_id: m.organization_id,
+              role: m.role,
+              active: !!m.active,
+              is_default: !!m.is_default,
+              organization: m.organization || null,
+            }));
+
+          // Si ya hay filas en memberships (p. ej. solo "cliente"), antes se hacía return y NUNCA corría el
+          // fallback por owner_id → dueño de gym con registro incompleto quedaba como cliente puro.
+          const { data: ownerOrgRows, error: ownerOrgErr } = await supabase
+            .from('organizations')
+            .select(
+              'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at'
+            )
+            .eq('owner_id', session.user.id);
+          if (!ownerOrgErr && Array.isArray(ownerOrgRows)) {
+            for (const org of ownerOrgRows) {
+              if (!org?.id) continue;
+              const alreadyStaffForOrg = mapped.some(
+                (m) => m.organization_id === org.id && staffRoles.has(m.role)
+              );
+              if (!alreadyStaffForOrg) {
+                mapped.push({
+                  id: null,
+                  organization_id: org.id,
+                  role: 'owner',
+                  active: true,
+                  is_default: false,
+                  organization: org,
+                });
+              }
+            }
+          }
+
+          if (!cancelled) setOrganizationMemberships(mapped);
+
+          const staffOrgs = mapped
+            .filter((m) => staffRoles.has(m.role) && m.organization?.id)
+            .map((m) => m.organization);
+          const unique = [];
+          const seen = new Set();
+          for (const org of staffOrgs) {
+            if (!org?.id || seen.has(org.id)) continue;
+            seen.add(org.id);
+            unique.push(org);
+          }
+          if (!cancelled) setOwnedOrganizations(unique);
+          if (!cancelled) setOwnedOrgsLoading(false);
+          return;
+        }
+
+        if (membershipsError) {
+          console.log('🟠 organization_memberships fallback:', membershipsError?.message || membershipsError);
+        }
+
+        // Fallback legacy: owner_id en organizations
+        const { data, error } = await supabase
+          .from('organizations')
+          .select(
+            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at'
+          )
+          .eq('owner_id', session.user.id);
+        if (cancelled) return;
+        if (error) {
+          console.log('❌ fetchOwnedOrganizations:', error?.message || error);
+          setOwnedOrganizations([]);
+          setOrganizationMemberships([]);
+        } else {
+          const orgs = data || [];
+          setOwnedOrganizations(orgs);
+          setOrganizationMemberships(
+            orgs.map((org) => ({
+              id: null,
+              organization_id: org.id,
+              role: 'owner',
+              active: true,
+              is_default: false,
+              organization: org,
+            }))
+          );
+        }
+      } finally {
+        if (!cancelled) setOwnedOrgsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id, profile?.id, staffRoles]);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setActiveAppModeState(null);
+      setActiveAppModeHydrated(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const mode = await readActiveAppMode(session.user.id);
+        if (cancelled) return;
+        setActiveAppModeState(mode);
+      } finally {
+        if (!cancelled) setActiveAppModeHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
+  // Si no hay modo guardado aún, elegir uno sano según memberships:
+  // - solo staff => staff
+  // - solo cliente => client
+  // - cliente + staff (mismo usuario) => no auto: WelcomeGlobal / login con forStaff eligen.
+  // - sombrero dual legacy (perfil cliente + gym propio): tampoco auto; debe elegir.
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    if (!activeAppModeHydrated) return;
+    if (activeAppMode) return;
+    if (!organizationMemberships?.length) return;
+    if (ownedOrgsLoading) return;
+    if (!profile?.id) return;
+    if (isDualHatUser) return;
+
+    const active = organizationMemberships.filter((m) => !!m?.active);
+    if (!active.length) return;
+    const onlyStaff = active.every((m) => staffRoles.has(m.role));
+    const onlyClient = active.every((m) => m.role === 'cliente');
+
+    if (onlyStaff) {
+      setActiveAppModeState('staff');
+      writeActiveAppMode(session.user.id, 'staff').catch(() => {});
+      return;
+    }
+    if (onlyClient) {
+      setActiveAppModeState('client');
+      writeActiveAppMode(session.user.id, 'client').catch(() => {});
+      return;
+    }
+
+    // Mezcla cliente + staff en memberships: no elegir aquí (UI dual en WelcomeGlobal).
+  }, [
+    session?.user?.id,
+    activeAppModeHydrated,
+    activeAppMode,
+    organizationMemberships,
+    staffRoles,
+    isDualHatUser,
+    ownedOrgsLoading,
+    profile?.id,
+  ]);
+
+  const persistActiveAppMode = useCallback(async (mode, userIdOverride) => {
+    const uid = userIdOverride || session?.user?.id;
+    if (!uid) return;
+    if (mode !== 'client' && mode !== 'staff') return;
+
+    // Canonizar contexto en BD (multi-dispositivo): set_default_membership(...)
+    try {
+      const active = (organizationMemberships || []).filter((m) => !!m?.active);
+      let candidate = null;
+      if (mode === 'staff') {
+        candidate =
+          active.find((m) => m?.is_default && staffRoles.has(m?.role)) ||
+          active.find((m) => staffRoles.has(m?.role));
+      } else {
+        candidate =
+          active.find((m) => m?.is_default && m?.role === 'cliente') ||
+          active.find((m) => m?.role === 'cliente');
+      }
+
+      if (candidate?.id) {
+        const { error: rpcError } = await supabase.rpc('set_default_membership', {
+          p_membership_id: candidate.id,
+        });
+        if (rpcError) {
+          console.log('🟠 persistActiveAppMode rpc set_default_membership:', rpcError?.message || rpcError);
+        } else {
+          setOrganizationMemberships((prev) =>
+            (prev || []).map((m) => ({
+              ...m,
+              is_default: m?.id === candidate.id,
+            }))
+          );
+        }
+      }
+    } catch (e) {
+      console.log('🟠 persistActiveAppMode rpc exception:', e?.message || e);
+    }
+
+    await writeActiveAppMode(uid, mode);
+    setActiveAppModeState(mode);
+  }, [session?.user?.id, organizationMemberships, staffRoles]);
+
+  /** WelcomeGlobal / login: no navegar hasta tener orgs propias + modo guardado leído (evita carrera a ClientTabs). */
+  const authNavigationReady = useMemo(() => {
+    if (!session?.user?.id) return true;
+    return !ownedOrgsLoading && activeAppModeHydrated;
+  }, [session?.user?.id, ownedOrgsLoading, activeAppModeHydrated]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    if (ownedOrgsLoading) return;
+    // eslint-disable-next-line no-console
+    console.log('ROUTING_DEBUG AuthContext snapshot', {
+      userId: session.user.id,
+      activeAppMode,
+      activeAppModeHydrated,
+      profileRole: profile?.role,
+      hasStaffMembership,
+      hasClientMembership,
+      ownedOrgsCount: ownedOrganizations?.length ?? 0,
+      orgsOwnedByUserCount: organizationsOwnedByUser?.length ?? 0,
+      needsFitEngineSpaceSetup,
+      membershipCount: organizationMemberships?.length ?? 0,
+      isDualHatUser,
+      authNavigationReady,
+    });
+  }, [
+    session?.user?.id,
+    ownedOrgsLoading,
+    activeAppMode,
+    activeAppModeHydrated,
+    profile?.role,
+    hasStaffMembership,
+    hasClientMembership,
+    ownedOrganizations,
+    organizationsOwnedByUser,
+    needsFitEngineSpaceSetup,
+    organizationMemberships,
+    isDualHatUser,
+    authNavigationReady,
+  ]);
+
+  /**
+   * Refresca la org activa para tema / BackgroundWrapper.
+   * Pasá `explicitOrgId` tras crear espacio (FitEngine): si no, se usa profile/memberships y puede
+   * haber carrera donde profile aún no tiene el nuevo organization_id → tema Waitomo por error.
+   */
+  const refreshOrganization = useCallback(async (explicitOrgId) => {
+    const orgId =
+      explicitOrgId != null && String(explicitOrgId).trim() !== ''
+        ? String(explicitOrgId).trim()
+        : resolveEffectiveOrganizationId();
+    if (!orgId) {
+      setOrganization(null);
+      return;
+    }
+    const org = await fetchOrganization(orgId);
+    if (org) setOrganization(org);
+    else setOrganization(null);
+  }, [resolveEffectiveOrganizationId]);
+
+  const refreshProfile = useCallback(async () => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    await fetchProfile(userId, session?.access_token);
+  }, [session?.user?.id, session?.access_token]);
 
   // -------------------------
   // ✅ ENSURE PROFILE (igual a tu versión, sin tocar lógica)
@@ -665,57 +1113,98 @@ export const AuthProvider = ({ children }) => {
       setRole(null);
       setUserPlans([]);
       setActivePlanId(null);
+      setOrganization(null);
+      setOwnedOrganizations([]);
+      setOrganizationMemberships([]);
+      setOwnedOrgsLoading(false);
+      setActiveAppModeState(null);
       await setPlanActualStorage(null);
       lastFetchedUserIdRef.current = null;
       lastAvatarCleanupUserIdRef.current = null;
+      setInitialProfileSyncDone(true);
       return;
     }
 
-    const shouldRefetch = lastFetchedUserIdRef.current !== userId || !profile;
+    // No usar `!profile` aquí: en llamadas seguidas (restore + onAuthStateChange) el closure
+    // sigue viendo profile=null y re-dispara fetch en bucle.
+    if (lastFetchedUserIdRef.current === userId) {
+      // Si el ref dice "ya sincronicé" pero el estado perdió profile (carrera / remount / limpieza parcial),
+      // NO omitir: si no, Login ve profile=null + initialProfileSyncDone=true y manda a RegistroInicial.
+      if (profileRef.current?.id === userId) {
+        setInitialProfileSyncDone(true);
+        console.log('🧠 SYNC: omitido (perfil ya sincronizado para este usuario)', {
+          userId,
+          lastFetchedUserId: lastFetchedUserIdRef.current,
+          note: 'profile en log puede ser null por closure de React; no indica estado real',
+        });
+        return;
+      }
+      console.log('🧠 SYNC: ref coincide pero sin profile en estado → fetch forzado', { userId });
+    }
+    if (profileSyncInFlightRef.current === userId) {
+      if (!profileSyncConcurrentSkipLoggedRef.current) {
+        profileSyncConcurrentSkipLoggedRef.current = true;
+        console.log('🧠 SYNC: omitido (fetch de perfil en curso)', {
+          userId,
+          note: 'restore + onAuthStateChange suelen disparar 2+; el primero hace el SELECT',
+        });
+      }
+      return;
+    }
 
     console.log('🧠 SYNC CHECK', {
       lastFetched: lastFetchedUserIdRef.current,
-      profileId: profile?.id || null,
-      shouldRefetch,
       userId,
       hasAccessToken: !!accessToken,
       tokenLen: accessToken ? String(accessToken).length : 0,
     });
 
-    if (!shouldRefetch) return;
+    setInitialProfileSyncDone(false);
+    profileSyncInFlightRef.current = userId;
+    try {
+      console.log('🧠 SYNC → fetchProfile(userId, accessToken)');
+      let p = await fetchProfile(userId, accessToken);
 
-    lastFetchedUserIdRef.current = userId;
-
-    console.log('🧠 SYNC → fetchProfile(userId, accessToken)');
-    const p = await fetchProfile(userId, accessToken);
-
-    if (p?.id) {
-      setProfile(p);
-      setRole(p?.role || null);
-      const pAct = p?.plan_actual ? String(p.plan_actual) : null;
-      setActivePlanId(pAct);
-      await setPlanActualStorage(pAct);
-    } else {
-      const { data: refData, error: refErr } = await supabase.auth.refreshSession();
-      if (refErr || !refData?.user) {
-        await clearSupabaseAuthStorage();
-        try {
-          await supabase.auth.signOut({ scope: 'local' });
-        } catch (_) {}
-        setSession(null);
+      if (p?.id) {
+        p = await healProfileRoleFromUserMetadata(
+          userId,
+          accessToken,
+          p,
+          nextSession?.user?.user_metadata
+        );
+        setProfile(p);
+        setRole(p?.role || null);
+        const pAct = p?.plan_actual ? String(p.plan_actual) : null;
+        setActivePlanId(pAct);
+        await setPlanActualStorage(pAct);
+      } else {
+        const { data: refData, error: refErr } = await supabase.auth.refreshSession();
+        if (refErr || !refData?.user) {
+          await clearSupabaseAuthStorage();
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch (_) {}
+          setSession(null);
+          setProfile(null);
+          setOrganization(null);
+          setRole(null);
+          setUserPlans([]);
+          setActivePlanId(null);
+          lastFetchedUserIdRef.current = null;
+          lastAvatarCleanupUserIdRef.current = null;
+          await setPlanActualStorage(null);
+          return;
+        }
         setProfile(null);
         setOrganization(null);
         setRole(null);
-        setUserPlans([]);
-        setActivePlanId(null);
-        lastFetchedUserIdRef.current = null;
-        lastAvatarCleanupUserIdRef.current = null;
-        await setPlanActualStorage(null);
-        return;
       }
-      setProfile(null);
-      setOrganization(null);
-      setRole(null);
+
+      lastFetchedUserIdRef.current = userId;
+    } finally {
+      profileSyncInFlightRef.current = null;
+      profileSyncConcurrentSkipLoggedRef.current = false;
+      setInitialProfileSyncDone(true);
     }
 
     // En segundo plano para no bloquear OAuth/Login (fetchUserPlans puede hacer timeout con RLS).
@@ -1007,9 +1496,7 @@ export const AuthProvider = ({ children }) => {
       if (base64Data) {
         body = base64ToArrayBuffer(base64Data);
       } else {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        body = blob;
+        body = await imageUriToArrayBuffer(uri);
       }
       const { error } = await supabase.storage
         .from('avatars')
@@ -1225,12 +1712,24 @@ export const AuthProvider = ({ children }) => {
     console.log('🚪 logout: global->local + limpiar storage');
     justLoggedOutAtRef.current = Date.now();
 
+    const uidBeforeLogout = session?.user?.id || null;
+    if (uidBeforeLogout) {
+      try {
+        await clearActiveAppMode(uidBeforeLogout);
+      } catch (_) {}
+    }
+
     // ✅ Limpiar estado YA para que la UI no vea sesión (evita que "Ya tengo cuenta" mande al panel)
     setSession(null);
     setProfile(null);
     setRole(null);
     setUserPlans([]);
     setActivePlanId(null);
+    setOrganization(null);
+    setOwnedOrganizations([]);
+      setOrganizationMemberships([]);
+    setOwnedOrgsLoading(false);
+    setActiveAppModeState(null);
     lastFetchedUserIdRef.current = null;
     lastAvatarCleanupUserIdRef.current = null;
 
@@ -1283,6 +1782,7 @@ export const AuthProvider = ({ children }) => {
     await setPlanActualStorage(pAct);
 
     lastFetchedUserIdRef.current = DEV_USER_ID;
+    setInitialProfileSyncDone(true);
     return fakeUser;
   };
 
@@ -1322,6 +1822,24 @@ export const AuthProvider = ({ children }) => {
       // ✅ CANÓNICO
       activePlanId,
 
+      /** Doble rol: cliente en profiles.organization_id + dueño de otra org */
+      ownedOrganizations,
+      /** Solo orgs con owner_id = usuario (FitEngine propio). */
+      organizationsOwnedByUser,
+      /** Coach/admin: falta crear/completar espacio propio (no confundir con staff en Waitomo). */
+      needsFitEngineSpaceSetup,
+      organizationMemberships,
+      ownedOrgsLoading,
+      isDualHatUser,
+      hasStaffMembership,
+      hasClientMembership,
+      activeAppMode,
+      activeAppModeHydrated,
+      authNavigationReady,
+      /** false hasta que syncFromSession termine el fetch de perfil (o decida skip por ya sincronizado). */
+      initialProfileSyncDone,
+      persistActiveAppMode,
+
       register,
       login,
       signInWithProvider,
@@ -1332,13 +1850,38 @@ export const AuthProvider = ({ children }) => {
       updateProfile,
       updateProfileData,
       uploadAvatar,
+      refreshOrganization,
+      refreshProfile,
 
       isAdmin,
       isCoach,
       isSuperAdmin,
       signInDev,
     }),
-    [session, profile, organization, role, loading, userPlans, activePlanId]
+    [
+      session,
+      profile,
+      organization,
+      role,
+      loading,
+      userPlans,
+      activePlanId,
+      ownedOrganizations,
+      organizationsOwnedByUser,
+      needsFitEngineSpaceSetup,
+      organizationMemberships,
+      ownedOrgsLoading,
+      isDualHatUser,
+      hasStaffMembership,
+      hasClientMembership,
+      activeAppMode,
+      activeAppModeHydrated,
+      authNavigationReady,
+      initialProfileSyncDone,
+      persistActiveAppMode,
+      refreshOrganization,
+      refreshProfile,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

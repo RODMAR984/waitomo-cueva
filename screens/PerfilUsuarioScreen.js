@@ -244,7 +244,7 @@ const PerfilUsuarioScreen = () => {
         console.log('🔁 Perfil.resetToWelcome: usando navigationRef.resetRoot');
         navigationRef.resetRoot({
           index: 0,
-          routes: [{ name: 'Welcome' }],
+          routes: [{ name: 'WelcomeGlobal' }],
         });
         return true;
       } catch {
@@ -267,7 +267,7 @@ const PerfilUsuarioScreen = () => {
         });
         nav.reset({
           index: 0,
-          routes: [{ name: 'Welcome' }],
+          routes: [{ name: 'WelcomeGlobal' }],
         });
         return true;
       } catch {
@@ -278,7 +278,7 @@ const PerfilUsuarioScreen = () => {
     try {
       // eslint-disable-next-line no-console
       console.log('🔁 Perfil.resetToWelcome: navigation.navigate("Welcome") fallback');
-      navigation.navigate('Welcome');
+      navigation.navigate('WelcomeGlobal');
       return true;
     } catch {
       // eslint-disable-next-line no-console

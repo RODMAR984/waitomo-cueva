@@ -1,5 +1,22 @@
 # FitEngine / WAITOMO — Brand & Logo Usage Specification
 
+## 0. Mapa de uso del logo FitEngine (app y web)
+
+**Asset:** `assets/logo-fitengine.svg` (app) / `web/public/logo-fitengine.svg` (web).
+
+| Lugar | Uso | Archivo / nota |
+|-------|-----|----------------|
+| **Splash** | Logo FitEngine + "by WAITOMO" (plataforma neutra) | `screens/SplashScreen.js` |
+| **Welcome global** | Logo FitEngine + subtítulo "Elegí cómo entrás" | `screens/WelcomeScreen.js` |
+| **Login** | Logo FitEngine + "powered by WAITOMO" | `screens/LoginScreen.js` |
+| **App icon** | Icono de la app = logo FitEngine (PNG exportado) | `app.json` → `./assets/icon.png`, `./assets/adaptive-icon.png` |
+| **Web (navbar)** | Logo en cabecera | `web/public/logo-fitengine.svg`, referenciado en `web/src/Navbar.jsx` |
+| **Footer atribución** | Solo texto: "FitEngine by WAITOMO © 2026" (sin logo) | `screens/GymConfigScreen.js`, `screens/LoginScreen.js` |
+
+En Splash, Welcome y Login se usa import condicional del SVG; si falla, se muestra el texto "FitEngine" como respaldo. El icono de app y favicon deben generarse desde el mismo logo (PNG en los tamaños que pida Expo).
+
+---
+
 ## 1. Brand Architecture
 
 The system is structured with a clear brand hierarchy.

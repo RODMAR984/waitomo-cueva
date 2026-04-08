@@ -39,6 +39,27 @@ export const translations = {
     welcome_client: 'Cliente',
     welcome_staff: 'Staff',
     welcome_admin: 'Admin',
+    welcome_global_subtitle: 'Creá tu cuenta o iniciá sesión para entrar',
+    welcome_action_login: 'Iniciar sesión',
+    welcome_action_create_account: 'Crear cuenta',
+    welcome_action_continue: 'Continuar',
+    welcome_login_staff_short: 'Iniciar sesión como gym / coach',
+    welcome_create_gym_coach_short: 'Crear cuenta gym / coach',
+    welcome_logout_use_other: 'Cerrar sesión y usar otra cuenta',
+    welcome_soy_cliente: 'Soy cliente',
+    welcome_soy_gym_coach: 'Soy gym / coach',
+    welcome_dual_subtitle:
+      'Tu cuenta tiene acceso como cliente y como staff. Elegí cómo continuar.',
+    welcome_dual_as_client: 'Como cliente',
+    welcome_dual_as_staff: 'Como coach / staff',
+
+    // Registro owner (Fase 6a)
+    registro_owner_titulo: 'Crear cuenta (gym / coach)',
+    registro_owner_subtitle: 'Después configurás tu espacio (nombre, tipo, logo).',
+    registro_owner_siguiente: 'Siguiente',
+    registro_owner_falta: 'Faltan datos',
+    registro_owner_completa: 'Completá email, contraseña y nombre.',
+    registro_owner_pass_corta: 'Contraseña corta',
 
     // Login
     login_title: 'Iniciar sesión',
@@ -58,6 +79,8 @@ export const translations = {
     login_not_staff_message: 'Iniciaste sesión con una cuenta de cliente. Para el panel staff necesitás una cuenta coach o admin.',
     login_create_staff_account: 'Crear cuenta staff (otro email)',
     login_enter_as_client: 'Entrar como cliente',
+    login_session_active_staff: 'Ya tenés sesión activa.',
+    login_continue_staff_panel: 'Continuar al panel staff',
 
     // CreaCuenta
     creacuenta_title: 'Creá tu cuenta',
@@ -301,6 +324,7 @@ export const translations = {
     admin_finanzas: 'Finanzas',
     admin_ver_novedades: 'Ver novedades',
     admin_gestionar_novedades: 'Gestionar novedades',
+    admin_mi_configuracion: 'Mi configuración',
     admin_plan: 'Plan',
     admin_sin_plan: 'Sin plan asignado. Un admin debe asignarte el plan que coordinás en tu perfil (Supabase → profiles → plan_actual).',
     admin_politica: 'Política del plan:',
@@ -379,6 +403,26 @@ export const translations = {
     welcome_client: 'Client',
     welcome_staff: 'Staff',
     welcome_admin: 'Admin',
+    welcome_global_subtitle: 'Create an account or sign in to continue',
+    welcome_action_login: 'Sign in',
+    welcome_action_create_account: 'Create account',
+    welcome_action_continue: 'Continue',
+    welcome_login_staff_short: 'Sign in as gym / coach',
+    welcome_create_gym_coach_short: 'Create gym / coach account',
+    welcome_logout_use_other: 'Sign out and use another account',
+    welcome_soy_cliente: 'I\'m a client',
+    welcome_soy_gym_coach: 'I\'m a gym / coach',
+    welcome_dual_subtitle:
+      'Your account has both client and staff access. Choose how to continue.',
+    welcome_dual_as_client: 'As a client',
+    welcome_dual_as_staff: 'As coach / staff',
+
+    registro_owner_titulo: 'Create account (gym / coach)',
+    registro_owner_subtitle: 'Then you\'ll set up your space (name, type, logo).',
+    registro_owner_siguiente: 'Next: set up space',
+    registro_owner_falta: 'Missing information',
+    registro_owner_completa: 'Please enter email, password and name.',
+    registro_owner_pass_corta: 'Password too short',
 
     login_title: 'Sign in',
     login_title_staff: 'Sign in (staff)',
@@ -397,6 +441,8 @@ export const translations = {
     login_not_staff_message: 'You signed in with a client account. For the staff panel you need a coach or admin account.',
     login_create_staff_account: 'Create staff account (different email)',
     login_enter_as_client: 'Sign in as client',
+    login_session_active_staff: 'You already have an active session.',
+    login_continue_staff_panel: 'Continue to staff panel',
 
     creacuenta_title: 'Create your account',
     creacuenta_subtitle: 'Choose how you want to sign up. Then you will complete your details and plan registration.',
@@ -624,6 +670,7 @@ export const translations = {
     admin_finanzas: 'Finance',
     admin_ver_novedades: 'View news',
     admin_gestionar_novedades: 'Manage news',
+    admin_mi_configuracion: 'My settings',
     admin_plan: 'Plan',
     admin_sin_plan: 'No plan assigned. An admin must assign you the plan you coordinate in your profile (Supabase → profiles → plan_actual).',
     admin_politica: 'Plan policy:',

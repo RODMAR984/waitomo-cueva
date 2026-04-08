@@ -1,5 +1,6 @@
-// WelcomeScreen — fondo mano + kettlebell; texto Waitomo Training incrustado = ingreso principal;
-// otros 3 ingresos = objetos (disco bumper, magnesio, pizarra)
+// WelcomeScreen — Welcome específico de Waitomo. Fondo mano + kettlebell; WAITOMO TRAINING; Cliente / Staff / Admin.
+// NO modificar: es el destino de "Soy cliente" desde WelcomeGlobalScreen. En Fase 6b cada org tendrá su WelcomeGymScreen.
+
 import React, { useMemo, useEffect, useRef } from 'react';
 import {
   StyleSheet,
@@ -14,9 +15,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { getThemeTokens } from '../theme/colors';
+import { useThemeContext } from '../contexts/ThemeContext';
 import BackgroundWrapper from '../components/BackgroundWrapper';
-
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -33,7 +33,7 @@ export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { user, role, profile } = useAuth();
   const { t: tStr } = useLocale();
-  const t = useMemo(() => getThemeTokens('dark'), []);
+  const { t } = useThemeContext();
 
   const bottomInset = Math.max(insets.bottom || 0, Platform.OS === 'android' ? 28 : 0);
   const opacityAnim = useRef(new Animated.Value(1)).current;
@@ -61,16 +61,13 @@ export default function WelcomeScreen() {
     () =>
       StyleSheet.create({
         fullScreen: { flex: 1 },
-        // Texto centrado sobre la kettlebell (bajado para quedar en el centro de la bola)
         heroTouchable: {
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
           paddingHorizontal: 24,
         },
-        heroTextBlock: {
-          marginTop: 72,
-        },
+        heroTextBlock: { marginTop: 72 },
         titleTop: {
           color: t.brand,
           fontSize: 36,
@@ -100,7 +97,6 @@ export default function WelcomeScreen() {
           letterSpacing: 2,
           textAlign: 'center',
         },
-        // Tres ingresos como “objetos” en la imagen: disco bumper, magnesio, pizarra
         objectsRow: {
           position: 'absolute',
           bottom: bottomInset + 20,
@@ -153,7 +149,6 @@ export default function WelcomeScreen() {
   return (
     <BackgroundWrapper screen="Welcome" forceDarkOverlay>
       <View style={styles.fullScreen}>
-        {/* Ingreso principal: tocar el texto incrustado en la imagen */}
         <TouchableOpacity
           onPress={handlePressHero}
           activeOpacity={0.85}
@@ -166,7 +161,6 @@ export default function WelcomeScreen() {
           </Animated.View>
         </TouchableOpacity>
 
-        {/* Objetos: disco bumper = cliente, magnesio = staff, pizarra = admin */}
         <View style={styles.objectsRow}>
           <TouchableOpacity
             style={styles.objectButton}

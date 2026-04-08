@@ -134,7 +134,23 @@ export default function ClientScreen() {
   const { t: tStr } = useLocale();
   const navigation = useNavigation();
 
-  const { profile, user, logout, activePlanId, ensureProfile, organization } = useAuth() || {};
+  const {
+    profile,
+    user,
+    logout,
+    activePlanId,
+    ensureProfile,
+    organization,
+    activeAppMode,
+    ownedOrganizations,
+    organizationsOwnedByUser,
+    needsFitEngineSpaceSetup,
+    authNavigationReady,
+    initialProfileSyncDone,
+    hasStaffMembership,
+    hasClientMembership,
+    persistActiveAppMode,
+  } = useAuth() || {};
   const saludo = tStr(getGreetingKey(new Date().getHours()));
 
   const nombre =
@@ -533,10 +549,102 @@ export default function ClientScreen() {
   // Si hay user pero no perfil (cuenta borrada o sin completar), ir a completar registro.
   useEffect(() => {
     if (!user?.id) return;
+    if (initialProfileSyncDone === false) return;
     if (profile?.id) return;
     if (!navigationRef.isReady()) return;
     navigationRef.resetRoot({ index: 0, routes: [{ name: 'RegistroInicial' }] });
-  }, [user?.id, profile?.id]);
+  }, [user?.id, profile?.id, initialProfileSyncDone]);
+
+  // Guardia anti-ruta equivocada: no quedarse en panel cliente si la cuenta es gym/staff.
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!authNavigationReady) return;
+    if (initialProfileSyncDone === false) return;
+
+    const hasOwnedFitEngineOrgs =
+      Array.isArray(organizationsOwnedByUser) && organizationsOwnedByUser.length > 0;
+    const isStaffRole =
+      profile?.role === 'coach' || profile?.role === 'admin' || profile?.role === 'superadmin';
+    const staffOnly = hasStaffMembership && !hasClientMembership;
+    const ownsGymNotClient = hasOwnedFitEngineOrgs && !hasClientMembership;
+    /** Rol en `profiles` dice staff pero memberships aún no reflejan cliente — evita quedar en cliente. */
+    const profileStaffNoClientMembership = isStaffRole && !hasClientMembership;
+
+    // eslint-disable-next-line no-console
+    console.log('ROUTING_DEBUG ClientScreen guard', {
+      userId: user?.id,
+      activeAppMode,
+      profileRole: profile?.role,
+      hasStaffMembership,
+      hasClientMembership,
+      ownedOrgsCount: ownedOrganizations?.length ?? 0,
+      orgsOwnedByUserCount: organizationsOwnedByUser?.length ?? 0,
+      needsFitEngineSpaceSetup,
+      staffOnly,
+      ownsGymNotClient,
+      profileStaffNoClientMembership,
+      authNavigationReady,
+      initialProfileSyncDone,
+    });
+
+    const modeIsClientish = activeAppMode === 'client' || activeAppMode == null;
+    const mustLeaveClientPanel =
+      modeIsClientish &&
+      (staffOnly || ownsGymNotClient || profileStaffNoClientMembership);
+
+    // Modo cliente (o null) pero la cuenta es solo staff / coach en perfil sin membresía cliente.
+    if (mustLeaveClientPanel) {
+      // eslint-disable-next-line no-console
+      console.log('ROUTING_DEBUG ClientScreen → reset AdminLite', {
+        reason: staffOnly
+          ? 'staffOnly'
+          : ownsGymNotClient
+            ? 'ownsGymNotClient'
+            : 'profileStaffNoClientMembership',
+      });
+      (async () => {
+        try {
+          if (persistActiveAppMode && user?.id) {
+            await persistActiveAppMode('staff', user.id);
+          }
+        } catch (_) {}
+        const staffRoute = needsFitEngineSpaceSetup
+          ? { name: 'ConfiguraTuEspacio', params: { email: user?.email } }
+          : { name: 'AdminLite' };
+        if (navigationRef.isReady()) {
+          navigationRef.resetRoot({ index: 0, routes: [staffRoute] });
+        } else {
+          navigation.reset({ index: 0, routes: [staffRoute] });
+        }
+      })();
+      return;
+    }
+
+    if (activeAppMode === 'staff' && (hasOwnedFitEngineOrgs || isStaffRole)) {
+      const staffRoute = needsFitEngineSpaceSetup
+        ? { name: 'ConfiguraTuEspacio', params: { email: user?.email } }
+        : { name: 'AdminLite' };
+      if (navigationRef.isReady()) {
+        navigationRef.resetRoot({ index: 0, routes: [staffRoute] });
+      } else {
+        navigation.reset({ index: 0, routes: [staffRoute] });
+      }
+    }
+  }, [
+    user?.id,
+    user?.email,
+    authNavigationReady,
+    initialProfileSyncDone,
+    activeAppMode,
+    ownedOrganizations,
+    organizationsOwnedByUser,
+    needsFitEngineSpaceSetup,
+    profile?.role,
+    navigation,
+    hasStaffMembership,
+    hasClientMembership,
+    persistActiveAppMode,
+  ]);
 
   const resetToWelcome = () => {
     // DEBUG logout: ver qué rama se ejecuta
@@ -550,7 +658,7 @@ export default function ClientScreen() {
       try {
         // eslint-disable-next-line no-console
         console.log('🔁 ClientScreen.resetToWelcome: usando navigationRef.resetRoot');
-        navigationRef.resetRoot({ index: 0, routes: [{ name: 'Welcome' }] });
+        navigationRef.resetRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
         return true;
       } catch {
         // seguir con los navegadores locales
@@ -569,7 +677,7 @@ export default function ClientScreen() {
         console.log('🔁 ClientScreen.resetToWelcome: nav.reset en', {
           hasParent: !!navigation?.getParent?.(),
         });
-        nav.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+        nav.reset({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
         return true;
       } catch {
         // keep trying
