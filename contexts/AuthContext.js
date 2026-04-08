@@ -263,6 +263,8 @@ export const AuthProvider = ({ children }) => {
 
     const START = Date.now();
     const REQUEST_TIMEOUT_MS = 8000;
+    const PROFILE_FETCH_ATTEMPTS = 2;
+    const PROFILE_RETRY_DELAY_MS = 500;
 
     const accessToken = accessTokenOverride || session?.access_token || null;
 
@@ -293,7 +295,9 @@ export const AuthProvider = ({ children }) => {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     };
 
-    // 1) SELECT
+    const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // 1) SELECT (1 reintento con backoff si red/5xx/429 — evita RegistroInicial fantasma en mobile lento)
     try {
       console.log('🧠 fetchProfileREST: SELECT start', {
         userId,
@@ -307,17 +311,33 @@ export const AuthProvider = ({ children }) => {
         `&select=${encodeURIComponent(cols)}` +
         `&limit=1`;
 
-      const res = await withAbort(
-        (signal) =>
-          fetch(url, {
-            method: 'GET',
-            headers: { ...baseHeaders },
-            signal,
-          }),
-        'select_http'
-      );
+      let res;
+      let text = '';
+      let attempt = 0;
+      while (attempt < PROFILE_FETCH_ATTEMPTS) {
+        try {
+          res = await withAbort(
+            (signal) =>
+              fetch(url, {
+                method: 'GET',
+                headers: { ...baseHeaders },
+                signal,
+              }),
+            'select_http'
+          );
+          text = await res.text();
+          break;
+        } catch (e) {
+          attempt += 1;
+          if (attempt >= PROFILE_FETCH_ATTEMPTS) {
+            console.log('❌ fetchProfileREST SELECT catch:', e?.message || e, e);
+            return null;
+          }
+          console.log('🟠 fetchProfileREST: reintento tras error red/abort', e?.message || e);
+          await sleepMs(PROFILE_RETRY_DELAY_MS);
+        }
+      }
 
-      const text = await res.text();
       let json = null;
       try {
         json = text ? JSON.parse(text) : null;
@@ -326,11 +346,38 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (!res.ok) {
-        console.log('❌ fetchProfileREST SELECT http error:', {
-          status: res.status,
-          body: (text || '').slice(0, 300),
-        });
-        return null;
+        const retryable = res.status >= 500 || res.status === 429;
+        if (retryable) {
+          console.log('🟠 fetchProfileREST: reintento tras HTTP', res.status);
+          await sleepMs(PROFILE_RETRY_DELAY_MS);
+          try {
+            res = await withAbort(
+              (signal) =>
+                fetch(url, {
+                  method: 'GET',
+                  headers: { ...baseHeaders },
+                  signal,
+                }),
+              'select_http_retry'
+            );
+            text = await res.text();
+            try {
+              json = text ? JSON.parse(text) : null;
+            } catch {
+              json = null;
+            }
+          } catch (e2) {
+            console.log('❌ fetchProfileREST retry catch:', e2?.message || e2);
+            return null;
+          }
+        }
+        if (!res.ok) {
+          console.log('❌ fetchProfileREST SELECT http error:', {
+            status: res.status,
+            body: (text || '').slice(0, 300),
+          });
+          return null;
+        }
       }
 
       let row = Array.isArray(json) ? json[0] : null;
