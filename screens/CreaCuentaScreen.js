@@ -21,9 +21,11 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { getThemeTokens } from '../theme/colors';
 
 export default function CreaCuentaScreen() {
-  const { t } = useThemeContext();
+  const { isDark } = useThemeContext();
+  const t = useMemo(() => getThemeTokens(isDark ? 'dark' : 'light', null), [isDark]);
   const { t: tStr } = useLocale();
   const navigation = useNavigation();
   const route = useRoute();

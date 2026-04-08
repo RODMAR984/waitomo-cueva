@@ -19,9 +19,11 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { getThemeTokens } from '../theme/colors';
 
 export default function AdminLoginScreen() {
-  const { t } = useThemeContext();
+  const { isDark } = useThemeContext();
+  const t = useMemo(() => getThemeTokens(isDark ? 'dark' : 'light', null), [isDark]);
   const navigation = useNavigation();
   const { login, logout, profile, session, loading } = useAuth();
   const mountedRef = useRef(true);

@@ -21,14 +21,17 @@ import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { getThemeTokens } from '../theme/colors';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
 export default function CreaCuentaStaffScreen() {
-  const { t } = useThemeContext();
+  const { isDark } = useThemeContext();
+  const t = useMemo(() => getThemeTokens(isDark ? 'dark' : 'light', null), [isDark]);
   const { t: tStr } = useLocale();
   const navigation = useNavigation();
-  const { register, signInWithProvider, session, profile, loading } = useAuth();
+  const { register, signInWithProvider, session, profile, loading, needsFitEngineSpaceSetup, authNavigationReady } =
+    useAuth();
   const mountedRef = useRef(true);
 
   const [email, setEmail] = useState('');
@@ -42,16 +45,29 @@ export default function CreaCuentaStaffScreen() {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // Después de volver de OAuth con cuenta staff (role coach), ir al panel
+  // Tras OAuth staff: FitEngine sin org propia → ConfiguraTuEspacio; si no, panel.
   useEffect(() => {
     if (!mountedRef.current) return;
     if (!session?.user?.id || loading) return;
+    if (!authNavigationReady) return;
     const role = profile?.role;
     if (role === 'coach' || role === 'admin' || role === 'superadmin') {
       if (oauthSubmitting && mountedRef.current) setOauthSubmitting(false);
-      navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
+      const route = needsFitEngineSpaceSetup
+        ? { name: 'ConfiguraTuEspacio', params: { email: session.user.email } }
+        : { name: 'AdminLite' };
+      navigation.reset({ index: 0, routes: [route] });
     }
-  }, [session?.user?.id, profile?.role, loading, navigation]);
+  }, [
+    session?.user?.id,
+    session?.user?.email,
+    profile?.role,
+    loading,
+    navigation,
+    oauthSubmitting,
+    needsFitEngineSpaceSetup,
+    authNavigationReady,
+  ]);
 
   const handleOAuth = async (provider) => {
     if (!signInWithProvider) {

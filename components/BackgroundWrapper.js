@@ -35,6 +35,16 @@ const TRABAJO_DIA_BACKGROUNDS = [
   require('../assets/plan_image/plan_yoga.jpg'),
 ].filter(img => img);
 
+/** Entrada / marketing FitEngine: no usar imagen sólida/degradado/fondo org del tenant. */
+function isFitEnginePlatformBackgroundScreen(sl) {
+  const s = String(sl || '').toLowerCase().trim();
+  if (!s) return false;
+  if (s === 'neutral' || s === 'fitengine' || s === 'fitengineglobal' || s === 'splash') return true;
+  // CreateAccount / AdminLogin / CreaCuentaStaff (screen="Welcome") — stock app, no white-label org
+  if (s === 'welcome') return true;
+  return false;
+}
+
 function getPlanKey(plan) {
   const raw =
     plan?.id ??
@@ -76,7 +86,10 @@ export default function BackgroundWrapper({
     screenLower.includes('clientscreen') ||
     screenLower.includes('clienttabs');
 
-  const useOrgBackground = organization && !isWaitomoOrg(organization);
+  const useOrgBackground =
+    organization &&
+    !isWaitomoOrg(organization) &&
+    !isFitEnginePlatformBackgroundScreen(screenLower);
   const orgBgType = useOrgBackground ? (organization.background_type || 'solid') : null;
   const orgBgUrl = useOrgBackground ? organization.background_url : null;
 
