@@ -29,6 +29,9 @@ import { supabase } from '../supabaseClient';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { normalizeBlockPlanKey } from '../utils/trainingBlockPlan';
+import { formatYmdLocal } from '../utils/formatYmdLocal';
+import { extractRmTags, splitTextWithRmTokens, RM_HIGHLIGHT_COLOR } from '../utils/rmPattern';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -63,6 +66,25 @@ const PLANS = [
   { label: 'OPEN BOX', value: 'open_box', policy: 'PARTITIONED' },
 ];
 
+/** Bloques viejos guardaban value tipo cross_training; tabla `plans` usa `code` (ej. cross). */
+const LEGACY_BLOCK_PLAN_TO_CODE = {
+  cross_training: 'cross',
+  hyrox: 'hyrox',
+  ciclo_evolucion: 'evolucion',
+  stretching: 'stretching',
+  yoga: 'yoga',
+  open_box: 'openbox',
+};
+
+const blockPlanToCode = (stored) => LEGACY_BLOCK_PLAN_TO_CODE[stored] || stored;
+
+const planMatchesSelection = (storedPlan, selectedCode) => {
+  const s = storedPlan || '';
+  if (!selectedCode) return false;
+  if (s === selectedCode) return true;
+  return blockPlanToCode(s) === selectedCode;
+};
+
 const generarHorarios = () => {
   const lista = [];
   for (let h = 6; h <= 22; h += 1) {
@@ -75,16 +97,11 @@ const generarHorarios = () => {
 
 const fechaKeyFrom = (d) => {
   try {
-    return new Date(d).toISOString().split('T')[0];
+    const x = d instanceof Date ? d : new Date(d);
+    return formatYmdLocal(x);
   } catch {
     return '';
   }
-};
-
-const detectarRM = (texto) => {
-  if (!texto || typeof texto !== 'string') return [];
-  const rx = /@\d+%\d*rm[a-záéíóúñ() ]*/gi;
-  return texto.match(rx) || [];
 };
 
 const sumarDias = (baseDate, delta) => {
@@ -93,31 +110,24 @@ const sumarDias = (baseDate, delta) => {
   return d;
 };
 
-const RMText = memo(({ children, styles }) => (
-  <Text style={styles.rmText}>{children}</Text>
-));
-
 const renderPreviewWithRM = (text, styles) => {
   if (!text) return <Text style={styles.previewText}>—</Text>;
-  const regex = /@\d+%\d*rm[a-zA-Záéíóúñ() ]*/gi;
-  const parts = text.split(regex);
-  const matches = text.match(regex) || [];
-  const out = [];
-  for (let i = 0; i < parts.length; i += 1) {
-    out.push(
-      <Text key={`p_${i}`} style={styles.previewText}>
-        {parts[i]}
-      </Text>,
-    );
-    if (matches[i]) {
-      out.push(
-        <RMText key={`rm_${i}`} styles={styles}>
-          {matches[i]}
-        </RMText>,
-      );
-    }
-  }
-  return out;
+  const parts = splitTextWithRmTokens(text);
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+      {parts.map((seg, i) =>
+        seg.type === 'text' ? (
+          <Text key={`p_${i}`} style={styles.previewText}>
+            {seg.value}
+          </Text>
+        ) : (
+          <Text key={`rm_${i}`} style={styles.rmText}>
+            {seg.full}
+          </Text>
+        ),
+      )}
+    </View>
+  );
 };
 
 const CustomDropdown = memo(function CustomDropdown({
@@ -262,14 +272,55 @@ export default function AdminScreen(props) {
   const isLite = mode === 'lite';
 
   const { bloques, saveBloques, refreshTrigger } = useTrainingData();
-  const { currentUser, rolesByUser, isSuperAdmin, logout, profile, organization } = useAuth();
+  const {
+    currentUser,
+    rolesByUser,
+    isSuperAdmin,
+    logout,
+    profile,
+    organization,
+    organizationsOwnedByUser,
+  } = useAuth();
   const myId = currentUser?.id || null;
   const myRole = rolesByUser?.[myId];
   const isSA = !!(myId && isSuperAdmin(myId));
+  const canEditGymConfig = useMemo(() => {
+    if (!profile?.id) return false;
+    if (isSA) return true;
+    if (organization?.owner_id === profile.id) return true;
+    return (organizationsOwnedByUser || []).some((o) => o?.id === organization?.id);
+  }, [isSA, profile?.id, organization?.id, organization?.owner_id, organizationsOwnedByUser]);
   const isCoach = myRole === 'coach';
-  const isOrgCoach = organization?.type === 'coach';
-  const isOrgGym = organization?.type === 'gym' || !organization?.type;
   const coachPlanActual = profile?.plan_actual ? String(profile.plan_actual) : null;
+
+  const orgIdForPlans = organization?.id || profile?.organization_id || null;
+  const [orgPlansRows, setOrgPlansRows] = useState([]);
+
+  useEffect(() => {
+    if (!orgIdForPlans) {
+      setOrgPlansRows([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('plans')
+          .select('code, title, subtitle, mode, active, order')
+          .eq('organization_id', orgIdForPlans)
+          .eq('active', true)
+          .order('order', { ascending: true });
+        if (error) throw error;
+        if (alive) setOrgPlansRows(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.log('AdminScreen: planes org', e?.message || e);
+        if (alive) setOrgPlansRows([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [orgIdForPlans]);
 
   const handleLogout = async () => {
     try {
@@ -286,24 +337,53 @@ export default function AdminScreen(props) {
 
   const initialPlan =
     route?.params?.planValue ||
-    (isCoach && coachPlanActual && PLANS.some((p) => p.value === coachPlanActual) ? coachPlanActual : null) ||
+    (isCoach && coachPlanActual ? blockPlanToCode(coachPlanActual) : null) ||
     'cross_training';
   const [planSeleccionado, setPlanSeleccionado] = useState(initialPlan || 'cross_training');
 
   useEffect(() => {
-    if (isCoach && coachPlanActual && PLANS.some((p) => p.value === coachPlanActual)) {
-      setPlanSeleccionado(coachPlanActual);
+    if (isCoach && coachPlanActual) {
+      setPlanSeleccionado(blockPlanToCode(coachPlanActual));
     }
   }, [isCoach, coachPlanActual]);
 
   const plansDisponibles = useMemo(() => {
-    if (isSA) return PLANS;
-    if (isCoach && coachPlanActual) {
-      const one = PLANS.find((p) => p.value === coachPlanActual);
-      return one ? [one] : PLANS;
+    let list = [];
+    if (orgPlansRows.length > 0) {
+      list = orgPlansRows.map((p) => ({
+        label: p.title || p.code,
+        value: p.code,
+        policy: p.mode === 'program' ? 'PARTITIONED' : 'SHARED',
+      }));
+    } else if (orgIdForPlans) {
+      if (isCoach && coachPlanActual) {
+        const c = blockPlanToCode(coachPlanActual);
+        list = [{ label: c, value: c, policy: 'SHARED' }];
+      } else {
+        list = [];
+      }
+    } else if (isSA) {
+      list = PLANS;
     }
-    return PLANS;
-  }, [isSA, isCoach, coachPlanActual]);
+    if (isCoach && coachPlanActual && list.length > 1) {
+      const codeWant = blockPlanToCode(coachPlanActual);
+      const filtered = list.filter((p) => p.value === codeWant);
+      return filtered.length ? filtered : list;
+    }
+    return list;
+  }, [orgPlansRows, orgIdForPlans, isCoach, coachPlanActual, isSA]);
+
+  useEffect(() => {
+    if (plansDisponibles.length === 0) return;
+    const vals = plansDisponibles.map((p) => p.value);
+    if (vals.includes(planSeleccionado)) return;
+    const mapped = blockPlanToCode(planSeleccionado);
+    if (vals.includes(mapped)) {
+      setPlanSeleccionado(mapped);
+      return;
+    }
+    setPlanSeleccionado(vals[0]);
+  }, [plansDisponibles]);
 
   const [fecha, setFecha] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -327,22 +407,23 @@ export default function AdminScreen(props) {
 
 
   const policy = useMemo(
-    () => PLANS.find((p) => p.value === planSeleccionado)?.policy || 'SHARED',
-    [planSeleccionado],
+    () => plansDisponibles.find((p) => p.value === planSeleccionado)?.policy || 'SHARED',
+    [plansDisponibles, planSeleccionado],
   );
   const isPartitioned = policy === 'PARTITIONED';
 
   const bloquesPlanOrdenados = useMemo(() => {
-    let lista = (Array.isArray(bloques) ? [...bloques] : []).filter(
-      (b) => (b?.plan || '') === planSeleccionado,
-    );
+    let lista = (Array.isArray(bloques) ? [...bloques] : []).filter((b) => {
+      if (orgIdForPlans && b.organization_id && b.organization_id !== orgIdForPlans) return false;
+      return planMatchesSelection(b?.plan, planSeleccionado);
+    });
     if (!isSA && isCoach && isPartitioned && myId) {
       lista = lista.filter((b) => (b.coachId || null) === myId);
     }
     return lista.sort(
       (a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0),
     );
-  }, [bloques, planSeleccionado, refreshTrigger, isSA, isCoach, isPartitioned, myId]);
+  }, [bloques, planSeleccionado, refreshTrigger, isSA, isCoach, isPartitioned, myId, orgIdForPlans]);
 
   const lastWeekBlocks = useMemo(() => {
     const now = new Date();
@@ -362,22 +443,118 @@ export default function AdminScreen(props) {
     );
   }, [bloquesPlanOrdenados]);
 
-  const chatPlanId = PLAN_VALUE_TO_CHAT_PLAN_ID[planSeleccionado] || planSeleccionado;
+  const chatPlanId =
+    normalizeBlockPlanKey(planSeleccionado) ||
+    PLAN_VALUE_TO_CHAT_PLAN_ID[planSeleccionado] ||
+    planSeleccionado;
+
+  const adminNavTiles = useMemo(
+    () =>
+      [
+        {
+          key: 'perfil',
+          ion: 'person-outline',
+          title: tStr('admin_mi_perfil'),
+          sub: tStr('admin_menu_perfil_sub'),
+          onPress: () => navigation.navigate('Perfil'),
+          show: true,
+        },
+        {
+          key: 'marca',
+          ion: 'color-wand-outline',
+          title: tStr('admin_menu_marca_title'),
+          sub: tStr('admin_menu_marca_sub'),
+          onPress: () => navigation.navigate('GymConfig'),
+          show: !!canEditGymConfig,
+        },
+        {
+          key: 'fin',
+          ion: 'wallet-outline',
+          title: tStr('admin_finanzas'),
+          sub: tStr('admin_menu_finanzas_sub'),
+          onPress: () => navigation.navigate('AdminFinanzas', { tab: 'cobros' }),
+          show: !isLite,
+        },
+        {
+          key: 'mem',
+          ion: 'people-outline',
+          title: tStr('admin_miembros'),
+          sub: tStr('admin_menu_miembros_sub'),
+          onPress: () => navigation.navigate('OrgMembers'),
+          show: !isLite,
+        },
+        {
+          key: 'nov',
+          ion: 'megaphone-outline',
+          title: tStr('admin_ver_novedades'),
+          sub: tStr('admin_menu_novedades_ver_sub'),
+          onPress: () => navigation.navigate('Novedades'),
+          show: true,
+        },
+        {
+          key: 'novadm',
+          ion: 'create-outline',
+          title: tStr('admin_gestionar_novedades'),
+          sub: tStr('admin_menu_novedades_edit_sub'),
+          onPress: () => navigation.navigate('AdminNovedades'),
+          show: !isLite,
+        },
+        {
+          key: 'planes',
+          ion: 'list-outline',
+          title: tStr('admin_nav_plans'),
+          sub: tStr('admin_menu_planes_sub'),
+          onPress: () => navigation.navigate('AdminPlanes'),
+          show: !isLite,
+        },
+        {
+          key: 'abonos',
+          ion: 'ticket-outline',
+          title: tStr('admin_nav_abonos'),
+          sub: tStr('admin_menu_abonos_sub'),
+          onPress: () => navigation.navigate('AdminAbonos'),
+          show: !isLite,
+        },
+        {
+          key: 'coaches',
+          ion: 'school-outline',
+          title: tStr('admin_nav_assign_coaches'),
+          sub: tStr('admin_menu_coaches_sub'),
+          onPress: () => navigation.navigate('AsignarCoaches'),
+          show: !isLite && !!canEditGymConfig,
+        },
+      ].filter((x) => x.show),
+    [navigation, tStr, canEditGymConfig, isLite],
+  );
   const irAlChatDelPlan = async () => {
     try {
-      const { data, error } = await supabase
-        .from('chat_channels')
-        .select('id, name')
-        .eq('plan_id', chatPlanId)
-        .maybeSingle();
+      const orgChat = organization?.id || profile?.organization_id || null;
+      if (!orgChat) {
+        Alert.alert(
+          tStr('admin_alert_chat_no_channel_title'),
+          tStr('chat_hint_no_org'),
+        );
+        return;
+      }
+      const { data, error } = await supabase.rpc('ensure_chat_channel_for_org_plan', {
+        p_organization_id: orgChat,
+        p_plan_id: chatPlanId,
+      });
       if (error) throw error;
-      if (data?.id) {
-        navigation.navigate('Chat', { channelId: data.id, channelName: data.name || planSeleccionado });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row?.id) {
+        navigation.navigate('Chat', {
+          channelId: row.id,
+          channelName: row.name || planSeleccionado,
+        });
       } else {
-        Alert.alert('Sin canal', `Aún no hay canal de chat para el plan "${planSeleccionado}". Creá uno en Supabase (chat_channels).`);
+        Alert.alert(
+          tStr('admin_alert_chat_no_channel_title'),
+          tStr('admin_alert_chat_no_channel_body'),
+        );
       }
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo abrir el chat.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_alert_chat_open_fail'));
     }
   };
 
@@ -494,6 +671,44 @@ export default function AdminScreen(props) {
         },
         financeBtnText: t.buttonPrimaryText,
 
+        menuGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+          marginTop: 4,
+        },
+        menuTile: {
+          width: (width - 56) / 2,
+          minHeight: 96,
+          marginBottom: 12,
+          padding: 12,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.inputBg,
+        },
+        menuTileIconWrap: {
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          backgroundColor: hexToRgbaLocal(t.brand, 0.14),
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 8,
+        },
+        menuTileTitle: {
+          color: t.text,
+          fontSize: 14,
+          fontWeight: '700',
+        },
+        menuTileSub: {
+          color: t.subText,
+          fontSize: 11,
+          marginTop: 4,
+          lineHeight: 15,
+        },
+
         dropdown: {
           alignItems: 'center',
           backgroundColor: t.inputBg,
@@ -516,15 +731,15 @@ export default function AdminScreen(props) {
           zIndex: 50,
         },
         dropdownList: {
-          backgroundColor: '#0e252e',
-          borderColor: colors.brand.primary,
+          backgroundColor: t.boxBg,
+          borderColor: t.overlayBorder,
           borderRadius: 16,
-          borderWidth: 2,
+          borderWidth: 1,
           width: '90%',
           height: 400,
           overflow: 'hidden',
-          shadowColor: '#000000',
-          shadowOpacity: 0.55,
+          shadowColor: '#000',
+          shadowOpacity: 0.35,
           shadowRadius: 18,
           shadowOffset: { width: 0, height: 6 },
           elevation: 22,
@@ -533,11 +748,11 @@ export default function AdminScreen(props) {
           paddingVertical: 12,
           paddingHorizontal: 16,
           borderBottomWidth: 1,
-          borderBottomColor: hexToRgbaLocal(colors.brand.primary, 0.4),
-          backgroundColor: hexToRgbaLocal(colors.brand.primary, 0.12),
+          borderBottomColor: t.overlayBorder,
+          backgroundColor: hexToRgbaLocal(t.brand, 0.1),
         },
         dropdownListHeaderText: {
-          color: colors.brand.primary,
+          color: t.brand,
           fontSize: 16,
           fontWeight: '700',
         },
@@ -566,7 +781,7 @@ export default function AdminScreen(props) {
           paddingHorizontal: 12,
           paddingVertical: 10,
           alignItems: 'flex-end',
-          backgroundColor: '#0e252e',
+          backgroundColor: t.inputBg,
         },
         dropdownDoneBtn: {
           paddingHorizontal: 16,
@@ -590,9 +805,9 @@ export default function AdminScreen(props) {
         previewRow: { flexDirection: 'row', flexWrap: 'wrap' },
         previewText: { color: t.text },
         rmText: {
-          backgroundColor: hexToRgbaLocal(t.brand, 0.12),
+          backgroundColor: hexToRgbaLocal(RM_HIGHLIGHT_COLOR, 0.14),
           borderRadius: 4,
-          color: t.text,
+          color: RM_HIGHLIGHT_COLOR,
           fontWeight: 'bold',
           paddingHorizontal: 4,
         },
@@ -733,8 +948,14 @@ export default function AdminScreen(props) {
   };
 
   const crearBloques = async () => {
+    Keyboard.dismiss();
     if (!titulo.trim() || !contenido.trim()) {
-      Alert.alert('Faltan datos', 'Completá título y contenido.');
+      Alert.alert(tStr('admin_alert_block_missing_title'), tStr('admin_alert_block_missing_body'));
+      return;
+    }
+
+    if (!editingBlockId && plansDisponibles.length === 0) {
+      Alert.alert(tStr('admin_nav_plans'), tStr('admin_sin_planes_bloques'));
       return;
     }
 
@@ -751,12 +972,12 @@ export default function AdminScreen(props) {
                   .split('\n')
                   .map((s) => s.trim())
                   .filter(Boolean),
-                rmTags: detectarRM(contenido),
+                rmTags: extractRmTags(contenido),
               }
             : b,
         ),
       );
-      Alert.alert('Actualizado', 'Bloque actualizado.');
+      Alert.alert(tStr('admin_alert_updated_title'), tStr('admin_alert_updated_block'));
       setEditingBlockId(null);
       setCoachNotes('');
       setVideoLinks('');
@@ -776,8 +997,9 @@ export default function AdminScreen(props) {
       const d = new Date(fecha);
       d.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
       return {
-        coachId: myId || 'superadmin',
+        coachId: myId || undefined,
         id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        organization_id: orgIdForPlans || undefined,
 
         plan: planSeleccionado,
         fecha: d.toISOString(),
@@ -790,7 +1012,7 @@ export default function AdminScreen(props) {
           .split('\n')
           .map((s) => s.trim())
           .filter(Boolean),
-        rmTags: detectarRM(contenido),
+        rmTags: extractRmTags(contenido),
       };
     });
     await updateBloquesArray((arr) => [...arr, ...nuevos]);
@@ -806,20 +1028,23 @@ export default function AdminScreen(props) {
     if (isSA) return true;
     if (!isPartitioned) return true;
     if ((b.coachId || null) === myId) return true;
-    Alert.alert('No autorizado', `Solo el dueño del bloque puede ${accion}.`);
+    Alert.alert(
+      tStr('admin_not_authorized_title'),
+      tStr('admin_not_authorized_body').replace('{{action}}', tStr(`admin_action_${accion}`) || accion),
+    );
     return false;
   };
 
   const copiarBloque = (b) => {
     if (guardiaPropietario(b, 'copiar')) {
       setClipboardBloque(b);
-      Alert.alert('Copiado', 'Bloque copiado');
+      Alert.alert(tStr('admin_copied_title'), tStr('admin_copied_body'));
     }
   };
 
   const pegarEnHorarios = async () => {
     if (!clipboardBloque) {
-      Alert.alert('Nada para pegar', 'Copiá un bloque primero.');
+      Alert.alert(tStr('admin_nothing_to_paste_title'), tStr('admin_nothing_to_paste_body'));
       return;
     }
     if (!horariosSeleccionados.length) {
@@ -834,6 +1059,7 @@ export default function AdminScreen(props) {
       return {
         ...clipboardBloque,
         id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        organization_id: orgIdForPlans || clipboardBloque.organization_id,
         plan: planSeleccionado,
         fecha: d.toISOString(),
         fechaKey: fk,
@@ -842,7 +1068,10 @@ export default function AdminScreen(props) {
       };
     });
     await updateBloquesArray((arr) => [...arr, ...clones]);
-    Alert.alert('Pegado', `Se pegó en ${clones.length} horario(s).`);
+    Alert.alert(
+      tStr('admin_pasted_title'),
+      tStr('admin_pasted_body').replace('{{count}}', String(clones.length)),
+    );
   };
 
   const empezarEdicion = (b) => {
@@ -873,7 +1102,7 @@ export default function AdminScreen(props) {
     const [hh, mm] = moveTargetHora.split(':');
     base.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
     const iso = base.toISOString();
-    const fk = iso.split('T')[0];
+    const fk = formatYmdLocal(base);
     await updateBloquesArray((arr) =>
       arr.map((x) =>
         x.id === bloqueParaMover.id
@@ -894,7 +1123,12 @@ export default function AdminScreen(props) {
             {new Date(b.fecha).toLocaleDateString(dateLocale)} — {b.hora}
           </Text>
           {!!b.coachId && (
-            <Text style={styles.bloqueCoach}>{tStr('admin_coach')} {b.coachId}</Text>
+            <Text style={styles.bloqueCoach}>
+              {tStr('admin_coach')}{' '}
+              {b.coachDisplayName ||
+                (b.coachId === myId ? profile?.full_name || profile?.username || '' : '') ||
+                tStr('admin_coach_fallback')}
+            </Text>
           )}
         </View>
         <View style={styles.rowCol14}>
@@ -964,6 +1198,8 @@ export default function AdminScreen(props) {
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <View style={styles.panel}>
             <View style={styles.headerRow}>
@@ -975,72 +1211,34 @@ export default function AdminScreen(props) {
 
             <Text style={styles.title}>{tStr('admin_title')}</Text>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Perfil')}
-              style={styles.financeBtn}
-            >
-              <Text style={styles.financeBtnText}>👤 {tStr('admin_mi_perfil')}</Text>
-            </TouchableOpacity>
-
-            {!isLite && (
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate('AdminFinanzas', { tab: 'cobros' })
-                }
-                style={styles.financeBtn}
-              >
-                <Text style={styles.financeBtnText}>💰 {tStr('admin_finanzas')}</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Novedades')}
-              style={styles.financeBtn}
-            >
-              <Text style={styles.financeBtnText}>📢 {tStr('admin_ver_novedades')}</Text>
-            </TouchableOpacity>
-
-            {!isLite && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('AdminNovedades')}
-                style={styles.financeBtn}
-              >
-                <Text style={styles.financeBtnText}>✏️ {tStr('admin_gestionar_novedades')}</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate('GymConfig')}
-              style={styles.financeBtn}
-            >
-              <Text style={styles.financeBtnText}>
-                🏢 {isOrgCoach ? tStr('admin_mi_configuracion') : 'Configuración del gym'}
-              </Text>
-            </TouchableOpacity>
-
-            {!isLite && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('AdminPlanes')}
-                style={styles.financeBtn}
-              >
-                <Text style={styles.financeBtnText}>📋 Planes</Text>
-              </TouchableOpacity>
-            )}
-
-            {!isLite && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('AdminAbonos')}
-                style={styles.financeBtn}
-              >
-                <Text style={styles.financeBtnText}>🎫 Abonos</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.menuGrid}>
+              {adminNavTiles.map((tile) => (
+                <TouchableOpacity
+                  key={tile.key}
+                  style={styles.menuTile}
+                  onPress={tile.onPress}
+                  activeOpacity={0.88}
+                >
+                  <View style={styles.menuTileIconWrap}>
+                    <Ionicons name={tile.ion} size={20} color={t.brand} />
+                  </View>
+                  <Text style={styles.menuTileTitle}>{tile.title}</Text>
+                  <Text style={styles.menuTileSub}>{tile.sub}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {isCoach && !coachPlanActual ? (
               <View style={styles.block}>
                 <Text style={styles.label}>{tStr('admin_plan')}</Text>
                 <Text style={[styles.fs12, styles.tacSubtle, { color: t.placeholder, marginTop: 4 }]}>
                   {tStr('admin_sin_plan')}
+                </Text>
+              </View>
+            ) : plansDisponibles.length === 0 && orgIdForPlans ? (
+              <View style={styles.block}>
+                <Text style={{ color: t.subText, fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
+                  {tStr('admin_sin_planes_bloques')}
                 </Text>
               </View>
             ) : (

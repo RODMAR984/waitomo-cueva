@@ -71,7 +71,11 @@ export default function CreaCuentaStaffScreen() {
 
   const handleOAuth = async (provider) => {
     if (!signInWithProvider) {
-      Alert.alert('Error', `${provider === 'google' ? 'Google' : 'Apple'} no está disponible.`);
+      const pName = tStr(provider === 'google' ? 'login_provider_google' : 'login_provider_apple');
+      Alert.alert(
+        tStr('gym_config_alert_title_error'),
+        tStr('login_oauth_unavailable').replace('{{provider}}', pName),
+      );
       return;
     }
     setOauthSubmitting(true);
@@ -80,7 +84,11 @@ export default function CreaCuentaStaffScreen() {
       await signInWithProvider(provider);
     } catch (err) {
       await AsyncStorage.removeItem(OAUTH_SIGNUP_STAFF_KEY);
-      Alert.alert('Error', err?.message || `No se pudo continuar con ${provider === 'google' ? 'Google' : 'Apple'}.`);
+      const pName = tStr(provider === 'google' ? 'login_provider_google' : 'login_provider_apple');
+      Alert.alert(
+        tStr('gym_config_alert_title_error'),
+        err?.message || tStr('login_oauth_signin_fail').replace('{{provider}}', pName),
+      );
     } finally {
       if (mountedRef.current) setOauthSubmitting(false);
     }
@@ -92,15 +100,15 @@ export default function CreaCuentaStaffScreen() {
     const confirm = (confirmPassword || '').trim();
     const n = (fullName || '').trim();
     if (!e || !p) {
-      Alert.alert('Falta info', 'Completá email y contraseña.');
+      Alert.alert(tStr('login_alert_missing_title'), tStr('login_alert_missing_body'));
       return;
     }
     if (p.length < 6) {
-      Alert.alert('Contraseña corta', 'Usá al menos 6 caracteres.');
+      Alert.alert(tStr('creacuenta_staff_alert_short_title'), tStr('creacuenta_staff_alert_short_body'));
       return;
     }
     if (p !== confirm) {
-      Alert.alert('Las contraseñas no coinciden', 'Revisá contraseña y confirmar contraseña.');
+      Alert.alert(tStr('creacuenta_staff_alert_mismatch_title'), tStr('creacuenta_staff_alert_mismatch_body'));
       return;
     }
     try {
@@ -112,12 +120,12 @@ export default function CreaCuentaStaffScreen() {
         role: 'coach',
       });
       Alert.alert(
-        'Cuenta creada',
-        'Ya podés iniciar sesión con tu email y contraseña. Un admin puede asignarte el plan que coordinás.',
-        [{ text: 'Ir a ingresar', onPress: () => navigation.replace('Login', { forStaff: true }) }]
+        tStr('creacuenta_staff_success_title'),
+        tStr('creacuenta_staff_success_body'),
+        [{ text: tStr('creacuenta_staff_success_btn'), onPress: () => navigation.replace('Login', { forStaff: true }) }],
       );
     } catch (err) {
-      Alert.alert('Error', err?.message || 'No se pudo crear la cuenta.');
+      Alert.alert(tStr('gym_config_alert_title_error'), err?.message || tStr('creacuenta_staff_error_generic'));
     } finally {
       setSubmitting(false);
     }
@@ -210,7 +218,7 @@ export default function CreaCuentaStaffScreen() {
               <Text style={styles.subtitle}>{tStr('creacuenta_staff_subtitle')}</Text>
 
               <TextInput
-                placeholder="Nombre completo"
+                placeholder={tStr('creacuenta_staff_ph_name')}
               placeholderTextColor={t.placeholder}
               style={styles.input}
               value={fullName}
@@ -218,7 +226,7 @@ export default function CreaCuentaStaffScreen() {
                 autoCapitalize="words"
               />
               <TextInput
-              placeholder="Email"
+              placeholder={tStr('login_email')}
               placeholderTextColor={t.placeholder}
               style={styles.input}
               keyboardType="email-address"
@@ -227,7 +235,7 @@ export default function CreaCuentaStaffScreen() {
                 onChangeText={setEmail}
               />
               <PasswordInput
-                placeholder="Contraseña (mín. 6 caracteres)"
+                placeholder={tStr('creacuenta_staff_ph_password_help')}
                 placeholderTextColor={t.placeholder}
                 style={styles.input}
                 containerStyle={{ marginBottom: 12 }}
@@ -235,7 +243,7 @@ export default function CreaCuentaStaffScreen() {
                 onChangeText={setPassword}
               />
               <PasswordInput
-                placeholder="Confirmar contraseña"
+                placeholder={tStr('creacuenta_staff_ph_confirm')}
                 placeholderTextColor={t.placeholder}
                 style={styles.input}
                 containerStyle={{ marginBottom: 12 }}
@@ -244,7 +252,9 @@ export default function CreaCuentaStaffScreen() {
               />
 
               <TouchableOpacity style={styles.button} onPress={handleCrear} disabled={disabled}>
-                <Text style={styles.buttonText}>{submitting ? 'Creando...' : 'Crear cuenta con email'}</Text>
+                <Text style={styles.buttonText}>
+                  {submitting ? tStr('creacuenta_staff_creating') : tStr('creacuenta_staff_btn_create')}
+                </Text>
               </TouchableOpacity>
 
               <Text style={styles.separatorText}>{tStr('creacuenta_staff_or')}</Text>

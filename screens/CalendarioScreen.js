@@ -1,7 +1,7 @@
 // screens/CalendarioScreen.js — Waitomo Dark Only (brillo unificado en paneles / inputs)
 // Funcionalidad preservada: días, horarios, recordatorio apto médico, navegación a TrabajoDelDia
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import PropTypes from 'prop-types';
+import { useFocusEffect } from '@react-navigation/native';
 import { usePlanContext } from '../contexts/PlanContext';
 import { useAuth } from '../contexts/AuthContext';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { formatYmdLocal } from '../utils/formatYmdLocal';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
+import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
+import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
+import { evaluateCalendarioAccess, evaluateWorkoutEntitlement } from '../utils/clientWorkoutEntitlement';
 
 // ---------- helpers ----------
 const { height } = Dimensions.get('window');
@@ -40,7 +49,7 @@ const getNextDays = (start = 0, count = 30, locale = 'es') => {
     days.push({
       label: day.toLocaleDateString(dateLocale, { weekday: 'short' }),
       number: day.getDate(),
-      full: day.toISOString().split('T')[0],
+      full: formatYmdLocal(day),
     });
   }
   return days;
@@ -80,7 +89,7 @@ function planFromProfile(planActual) {
 // ---------- screen ----------
 export default function CalendarioScreen({ route, navigation }) {
   const { plan: contextPlan } = usePlanContext();
-  const { profile } = useAuth();
+  const { profile, user, organization } = useAuth();
   const params = route?.params || {};
   const planParam = params?.plan || null;
   const plan = planParam || contextPlan || planFromProfile(profile?.plan_actual);
@@ -88,12 +97,95 @@ export default function CalendarioScreen({ route, navigation }) {
   const { t: tStr, locale } = useLocale();
 
   const [diaSeleccionado, setDiaSeleccionado] = useState(getNextDays(0, 1, locale)[0].full);
+  const [abonoRow, setAbonoRow] = useState(null);
+  const [abonoLoading, setAbonoLoading] = useState(true);
+  const [freeClassGrant, setFreeClassGrant] = useState(null);
   const dateLocale = locale === 'en' ? 'en-US' : 'es-AR';
-  const days = useMemo(() => getNextDays(0, 30, locale), [locale]);
+  // Permite revisar historial reciente y próximos días.
+  const days = useMemo(() => getNextDays(-14, 45, locale), [locale]);
   const horarios = generarHorarios(plan?.nombre || 'Cross Training');
 
-  const handleReserva = (hora) => {
-    navigation.navigate('TrabajoDelDia', { fecha: diaSeleccionado, hora, plan });
+  const planCanon = useMemo(
+    () => normalizePlanKey(params.planKey) || normalizePlanKey(plan?.id) || null,
+    [params.planKey, plan?.id],
+  );
+
+  useEffect(() => {
+    if (!user?.id) {
+      setAbonoLoading(false);
+      setAbonoRow(null);
+      return undefined;
+    }
+    let alive = true;
+    (async () => {
+      setAbonoLoading(true);
+      try {
+        const row = await fetchLatestUserAbono(user.id);
+        if (alive) setAbonoRow(row);
+      } catch {
+        if (alive) setAbonoRow(null);
+      } finally {
+        if (alive) setAbonoLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        const g = await resolveFreeClassGrant(user?.id);
+        if (alive) setFreeClassGrant(g);
+      })();
+      return () => {
+        alive = false;
+      };
+    }, [user?.id]),
+  );
+
+  const orgId = organization?.id || profile?.organization_id || null;
+
+  const calendarAccess = useMemo(
+    () =>
+      evaluateCalendarioAccess({
+        planCanonKey: planCanon,
+        organizationId: orgId,
+        abonoRow,
+        abonoLoading,
+        freeClassGrant,
+      }),
+    [planCanon, orgId, abonoRow, abonoLoading, freeClassGrant],
+  );
+
+  const handleReserva = async (hora) => {
+    if (!user?.id) {
+      Alert.alert(tStr('client_trabajo_locked_title'), tStr('client_trabajo_locked_body'));
+      return;
+    }
+    const row = abonoRow ?? (await fetchLatestUserAbono(user.id));
+    const g = await resolveFreeClassGrant(user?.id);
+    const ent = evaluateWorkoutEntitlement({
+      planCanonKey: planCanon,
+      organizationId: orgId,
+      abonoRow: row,
+      abonoLoading: false,
+      freeClassGrant: g,
+      fechaYmd: diaSeleccionado,
+      horarioNormalized: normalizeSlotLabel(hora),
+    });
+    if (!ent.ok) {
+      Alert.alert(tStr('client_trabajo_locked_title'), tStr('client_trabajo_locked_body'));
+      return;
+    }
+    navigation.navigate('TrabajoDelDia', {
+      fecha: diaSeleccionado,
+      hora,
+      plan,
+      planKey: params.planKey || plan?.id,
+    });
   };
 
   const mes = useMemo(
@@ -247,9 +339,37 @@ export default function CalendarioScreen({ route, navigation }) {
           padding: 14,
         },
         volverTxt: t.buttonPrimaryText,
+        lockText: {
+          color: t.subText,
+          fontSize: 14,
+          lineHeight: 20,
+          marginBottom: 16,
+          textAlign: 'center',
+        },
+        lockCta: {
+          alignItems: 'center',
+          ...t.buttonPrimary,
+          borderRadius: 10,
+          marginTop: 10,
+          padding: 14,
+          width: '100%',
+        },
+        lockCtaTxt: t.buttonPrimaryText,
       }),
     [t],
   );
+
+  if (user?.id && abonoLoading) {
+    return (
+      <BackgroundWrapper plan={plan}>
+        <View style={[styles.panel, { marginTop: height * 0.25, minHeight: 120 }]}>
+          <ActivityIndicator size="large" color={t.brand} />
+        </View>
+      </BackgroundWrapper>
+    );
+  }
+
+  const calendarLocked = user?.id && !calendarAccess.ok;
 
   return (
     <BackgroundWrapper plan={plan}>
@@ -262,48 +382,71 @@ export default function CalendarioScreen({ route, navigation }) {
           </View>
         )}
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.weekRow}
-        >
-          {days.map((d) => {
-            const tieneContenido =
-              plan?.bloquesDelDia?.[d.full]
-              && Array.isArray(plan.bloquesDelDia[d.full])
-              && plan.bloquesDelDia[d.full].length > 0;
-
-            const seleccionado = diaSeleccionado === d.full;
-
-            return (
-              <TouchableOpacity
-                key={d.full}
-                onPress={() => setDiaSeleccionado(d.full)}
-                style={[styles.diaContainer, seleccionado && styles.diaSeleccionado]}
-              >
-                <Text style={[styles.diaLabel, seleccionado && styles.diaLabelActivo]}>
-                  {d.label.toUpperCase()}
-                </Text>
-                <View style={[styles.circuloNumero, seleccionado && styles.circuloActivo]}>
-                  <Text style={[styles.diaNumero, seleccionado && styles.diaNumeroActivo]}>
-                    {d.number}
-                  </Text>
-                </View>
-                {tieneContenido && <View style={styles.punto} />}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <Text style={styles.subtitulo}>{tStr('calendario_horarios_disponibles')}</Text>
-
-        <View style={styles.horariosContainer}>
-          {horarios.map((h) => (
-            <TouchableOpacity key={h} style={styles.horario} onPress={() => handleReserva(h)}>
-              <Text style={styles.horarioTexto}>{h}</Text>
+        {calendarLocked ? (
+          <>
+            <Text style={styles.subtitulo}>{tStr('client_calendario_locked_title')}</Text>
+            <Text style={styles.lockText}>{tStr('client_calendario_locked_body')}</Text>
+            <TouchableOpacity
+              style={styles.lockCta}
+              onPress={() => navigation.navigate('AbonosPases')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.lockCtaTxt}>{tStr('client_entitlement_go_pay')}</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+            <TouchableOpacity
+              style={styles.lockCta}
+              onPress={() => navigation.navigate('PlanSelector')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.lockCtaTxt}>{tStr('client_entitlement_go_plans')}</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.weekRow}
+            >
+              {days.map((d) => {
+                const tieneContenido =
+                  plan?.bloquesDelDia?.[d.full]
+                  && Array.isArray(plan.bloquesDelDia[d.full])
+                  && plan.bloquesDelDia[d.full].length > 0;
+
+                const seleccionado = diaSeleccionado === d.full;
+
+                return (
+                  <TouchableOpacity
+                    key={d.full}
+                    onPress={() => setDiaSeleccionado(d.full)}
+                    style={[styles.diaContainer, seleccionado && styles.diaSeleccionado]}
+                  >
+                    <Text style={[styles.diaLabel, seleccionado && styles.diaLabelActivo]}>
+                      {d.label.toUpperCase()}
+                    </Text>
+                    <View style={[styles.circuloNumero, seleccionado && styles.circuloActivo]}>
+                      <Text style={[styles.diaNumero, seleccionado && styles.diaNumeroActivo]}>
+                        {d.number}
+                      </Text>
+                    </View>
+                    {tieneContenido && <View style={styles.punto} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <Text style={styles.subtitulo}>{tStr('calendario_horarios_disponibles')}</Text>
+
+            <View style={styles.horariosContainer}>
+              {horarios.map((h) => (
+                <TouchableOpacity key={h} style={styles.horario} onPress={() => handleReserva(h)}>
+                  <Text style={styles.horarioTexto}>{h}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.volver}>
           <Text style={styles.volverTxt}>⬅ {tStr('config_back')}</Text>

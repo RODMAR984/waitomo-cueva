@@ -18,14 +18,12 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import LogoCompleto from '../components/LogoCompleto';
 import { useAuth } from '../contexts/AuthContext';
-import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { getThemeTokens } from '../theme/colors';
+import { fitengineLogoColors as fe } from '../theme/colors';
 
 export default function CreaCuentaScreen() {
-  const { isDark } = useThemeContext();
-  const t = useMemo(() => getThemeTokens(isDark ? 'dark' : 'light', null), [isDark]);
   const { t: tStr } = useLocale();
   const navigation = useNavigation();
   const route = useRoute();
@@ -70,55 +68,58 @@ export default function CreaCuentaScreen() {
         kav: {
           flex: 1,
           padding: 20,
-          paddingTop: 60,
+          paddingTop: 48,
         },
         outer: {
           flex: 1,
           justifyContent: 'center',
         },
         panel: {
-          backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
+          backgroundColor: fe.panelBg,
+          borderColor: fe.panelBorder,
           borderRadius: 16,
           borderWidth: 1,
           padding: 20,
         },
         title: {
-          color: t.text,
+          color: fe.subText,
           fontSize: 22,
           fontWeight: 'bold',
           marginBottom: 12,
           textAlign: 'center',
         },
         subtitle: {
-          color: t.subText,
+          color: fe.subText,
           fontSize: 14,
           marginBottom: 20,
           textAlign: 'center',
+          opacity: 0.95,
         },
         buttonPrimary: {
           alignItems: 'center',
-          ...t.buttonPrimary,
+          backgroundColor: fe.buttonBg,
+          borderColor: fe.buttonBorder,
           borderRadius: 10,
+          borderWidth: 1,
           padding: 14,
           marginBottom: 12,
         },
         buttonPrimaryText: {
-          ...t.buttonPrimaryText,
+          color: fe.buttonText,
           fontWeight: 'bold',
           fontSize: 15,
         },
         buttonSocial: {
           alignItems: 'center',
-          backgroundColor: t.inputBg,
+          backgroundColor: fe.inputBg,
           borderRadius: 10,
           padding: 12,
           marginBottom: 10,
           borderWidth: 1,
-          borderColor: t.overlayBorder,
+          borderColor: fe.panelBorder,
         },
         buttonSocialText: {
-          color: t.text,
+          color: fe.text,
           fontSize: 14,
           fontWeight: '600',
         },
@@ -127,12 +128,12 @@ export default function CreaCuentaScreen() {
           alignItems: 'center',
         },
         buttonSecondaryText: {
-          color: t.subText,
+          color: fe.subText,
           fontSize: 13,
           textDecorationLine: 'underline',
         },
       }),
-    [t],
+    [],
   );
 
   // EMAIL → flujo clásico
@@ -161,18 +162,30 @@ export default function CreaCuentaScreen() {
     }
   };
 
-  const handleVolverPlanes = () => {
-    navigation.navigate('PlanSelector');
+  const handleVolver = () => {
+    if (plan || abono) {
+      navigation.navigate('PlanSelector');
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('WelcomeGlobal');
   };
 
   return (
-    <BackgroundWrapper screen="Welcome">
+    <BackgroundWrapper screen="neutral">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.kav}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.outer}>
+            <View style={{ alignItems: 'center', marginBottom: 14 }}>
+              <LogoCompleto height={52} />
+              <Text style={{ color: fe.subText, fontSize: 11, marginTop: 4 }}>powered by WAITOMO</Text>
+            </View>
             <View style={styles.panel}>
               <Text style={styles.title}>{tStr('creacuenta_title')}</Text>
               <Text style={styles.subtitle}>{tStr('creacuenta_subtitle')}</Text>
@@ -198,11 +211,10 @@ export default function CreaCuentaScreen() {
                 <Text style={styles.buttonSocialText}>{tStr('creacuenta_continue_apple')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.buttonSecondary}
-                onPress={handleVolverPlanes}
-              >
-                <Text style={styles.buttonSecondaryText}>{tStr('creacuenta_back_plans')}</Text>
+              <TouchableOpacity style={styles.buttonSecondary} onPress={handleVolver}>
+                <Text style={styles.buttonSecondaryText}>
+                  {plan || abono ? tStr('creacuenta_back_plans') : tStr('creacuenta_back_welcome')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

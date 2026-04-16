@@ -24,6 +24,7 @@ import { useTrainingData } from '../contexts/TrainingDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 
 // ---------- helpers ----------
@@ -58,6 +59,7 @@ export default function PagoScreen({ navigation, route }) {
   const { createPayment, markAsPaid } = useTrainingData();
   const { user: ctxUser } = useAuth() || {};
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
 
   const defaultPlan = { id: 'admin', title: 'Pago', nombre: 'admin' };
   const { plan = defaultPlan, userData, abono, planKey: routePlanKey } = route?.params || {};
@@ -89,7 +91,7 @@ export default function PagoScreen({ navigation, route }) {
 
   const copiarDatos = async (texto) => {
     await Clipboard.setStringAsync(texto);
-    Alert.alert('📋 Copiado', `${texto}\n\nYa podés pegarlo en tu app de pago.`);
+    Alert.alert(tStr('pago_copied_title'), `${texto}\n\n${tStr('pago_copied_hint')}`);
   };
 
   const crearIntentoPago = async (metodo) => {
@@ -278,7 +280,7 @@ export default function PagoScreen({ navigation, route }) {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.panel}>
-            <Text style={styles.title}>Seleccioná tu forma de pago</Text>
+            <Text style={styles.title}>{tStr('pago_title_select')}</Text>
 
             <TouchableOpacity
               style={styles.btnPrimary}
@@ -288,7 +290,7 @@ export default function PagoScreen({ navigation, route }) {
                 try { await Linking.openURL(url); } catch {}
               }}
             >
-              <Text style={styles.btnTextOn}>💳 Pagar con MercadoPago</Text>
+              <Text style={styles.btnTextOn}>{tStr('pago_btn_mercadopago')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -298,7 +300,7 @@ export default function PagoScreen({ navigation, route }) {
                 await crearIntentoPago('transferencia');
               }}
             >
-              <Text style={styles.btnTextOn}>🏦 Transferencia bancaria</Text>
+              <Text style={styles.btnTextOn}>{tStr('pago_btn_transfer')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -308,7 +310,7 @@ export default function PagoScreen({ navigation, route }) {
                 await crearIntentoPago('cuenta_dni');
               }}
             >
-              <Text style={styles.btnTextOn}>🟡 Cuenta DNI</Text>
+              <Text style={styles.btnTextOn}>{tStr('pago_btn_dni')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -318,26 +320,26 @@ export default function PagoScreen({ navigation, route }) {
                 await crearIntentoPago('modo');
               }}
             >
-              <Text style={styles.btnTextOn}>🍋 MODO / Lemon u otras</Text>
+              <Text style={styles.btnTextOn}>{tStr('pago_btn_modo')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.btnPrimary}
               onPress={async () => {
-                Alert.alert('💬 Pagá directamente en el box con efectivo.');
+                Alert.alert(tStr('pago_cash_alert'));
                 await crearIntentoPago('efectivo');
               }}
             >
-              <Text style={styles.btnTextOn}>💵 Efectivo en el box</Text>
+              <Text style={styles.btnTextOn}>{tStr('pago_btn_cash')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.btnSecondary} onPress={handlePagoConfirmado}>
-              <Text style={styles.btnText}>✅ Ya pagué (avisar)</Text>
+              <Text style={styles.btnText}>{tStr('pago_btn_paid')}</Text>
             </TouchableOpacity>
 
             <View style={styles.volverWrap}>
               <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={styles.volverText}>⬅ Volver</Text>
+                <Text style={styles.volverText}>{tStr('pago_back')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -1,0 +1,25 @@
+FitEngine — Auth / URLs (Supabase Dashboard)
+============================================
+
+Canónico en app: https://fitengine.app (apex) para invitaciones /join.
+
+1) Site URL: https://app.fitengine.app
+
+2) Redirect URLs: incluir
+   https://fitengine.app/**
+   https://fitengine.app/join
+   (+ app.fitengine.app, waitomo://, exp, marketing como ya tengas)
+
+3) DNS (Vercel): para que el apex NO muestre Squarespace "Coming soon":
+   - Nameservers del dominio: ns1.vercel-dns.com, ns2.vercel-dns.com
+   - En Vercel → Domains → fitengine.app → DNS:
+     - A  @  → 216.198.79.1 (o IP que indique Vercel)
+     - CNAME www → …vercel-dns-….com
+   - Opcional: en el proyecto, redirect 307 de www → apex o al revés (una sola URL pública).
+
+4) GitHub html-starter: servir .well-known en el MISMO host que los links:
+   https://fitengine.app/.well-known/apple-app-site-association
+   https://fitengine.app/.well-known/assetlinks.json
+   Mantener Team ID en appID del AASA.
+
+Referencias: utils/fitengineUrls.js, app.json → expo.extra.fitengineLinksBaseUrl

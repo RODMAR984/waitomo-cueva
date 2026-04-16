@@ -5,7 +5,7 @@
 // - Estilos con useMemo + StyleSheet.create
 // - Funcionalidad preservada: autoriza superadmin, asigna/quita coaches por plan
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,9 @@ import {
   StyleSheet,
 } from 'react-native';
 import PropTypes from 'prop-types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 
 // ---------- fallback de planes (si navegación no provee) ----------
@@ -27,20 +29,76 @@ const DEFAULT_PLANS = [
   { id: 'yoga', nombre: 'Yoga' },
 ];
 
+const storageKeyCoaches = (orgId) =>
+  `waitomo_coaches_by_plan_v1_${orgId || 'none'}`;
+
 export default function AsignarCoachesScreen({ route }) {
   const { t } = useThemeContext();
-  const {
-    currentUser,
-    isSuperAdmin,
-    coachesByPlan,
-    assignCoachToPlan,
-    removeCoachFromPlan,
-  } = useAuth();
+  const { t: tStr } = useLocale();
+  const { currentUser, isSuperAdmin, organization, organizationsOwnedByUser } = useAuth();
 
   const plans = route?.params?.plans || DEFAULT_PLANS;
 
-  // solo superadmin puede gestionar asignaciones
-  const autorizado = isSuperAdmin?.(currentUser?.id);
+  const [coachesByPlan, setCoachesByPlan] = useState({});
+
+  const orgId = organization?.id;
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!orgId) {
+        if (alive) setCoachesByPlan({});
+        return;
+      }
+      try {
+        const raw = await AsyncStorage.getItem(storageKeyCoaches(orgId));
+        if (!alive) return;
+        const parsed = raw ? JSON.parse(raw) : {};
+        setCoachesByPlan(typeof parsed === 'object' && parsed ? parsed : {});
+      } catch {
+        if (alive) setCoachesByPlan({});
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [orgId]);
+
+  const assignCoachToPlan = useCallback(
+    async (planId, userId) => {
+      const uid = (userId || '').trim();
+      if (!uid || !planId || !orgId) return;
+      setCoachesByPlan((prev) => {
+        const list = [...(prev[planId] || [])];
+        if (list.includes(uid)) return prev;
+        const next = { ...prev, [planId]: [...list, uid] };
+        AsyncStorage.setItem(storageKeyCoaches(orgId), JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+    },
+    [orgId],
+  );
+
+  const removeCoachFromPlan = useCallback(
+    async (planId, userId) => {
+      const uid = (userId || '').trim();
+      if (!uid || !planId || !orgId) return;
+      setCoachesByPlan((prev) => {
+        const list = (prev[planId] || []).filter((x) => x !== uid);
+        const next = { ...prev, [planId]: list };
+        AsyncStorage.setItem(storageKeyCoaches(orgId), JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+    },
+    [orgId],
+  );
+
+  const isOwnerOfCurrentOrg = (organizationsOwnedByUser || []).some(
+    (o) => o?.id === organization?.id,
+  );
+
+  const autorizado =
+    !!isSuperAdmin?.(currentUser?.id) || (!!organization?.id && isOwnerOfCurrentOrg);
 
   const [inputByPlan, setInputByPlan] = useState({});
 
@@ -156,7 +214,7 @@ export default function AsignarCoachesScreen({ route }) {
         {/* fila de alta */}
         <View style={styles.row}>
           <TextInput
-            placeholder="userId (email, uid, etc.)"
+            placeholder={tStr('assign_coach_ph_user')}
             placeholderTextColor={placeholderColor}
             value={inputByPlan[item.id] || ''}
             onChangeText={(t0) =>
@@ -165,13 +223,13 @@ export default function AsignarCoachesScreen({ route }) {
             style={styles.input}
           />
           <TouchableOpacity style={styles.addBtn} onPress={() => onAdd(item.id)}>
-            <Text style={styles.addTxt}>Agregar</Text>
+            <Text style={styles.addTxt}>{tStr('assign_coach_add')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* listado de coaches */}
         {list.length === 0 ? (
-          <Text style={styles.emptyText}>Sin coaches asignados.</Text>
+          <Text style={styles.emptyText}>{tStr('assign_coach_empty')}</Text>
         ) : (
           <FlatList
             data={list}
@@ -183,7 +241,7 @@ export default function AsignarCoachesScreen({ route }) {
                   style={styles.delBtn}
                   onPress={() => removeCoachFromPlan(item.id, uid)}
                 >
-                  <Text style={styles.delTxt}>Quitar</Text>
+                  <Text style={styles.delTxt}>{tStr('assign_coach_remove')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -196,7 +254,7 @@ export default function AsignarCoachesScreen({ route }) {
   if (!autorizado) {
     return (
       <View style={styles.center}>
-        <Text style={styles.centerMsg}>No autorizado</Text>
+        <Text style={styles.centerMsg}>{tStr('assign_coach_unauthorized')}</Text>
       </View>
     );
   }

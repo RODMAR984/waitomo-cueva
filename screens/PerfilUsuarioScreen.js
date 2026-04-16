@@ -95,11 +95,11 @@ const PerfilUsuarioScreen = () => {
   }, [profile?.avatar_url]);
 
   const sexoLabel = useMemo(() => {
-    if (!sexo) return 'No especificado';
-    if (sexo === 'M') return 'Masculino';
-    if (sexo === 'F') return 'Femenino';
+    if (!sexo) return tStr('perfil_sex_unspecified');
+    if (sexo === 'M') return tStr('perfil_sex_m');
+    if (sexo === 'F') return tStr('perfil_sex_f');
     return sexo;
-  }, [sexo]);
+  }, [sexo, tStr]);
 
   const aptoOk = !!profile?.apto_medico_url;
 
@@ -110,10 +110,7 @@ const PerfilUsuarioScreen = () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permiso requerido',
-          'Necesitamos acceso a tu galería para cambiar la foto de perfil.'
-        );
+        Alert.alert(tStr('perfil_perm_gallery_title'), tStr('perfil_perm_gallery_body'));
         return;
       }
 
@@ -136,18 +133,15 @@ const PerfilUsuarioScreen = () => {
       const updatedUri = await uploadAvatar(uri, base64);
       if (updatedUri) {
         setAvatarUri(updatedUri);
-        Alert.alert('Listo', 'Tu foto de perfil fue actualizada.');
+        Alert.alert(tStr('perfil_avatar_ok_title'), tStr('perfil_avatar_ok_body'));
       } else {
         setAvatarUri(profile?.avatar_url || null);
-        Alert.alert(
-          'No se pudo subir',
-          'Revisá tu conexión e intentá de nuevo. La foto no se guardó en el servidor.'
-        );
+        Alert.alert(tStr('perfil_avatar_fail_title'), tStr('perfil_avatar_fail_body'));
       }
     } catch (error) {
       console.log('handlePickAvatar error:', error);
       setAvatarUri(profile?.avatar_url || null);
-      Alert.alert('Error', 'No se pudo actualizar la foto. Intentá de nuevo.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('perfil_avatar_error'));
     }
   };
 
@@ -157,7 +151,7 @@ const PerfilUsuarioScreen = () => {
   // ---------------------------------------------
   const handlePickApto = async () => {
     if (!profile?.id) {
-      Alert.alert('Perfil', 'No se encontró un usuario logueado.');
+      Alert.alert(tStr('perfil_no_user_title'), tStr('perfil_no_user_body'));
       return;
     }
 
@@ -177,13 +171,13 @@ const PerfilUsuarioScreen = () => {
       });
 
       if (!updated) {
-        throw new Error('No se pudo guardar el apto médico (flag).');
+        throw new Error(tStr('perfil_apto_flag_error'));
       }
 
-      Alert.alert('Listo', 'Apto médico marcado como cargado.');
+      Alert.alert(tStr('perfil_avatar_ok_title'), tStr('perfil_apto_ok'));
     } catch (e) {
       console.log('handlePickApto error:', e?.message || e, e);
-      Alert.alert('Error', 'No se pudo registrar el apto médico. Intentá de nuevo.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('perfil_apto_error'));
     } finally {
       setAptoSaving(false);
     }
@@ -194,7 +188,7 @@ const PerfilUsuarioScreen = () => {
   // ---------------------------------------------
   const handleGuardarCambios = async () => {
     if (!profile?.id) {
-      Alert.alert('Perfil', 'No se encontró un usuario logueado.');
+      Alert.alert(tStr('perfil_no_user_title'), tStr('perfil_no_user_body'));
       return;
     }
 
@@ -216,13 +210,13 @@ const PerfilUsuarioScreen = () => {
       const updated = await updateProfile(payload);
 
       if (!updated) {
-        throw new Error('No se pudo actualizar el perfil.');
+        throw new Error(tStr('perfil_update_error'));
       }
 
-      Alert.alert('Listo', 'Perfil actualizado correctamente.');
+      Alert.alert(tStr('perfil_avatar_ok_title'), tStr('perfil_saved_ok'));
     } catch (err) {
       console.log('Error handleGuardarCambios PerfilUsuarioScreen:', err);
-      Alert.alert('Error', 'No se pudo guardar el perfil. Intentá de nuevo.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('perfil_save_fail'));
     } finally {
       setSaving(false);
     }
@@ -290,10 +284,10 @@ const PerfilUsuarioScreen = () => {
   const handleLogout = () => {
     // eslint-disable-next-line no-console
     console.log('🟡 Perfil.handleLogout: Alert de confirmación');
-    Alert.alert('Cerrar sesión', '¿Seguro que querés salir de tu cuenta?', [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(tStr('perfil_logout_title'), tStr('perfil_logout_message'), [
+      { text: tStr('common_cancel'), style: 'cancel' },
       {
-        text: 'Salir',
+        text: tStr('perfil_logout_confirm'),
         style: 'destructive',
         onPress: () => {
           // ⚠️ Igual que en ClientScreen: no esperamos a que termine logout(), navegamos ya.
@@ -303,7 +297,7 @@ const PerfilUsuarioScreen = () => {
             logout?.();
           } catch (error) {
             console.log('Error al cerrar sesión desde PerfilUsuarioScreen:', error);
-            Alert.alert('Error', 'No se pudo cerrar sesión del todo, pero te vamos a sacar igual.');
+            Alert.alert(tStr('gym_config_alert_title_error'), tStr('perfil_logout_error'));
           }
           // eslint-disable-next-line no-console
           console.log('✅ Perfil.handleLogout: llamando resetToWelcome() inmediatamente');

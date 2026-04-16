@@ -17,10 +17,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { useAuth } from '../contexts/AuthContext';
+import { formatYmdLocal } from '../utils/formatYmdLocal';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { clearFreeClassGrant, saveFreeClassGrant } from '../utils/freeClassGrantStorage';
+import { insertTrialClassGrantServer } from '../utils/trialClassGrantSupabase';
+import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../utils/freeClassPolicy';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -35,27 +42,86 @@ export default function FreeClassRequestScreen({ route, navigation }) {
   const defaultPlan = { nombre: 'Clase Gratuita' };
   const { plan = defaultPlan } = route?.params || {};
   const { t } = useThemeContext();
-  const { t: tStr } = useLocale();
+  const { t: tStr, locale } = useLocale();
+  const { organization, profile, user } = useAuth() || {};
 
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [selectedHour, setSelectedHour] = useState(null);
+  const [sessionDate, setSessionDate] = useState(() => {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    return d;
+  });
+  const [androidPickerOpen, setAndroidPickerOpen] = useState(false);
 
   const hours = useMemo(
     () => Array.from({ length: 13 }, (_, i) => `${(8 + i).toString().padStart(2, '0')}:00`),
     [],
   );
 
-  const handleRequest = () => {
+  const minDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const sessionYmd = useMemo(() => formatYmdLocal(sessionDate), [sessionDate]);
+
+  const handleRequest = async () => {
     if (!name.trim() || !contact.trim() || !selectedHour) {
-      Alert.alert('Faltan datos', 'Completá todo y elegí un horario.');
+      Alert.alert(tStr('freeclass_alert_missing_title'), tStr('freeclass_alert_missing_body'));
       return;
     }
 
-    Alert.alert(
-      '✅ Reserva confirmada',
-      `Tu clase gratuita quedó agendada a las ${selectedHour}.\n\nNos comunicaremos con vos. También podés acercarte unos minutos antes al box o escribirnos al 2268635566.`,
-    );
+    const todayYmd = formatYmdLocal(new Date());
+    if (!sessionYmd || sessionYmd < todayYmd) {
+      Alert.alert(tStr('freeclass_alert_date_title'), tStr('freeclass_alert_date_body'));
+      return;
+    }
+
+    const planCanon =
+      normalizePlanKey(plan?.id || plan?.code || plan?.planKey || plan?.nombre) || 'cross';
+    const orgId = organization?.id || profile?.organization_id || null;
+    await saveFreeClassGrant({
+      planCanonId: planCanon,
+      fechaYmd: sessionYmd,
+      slotLabel: selectedHour,
+      organizationId: orgId,
+    });
+
+    if (user?.id && orgId) {
+      const note = `${name.trim()} — ${contact.trim()}`;
+      const serverRes = await insertTrialClassGrantServer({
+        userId: user.id,
+        organizationId: orgId,
+        planCanonId: planCanon,
+        fechaYmd: sessionYmd,
+        slotLabel: selectedHour,
+        contactNote: note,
+      });
+      if (!serverRes.ok) {
+        await clearFreeClassGrant();
+        // eslint-disable-next-line no-console
+        console.warn('trial_class_grants book', serverRes.error?.message || serverRes.reason);
+        Alert.alert(tStr('freeclass_book_error_title'), tStr('freeclass_book_error_body'));
+        return;
+      }
+    }
+
+    const loc = locale === 'en' ? 'en-US' : 'es-AR';
+    const dateLabel = sessionDate.toLocaleDateString(loc, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const hStr = String(FREE_CLASS_CANCEL_NOTICE_HOURS);
+    const body = tStr('freeclass_success_body')
+      .replace('{{hour}}', selectedHour)
+      .replace('{{date}}', dateLabel)
+      .replace(/\{\{hours\}\}/g, hStr);
+    Alert.alert(tStr('freeclass_success_title'), body);
 
     navigation.goBack();
   };
@@ -99,6 +165,14 @@ export default function FreeClassRequestScreen({ route, navigation }) {
           gap: 10,
           justifyContent: 'center',
           marginBottom: 20,
+        },
+        fieldLabel: {
+          color: t.subText ?? t.placeholder,
+          fontSize: 13,
+          fontWeight: '700',
+          marginBottom: 8,
+          textAlign: 'left',
+          width: '100%',
         },
         hourText: {
           color: t.text,
@@ -149,9 +223,22 @@ export default function FreeClassRequestScreen({ route, navigation }) {
           marginBottom: 24,
           textAlign: 'center',
         },
+        datePicker: {
+          width: '100%',
+        },
+        policyHint: {
+          color: t.placeholder,
+          fontSize: 12,
+          lineHeight: 18,
+          marginTop: 6,
+          marginBottom: 8,
+          textAlign: 'center',
+        },
       }),
     [t],
   );
+
+  const hoursNotice = String(FREE_CLASS_CANCEL_NOTICE_HOURS);
 
   return (
     <BackgroundWrapper fondo={getRandomGeneralImage()}>
@@ -162,11 +249,11 @@ export default function FreeClassRequestScreen({ route, navigation }) {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.panel}>
-            <Text style={styles.title}>{tStr('freeclass_title')}</Text>
+            <Text style={styles.title}>{tStr('freeclass_screen_title')}</Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Tu nombre completo"
+              placeholder={tStr('freeclass_ph_name')}
               placeholderTextColor={t.placeholder}
               value={name}
               onChangeText={setName}
@@ -174,12 +261,60 @@ export default function FreeClassRequestScreen({ route, navigation }) {
 
             <TextInput
               style={styles.input}
-              placeholder="Mail o teléfono"
+              placeholder={tStr('freeclass_ph_contact')}
               placeholderTextColor={t.placeholder}
               value={contact}
               onChangeText={setContact}
               keyboardType="default"
             />
+
+            <Text style={styles.fieldLabel}>{tStr('freeclass_pick_date_title')}</Text>
+            {Platform.OS === 'android' ? (
+              <>
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={() => setAndroidPickerOpen(true)}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.confirmText}>{sessionYmd}</Text>
+                </TouchableOpacity>
+                {androidPickerOpen ? (
+                  <DateTimePicker
+                    value={sessionDate}
+                    mode="date"
+                    display="calendar"
+                    minimumDate={minDate}
+                    onChange={(_, date) => {
+                      setAndroidPickerOpen(false);
+                      if (date) {
+                        const d = new Date(date);
+                        d.setHours(12, 0, 0, 0);
+                        setSessionDate(d);
+                      }
+                    }}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <DateTimePicker
+                value={sessionDate}
+                mode="date"
+                display="spinner"
+                minimumDate={minDate}
+                onChange={(_, date) => {
+                  if (!date) return;
+                  const d = new Date(date);
+                  d.setHours(12, 0, 0, 0);
+                  setSessionDate(d);
+                }}
+                style={styles.datePicker}
+              />
+            )}
+            <Text style={[styles.fieldLabel, { marginTop: 10, fontWeight: '600' }]}>
+              {tStr('freeclass_pick_date_hint').replace(/\{\{hours\}\}/g, hoursNotice)}
+            </Text>
+
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>{tStr('freeclass_title')}</Text>
 
             <View style={styles.hourGrid}>
               {hours.map((h) => {
@@ -195,6 +330,10 @@ export default function FreeClassRequestScreen({ route, navigation }) {
                 );
               })}
             </View>
+
+            <Text style={styles.policyHint}>
+              {tStr('freeclass_policy_footer').replace(/\{\{hours\}\}/g, hoursNotice)}
+            </Text>
 
             <TouchableOpacity onPress={handleRequest} style={styles.confirmButton}>
               <Text style={styles.confirmText}>{tStr('freeclass_confirm')}</Text>

@@ -23,12 +23,14 @@ import { useNavigation } from '@react-navigation/native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { navigationRef } from '../navigationRef';
 
 const SeguridadScreen = () => {
   const navigation = useNavigation();
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
   const { profile, session, changePassword, changeEmail, deleteAccount } = useAuth();
 
   // ----- ESTADOS CAMBIO DE CONTRASEÑA -----
@@ -54,23 +56,17 @@ const handleChangePassword = async () => {
     console.log('=== INICIO handleChangePassword ===');
     
     if (!currentPassword || !newPassword || !repeatPassword) {
-      Alert.alert('Datos incompletos', 'Completá todos los campos de contraseña.');
+      Alert.alert(tStr('security_alert_incomplete_pass_title'), tStr('security_alert_incomplete_pass_body'));
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert(
-        'Contraseña corta',
-        'La nueva contraseña debe tener al menos 6 caracteres.',
-      );
+      Alert.alert(tStr('security_alert_short_pass_title'), tStr('security_alert_short_pass_body'));
       return;
     }
 
     if (newPassword !== repeatPassword) {
-      Alert.alert(
-        'No coinciden',
-        'La nueva contraseña y su repetición no coinciden.',
-      );
+      Alert.alert(tStr('security_alert_mismatch_title'), tStr('security_alert_mismatch_body'));
       return;
     }
 
@@ -81,7 +77,7 @@ const handleChangePassword = async () => {
       const result = await changePassword(currentPassword, newPassword);
       console.log('✅ changePassword retornó:', result);
       
-      Alert.alert('✅ ¡Listo!', 'Tu contraseña fue actualizada correctamente.');
+      Alert.alert(tStr('security_success_title'), tStr('security_success_password_body'));
       setCurrentPassword('');
       setNewPassword('');
       setRepeatPassword('');
@@ -92,14 +88,14 @@ const handleChangePassword = async () => {
       // Mensajes más amigables
       let mensaje = error.message;
       if (error.message.includes('Tiempo de espera')) {
-        mensaje = 'El servidor tardó demasiado en responder. Intentá de nuevo.';
+        mensaje = tStr('security_err_timeout');
       } else if (error.message.includes('Contraseña actual incorrecta')) {
-        mensaje = 'La contraseña actual es incorrecta.';
+        mensaje = tStr('security_err_wrong_password');
       } else if (error.message.includes('Invalid API key')) {
-        mensaje = 'Error de configuración. Contactá al administrador.';
+        mensaje = tStr('security_err_config');
       }
-      
-      Alert.alert('❌ Error', mensaje);
+
+      Alert.alert(tStr('security_error_title'), mensaje);
     } finally {
       console.log('🏁 FINALLY - Limpiando estado');
       setChangingPass(false);
@@ -113,15 +109,12 @@ const handleChangePassword = async () => {
     console.log('=== INICIO handleChangeEmail ===');
     
     if (!newEmail || !emailPassword) {
-      Alert.alert(
-        'Datos incompletos',
-        'Completá el nuevo email y tu contraseña actual.',
-      );
+      Alert.alert(tStr('security_alert_incomplete_email_title'), tStr('security_alert_incomplete_email_body'));
       return;
     }
 
     if (!newEmail.includes('@')) {
-      Alert.alert('Email inválido', 'Ingresá un email válido.');
+      Alert.alert(tStr('security_alert_invalid_email_title'), tStr('security_alert_invalid_email_body'));
       return;
     }
 
@@ -131,7 +124,7 @@ const handleChangePassword = async () => {
       
       await changeEmail(newEmail, emailPassword);
       
-      Alert.alert('✅ ¡Listo!', 'Tu email de acceso fue actualizado.');
+      Alert.alert(tStr('security_success_title'), tStr('security_success_email_body'));
       setNewEmail('');
       setEmailPassword('');
     } catch (error) {
@@ -140,16 +133,16 @@ const handleChangePassword = async () => {
       // Mensajes más amigables
       let mensaje = error.message;
       if (error.message.includes('Tiempo de espera')) {
-        mensaje = 'El servidor tardó demasiado en responder. Intentá de nuevo.';
+        mensaje = tStr('security_err_timeout');
       } else if (error.message.includes('Contraseña actual incorrecta')) {
-        mensaje = 'La contraseña actual es incorrecta.';
+        mensaje = tStr('security_err_wrong_password');
       } else if (error.message.includes('already registered')) {
-        mensaje = 'Este email ya está en uso por otro usuario.';
+        mensaje = tStr('security_err_email_in_use');
       } else if (error.message.includes('confirmation')) {
-        mensaje = 'Revisá tu bandeja de entrada para confirmar el nuevo email.';
+        mensaje = tStr('security_err_email_confirm');
       }
-      
-      Alert.alert('❌ Error', mensaje);
+
+      Alert.alert(tStr('security_error_title'), mensaje);
     } finally {
       console.log('🏁 FINALLY email - Limpiando estado');
       setChangingEmail(false);
@@ -173,12 +166,12 @@ const handleChangePassword = async () => {
 
   const handleEliminarCuenta = () => {
     Alert.alert(
-      'Eliminar cuenta',
-      'Se borrarán todos tus datos (perfil, planes, historial) y no podrás volver a entrar con esta cuenta. ¿Estás seguro?',
+      tStr('security_delete_title'),
+      tStr('security_delete_message'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: tStr('common_cancel'), style: 'cancel' },
         {
-          text: 'Sí, eliminar mi cuenta',
+          text: tStr('security_delete_confirm'),
           style: 'destructive',
           onPress: async () => {
             setDeletingAccount(true);
@@ -186,8 +179,8 @@ const handleChangePassword = async () => {
               await deleteAccount?.();
               resetToWelcome();
             } catch (e) {
-              const msg = e?.message || 'No se pudo eliminar la cuenta. Probá de nuevo o contactá soporte.';
-              Alert.alert('Error', msg);
+              const msg = e?.message || tStr('security_delete_fail');
+              Alert.alert(tStr('gym_config_alert_title_error'), msg);
             } finally {
               setDeletingAccount(false);
             }
@@ -304,10 +297,8 @@ const handleChangePassword = async () => {
       >
         <ScrollView contentContainerStyle={styles.container}>
           <View style={styles.panel}>
-            <Text style={styles.title}>Seguridad de la cuenta</Text>
-            <Text style={styles.subtitle}>
-              Desde acá podés cambiar tu contraseña y tu email de acceso.
-            </Text>
+            <Text style={styles.title}>{tStr('security_screen_title')}</Text>
+            <Text style={styles.subtitle}>{tStr('security_subtitle')}</Text>
 
             {/* ================== CAMBIO DE CONTRASEÑA ================== */}
             <View style={styles.section}>
@@ -317,35 +308,35 @@ const handleChangePassword = async () => {
                   size={18}
                   color={t.text}
                 />
-                <Text style={styles.sectionTitle}>Cambiar contraseña</Text>
+                <Text style={styles.sectionTitle}>{tStr('security_section_password')}</Text>
               </View>
 
-              <Text style={styles.label}>Contraseña actual</Text>
+              <Text style={styles.label}>{tStr('security_label_current_password')}</Text>
               <PasswordInput
                 style={styles.input}
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                placeholder="Tu contraseña actual"
+                placeholder={tStr('security_ph_current_password')}
                 placeholderTextColor={t.placeholder}
                 containerStyle={{ marginBottom: 12 }}
               />
 
-              <Text style={styles.label}>Nueva contraseña</Text>
+              <Text style={styles.label}>{tStr('security_label_new_password')}</Text>
               <PasswordInput
                 style={styles.input}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="Nueva contraseña"
+                placeholder={tStr('security_ph_new_password')}
                 placeholderTextColor={t.placeholder}
                 containerStyle={{ marginBottom: 12 }}
               />
 
-              <Text style={styles.label}>Repetir nueva contraseña</Text>
+              <Text style={styles.label}>{tStr('security_label_repeat_password')}</Text>
               <PasswordInput
                 style={styles.input}
                 value={repeatPassword}
                 onChangeText={setRepeatPassword}
-                placeholder="Repetí la nueva contraseña"
+                placeholder={tStr('security_ph_repeat_password')}
                 placeholderTextColor={t.placeholder}
                 containerStyle={{ marginBottom: 12 }}
               />
@@ -356,7 +347,7 @@ const handleChangePassword = async () => {
                 disabled={changingPass}
               >
                 <Text style={styles.primaryButtonText}>
-                  {changingPass ? 'Actualizando...' : 'Actualizar contraseña'}
+                  {changingPass ? tStr('security_btn_updating') : tStr('security_btn_update_password')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -369,33 +360,33 @@ const handleChangePassword = async () => {
                   size={18}
                   color={t.text}
                 />
-                <Text style={styles.sectionTitle}>Cambiar email de acceso</Text>
+                <Text style={styles.sectionTitle}>{tStr('security_section_email')}</Text>
               </View>
 
               <Text style={styles.currentEmail}>
-                Email actual:{' '}
+                {tStr('security_current_email_label')}{' '}
                 <Text style={styles.currentEmailStrong}>
                   {currentEmail || '—'}
                 </Text>
               </Text>
 
-              <Text style={styles.label}>Nuevo email</Text>
+              <Text style={styles.label}>{tStr('security_label_new_email')}</Text>
               <TextInput
                 style={styles.input}
                 value={newEmail}
                 onChangeText={setNewEmail}
-                placeholder="Nuevo email"
+                placeholder={tStr('security_ph_new_email')}
                 placeholderTextColor={t.placeholder}
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
 
-              <Text style={styles.label}>Contraseña actual</Text>
+              <Text style={styles.label}>{tStr('security_label_current_password')}</Text>
               <PasswordInput
                 style={styles.input}
                 value={emailPassword}
                 onChangeText={setEmailPassword}
-                placeholder="Tu contraseña actual"
+                placeholder={tStr('security_ph_current_password')}
                 placeholderTextColor={t.placeholder}
                 containerStyle={{ marginBottom: 12 }}
               />
@@ -406,7 +397,7 @@ const handleChangePassword = async () => {
                 disabled={changingEmail}
               >
                 <Text style={styles.secondaryButtonText}>
-                  {changingEmail ? 'Actualizando...' : 'Actualizar email'}
+                  {changingEmail ? tStr('security_btn_updating') : tStr('security_btn_update_email')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -415,11 +406,9 @@ const handleChangePassword = async () => {
             <View style={styles.deleteSection}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="trash-outline" size={18} color={t.text} />
-                <Text style={styles.sectionTitle}>Eliminar cuenta</Text>
+                <Text style={styles.sectionTitle}>{tStr('security_section_delete')}</Text>
               </View>
-              <Text style={[styles.subtitle, { marginBottom: 8 }]}>
-                Se borrarán todos tus datos y no podrás volver a entrar con esta cuenta.
-              </Text>
+              <Text style={[styles.subtitle, { marginBottom: 8 }]}>{tStr('security_delete_hint')}</Text>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={handleEliminarCuenta}
@@ -431,7 +420,7 @@ const handleChangePassword = async () => {
                   <Ionicons name="trash-outline" size={18} color={t.subText} />
                 )}
                 <Text style={styles.deleteButtonText}>
-                  {deletingAccount ? 'Eliminando...' : 'Eliminar mi cuenta'}
+                  {deletingAccount ? tStr('security_deleting') : tStr('security_btn_delete_account')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -446,7 +435,7 @@ const handleChangePassword = async () => {
                 size={18}
                 color={t.primaryText}
               />
-              <Text style={styles.backButtonText}>Volver</Text>
+              <Text style={styles.backButtonText}>{tStr('common_back')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

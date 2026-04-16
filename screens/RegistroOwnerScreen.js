@@ -96,11 +96,11 @@ export default function RegistroOwnerScreen() {
     const p = password || '';
     const n = (nombre || '').trim();
     if (!e || !p || !n) {
-      Alert.alert(tStr('registro_owner_falta') || 'Faltan datos', tStr('registro_owner_completa') || 'Completá email, contraseña y nombre.');
+      Alert.alert(tStr('registro_owner_falta'), tStr('registro_owner_completa'));
       return;
     }
     if (p.length < 6) {
-      Alert.alert(tStr('registro_owner_pass_corta') || 'Contraseña corta', 'Mínimo 6 caracteres.');
+      Alert.alert(tStr('registro_owner_pass_corta'), tStr('registro_owner_pass_min_body'));
       return;
     }
     setLoading(true);
@@ -119,7 +119,7 @@ export default function RegistroOwnerScreen() {
         },
       });
       if (authError) throw authError;
-      if (!authData?.user) throw new Error('No se creó el usuario.');
+      if (!authData?.user) throw new Error(tStr('registro_owner_error_no_user'));
       navigation.replace('ConfiguraTuEspacio', { email: e, fullName: n });
     } catch (err) {
       const msg = String(err?.message || '');
@@ -131,19 +131,15 @@ export default function RegistroOwnerScreen() {
         msg.toLowerCase().includes('registrad');
 
       if (alreadyExists) {
-        Alert.alert(
-          'Email ya registrado',
-          'Este email ya existe. Ingresá con tu cuenta.',
-          [
-            { text: 'Cancelar', style: 'cancel' },
-            {
-              text: 'Ir a login',
-              onPress: () => navigation.navigate('Login', { forStaff: true, prefillEmail: e }),
-            },
-          ],
-        );
+        Alert.alert(tStr('registro_owner_email_taken_title'), tStr('registro_owner_email_taken_body'), [
+          { text: tStr('common_cancel'), style: 'cancel' },
+          {
+            text: tStr('registro_owner_go_login'),
+            onPress: () => navigation.navigate('Login', { forStaff: true, prefillEmail: e }),
+          },
+        ]);
       } else {
-        Alert.alert('Error', err?.message || 'No se pudo crear la cuenta.');
+        Alert.alert(tStr('gym_config_alert_title_error'), err?.message || tStr('registro_owner_error_generic'));
       }
     } finally {
       setLoading(false);
@@ -167,14 +163,12 @@ export default function RegistroOwnerScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.centerWrap}>
-            <Text style={styles.title}>{tStr('registro_owner_titulo') || 'Crear cuenta (gym / coach)'}</Text>
-            <Text style={styles.subtitle}>
-              {tStr('registro_owner_subtitle') || 'Después configurás tu espacio (nombre, tipo, logo).'}
-            </Text>
+            <Text style={styles.title}>{tStr('registro_owner_titulo')}</Text>
+            <Text style={styles.subtitle}>{tStr('registro_owner_subtitle')}</Text>
 
             <TextInput
               style={styles.input}
-              placeholder={tStr('login_email') || 'Email'}
+              placeholder={tStr('login_email')}
               placeholderTextColor={fe.placeholder}
               value={email}
               onChangeText={setEmail}
@@ -182,7 +176,7 @@ export default function RegistroOwnerScreen() {
               autoCapitalize="none"
             />
             <PasswordInput
-              placeholder={tStr('login_password') || 'Contraseña'}
+              placeholder={tStr('login_password')}
               placeholderTextColor={fe.placeholder}
               style={styles.input}
               containerStyle={{ marginBottom: 10 }}
@@ -191,7 +185,7 @@ export default function RegistroOwnerScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder={tStr('perfil_nombre') || 'Nombre completo'}
+              placeholder={tStr('perfil_nombre')}
               placeholderTextColor={fe.placeholder}
               value={nombre}
               onChangeText={setNombre}
@@ -199,12 +193,12 @@ export default function RegistroOwnerScreen() {
 
             <TouchableOpacity style={styles.btn} onPress={handleRegistro} disabled={loading}>
               <Text style={styles.btnText}>
-                {loading ? (tStr('login_entering') || '...') : (tStr('registro_owner_siguiente') || 'Siguiente')}
+                {loading ? tStr('login_entering') : tStr('registro_owner_siguiente')}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.linkWrap} onPress={() => navigation.navigate('WelcomeGlobal')}>
-              <Text style={styles.linkText}>{tStr('welcome_soy_cliente') || 'Soy cliente'}</Text>
+              <Text style={styles.linkText}>{tStr('welcome_soy_cliente')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableWithoutFeedback>

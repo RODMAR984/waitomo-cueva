@@ -1,6 +1,6 @@
 // ChatCanalesScreen — Lista de canales de chat (por plan). RLS filtra según rol y plan_actual.
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,19 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
-import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
+import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
+import { evaluateCalendarioAccess, evaluateClientCommunityAccess } from '../utils/clientWorkoutEntitlement';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -29,34 +34,135 @@ const hexToRgba = (hex, alpha = 1) => {
 
 export default function ChatCanalesScreen() {
   const navigation = useNavigation();
+  const { t: tStr } = useLocale();
+  const { profile, activePlanId, organization, user, hasStaffMembership } = useAuth() || {};
+  const orgId = organization?.id ?? profile?.organization_id ?? null;
   const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [abonoRow, setAbonoRow] = useState(null);
+  const [abonoLoading, setAbonoLoading] = useState(true);
+  const [freeClassGrant, setFreeClassGrant] = useState(null);
+
+  const dbPlan = (profile?.plan_actual ?? profile?.planActual ?? '').trim();
+  const hasDbPlan = !!dbPlan;
+  const hasLocalPlan = !!(activePlanId && String(activePlanId).trim());
+
+  const planCanon = useMemo(() => normalizePlanKey(profile?.plan_actual ?? profile?.planActual), [
+    profile?.plan_actual,
+    profile?.planActual,
+  ]);
+
+  const communityAccess = useMemo(
+    () =>
+      evaluateClientCommunityAccess({
+        planCanonKey: planCanon,
+        organizationId: orgId,
+        abonoRow,
+        abonoLoading,
+        freeClassGrant,
+      }),
+    [planCanon, orgId, abonoRow, abonoLoading, freeClassGrant],
+  );
+
+  const showAllChatChannels = useMemo(() => {
+    if (hasStaffMembership) return true;
+    const r = String(profile?.role || '').toLowerCase();
+    return r === 'owner' || r === 'admin' || r === 'superadmin' || r === 'coach';
+  }, [hasStaffMembership, profile?.role]);
 
   useEffect(() => {
     AsyncStorage.setItem('waitomo_chat_last_open', new Date().toISOString()).catch(() => {});
   }, []);
 
+  const planRefetchKey = profile?.plan_actual ?? profile?.planActual;
+
   useEffect(() => {
+    if (!user?.id) {
+      setAbonoLoading(false);
+      setAbonoRow(null);
+      return undefined;
+    }
     let alive = true;
     (async () => {
+      setAbonoLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('chat_channels')
-          .select('id, plan_id, name')
-          .order('name');
-        if (!alive) return;
-        if (error) throw error;
-        setChannels(Array.isArray(data) ? data : []);
+        const row = await fetchLatestUserAbono(user.id);
+        if (alive) setAbonoRow(row);
       } catch {
-        if (alive) setChannels([]);
+        if (alive) setAbonoRow(null);
       } finally {
-        if (alive) setLoading(false);
+        if (alive) setAbonoLoading(false);
       }
     })();
-    return () => { alive = false; };
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [user?.id]);
+
+  const loadChannels = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (communityAccess.reason === 'loading') {
+        setChannels([]);
+        return;
+      }
+      if (!communityAccess.ok) {
+        setChannels([]);
+        return;
+      }
+      let q = supabase.from('chat_channels').select('id, plan_id, name').order('name');
+      if (orgId) q = q.eq('organization_id', orgId);
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      if (showAllChatChannels) {
+        setChannels(rows);
+        return;
+      }
+      const filtered = rows.filter((ch) =>
+        evaluateCalendarioAccess({
+          planCanonKey: normalizePlanKey(ch.plan_id),
+          organizationId: orgId,
+          abonoRow,
+          abonoLoading,
+          freeClassGrant,
+        }).ok,
+      );
+      setChannels(filtered);
+    } catch {
+      setChannels([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [orgId, communityAccess.ok, communityAccess.reason, showAllChatChannels, abonoRow, abonoLoading, freeClassGrant]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        const g = await resolveFreeClassGrant(user?.id);
+        if (alive) setFreeClassGrant(g);
+      })();
+      loadChannels();
+      return () => {
+        alive = false;
+      };
+    }, [loadChannels, planRefetchKey, orgId, user?.id]),
+  );
 
   const { t } = useThemeContext();
+
+  const emptyHint = !orgId
+    ? tStr('chat_hint_no_org')
+    : communityAccess.reason === 'loading'
+      ? tStr('client_loading_abono')
+      : !communityAccess.ok
+        ? tStr('client_community_locked_body')
+        : !hasDbPlan && hasLocalPlan
+          ? tStr('chat_hint_plan_not_synced')
+          : !hasDbPlan
+            ? tStr('chat_hint_plan_missing_profile')
+            : tStr('chat_hint_no_channels_staff');
 
   const styles = useMemo(
     () =>
@@ -94,10 +200,25 @@ export default function ChatCanalesScreen() {
         },
         cardName: { color: t.text, fontSize: 17, fontWeight: '700' },
         cardPlan: { color: t.placeholder, fontSize: 12, marginTop: 2 },
-        empty: { paddingVertical: 40, alignItems: 'center' },
-        emptyText: { color: t.placeholder, fontSize: 16 },
+        empty: { paddingVertical: 32, alignItems: 'center', paddingHorizontal: 20 },
+        emptyText: { color: t.placeholder, fontSize: 16, textAlign: 'center' },
+        emptyHint: {
+          color: t.subText ?? t.placeholder,
+          fontSize: 14,
+          marginTop: 12,
+          textAlign: 'center',
+          lineHeight: 20,
+        },
+        cta: {
+          marginTop: 20,
+          paddingVertical: 12,
+          paddingHorizontal: 22,
+          borderRadius: 12,
+          ...t.buttonPrimary,
+        },
+        ctaText: { ...t.buttonPrimaryText, fontWeight: '700', fontSize: 15 },
       }),
-    [t]
+    [t],
   );
 
   const openChannel = (ch) => {
@@ -110,7 +231,7 @@ export default function ChatCanalesScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <Ionicons name="arrow-back" size={26} color={t.brand ?? t.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Chat</Text>
+        <Text style={styles.title}>{tStr('chat_title')}</Text>
         <View style={{ width: 42 }} />
       </View>
 
@@ -120,10 +241,36 @@ export default function ChatCanalesScreen() {
         </View>
       ) : channels.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No tenés canales disponibles.</Text>
-          <Text style={[styles.emptyText, { fontSize: 13, marginTop: 8 }]}>
-            Asignate un plan para ver el chat de tu grupo.
+          <Text style={styles.emptyText}>
+            {!communityAccess.ok ? tStr('client_community_locked_title') : tStr('chat_no_channels')}
           </Text>
+          <Text style={styles.emptyHint}>{emptyHint}</Text>
+          {!orgId ? null : !communityAccess.ok ? (
+            <>
+              <TouchableOpacity
+                style={styles.cta}
+                onPress={() => navigation.navigate('AbonosPases')}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.ctaText}>{tStr('client_entitlement_go_pay')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cta}
+                onPress={() => navigation.navigate('PlanSelector')}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.ctaText}>{tStr('client_entitlement_go_plans')}</Text>
+              </TouchableOpacity>
+            </>
+          ) : !hasDbPlan ? (
+            <TouchableOpacity
+              style={styles.cta}
+              onPress={() => navigation.navigate('PlanSelector')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.ctaText}>{tStr('chat_btn_choose_plan')}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : (
         <FlatList

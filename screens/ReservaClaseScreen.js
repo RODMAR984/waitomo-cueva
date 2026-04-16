@@ -16,12 +16,14 @@ import {
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 
 // ---------- screen ----------
 export default function ReservaClaseScreen({ route, navigation }) {
   const { plan, fecha } = route.params;
 
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
 
   const [selectedHour, setSelectedHour] = useState(null);
 
@@ -32,16 +34,17 @@ export default function ReservaClaseScreen({ route, navigation }) {
 
   const handleReserva = () => {
     if (!selectedHour) {
-      Alert.alert('⏰ Seleccioná un horario');
+      Alert.alert(tStr('reserva_clase_pick_alert'));
       return;
     }
 
+    const msg = tStr('reserva_clase_ok_body').replace('{{time}}', selectedHour).replace('{{date}}', fecha);
     Alert.alert(
-      '✅ Reserva confirmada',
-      `Reservaste tu clase a las ${selectedHour} del día ${fecha}.`,
+      tStr('reserva_clase_ok_title'),
+      msg,
       [
         {
-          text: 'OK',
+          text: tStr('common_ok'),
           onPress: () =>
             navigation.navigate('TrabajoDelDiaScreen', {
               plan,
@@ -130,9 +133,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
     <BackgroundWrapper plan={plan}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.panel}>
-          <Text style={styles.title}>
-            {`Elegí tu horario para el ${fecha}`}
-          </Text>
+          <Text style={styles.title}>{tStr('reserva_clase_title').replace('{{date}}', fecha)}</Text>
 
           <View style={styles.hourGrid}>
             {horas.map((hora) => {
@@ -152,11 +153,11 @@ export default function ReservaClaseScreen({ route, navigation }) {
           </View>
 
           <TouchableOpacity style={styles.confirmar} onPress={handleReserva}>
-            <Text style={styles.confirmarTxt}>Confirmar reserva</Text>
+            <Text style={styles.confirmarTxt}>{tStr('reserva_clase_confirm')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelar}>
-            <Text style={styles.cancelarTxt}>Cancelar</Text>
+            <Text style={styles.cancelarTxt}>{tStr('reserva_clase_cancel')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

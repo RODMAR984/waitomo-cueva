@@ -15,6 +15,20 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabaseClient';
+import { useAuth } from './AuthContext';
+import {
+  mergeRemoteTrainingBlocks,
+  syncTrainingBlocksToSupabase,
+  fetchTrainingBlocksForOrg,
+} from '../utils/trainingBlocksSupabase';
+import {
+  upsertBillingPaymentRow,
+  upsertBillingSubscriptionRow,
+  fetchBillingPaymentsForOrg,
+  fetchBillingSubscriptionsForOrg,
+  paymentRowToLocal,
+  subscriptionRowToLocal,
+} from '../utils/billingSupabase';
 
 const TrainingDataContext = createContext(null);
 
@@ -22,7 +36,6 @@ const STORAGE_KEYS = {
   BLOQUES: 'tdc_bloques',
   USER_NOTES: 'tdc_user_notes',
   RMS: 'tdc_rms',
-  CHAT: 'tdc_chat',
   PAYMENTS: 'tdc_payments',
   SUBSCRIPTIONS: 'tdc_subscriptions',
   LEDGER: 'tdc_ledger',
@@ -41,8 +54,6 @@ export function TrainingDataProvider({ children }) {
   const [userNotes, setUserNotes] = useState({});
   // RMs por ejercicio
   const [rms, setRms] = useState({});
-  // chat por canal
-  const [chatMessages, setChatMessages] = useState({});
 
   // pagos / suscripciones
   const [payments, setPayments] = useState({});
@@ -54,6 +65,26 @@ export function TrainingDataProvider({ children }) {
   const [cajaInicialByDate, setCajaInicialByDate] = useState({});
   // categorías
   const [categories, setCategories] = useState({});
+
+  const { organization, profile, user, activeAppMode, activeAppModeHydrated } = useAuth();
+  const orgId = organization?.id ?? profile?.organization_id ?? null;
+  const coachUid = user?.id ?? profile?.id ?? null;
+  const bloquesRef = useRef([]);
+  const mergeBlocksOpts = useMemo(() => {
+    const clientish =
+      !activeAppModeHydrated || activeAppMode == null || activeAppMode === 'client';
+    return { replaceOrgWhenEmpty: !!orgId && clientish };
+  }, [orgId, activeAppMode, activeAppModeHydrated]);
+
+  // ======= Helpers de persistencia (antes de efectos que lo referencian) =======
+  const persist = useCallback(async (key, value) => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Persist error', key, e?.message);
+    }
+  }, []);
 
   // ======= Hydration =======
   useEffect(() => {
@@ -87,15 +118,6 @@ export function TrainingDataProvider({ children }) {
           loadPromises.push(
             new Promise((resolve) => {
               setRms(JSON.parse(storageMap[STORAGE_KEYS.RMS]));
-              resolve();
-            }),
-          );
-        }
-
-        if (storageMap[STORAGE_KEYS.CHAT]) {
-          loadPromises.push(
-            new Promise((resolve) => {
-              setChatMessages(JSON.parse(storageMap[STORAGE_KEYS.CHAT]));
               resolve();
             }),
           );
@@ -207,26 +229,113 @@ export function TrainingDataProvider({ children }) {
         console.warn('Finanzas sync from Supabase', e?.message);
       }
     })();
-  }, [hydrated, persist]);
+  }, [hydrated]);
 
-  // ======= Helpers de persistencia =======
-  const persist = useCallback(async (key, value) => {
-    try {
-      await AsyncStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('Persist error', key, e?.message);
-    }
-  }, []);
+  useEffect(() => {
+    bloquesRef.current = bloques;
+  }, [bloques]);
+
+  // Rutinas del día: pull desde Supabase por sede (merge con caché local)
+  useEffect(() => {
+    if (!hydrated || !orgId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await fetchTrainingBlocksForOrg(orgId);
+        if (cancelled || error) return;
+        setBloques((prev) => {
+          const merged = mergeRemoteTrainingBlocks(prev, data, orgId, mergeBlocksOpts);
+          persist(STORAGE_KEYS.BLOQUES, merged).catch(() => {});
+          return merged;
+        });
+        setRefreshTrigger((x) => x + 1);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('training_daily_blocks pull', e?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, orgId, persist, mergeBlocksOpts]);
+
+  // Cobros y suscripciones (staff) desde Supabase por sede
+  useEffect(() => {
+    if (!hydrated || !orgId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [pr, sr] = await Promise.all([
+          fetchBillingPaymentsForOrg(orgId),
+          fetchBillingSubscriptionsForOrg(orgId),
+        ]);
+        if (cancelled) return;
+        if (pr.error) console.warn('billing_payments pull', pr.error.message);
+        if (sr.error) console.warn('billing_subscriptions pull', sr.error.message);
+        setPayments((prev) => {
+          const next = { ...prev };
+          for (const row of pr.data || []) {
+            const loc = paymentRowToLocal(row);
+            if (loc) next[loc.id] = loc;
+          }
+          persist(STORAGE_KEYS.PAYMENTS, next).catch(() => {});
+          return next;
+        });
+        setSubscriptions((prev) => {
+          const next = { ...prev };
+          for (const row of sr.data || []) {
+            const loc = subscriptionRowToLocal(row);
+            if (loc) next[loc.id] = loc;
+          }
+          persist(STORAGE_KEYS.SUBSCRIPTIONS, next).catch(() => {});
+          return next;
+        });
+        setRefreshTrigger((x) => x + 1);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('billing sync', e?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, orgId, persist]);
 
   // ======= Bloques =======
+  const refreshTrainingBlocksFromServer = useCallback(async () => {
+    if (!orgId) return { ok: false, reason: 'no_org' };
+    const { data, error } = await fetchTrainingBlocksForOrg(orgId);
+    if (error) return { ok: false, error };
+    let merged;
+    setBloques((prev) => {
+      merged = mergeRemoteTrainingBlocks(prev, data, orgId, mergeBlocksOpts);
+      return merged;
+    });
+    if (merged) {
+      await persist(STORAGE_KEYS.BLOQUES, merged);
+      setRefreshTrigger((x) => x + 1);
+    }
+    return { ok: true };
+  }, [orgId, persist, mergeBlocksOpts]);
+
   const saveBloques = useCallback(
     async (next) => {
-      setBloques(next);
-      await persist(STORAGE_KEYS.BLOQUES, next);
+      const prev = bloquesRef.current || [];
+      const withOrg =
+        orgId && Array.isArray(next)
+          ? next.map((b) =>
+              b && !b.organization_id ? { ...b, organization_id: orgId } : b,
+            )
+          : next;
+      setBloques(withOrg);
+      await persist(STORAGE_KEYS.BLOQUES, withOrg);
       setRefreshTrigger((x) => x + 1);
+      const prevIds = new Set(prev.map((b) => b?.id).filter(Boolean));
+      const nextIds = new Set((withOrg || []).map((b) => b?.id).filter(Boolean));
+      const removed = [...prevIds].filter((id) => !nextIds.has(id));
+      await syncTrainingBlocksToSupabase(withOrg, removed, orgId, coachUid);
     },
-    [persist],
+    [persist, orgId, coachUid],
   );
 
   // ======= Notas =======
@@ -276,36 +385,36 @@ export function TrainingDataProvider({ children }) {
     [rms],
   );
 
-  // ======= Chat =======
-  const sendChatMessage = useCallback(
-    (channelKey, message) => {
-      if (!channelKey || !message) return;
-      setChatMessages((prev) => {
-        const prevList = prev?.[channelKey] || [];
-        const nextList = [...prevList, message];
-        const next = { ...prev, [channelKey]: nextList };
-        persist(STORAGE_KEYS.CHAT, next);
-        return next;
-      });
-      setRefreshTrigger((x) => x + 1);
-    },
-    [persist],
-  );
-
   // ======= Pagos =======
   const createPayment = useCallback(
     ({ userId, planId, periodo, monto, moneda = 'ARS', metodo, status = 'pendiente' }) => {
       const id = `pay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const payload = { id, userId, planId, periodo, monto, moneda, metodo, status, createdAt: Date.now() };
+      const payload = {
+        id,
+        userId,
+        planId,
+        periodo,
+        monto,
+        moneda,
+        metodo,
+        status,
+        createdAt: Date.now(),
+        organization_id: orgId || undefined,
+      };
       setPayments((prev) => {
         const next = { ...prev, [id]: payload };
         persist(STORAGE_KEYS.PAYMENTS, next);
         return next;
       });
       setRefreshTrigger((x) => x + 1);
+      if (orgId) {
+        upsertBillingPaymentRow(payload, orgId).then(({ error }) => {
+          if (error) console.warn('billing_payments upsert', error.message);
+        });
+      }
       return id;
     },
-    [persist],
+    [persist, orgId],
   );
 
   // helper interno: asiento en caja (local + Supabase si hay sesión)
@@ -362,7 +471,13 @@ export function TrainingDataProvider({ children }) {
       setPayments((prev) => {
         const p = prev?.[paymentId];
         if (!p) return prev;
-        const updated = { ...p, status: 'pagado', metodo, paidAt: Date.now() };
+        const updated = {
+          ...p,
+          status: 'pagado',
+          metodo,
+          paidAt: Date.now(),
+          organization_id: p.organization_id || orgId,
+        };
         const next = { ...prev, [paymentId]: updated };
         persist(STORAGE_KEYS.PAYMENTS, next);
 
@@ -376,10 +491,17 @@ export function TrainingDataProvider({ children }) {
           linkId: paymentId,
         });
 
+        const oid = updated.organization_id || orgId;
+        if (oid) {
+          upsertBillingPaymentRow(updated, oid).then(({ error }) => {
+            if (error) console.warn('billing_payments upsert', error.message);
+          });
+        }
+
         return next;
       });
     },
-    [persist, _addLedger],
+    [persist, _addLedger, orgId],
   );
 
   // Pago parcial => ingresa a caja el parcial
@@ -397,6 +519,7 @@ export function TrainingDataProvider({ children }) {
           metodo,
           pagadoParcial: acumulado,
           lastPartialAt: Date.now(),
+          organization_id: p.organization_id || orgId,
         };
         const next = { ...prev, [paymentId]: updated };
         persist(STORAGE_KEYS.PAYMENTS, next);
@@ -411,10 +534,17 @@ export function TrainingDataProvider({ children }) {
           linkId: paymentId,
         });
 
+        const oid = updated.organization_id || orgId;
+        if (oid) {
+          upsertBillingPaymentRow(updated, oid).then(({ error }) => {
+            if (error) console.warn('billing_payments upsert', error.message);
+          });
+        }
+
         return next;
       });
     },
-    [persist, _addLedger],
+    [persist, _addLedger, orgId],
   );
 
   // Devolución (total o parcial) => egreso en caja
@@ -424,7 +554,13 @@ export function TrainingDataProvider({ children }) {
         const p = prev?.[paymentId];
         if (!p) return prev;
         const monto = amountOptional != null ? Number(amountOptional) : Number(p.monto || 0);
-        const updated = { ...p, status: 'devuelto', refundAt: Date.now(), refundAmount: monto };
+        const updated = {
+          ...p,
+          status: 'devuelto',
+          refundAt: Date.now(),
+          refundAmount: monto,
+          organization_id: p.organization_id || orgId,
+        };
         const next = { ...prev, [paymentId]: updated };
         persist(STORAGE_KEYS.PAYMENTS, next);
 
@@ -438,10 +574,17 @@ export function TrainingDataProvider({ children }) {
           linkId: paymentId,
         });
 
+        const oid = updated.organization_id || orgId;
+        if (oid) {
+          upsertBillingPaymentRow(updated, oid).then(({ error }) => {
+            if (error) console.warn('billing_payments upsert', error.message);
+          });
+        }
+
         return next;
       });
     },
-    [persist, _addLedger],
+    [persist, _addLedger, orgId],
   );
 
   // Consulta de pagos
@@ -463,16 +606,32 @@ export function TrainingDataProvider({ children }) {
   const createSubscription = useCallback(
     ({ userId, planId, tipo = 'mensual', precio, moneda = 'ARS', diaVencimiento = 5 }) => {
       const id = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const s = { id, userId, planId, tipo, precio, moneda, diaVencimiento, activo: true, createdAt: Date.now() };
+      const s = {
+        id,
+        userId,
+        planId,
+        tipo,
+        precio,
+        moneda,
+        diaVencimiento,
+        activo: true,
+        createdAt: Date.now(),
+        organization_id: orgId || undefined,
+      };
       setSubscriptions((prev) => {
         const next = { ...prev, [id]: s };
         persist(STORAGE_KEYS.SUBSCRIPTIONS, next);
         return next;
       });
       setRefreshTrigger((x) => x + 1);
+      if (orgId) {
+        upsertBillingSubscriptionRow(s, orgId).then(({ error }) => {
+          if (error) console.warn('billing_subscriptions upsert', error.message);
+        });
+      }
       return id;
     },
-    [persist],
+    [persist, orgId],
   );
 
   const cancelSubscription = useCallback(
@@ -480,13 +639,24 @@ export function TrainingDataProvider({ children }) {
       setSubscriptions((prev) => {
         const s = prev?.[subscriptionId];
         if (!s) return prev;
-        const updated = { ...s, activo: false, cancelledAt: Date.now() };
+        const updated = {
+          ...s,
+          activo: false,
+          cancelledAt: Date.now(),
+          organization_id: s.organization_id || orgId,
+        };
         const next = { ...prev, [subscriptionId]: updated };
         persist(STORAGE_KEYS.SUBSCRIPTIONS, next);
+        const oid = updated.organization_id || orgId;
+        if (oid) {
+          upsertBillingSubscriptionRow(updated, oid).then(({ error }) => {
+            if (error) console.warn('billing_subscriptions upsert', error.message);
+          });
+        }
         return next;
       });
     },
-    [persist],
+    [persist, orgId],
   );
 
   // Genera "facturas" para suscripciones activas
@@ -663,6 +833,7 @@ export function TrainingDataProvider({ children }) {
 
       bloques,
       saveBloques,
+      refreshTrainingBlocksFromServer,
 
       userNotes,
       saveUserNote,
@@ -670,9 +841,6 @@ export function TrainingDataProvider({ children }) {
       getRM,
       updateRM,
       calculateWeight,
-
-      chatMessages,
-      sendChatMessage,
 
       payments,
       createPayment,
@@ -703,13 +871,12 @@ export function TrainingDataProvider({ children }) {
       refreshTrigger,
       bloques,
       saveBloques,
+      refreshTrainingBlocksFromServer,
       userNotes,
       saveUserNote,
       getRM,
       updateRM,
       calculateWeight,
-      chatMessages,
-      sendChatMessage,
       payments,
       createPayment,
       markAsPaid,

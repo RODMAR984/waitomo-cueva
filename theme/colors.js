@@ -108,6 +108,60 @@ export function resolveOrgSecondaryTextColor(org) {
   return normalizeTextColor(org.text_secondary_color ?? fromFeatures);
 }
 
+/** Opcional: tinte de cajas/paneles (`features.ui_surface_color`), independiente del acento. */
+export function resolveOrgUiSurfaceColor(org) {
+  if (!org?.features || typeof org.features !== 'object') return null;
+  return normalizeTextColor(org.features.ui_surface_color);
+}
+
+/** Opcional: color de bordes UI (`features.ui_border_color`). */
+export function resolveOrgUiBorderColor(org) {
+  if (!org?.features || typeof org.features !== 'object') return null;
+  return normalizeTextColor(org.features.ui_border_color);
+}
+
+/** Opcional: tinte del overlay de pantalla (`features.ui_overlay_color`) — velo sobre fondo/imagen, distinto de cajas. */
+export function resolveOrgUiOverlayColor(org) {
+  if (!org?.features || typeof org.features !== 'object') return null;
+  return normalizeTextColor(org.features.ui_overlay_color);
+}
+
+/**
+ * Aplica overrides de superficie/borde/overlay sin mezclar con acento ni tipografía.
+ */
+function applySurfaceBorderUiOverride(base, isDark, org) {
+  const s = resolveOrgUiSurfaceColor(org);
+  const b = resolveOrgUiBorderColor(org);
+  const o = resolveOrgUiOverlayColor(org);
+  if (!s && !b && !o) return base;
+  const next = { ...base };
+  if (s) {
+    if (isDark) {
+      next.boxBg = hexToRgba(s, 0.36);
+      next.overlayBg = hexToRgba(s, 0.26);
+      next.inputBg = hexToRgba(s, 0.2);
+      next.inactiveTabBg = hexToRgba(s, 0.14);
+      next.segmentInactiveBg = hexToRgba(s, 0.12);
+    } else {
+      next.boxBg = mixHex('#ffffff', s, 0.26);
+      next.overlayBg = mixHex('#f1f5f9', s, 0.38);
+      next.inputBg = mixHex('#ffffff', s, 0.14);
+      next.inactiveTabBg = mixHex('#f8fafc', s, 0.45);
+      next.segmentInactiveBg = mixHex('#f1f5f9', s, 0.42);
+    }
+  }
+  if (b) {
+    next.overlayBorder = isDark ? hexToRgba(b, 0.58) : hexToRgba(b, 0.4);
+    next.border = b;
+    next.borderStrong = b;
+  }
+  if (o) {
+    // Velo sobre el fondo (BackgroundWrapper); alfa distinto claro/oscuro para legibilidad.
+    next.screenOverlay = isDark ? hexToRgba(o, 0.44) : hexToRgba(o, 0.14);
+  }
+  return next;
+}
+
 // Cian y gris del logo FitEngine (logo-navbar) — nodos cian y letras metálicas
 export const logoColors = {
   cian: '#90ABB5',       // nodos cian del logo → primary/glow
@@ -337,6 +391,107 @@ function getThemeTokensBase(mode) {
 }
 
 /**
+ * Sin `organization` en contexto (logout o carga): grises + acento slate, sin cian Waitomo.
+ * Reduce flashes llamativos al cerrar sesión o antes de hidratar la org.
+ */
+function getThemeTokensNeutralShell(mode) {
+  const isDark = mode !== 'light';
+  const accent = '#64748b';
+  if (isDark) {
+    return {
+      bg: '#050a0d',
+      text: '#f1f5f9',
+      subText: '#94a3b8',
+      placeholder: '#64748b',
+      place: '#64748b',
+      empty: '#94a3b8',
+      border: 'rgba(148,163,184,0.35)',
+      brand: accent,
+      overlayBg: 'rgba(148,163,184,0.12)',
+      overlayBorder: 'rgba(148,163,184,0.35)',
+      boxBg: 'rgba(148,163,184,0.1)',
+      inputBg: 'rgba(148,163,184,0.12)',
+      faint: 'rgba(241,245,249,0.06)',
+      faintStrong: 'rgba(241,245,249,0.1)',
+      primaryText: colors.buttons.primaryText.color,
+      onBrand: colors.dark.buttonText,
+      brand2: '#cbd5e1',
+      danger: colors.brand.danger,
+      buttonPrimary: {
+        backgroundColor: hexToRgba(accent, 0.2),
+        borderColor: accent,
+        borderWidth: 1,
+      },
+      buttonPrimaryText: colors.buttons.primaryText,
+      buttonDanger: colors.buttons.danger,
+      buttonDangerText: colors.buttons.dangerText,
+      activeTabBg: hexToRgba(accent, 0.28),
+      inactiveTabBg: 'rgba(148,163,184,0.1)',
+      borderStrong: accent,
+      screenOverlay: 'rgba(0,0,0,0.35)',
+      segmentInactiveBg: 'rgba(241,245,249,0.08)',
+      segmentInactiveText: '#cbd5e1',
+      brandText: '#f1f5f9',
+      brandTextShadow: 'rgba(0,0,0,0.35)',
+      metallicGrey: logoColors.metallicGrey,
+      logoCian: accent,
+      buttonGlow: {
+        shadowColor: '#64748b',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 3,
+      },
+    };
+  }
+  return {
+    bg: '#f8fafc',
+    text: '#0f172a',
+    subText: '#475569',
+    placeholder: '#64748b',
+    place: '#64748b',
+    empty: '#64748b',
+    border: '#cbd5e1',
+    brand: accent,
+    overlayBorder: '#e2e8f0',
+    overlayBg: 'rgba(255,255,255,0.85)',
+    boxBg: '#ffffff',
+    inputBg: '#ffffff',
+    faint: 'rgba(15,23,42,0.04)',
+    faintStrong: 'rgba(15,23,42,0.08)',
+    primaryText: colors.buttons.primaryTextLight.color,
+    onBrand: colors.light.buttonText,
+    brand2: '#475569',
+    danger: colors.brand.danger,
+    buttonPrimary: {
+      backgroundColor: hexToRgba(accent, 0.35),
+      borderColor: accent,
+      borderWidth: 1,
+    },
+    buttonPrimaryText: colors.buttons.primaryTextLight,
+    buttonDanger: colors.buttons.danger,
+    buttonDangerText: colors.buttons.dangerText,
+    activeTabBg: hexToRgba(accent, 0.22),
+    inactiveTabBg: '#f1f5f9',
+    borderStrong: accent,
+    screenOverlay: 'rgba(15,23,42,0.06)',
+    segmentInactiveBg: '#f1f5f9',
+    segmentInactiveText: '#475569',
+    brandText: '#0f172a',
+    brandTextShadow: 'rgba(15,23,42,0.08)',
+    metallicGrey: logoColors.metallicGrey,
+    logoCian: accent,
+    buttonGlow: {
+      shadowColor: 'rgba(15,23,42,0.15)',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 1,
+      shadowRadius: 10,
+      elevation: 3,
+    },
+  };
+}
+
+/**
  * Presets multi-org: vivid vs minimal vs clean vs warm deben notarse sin depender solo del acento.
  * Tipografía: `features.text_color` + opcional `features.text_secondary_color` (sin mezclas arbitrarias).
  */
@@ -372,6 +527,14 @@ function getThemeTokensWithBranding(mode, org) {
       next.place = next.placeholder;
       next.empty = mixHex(next.text, neutralSoft, 0.45);
       next.segmentInactiveText = mixHex(next.text, neutral, 0.32);
+    }
+    // Títulos “de marca” y segunda jerarquía: que sigan el texto configurado, no el acento del preset.
+    if (primaryCustom) {
+      next.brandText = next.text;
+      next.brandTextShadow = isDark ? 'rgba(0,0,0,0.42)' : 'rgba(15,23,42,0.1)';
+    }
+    if (primaryCustom || secondaryCustom) {
+      next.brand2 = next.subText;
     }
     return next;
   };
@@ -472,7 +635,8 @@ function getThemeTokensWithBranding(mode, org) {
     };
 
     const base = darkKey === 'dark_minimal' ? minimal : vivid;
-    return applyTypographyOverride(base);
+    const withUi = applySurfaceBorderUiOverride(base, true, org);
+    return applyTypographyOverride(withUi);
   }
 
   // Claro limpio: frío, tarjetas blancas, sombra “SaaS”
@@ -570,7 +734,8 @@ function getThemeTokensWithBranding(mode, org) {
   };
 
   const base = lightKey === 'light_warm' ? warm : clean;
-  return applyTypographyOverride(base);
+  const withUi = applySurfaceBorderUiOverride(base, false, org);
+  return applyTypographyOverride(withUi);
 }
 
 /**
@@ -582,4 +747,4 @@ function getThemeTokens(mode, orgBranding = null) {
   return getThemeTokensWithBranding(mode, orgBranding);
 }
 
-export { hexToRgba, getThemeTokens, getThemeTokensBase, isWaitomoOrg };
+export { hexToRgba, getThemeTokens, getThemeTokensBase, getThemeTokensNeutralShell, isWaitomoOrg };

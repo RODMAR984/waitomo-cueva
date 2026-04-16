@@ -9,14 +9,16 @@ import { useAuth } from '../contexts/AuthContext';
 import AdminScreen from './AdminScreen';
 
 function AdminLiteScreen(props) {
-  const { currentUser, isSuperAdmin } = useAuth();
+  const { currentUser, isSuperAdmin, organizationsOwnedByUser } = useAuth();
 
-  if (isSuperAdmin(currentUser?.id)) {
-    // Superadmin usa Admin "full"
+  const isOrgOwner = (organizationsOwnedByUser?.length ?? 0) > 0;
+
+  if (isSuperAdmin(currentUser?.id) || isOrgOwner) {
+    // Superadmin y dueños de organización usan Admin "full"
     return <AdminScreen {...props} mode="full" />;
   }
 
-  // Resto (coach u otros roles) usan Admin "lite"
+  // Resto (coach empleado u otros) usan Admin "lite"
   return <AdminScreen {...props} mode="lite" />;
 }
 

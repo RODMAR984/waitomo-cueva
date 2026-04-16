@@ -20,10 +20,12 @@ import {
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 
 export default function RegistroDesdeCiclo({ navigation, route }) {
   const { plan = { nombre: 'Ciclo Evolución' } } = route?.params || {};
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
 
   const [nombre, setNombre] = useState('');
   const [objetivo, setObjetivo] = useState('');
@@ -31,14 +33,11 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
 
   const handleContinuar = () => {
     if (!nombre.trim() || !objetivo.trim() || !contacto.trim()) {
-      Alert.alert('⚠️ Incompleto', 'Por favor completá todos los campos obligatorios.');
+      Alert.alert(tStr('reg_ciclo_incomplete_title'), tStr('reg_ciclo_incomplete_body'));
       return;
     }
 
-    Alert.alert(
-      '✅ Registro parcial enviado',
-      'Nos comunicaremos con vos. Si preferís, podés acercarte al box o escribirnos al 2268635566.'
-    );
+    Alert.alert(tStr('reg_ciclo_sent_title'), tStr('reg_ciclo_sent_body'));
   };
 
   const styles = useMemo(
@@ -109,10 +108,10 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.container}>
-            <Text style={styles.title}>Iniciar Ciclo Evolución</Text>
+            <Text style={styles.title}>{tStr('reg_ciclo_title')}</Text>
 
             <TextInput
-              placeholder="Tu nombre completo"
+              placeholder={tStr('reg_ciclo_ph_name')}
               placeholderTextColor={t.placeholder}
               style={styles.input}
               value={nombre}
@@ -120,7 +119,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
             />
 
             <TextInput
-              placeholder="Contanos tu objetivo"
+              placeholder={tStr('reg_ciclo_ph_goal')}
               placeholderTextColor={t.placeholder}
               style={styles.input}
               value={objetivo}
@@ -128,7 +127,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
             />
 
             <TextInput
-              placeholder="Mail o teléfono"
+              placeholder={tStr('reg_ciclo_ph_contact')}
               placeholderTextColor={t.placeholder}
               style={styles.input}
               value={contacto}
@@ -137,11 +136,11 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
             />
 
             <TouchableOpacity style={styles.button} onPress={handleContinuar}>
-              <Text style={styles.buttonText}>Continuar</Text>
+              <Text style={styles.buttonText}>{tStr('reg_ciclo_continue')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.volver} onPress={() => navigation.goBack()}>
-              <Text style={styles.volverText}>← Volver</Text>
+              <Text style={styles.volverText}>{tStr('reg_ciclo_back')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

@@ -19,14 +19,19 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import LogoCompleto from '../components/LogoCompleto';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { fitengineLogoColors as fe } from '../theme/colors';
 
 export default function RegistroInicialScreen({ route, navigation }) {
   // Recibimos plan y abono desde Abonos/PlanDetail o desde CreaCuenta (OAuth)
   const { plan, abono, fromOAuth } = route?.params || {};
+
+  /** Sin plan = alta desde FitEngine global (Welcome → Crear cuenta), no marketing Waitomo en fondo. */
+  const hasPlanContext = !!(plan && (plan.id || plan.title || plan.name || plan.nombre));
 
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -73,17 +78,17 @@ export default function RegistroInicialScreen({ route, navigation }) {
 
     // Validaciones por modo
     if (!nombre || !email || !telefono) {
-      Alert.alert('⚠️ Faltan datos', 'Completá todos los campos.');
+      Alert.alert(tStr('reg_ini_alert_faltan_title'), tStr('reg_ini_alert_faltan_body'));
       return;
     }
 
     if (!isOAuth) {
       if (!password || !confirmPassword) {
-        Alert.alert('⚠️ Faltan datos', 'Completá todos los campos.');
+        Alert.alert(tStr('reg_ini_alert_faltan_title'), tStr('reg_ini_alert_faltan_body'));
         return;
       }
       if (password !== confirmPassword) {
-        Alert.alert('❌ Contraseña incorrecta', 'Las contraseñas no coinciden.');
+        Alert.alert(tStr('reg_ini_alert_pass_title'), tStr('reg_ini_alert_pass_body'));
         return;
       }
     }
@@ -113,10 +118,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
 
         if (!createdUser || !createdUser.id) {
           console.log('❌ Registro inicial: user sin id', createdUser);
-          Alert.alert(
-            'Error al registrarse',
-            'No se pudo crear tu usuario en Waitomo. Intentá de nuevo en unos minutos.',
-          );
+          Alert.alert(tStr('reg_ini_error_create_title'), tStr('reg_ini_error_create_body'));
           return;
         }
 
@@ -143,10 +145,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
       // ✅ MODO B: OAuth (NO crear auth de nuevo)
       // =========================================================
       if (!user?.id) {
-        Alert.alert(
-          'Error',
-          'No se detectó el usuario autenticado. Volvé y probá de nuevo.',
-        );
+        Alert.alert(tStr('reg_ini_error_auth_title'), tStr('reg_ini_error_auth_body'));
         return;
       }
 
@@ -208,83 +207,91 @@ export default function RegistroInicialScreen({ route, navigation }) {
       navigation.navigate('Pago', { plan, userData, abono });
     } catch (error) {
       console.log('❌ Error en registro inicial:', error);
-      const message =
-        error?.message ||
-        'No se pudo completar tu registro. Revisá los datos o intentá de nuevo en unos minutos.';
-      Alert.alert('Error', message);
+      const message = error?.message || tStr('reg_ini_error_generic');
+      Alert.alert(tStr('gym_config_alert_title_error'), message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        button: {
-          alignItems: 'center',
-          ...t.buttonPrimary,
-          borderRadius: 10,
-          marginBottom: 20,
-          marginTop: 10,
-          padding: 16,
-          opacity: submitting ? 0.7 : 1,
-        },
-        buttonText: {
-          ...t.buttonPrimaryText,
-          fontWeight: 'bold',
-          textAlign: 'center',
-        },
-        input: {
-          backgroundColor: t.inputBg,
-          borderColor: t.overlayBorder,
-          borderRadius: 10,
-          borderWidth: 1,
-          color: t.text,
-          marginBottom: 15,
-          padding: 12,
-        },
-        kav: { flex: 1 },
-        panel: {
-          backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
-          borderRadius: 16,
-          borderWidth: 1,
-          padding: 20,
-        },
-        scroll: {
-          backgroundColor: 'transparent',
-          flexGrow: 1,
-          padding: 20,
-          paddingTop: 60,
-        },
-        title: {
-          color: t.subText,
-          fontSize: 22,
-          fontWeight: 'bold',
-          marginBottom: 20,
-          textAlign: 'center',
-        },
-        subtitle: {
-          color: t.subText,
-          fontSize: 14,
-          textAlign: 'center',
-          opacity: 0.9,
-        },
-        loginLinkText: {
-          color: t.subText,
-          fontSize: 13,
-          textAlign: 'center',
-          textDecorationLine: 'underline',
-        },
-        inlineRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        spinner: { marginLeft: 10 },
-      }),
-    [t, submitting],
-  );
+  const styles = useMemo(() => {
+    const shellFe = !hasPlanContext;
+    const bg = shellFe ? fe.panelBg : t.boxBg;
+    const border = shellFe ? fe.panelBorder : t.overlayBorder;
+    const inputBg = shellFe ? fe.inputBg : t.inputBg;
+    const textCol = shellFe ? fe.text : t.text;
+    const subCol = shellFe ? fe.subText : t.subText;
+    return StyleSheet.create({
+      button: {
+        alignItems: 'center',
+        ...(shellFe
+          ? {
+              backgroundColor: fe.buttonBg,
+              borderColor: fe.buttonBorder,
+              borderWidth: 1,
+            }
+          : t.buttonPrimary),
+        borderRadius: 10,
+        marginBottom: 20,
+        marginTop: 10,
+        padding: 16,
+        opacity: submitting ? 0.7 : 1,
+      },
+      buttonText: {
+        ...(shellFe ? { color: fe.buttonText } : t.buttonPrimaryText),
+        fontWeight: 'bold',
+        textAlign: 'center',
+      },
+      input: {
+        backgroundColor: inputBg,
+        borderColor: border,
+        borderRadius: 10,
+        borderWidth: 1,
+        color: textCol,
+        marginBottom: 15,
+        padding: 12,
+      },
+      kav: { flex: 1 },
+      panel: {
+        backgroundColor: bg,
+        borderColor: border,
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 20,
+      },
+      scroll: {
+        backgroundColor: 'transparent',
+        flexGrow: 1,
+        padding: 20,
+        paddingTop: hasPlanContext ? 60 : 24,
+      },
+      title: {
+        color: subCol,
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        textAlign: 'center',
+      },
+      subtitle: {
+        color: subCol,
+        fontSize: 14,
+        textAlign: 'center',
+        opacity: 0.9,
+      },
+      loginLinkText: {
+        color: subCol,
+        fontSize: 13,
+        textAlign: 'center',
+        textDecorationLine: 'underline',
+      },
+      inlineRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      spinner: { marginLeft: 10 },
+    });
+  }, [t, submitting, hasPlanContext]);
 
   const handleYaTengoCuenta = () => {
     navigation.navigate('Login', {
@@ -294,8 +301,10 @@ export default function RegistroInicialScreen({ route, navigation }) {
     });
   };
 
+  const placeholderColor = hasPlanContext ? t.placeholder : fe.placeholder;
+
   return (
-    <BackgroundWrapper plan={plan}>
+    <BackgroundWrapper screen={hasPlanContext ? undefined : 'neutral'} plan={plan}>
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -305,6 +314,12 @@ export default function RegistroInicialScreen({ route, navigation }) {
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
           >
+            {!hasPlanContext ? (
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <LogoCompleto height={48} />
+                <Text style={{ color: fe.subText, fontSize: 11, marginTop: 4 }}>{tStr('login_brand_powered')}</Text>
+              </View>
+            ) : null}
             <View style={styles.panel}>
               <Text style={styles.title}>
                 {isOAuth ? tStr('registro_title_oauth') : tStr('registro_title')}
@@ -318,7 +333,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
               <TextInput
                 style={styles.input}
                 placeholder={tStr('registro_placeholder_name')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={placeholderColor}
                 value={nombre}
                 onChangeText={setNombre}
               />
@@ -326,7 +341,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
               <TextInput
                 style={styles.input}
                 placeholder={tStr('registro_placeholder_phone')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={placeholderColor}
                 value={telefono}
                 onChangeText={setTelefono}
                 keyboardType="phone-pad"
@@ -335,7 +350,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
               <TextInput
                 style={styles.input}
                 placeholder={tStr('registro_placeholder_email')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={placeholderColor}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -348,7 +363,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
                   <PasswordInput
                     style={styles.input}
                     placeholder={tStr('registro_placeholder_password')}
-                    placeholderTextColor={t.placeholder}
+                    placeholderTextColor={placeholderColor}
                     value={password}
                     onChangeText={setPassword}
                     containerStyle={{ marginBottom: 15 }}
@@ -357,7 +372,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
                   <PasswordInput
                     style={styles.input}
                     placeholder={tStr('registro_placeholder_confirm_password')}
-                    placeholderTextColor={t.placeholder}
+                    placeholderTextColor={placeholderColor}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     containerStyle={{ marginBottom: 15 }}

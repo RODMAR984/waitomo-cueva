@@ -48,23 +48,27 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
 
   const handleEnviar = () => {
     if (!nivel) {
-      Alert.alert('Falta elegir el plan', 'Elegí Rookie, Scaled o Atleta.');
+      Alert.alert(tStr('reg_evol_alert_pick_level_title'), tStr('reg_evol_alert_pick_level_body'));
       return;
     }
     if (!nombre.trim() || !objetivo.trim()) {
-      Alert.alert('Faltan datos', 'Completá tu nombre y objetivo.');
+      Alert.alert(tStr('reg_evol_alert_missing_title'), tStr('reg_evol_alert_missing_body'));
       return;
     }
+    const thanksBody = tStr('reg_evol_success_body')
+      .replace('{{name}}', nombre.trim())
+      .replace('{{level}}', nivel.toUpperCase());
     Alert.alert(
-      '¡Listo!',
-      `Gracias ${nombre.trim()}. Registramos tu interés en Ciclo Evolución (${nivel.toUpperCase()}). Te contactaremos para enviarte tu rutina personalizada. No hay abonos ni pago en la app para este plan.`,
+      tStr('reg_evol_success_title'),
+      thanksBody,
       [
-        { text: 'Volver', onPress: () => navigation.goBack() },
+        { text: tStr('config_back'), onPress: () => navigation.goBack() },
         {
-          text: 'Crear cuenta',
+          text: tStr('reg_evol_create_account'),
           onPress: () => {
+            const evTitle = tStr('registro_evolucion_title');
             navigation.navigate('CreateAccount', {
-              plan: { ...plan, id: plan?.id || 'evolucion', title: plan?.title || 'Ciclo Evolución' },
+              plan: { ...plan, id: plan?.id || 'evolucion', title: plan?.title || evTitle },
               abono: null,
               fromEvolucion: true,
             });
@@ -231,7 +235,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
 
           <TextInput
             style={styles.input}
-            placeholder="Tu nombre"
+            placeholder={tStr('reg_evol_ph_name')}
             placeholderTextColor={t.placeholder}
             value={nombre}
             onChangeText={setNombre}
@@ -239,7 +243,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
 
           <TextInput
             style={styles.input}
-            placeholder="Contanos tu objetivo (fuerza, bajar grasa, etc.)"
+            placeholder={tStr('reg_evol_ph_goal')}
             placeholderTextColor={t.placeholder}
             value={objetivo}
             onChangeText={setObjetivo}

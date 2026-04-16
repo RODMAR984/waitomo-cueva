@@ -2,7 +2,7 @@
 // Módulo de finanzas: cobros, suscripciones, métodos de pago, reportes y caja (libro diario).
 // Soporta ARS, USD, EUR. Confirmaciones en acciones destructivas. Copy formal.
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,25 +16,13 @@ import PropTypes from 'prop-types';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useTrainingData } from '../contexts/TrainingDataContext';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../supabaseClient';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD', 'EUR'];
-// Medios por los que te pagan (ingresos)
-const MEDIOS_DE_COBRO = [
-  { id: 'efectivo', label: 'Efectivo' },
-  { id: 'transferencia', label: 'Transferencia' },
-  { id: 'qr', label: 'QR' },
-  { id: 'mercadopago', label: 'Mercado Pago' },
-  { id: 'cuenta_dni', label: 'Cuenta DNI' },
-  { id: 'otro', label: 'Otro' },
-];
-// De dónde sale el dinero en una salida
-const ORIGENES_SALIDA = [
-  { id: 'efectivo', label: 'Efectivo (caja)' },
-  { id: 'cuenta_bancaria', label: 'Cuenta bancaria' },
-  { id: 'billetera', label: 'Billetera' },
-];
 
 const formatMonto = (num, moneda = 'ARS') => {
   const n = Number(num);
@@ -48,20 +36,50 @@ const formatMonto = (num, moneda = 'ARS') => {
   return `${n < 0 ? '-' : ''}${s} ${moneda}`;
 };
 
-const formatDateTime = (ts) => {
-  const d = new Date(ts);
-  return d.toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
 export default function AdminFinanzasScreen({ route }) {
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
+  const { t: tStr, locale } = useLocale();
+  const { organization } = useAuth() || {};
+
+  const payMethods = useMemo(
+    () => [
+      { id: 'efectivo', label: tStr('fin_pay_efectivo') },
+      { id: 'transferencia', label: tStr('fin_pay_transferencia') },
+      { id: 'qr', label: tStr('fin_pay_qr') },
+      { id: 'mercadopago', label: tStr('fin_pay_mercadopago') },
+      { id: 'cuenta_dni', label: tStr('fin_pay_cuenta_dni') },
+      { id: 'otro', label: tStr('fin_pay_otro') },
+    ],
+    [tStr],
+  );
+
+  const outcomeSources = useMemo(
+    () => [
+      { id: 'efectivo', label: tStr('fin_out_efectivo') },
+      { id: 'cuenta_bancaria', label: tStr('fin_out_cuenta') },
+      { id: 'billetera', label: tStr('fin_out_billetera') },
+    ],
+    [tStr],
+  );
+
+  const payLabel = (id) => payMethods.find((x) => x.id === id)?.label || id;
+  const outLabel = (id) => outcomeSources.find((x) => x.id === id)?.label || id;
+
+  const formatDateTime = useCallback(
+    (ts) => {
+      const d = new Date(ts);
+      const loc = locale === 'en' ? 'en-US' : 'es-AR';
+      return d.toLocaleDateString(loc, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    },
+    [locale],
+  );
 
   const {
     payments,
@@ -120,6 +138,48 @@ export default function AdminFinanzasScreen({ route }) {
   const [nuevaSubPrecio, setNuevaSubPrecio] = useState('');
   const [nuevaSubMoneda, setNuevaSubMoneda] = useState('ARS');
   const [nuevaSubDiaVenc, setNuevaSubDiaVenc] = useState('5');
+  const [orgMemberPicklist, setOrgMemberPicklist] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const oid = organization?.id;
+      if (!oid) {
+        if (alive) setOrgMemberPicklist([]);
+        return;
+      }
+      try {
+        const { data: mems, error: e1 } = await supabase
+          .from('organization_memberships')
+          .select('user_id')
+          .eq('organization_id', oid)
+          .eq('active', true);
+        if (e1) throw e1;
+        const ids = [...new Set((mems || []).map((m) => m.user_id).filter(Boolean))];
+        if (!ids.length) {
+          if (alive) setOrgMemberPicklist([]);
+          return;
+        }
+        const { data: profs, error: e2 } = await supabase
+          .from('profiles')
+          .select('id, full_name, username')
+          .in('id', ids);
+        if (e2) throw e2;
+        const list = (profs || [])
+          .map((p) => ({
+            id: p.id,
+            label: (p.full_name || p.username || p.id).trim(),
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label, locale === 'en' ? 'en' : 'es'));
+        if (alive) setOrgMemberPicklist(list);
+      } catch {
+        if (alive) setOrgMemberPicklist([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [organization?.id, locale]);
 
   // estilos
   const styles = useMemo(
@@ -181,6 +241,17 @@ export default function AdminFinanzasScreen({ route }) {
           gap: 10,
           marginBottom: 10,
         },
+        memberPickScroll: { marginBottom: 8, maxHeight: 48 },
+        memberChip: {
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.faintStrong,
+          marginRight: 8,
+        },
+        memberChipText: { color: t.text, fontSize: 12, fontWeight: '600' },
         btnRow: { flexDirection: 'row', gap: 12, marginVertical: 10 },
         cardActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
 
@@ -263,7 +334,7 @@ export default function AdminFinanzasScreen({ route }) {
   const guardarNuevoCobro = (marcarCobrado = false) => {
     const monto = parseFloat(String(nuevoCobroMonto).replace(',', '.'));
     if (Number.isNaN(monto) || monto <= 0) {
-      Alert.alert('Dato inválido', 'Ingrese un monto mayor a 0.');
+      Alert.alert(tStr('fin_alert_invalid_amount'), tStr('fin_alert_amount_gt_zero'));
       return;
     }
     const id = createPayment({
@@ -280,20 +351,21 @@ export default function AdminFinanzasScreen({ route }) {
     setNuevoCobroMonto('');
     setNuevoCobroRef('');
     Alert.alert(
-      marcarCobrado ? 'Cobro registrado' : 'Cobro creado',
-      marcarCobrado
-        ? 'El cobro quedó registrado y el ingreso se reflejó en Caja.'
-        : 'El cobro quedó pendiente. Puede marcarlo como cobrado desde la lista.',
+      marcarCobrado ? tStr('fin_alert_payment_registered_title') : tStr('fin_alert_payment_created_title'),
+      marcarCobrado ? tStr('fin_alert_payment_registered_body') : tStr('fin_alert_payment_created_body'),
     );
   };
 
   const confirmarDevolucion = (p) => {
+    const refStr = `${p.userId} · ${p.periodo || 'N/A'}`;
     Alert.alert(
-      'Confirmar devolución',
-      `¿Devolver ${formatMonto(p.monto, p.moneda)} (${p.userId} · ${p.periodo || 'N/A'})? Se registrará un egreso en Caja.`,
+      tStr('fin_refund_confirm_title'),
+      tStr('fin_refund_confirm_body')
+        .replace('{{amount}}', formatMonto(p.monto, p.moneda))
+        .replace('{{ref}}', refStr),
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Devolver', style: 'destructive', onPress: () => refundPayment(p.id) },
+        { text: tStr('common_cancel'), style: 'cancel' },
+        { text: tStr('fin_refund_btn'), style: 'destructive', onPress: () => refundPayment(p.id) },
       ],
     );
   };
@@ -303,7 +375,7 @@ export default function AdminFinanzasScreen({ route }) {
     const precio = parseFloat(String(nuevaSubPrecio).replace(',', '.'));
     const dia = parseInt(nuevaSubDiaVenc, 10);
     if (Number.isNaN(precio) || precio <= 0) {
-      Alert.alert('Dato inválido', 'Ingrese un precio mayor a 0.');
+      Alert.alert(tStr('fin_alert_invalid_amount'), tStr('fin_alert_price_gt_zero'));
       return;
     }
     createSubscription({
@@ -319,16 +391,16 @@ export default function AdminFinanzasScreen({ route }) {
     setNuevaSubPlanId('');
     setNuevaSubPrecio('');
     setNuevaSubDiaVenc('5');
-    Alert.alert('Suscripción creada', 'Se generarán facturas según el día de vencimiento.');
+    Alert.alert(tStr('fin_sub_created_title'), tStr('fin_sub_created_body'));
   };
 
   const confirmarCancelarSuscripcion = (s) => {
     Alert.alert(
-      'Cancelar suscripción',
-      `¿Cancelar la suscripción ${s.userId} · ${s.planId}? No se generarán más facturas.`,
+      tStr('fin_sub_cancel_title'),
+      tStr('fin_sub_cancel_body').replace('{{ref}}', `${s.userId} · ${s.planId}`),
       [
-        { text: 'No', style: 'cancel' },
-        { text: 'Sí, cancelar', style: 'destructive', onPress: () => cancelSubscription(s.id) },
+        { text: tStr('fin_sub_cancel_no'), style: 'cancel' },
+        { text: tStr('fin_sub_cancel_yes'), style: 'destructive', onPress: () => cancelSubscription(s.id) },
       ],
     );
   };
@@ -337,18 +409,18 @@ export default function AdminFinanzasScreen({ route }) {
   const guardarCajaInicial = () => {
     const monto = parseFloat(String(cajaInicialInput).replace(',', '.'));
     if (Number.isNaN(monto) || monto < 0) {
-      Alert.alert('Dato inválido', 'Ingrese un monto válido (mayor o igual a 0).');
+      Alert.alert(tStr('fin_alert_invalid_amount'), tStr('fin_alert_opening_valid'));
       return;
     }
     setOpenBalance(todayStr, monto);
     setCajaInicialInput('');
-    Alert.alert('Guardado', 'Caja inicial del día actualizada.');
+    Alert.alert(tStr('fin_alert_saved_opening_title'), tStr('fin_alert_saved_opening_body'));
   };
 
   const registrarIngreso = () => {
     const monto = parseFloat(String(montoIngreso).replace(',', '.'));
     if (Number.isNaN(monto) || monto <= 0) {
-      Alert.alert('Dato inválido', 'Ingrese un monto mayor a 0.');
+      Alert.alert(tStr('fin_alert_invalid_amount'), tStr('fin_alert_amount_gt_zero'));
       return;
     }
     addLedgerEntry({
@@ -357,7 +429,9 @@ export default function AdminFinanzasScreen({ route }) {
       metodo: medioIngreso,
       monto,
       moneda: 'ARS',
-      notas: (conceptoIngreso || '').trim() || `Cobro por ${MEDIOS_DE_COBRO.find((x) => x.id === medioIngreso)?.label || medioIngreso}`,
+      notas:
+        (conceptoIngreso || '').trim() ||
+        tStr('fin_note_income').replace('{{label}}', payLabel(medioIngreso)),
     });
     setMontoIngreso('');
     setConceptoIngreso('');
@@ -366,7 +440,7 @@ export default function AdminFinanzasScreen({ route }) {
   const registrarSalida = () => {
     const monto = parseFloat(String(montoSalida).replace(',', '.'));
     if (Number.isNaN(monto) || monto <= 0) {
-      Alert.alert('Dato inválido', 'Ingrese un monto mayor a 0.');
+      Alert.alert(tStr('fin_alert_invalid_amount'), tStr('fin_alert_amount_gt_zero'));
       return;
     }
     addLedgerEntry({
@@ -375,7 +449,9 @@ export default function AdminFinanzasScreen({ route }) {
       metodo: origenSalida,
       monto,
       moneda: 'ARS',
-      notas: (conceptoSalida || '').trim() || `Salida desde ${ORIGENES_SALIDA.find((x) => x.id === origenSalida)?.label || origenSalida}`,
+      notas:
+        (conceptoSalida || '').trim() ||
+        tStr('fin_note_outcome').replace('{{label}}', outLabel(origenSalida)),
     });
     setMontoSalida('');
     setConceptoSalida('');
@@ -383,11 +459,11 @@ export default function AdminFinanzasScreen({ route }) {
 
   const confirmarEliminarMovimiento = (m) => {
     Alert.alert(
-      'Eliminar movimiento',
-      `¿Eliminar este movimiento (${formatMonto(m.monto, m.moneda)})? Esta acción no se puede deshacer.`,
+      tStr('fin_delete_move_title'),
+      tStr('fin_delete_move_body').replace('{{amount}}', formatMonto(m.monto, m.moneda)),
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: () => deleteLedgerEntry(m.id) },
+        { text: tStr('common_cancel'), style: 'cancel' },
+        { text: tStr('fin_btn_delete'), style: 'destructive', onPress: () => deleteLedgerEntry(m.id) },
       ],
     );
   };
@@ -408,13 +484,13 @@ export default function AdminFinanzasScreen({ route }) {
             style={[styles.tab, tab === 'caja' && styles.activeTab]}
             onPress={() => setTab('caja')}
           >
-            <Text style={styles.tabText}>Caja</Text>
+            <Text style={styles.tabText}>{tStr('fin_tab_caja')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, tab === 'pendientes' && styles.activeTab]}
             onPress={() => setTab('pendientes')}
           >
-            <Text style={styles.tabText}>Pendientes</Text>
+            <Text style={styles.tabText}>{tStr('fin_tab_pendientes')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -425,22 +501,18 @@ export default function AdminFinanzasScreen({ route }) {
         >
           {tab === 'caja' && (
             <View>
-              <Text style={styles.sectionTitle}>Libro diario — Caja</Text>
-              <Text style={styles.infoText}>
-                Acá se registra todo: caja inicial del día, cada cobro (efectivo, transferencia, QR, Mercado Pago, Cuenta DNI) y cada salida (desde efectivo, cuenta bancaria o billetera). Cuando alguien te paga por cualquier medio, cargá el ingreso abajo con el medio que corresponda.
-              </Text>
+              <Text style={styles.sectionTitle}>{tStr('fin_section_ledger')}</Text>
+              <Text style={styles.infoText}>{tStr('fin_intro_caja')}</Text>
 
               <View style={[styles.card, { borderColor: t.brand, opacity: 0.95 }]}>
-                <Text style={styles.cardTitle}>¿Por qué se carga manual? ¿Se puede automatizar?</Text>
-                <Text style={styles.cardLine}>
-                  Hoy la app no está linkeada a ninguna cuenta (Mercado Pago, banco, etc.). Por eso cada cobro se registra a mano. Sí se puede automatizar: si conectás tu cuenta de Mercado Pago (o un banco que ofrezca API) mediante webhooks, cuando te paguen por QR, link o transferencia el sistema puede recibir la notificación y cargar el ingreso solo. Eso requiere un backend (por ejemplo Supabase) que reciba la notificación de pago y guarde el movimiento; la app después lo muestra. La opción «Conectar cuenta» para linkear Mercado Pago y que los cobros se carguen solos está prevista para una próxima versión.
-                </Text>
+                <Text style={styles.cardTitle}>{tStr('fin_card_why_manual_title')}</Text>
+                <Text style={styles.cardLine}>{tStr('fin_card_why_manual_body')}</Text>
               </View>
 
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Caja inicial del día</Text>
+                <Text style={styles.cardTitle}>{tStr('fin_opening_balance_title')}</Text>
                 <Text style={styles.cardLine}>
-                  Hoy tenés cargado: {formatMonto(cajaInicialHoy)}
+                  {tStr('fin_opening_balance_today')} {formatMonto(cajaInicialHoy)}
                 </Text>
                 <View style={styles.row}>
                   <TextInput
@@ -448,20 +520,20 @@ export default function AdminFinanzasScreen({ route }) {
                     keyboardType="numeric"
                     value={cajaInicialInput}
                     onChangeText={setCajaInicialInput}
-                    placeholder="Monto con el que abrís caja"
+                    placeholder={tStr('fin_ph_opening')}
                     placeholderTextColor={t.placeholder}
                   />
                   <TouchableOpacity style={styles.btn} onPress={guardarCajaInicial}>
-                    <Text style={styles.btnText}>Guardar</Text>
+                    <Text style={styles.btnText}>{tStr('common_save')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Registrar ingreso (cobro recibido)</Text>
-                <Text style={styles.cardLine}>Medio por el que te pagaron:</Text>
+                <Text style={styles.cardTitle}>{tStr('fin_income_title')}</Text>
+                <Text style={styles.cardLine}>{tStr('fin_income_via')}</Text>
                 <View style={styles.pillRow}>
-                  {MEDIOS_DE_COBRO.map((med) => (
+                  {payMethods.map((med) => (
                     <TouchableOpacity
                       key={med.id}
                       style={[styles.pill, medioIngreso === med.id && styles.pillActive]}
@@ -472,36 +544,36 @@ export default function AdminFinanzasScreen({ route }) {
                   ))}
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.label}>Monto</Text>
+                  <Text style={styles.label}>{tStr('fin_label_amount')}</Text>
                   <TextInput
                     style={styles.input}
                     keyboardType="numeric"
                     value={montoIngreso}
                     onChangeText={setMontoIngreso}
-                    placeholder="0"
+                    placeholder={tStr('fin_ph_amount_zero')}
                     placeholderTextColor={t.placeholder}
                   />
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.label}>Concepto</Text>
+                  <Text style={styles.label}>{tStr('fin_label_concept')}</Text>
                   <TextInput
                     style={styles.input}
                     value={conceptoIngreso}
                     onChangeText={setConceptoIngreso}
-                    placeholder="Ej: mensualidad Juan, clase suelta"
+                    placeholder={tStr('fin_ph_concept_in')}
                     placeholderTextColor={t.placeholder}
                   />
                 </View>
                 <TouchableOpacity style={styles.btn} onPress={registrarIngreso}>
-                  <Text style={styles.btnText}>Cargar ingreso</Text>
+                  <Text style={styles.btnText}>{tStr('fin_btn_load_income')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Registrar salida</Text>
-                <Text style={styles.cardLine}>¿De dónde sale el dinero?</Text>
+                <Text style={styles.cardTitle}>{tStr('fin_outcome_title')}</Text>
+                <Text style={styles.cardLine}>{tStr('fin_outcome_from')}</Text>
                 <View style={styles.pillRow}>
-                  {ORIGENES_SALIDA.map((org) => (
+                  {outcomeSources.map((org) => (
                     <TouchableOpacity
                       key={org.id}
                       style={[styles.pill, origenSalida === org.id && styles.pillActive]}
@@ -512,41 +584,41 @@ export default function AdminFinanzasScreen({ route }) {
                   ))}
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.label}>Monto</Text>
+                  <Text style={styles.label}>{tStr('fin_label_amount')}</Text>
                   <TextInput
                     style={styles.input}
                     keyboardType="numeric"
                     value={montoSalida}
                     onChangeText={setMontoSalida}
-                    placeholder="0"
+                    placeholder={tStr('fin_ph_amount_zero')}
                     placeholderTextColor={t.placeholder}
                   />
                 </View>
                 <View style={styles.row}>
-                  <Text style={styles.label}>Concepto</Text>
+                  <Text style={styles.label}>{tStr('fin_label_concept')}</Text>
                   <TextInput
                     style={styles.input}
                     value={conceptoSalida}
                     onChangeText={setConceptoSalida}
-                    placeholder="Ej: alquiler, proveedor, retiro"
+                    placeholder={tStr('fin_ph_concept_out')}
                     placeholderTextColor={t.placeholder}
                   />
                 </View>
                 <TouchableOpacity style={styles.btn} onPress={registrarSalida}>
-                  <Text style={styles.btnText}>Cargar salida</Text>
+                  <Text style={styles.btnText}>{tStr('fin_btn_load_outcome')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={[styles.card, { marginBottom: 8 }]}>
-                <Text style={styles.cardTitle}>Total caja del día</Text>
+                <Text style={styles.cardTitle}>{tStr('fin_total_day_title')}</Text>
                 <Text style={[styles.cardLine, { fontSize: 16 }]}>
-                  Caja inicial: {formatMonto(cajaInicialHoy)}
+                  {tStr('fin_total_opening')} {formatMonto(cajaInicialHoy)}
                 </Text>
                 <Text style={[styles.cardLine, { fontSize: 16, color: t.brand }]}>
-                  + Ingresos: {formatMonto(resumenDia.ingresos)}
+                  {tStr('fin_total_in')} {formatMonto(resumenDia.ingresos)}
                 </Text>
                 <Text style={[styles.cardLine, { fontSize: 16, color: t.danger }]}>
-                  − Salidas: {formatMonto(resumenDia.egresos)}
+                  {tStr('fin_total_out')} {formatMonto(resumenDia.egresos)}
                 </Text>
                 <Text style={[styles.cardLine, { fontSize: 20, fontWeight: '700', marginTop: 8 }]}>
                   = {formatMonto(totalCajaHoy)}
@@ -555,49 +627,51 @@ export default function AdminFinanzasScreen({ route }) {
 
               {editingLedgerId ? (
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Editar concepto</Text>
+                  <Text style={styles.cardTitle}>{tStr('fin_edit_concept_title')}</Text>
                   <TextInput
                     style={styles.input}
                     value={editingLedgerNota}
                     onChangeText={setEditingLedgerNota}
-                    placeholder="Concepto"
+                    placeholder={tStr('fin_ph_concept_short')}
                     placeholderTextColor={t.placeholder}
                   />
                   <View style={styles.btnRow}>
                     <TouchableOpacity style={styles.btn} onPress={guardarEditarNota}>
-                      <Text style={styles.btnText}>Guardar</Text>
+                      <Text style={styles.btnText}>{tStr('common_save')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => { setEditingLedgerId(null); setEditingLedgerNota(''); }}>
-                      <Text style={[styles.cardLine, { color: t.brand }]}>Cancelar</Text>
+                      <Text style={[styles.cardLine, { color: t.brand }]}>{tStr('common_cancel')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               ) : null}
 
               <View style={styles.row}>
-                <Text style={styles.label}>Ver</Text>
+                <Text style={styles.label}>{tStr('fin_view_label')}</Text>
                 <TouchableOpacity
                   style={[styles.pill, soloHoy && styles.pillActive]}
                   onPress={() => setSoloHoy(true)}
                 >
-                  <Text style={styles.pillText}>Solo hoy</Text>
+                  <Text style={styles.pillText}>{tStr('fin_view_today')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.pill, !soloHoy && styles.pillActive]}
                   onPress={() => setSoloHoy(false)}
                 >
-                  <Text style={styles.pillText}>Todo</Text>
+                  <Text style={styles.pillText}>{tStr('fin_view_all')}</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.sectionTitle}>Movimientos</Text>
+              <Text style={styles.sectionTitle}>{tStr('fin_movements_title')}</Text>
               {movimientosParaLista.length ? (
                 movimientosParaLista.map((m) => (
                   <View key={m.id} style={styles.card}>
                     <Text style={styles.cardTitle}>
-                      {m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {formatMonto(m.monto, m.moneda)}
+                      {m.tipo === 'ingreso' ? tStr('fin_movement_in') : tStr('fin_movement_out')} ·{' '}
+                      {formatMonto(m.monto, m.moneda)}
                     </Text>
                     <Text style={styles.cardLine}>
-                      {formatDateTime(m.fecha)} · {m.tipo === 'ingreso' ? (MEDIOS_DE_COBRO.find((x) => x.id === m.metodo)?.label || m.metodo) : (ORIGENES_SALIDA.find((x) => x.id === m.metodo)?.label || m.metodo)}
+                      {formatDateTime(m.fecha)} ·{' '}
+                      {m.tipo === 'ingreso' ? payLabel(m.metodo) : outLabel(m.metodo)}
                     </Text>
                     {m.notas ? <Text style={styles.cardLine}>{m.notas}</Text> : null}
                     <View style={styles.cardActions}>
@@ -605,44 +679,42 @@ export default function AdminFinanzasScreen({ route }) {
                         style={styles.smallBtn}
                         onPress={() => { setEditingLedgerId(m.id); setEditingLedgerNota(m.notas || ''); }}
                       >
-                        <Text style={styles.smallBtnText}>Editar concepto</Text>
+                        <Text style={styles.smallBtnText}>{tStr('fin_btn_edit_concept')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.smallBtnDanger}
                         onPress={() => confirmarEliminarMovimiento(m)}
                       >
-                        <Text style={styles.smallBtnText}>Eliminar</Text>
+                        <Text style={styles.smallBtnText}>{tStr('fin_btn_delete')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 ))
               ) : (
-                <Text style={styles.emptyText}>Sin movimientos</Text>
+                <Text style={styles.emptyText}>{tStr('fin_empty_movements')}</Text>
               )}
             </View>
           )}
 
           {tab === 'pendientes' && (
             <View>
-              <Text style={styles.sectionTitle}>Cobros pendientes</Text>
-              <Text style={styles.infoText}>
-                Facturas o cobros que aún no se cobraron. Cuando cobrés (por el medio que sea), marcá «Marcar cobrado» y el ingreso se suma en Caja. Si preferís no usar esta lista, podés cargar el ingreso directo en la pestaña Caja.
-              </Text>
+              <Text style={styles.sectionTitle}>{tStr('fin_pending_title')}</Text>
+              <Text style={styles.infoText}>{tStr('fin_pending_intro')}</Text>
               <View style={styles.row}>
-                <Text style={styles.label}>Estado</Text>
+                <Text style={styles.label}>{tStr('fin_label_status')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="pendiente, pagado, etc."
+                  placeholder={tStr('fin_ph_filter_status')}
                   placeholderTextColor={t.placeholder}
                   value={filtroEstado}
                   onChangeText={setFiltroEstado}
                 />
               </View>
               <View style={styles.row}>
-                <Text style={styles.label}>Método</Text>
+                <Text style={styles.label}>{tStr('fin_label_method')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="efectivo, transferencia, etc."
+                  placeholder={tStr('fin_ph_filter_method')}
                   placeholderTextColor={t.placeholder}
                   value={filtroMetodo}
                   onChangeText={setFiltroMetodo}
@@ -650,17 +722,17 @@ export default function AdminFinanzasScreen({ route }) {
               </View>
               {!showNuevoCobro ? (
                 <TouchableOpacity style={styles.btn} onPress={() => setShowNuevoCobro(true)}>
-                  <Text style={styles.btnText}>+ Nuevo cobro pendiente</Text>
+                  <Text style={styles.btnText}>{tStr('fin_btn_new_pending')}</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Nuevo cobro pendiente</Text>
+                  <Text style={styles.cardTitle}>{tStr('fin_new_pending_title')}</Text>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Monto</Text>
-                    <TextInput style={styles.input} keyboardType="numeric" value={nuevoCobroMonto} onChangeText={setNuevoCobroMonto} placeholder="Ej: 20000" placeholderTextColor={t.placeholder} />
+                    <Text style={styles.label}>{tStr('fin_label_amount')}</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={nuevoCobroMonto} onChangeText={setNuevoCobroMonto} placeholder={tStr('fin_ph_amount_example')} placeholderTextColor={t.placeholder} />
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Moneda</Text>
+                    <Text style={styles.label}>{tStr('fin_label_currency')}</Text>
                     <View style={styles.pillRow}>
                       {SUPPORTED_CURRENCIES.map((cur) => (
                         <TouchableOpacity key={cur} style={[styles.pill, nuevoCobroMoneda === cur && styles.pillActive]} onPress={() => setNuevoCobroMoneda(cur)}>
@@ -670,9 +742,9 @@ export default function AdminFinanzasScreen({ route }) {
                     </View>
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Medio (al cobrar)</Text>
+                    <Text style={styles.label}>{tStr('fin_label_method_when_paid')}</Text>
                     <View style={styles.pillRow}>
-                      {MEDIOS_DE_COBRO.map((med) => (
+                      {payMethods.map((med) => (
                         <TouchableOpacity key={med.id} style={[styles.pill, nuevoCobroMetodo === med.id && styles.pillActive]} onPress={() => setNuevoCobroMetodo(med.id)}>
                           <Text style={styles.pillText}>{med.label}</Text>
                         </TouchableOpacity>
@@ -680,19 +752,19 @@ export default function AdminFinanzasScreen({ route }) {
                     </View>
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Referencia</Text>
-                    <TextInput style={styles.input} value={nuevoCobroRef} onChangeText={setNuevoCobroRef} placeholder="Cliente / plan (opcional)" placeholderTextColor={t.placeholder} />
+                    <Text style={styles.label}>{tStr('fin_label_ref')}</Text>
+                    <TextInput style={styles.input} value={nuevoCobroRef} onChangeText={setNuevoCobroRef} placeholder={tStr('fin_ph_ref')} placeholderTextColor={t.placeholder} />
                   </View>
                   <View style={styles.btnRow}>
                     <TouchableOpacity style={styles.btn} onPress={() => guardarNuevoCobro(false)}>
-                      <Text style={styles.btnText}>Guardar (pendiente)</Text>
+                      <Text style={styles.btnText}>{tStr('fin_btn_save_pending')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.btn} onPress={() => guardarNuevoCobro(true)}>
-                      <Text style={styles.btnText}>Guardar y marcar cobrado</Text>
+                      <Text style={styles.btnText}>{tStr('fin_btn_save_paid')}</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity onPress={() => setShowNuevoCobro(false)}>
-                    <Text style={[styles.cardLine, { color: t.brand, marginTop: 8 }]}>Cancelar</Text>
+                    <Text style={[styles.cardLine, { color: t.brand, marginTop: 8 }]}>{tStr('common_cancel')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -700,63 +772,85 @@ export default function AdminFinanzasScreen({ route }) {
                 pagosFiltrados.map((p) => (
                   <View key={p.id} style={styles.card}>
                     <Text style={styles.cardTitle}>{p.userId} · {p.planId}</Text>
-                    <Text style={styles.cardLine}>Período: {p.periodo || '—'} · Estado: {p.status}</Text>
-                    <Text style={styles.cardLine}>{formatMonto(p.monto, p.moneda)} · {p.metodo || '—'}</Text>
-                    {p.paidAt ? <Text style={[styles.cardLine, { fontSize: 12, color: t.subText }]}>Cobrado: {formatDateTime(p.paidAt)}</Text> : null}
+                    <Text style={styles.cardLine}>
+                      {tStr('fin_period_line')} {p.periodo || '—'} · {tStr('fin_status_line')} {p.status}
+                    </Text>
+                    <Text style={styles.cardLine}>
+                      {formatMonto(p.monto, p.moneda)} · {p.metodo ? payLabel(p.metodo) : '—'}
+                    </Text>
+                    {p.paidAt ? (
+                      <Text style={[styles.cardLine, { fontSize: 12, color: t.subText }]}>
+                        {tStr('fin_collected')} {formatDateTime(p.paidAt)}
+                      </Text>
+                    ) : null}
                     <View style={styles.cardActions}>
                       {(p.status === 'pendiente' || p.status === 'parcial') && (
                         <>
                           <TouchableOpacity style={styles.smallBtn} onPress={() => markAsPaid(p.id, { metodo: p.metodo || 'efectivo' })}>
-                            <Text style={styles.smallBtnText}>Marcar cobrado</Text>
+                            <Text style={styles.smallBtnText}>{tStr('fin_btn_mark_paid')}</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.smallBtn} onPress={() => markAsPartial(p.id, Math.round((p.monto || 0) / 2), { metodo: p.metodo || 'efectivo' })}>
-                            <Text style={styles.smallBtnText}>Pago parcial</Text>
+                            <Text style={styles.smallBtnText}>{tStr('fin_btn_partial')}</Text>
                           </TouchableOpacity>
                         </>
                       )}
                       {p.status !== 'devuelto' && (
                         <TouchableOpacity style={styles.smallBtnDanger} onPress={() => confirmarDevolucion(p)}>
-                          <Text style={styles.smallBtnText}>Devolución</Text>
+                          <Text style={styles.smallBtnText}>{tStr('fin_btn_refund')}</Text>
                         </TouchableOpacity>
                       )}
                     </View>
                   </View>
                 ))
               ) : (
-                <Text style={styles.emptyText}>Sin cobros pendientes</Text>
+                <Text style={styles.emptyText}>{tStr('fin_empty_payments')}</Text>
               )}
 
               <View style={styles.spacerSm} />
-              <Text style={styles.sectionTitle}>Suscripciones</Text>
-              <Text style={styles.infoText}>
-                Generan cobros periódicos. «Generar facturas del mes» crea los cobros pendientes; después cobrás y los registrás en Caja.
-              </Text>
+              <Text style={styles.sectionTitle}>{tStr('fin_subscriptions_title')}</Text>
+              <Text style={styles.infoText}>{tStr('fin_subscriptions_intro')}</Text>
               {!showNuevaSub ? (
                 <View style={styles.btnRow}>
                   <TouchableOpacity style={styles.btn} onPress={() => setShowNuevaSub(true)}>
-                    <Text style={styles.btnText}>+ Nueva suscripción</Text>
+                    <Text style={styles.btnText}>{tStr('fin_btn_new_sub')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.btn} onPress={generateNextInvoices}>
-                    <Text style={styles.btnText}>Generar facturas del mes</Text>
+                    <Text style={styles.btnText}>{tStr('fin_btn_gen_invoices')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Nueva suscripción</Text>
+                  <Text style={styles.cardTitle}>{tStr('fin_new_sub_title')}</Text>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Cliente / ID</Text>
-                    <TextInput style={styles.input} value={nuevaSubUserId} onChangeText={setNuevaSubUserId} placeholder="Ej: cliente@email.com" placeholderTextColor={t.placeholder} />
+                    <Text style={styles.label}>{tStr('fin_label_client_id')}</Text>
+                    <TextInput style={styles.input} value={nuevaSubUserId} onChangeText={setNuevaSubUserId} placeholder={tStr('fin_ph_uuid')} placeholderTextColor={t.placeholder} />
+                  </View>
+                  {orgMemberPicklist.length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberPickScroll}>
+                      {orgMemberPicklist.map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={styles.memberChip}
+                          onPress={() => setNuevaSubUserId(m.id)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.memberChipText} numberOfLines={1}>
+                            {m.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : null}
+                  <View style={styles.row}>
+                    <Text style={styles.label}>{tStr('fin_label_plan')}</Text>
+                    <TextInput style={styles.input} value={nuevaSubPlanId} onChangeText={setNuevaSubPlanId} placeholder={tStr('fin_ph_plan_id')} placeholderTextColor={t.placeholder} />
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Plan</Text>
-                    <TextInput style={styles.input} value={nuevaSubPlanId} onChangeText={setNuevaSubPlanId} placeholder="Ej: cross_training" placeholderTextColor={t.placeholder} />
+                    <Text style={styles.label}>{tStr('fin_label_price')}</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={nuevaSubPrecio} onChangeText={setNuevaSubPrecio} placeholder={tStr('fin_ph_amount_example')} placeholderTextColor={t.placeholder} />
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Precio</Text>
-                    <TextInput style={styles.input} keyboardType="numeric" value={nuevaSubPrecio} onChangeText={setNuevaSubPrecio} placeholder="Ej: 25000" placeholderTextColor={t.placeholder} />
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Moneda</Text>
+                    <Text style={styles.label}>{tStr('fin_label_currency')}</Text>
                     <View style={styles.pillRow}>
                       {SUPPORTED_CURRENCIES.map((cur) => (
                         <TouchableOpacity key={cur} style={[styles.pill, nuevaSubMoneda === cur && styles.pillActive]} onPress={() => setNuevaSubMoneda(cur)}>
@@ -766,14 +860,14 @@ export default function AdminFinanzasScreen({ route }) {
                     </View>
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Día venc.</Text>
-                    <TextInput style={styles.input} keyboardType="number-pad" value={nuevaSubDiaVenc} onChangeText={setNuevaSubDiaVenc} placeholder="1-31" placeholderTextColor={t.placeholder} />
+                    <Text style={styles.label}>{tStr('fin_label_due_day')}</Text>
+                    <TextInput style={styles.input} keyboardType="number-pad" value={nuevaSubDiaVenc} onChangeText={setNuevaSubDiaVenc} placeholder={tStr('fin_ph_due_day')} placeholderTextColor={t.placeholder} />
                   </View>
                   <TouchableOpacity style={styles.btn} onPress={guardarNuevaSuscripcion}>
-                    <Text style={styles.btnText}>Crear suscripción</Text>
+                    <Text style={styles.btnText}>{tStr('fin_btn_create_sub')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setShowNuevaSub(false)}>
-                    <Text style={[styles.cardLine, { color: t.brand, marginTop: 8 }]}>Cancelar</Text>
+                    <Text style={[styles.cardLine, { color: t.brand, marginTop: 8 }]}>{tStr('common_cancel')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -781,20 +875,25 @@ export default function AdminFinanzasScreen({ route }) {
                 Object.values(subscriptions).map((s) => (
                   <View key={s.id} style={styles.card}>
                     <Text style={styles.cardTitle}>{s.userId} · {s.planId}</Text>
-                    <Text style={styles.cardLine}>{s.tipo} · {formatMonto(s.precio, s.moneda)} / mes · Vence día {s.diaVencimiento ?? '—'}</Text>
+                    <Text style={styles.cardLine}>
+                      {tStr('fin_sub_line')
+                        .replace('{{tipo}}', s.tipo)
+                        .replace('{{amount}}', formatMonto(s.precio, s.moneda))
+                        .replace('{{day}}', String(s.diaVencimiento ?? '—'))}
+                    </Text>
                     <View style={styles.cardActions}>
                       {s.activo ? (
                         <TouchableOpacity style={styles.smallBtnDanger} onPress={() => confirmarCancelarSuscripcion(s)}>
-                          <Text style={styles.smallBtnText}>Cancelar suscripción</Text>
+                          <Text style={styles.smallBtnText}>{tStr('fin_btn_cancel_sub')}</Text>
                         </TouchableOpacity>
                       ) : (
-                        <Text style={[styles.cardLine, { color: t.subText }]}>Cancelada</Text>
+                        <Text style={[styles.cardLine, { color: t.subText }]}>{tStr('fin_sub_cancelled')}</Text>
                       )}
                     </View>
                   </View>
                 ))
               ) : (
-                <Text style={styles.emptyText}>Sin suscripciones</Text>
+                <Text style={styles.emptyText}>{tStr('fin_empty_subs')}</Text>
               )}
             </View>
           )}

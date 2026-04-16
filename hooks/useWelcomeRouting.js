@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 
 /**
  * Navegación post-welcome: destino según rol, membresías y modo (cliente/staff).
@@ -97,7 +98,7 @@ export function useWelcomeRouting() {
           navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
           return;
         }
-        navigation.reset({ index: 0, routes: [{ name: 'ClientTabs' }] });
+        navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
         return;
       }
 
@@ -118,7 +119,7 @@ export function useWelcomeRouting() {
           navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
           return;
         }
-        navigation.reset({ index: 0, routes: [{ name: 'ClientTabs' }] });
+        navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
         return;
       }
 
@@ -145,7 +146,7 @@ export function useWelcomeRouting() {
         navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
         return;
       }
-      navigation.reset({ index: 0, routes: [{ name: 'ClientTabs' }] });
+      navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
     },
     [
       navigation,

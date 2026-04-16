@@ -21,6 +21,7 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -31,23 +32,26 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
-const formatDate = (iso) => {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return '';
-  }
-};
-
 export default function AdminNovedadesScreen() {
   const navigation = useNavigation();
   const { t } = useThemeContext();
-  const { currentUser } = useAuth();
+  const { t: tStr, locale } = useLocale();
+  const { user, profile, organization } = useAuth() || {};
+  const orgId = organization?.id || profile?.organization_id || null;
+
+  const formatDate = (iso) => {
+    if (!iso) return '';
+    try {
+      const loc = locale === 'en' ? 'en-US' : 'es-AR';
+      return new Date(iso).toLocaleDateString(loc, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return '';
+    }
+  };
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,11 +65,13 @@ export default function AdminNovedadesScreen() {
 
   const loadNews = async () => {
     try {
-      const { data, error } = await supabase
+      let q = supabase
         .from('gym_news')
         .select('id, title, body, tag, pinned, is_active, created_at')
         .order('pinned', { ascending: false })
         .order('created_at', { ascending: false });
+      if (orgId) q = q.eq('organization_id', orgId);
+      const { data, error } = await q;
       if (error) throw error;
       setItems(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -77,7 +83,7 @@ export default function AdminNovedadesScreen() {
 
   useEffect(() => {
     loadNews();
-  }, []);
+  }, [orgId]);
 
   const openEdit = (row) => {
     setEditingId(row.id);
@@ -107,7 +113,11 @@ export default function AdminNovedadesScreen() {
   const saveItem = async () => {
     const title = (formTitle || '').trim();
     if (!title) {
-      Alert.alert('Falta título', 'El título es obligatorio.');
+      Alert.alert(tStr('admin_news_title_required_title'), tStr('admin_news_title_required_body'));
+      return;
+    }
+    if (!orgId) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_news_need_org'));
       return;
     }
     setSaving(true);
@@ -123,13 +133,15 @@ export default function AdminNovedadesScreen() {
         const { error } = await supabase.from('gym_news').update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('gym_news').insert({ ...payload, created_by: currentUser?.id || null });
+        const { error } = await supabase
+          .from('gym_news')
+          .insert({ ...payload, organization_id: orgId, created_by: user?.id || null });
         if (error) throw error;
       }
       cancelForm();
       await loadNews();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo guardar.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_news_save_fail'));
     } finally {
       setSaving(false);
     }
@@ -144,18 +156,19 @@ export default function AdminNovedadesScreen() {
       if (error) throw error;
       await loadNews();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo actualizar.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_news_update_fail'));
     }
   };
 
   const deleteItem = (row) => {
+    const titlePreview = (row.title || '').slice(0, 40);
     Alert.alert(
-      'Eliminar novedad',
-      `¿Eliminar "${(row.title || '').slice(0, 40)}..."? Los clientes ya no la verán.`,
+      tStr('admin_news_delete_title'),
+      tStr('admin_news_delete_message').replace('{{title}}', titlePreview),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: tStr('admin_news_delete_cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: tStr('admin_news_delete_confirm'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -164,7 +177,7 @@ export default function AdminNovedadesScreen() {
               await loadNews();
               if (editingId === row.id) cancelForm();
             } catch (e) {
-              Alert.alert('Error', e?.message || 'No se pudo eliminar.');
+              Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_news_delete_fail'));
             }
           },
         },
@@ -238,57 +251,57 @@ export default function AdminNovedadesScreen() {
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
               <Ionicons name="arrow-back" size={26} color={t.text} />
             </TouchableOpacity>
-            <Text style={styles.title}>Novedades</Text>
+            <Text style={styles.title}>{tStr('admin_news_screen_title')}</Text>
             <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>
-              <Text style={styles.btnText}>Nueva</Text>
+              <Text style={styles.btnText}>{tStr('admin_news_new')}</Text>
             </TouchableOpacity>
           </View>
 
           {formVisible && (
             <View style={styles.formWrap}>
-              <Text style={styles.label}>Título *</Text>
+              <Text style={styles.label}>{tStr('admin_news_label_title')}</Text>
               <TextInput
                 style={styles.input}
                 value={formTitle}
                 onChangeText={setFormTitle}
-                placeholder="Título de la novedad"
+                placeholder={tStr('admin_news_form_title_ph')}
                 placeholderTextColor={t.placeholder}
               />
-              <Text style={styles.label}>Cuerpo (opcional)</Text>
+              <Text style={styles.label}>{tStr('admin_news_label_body')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={formBody}
                 onChangeText={setFormBody}
-                placeholder="Texto completo..."
+                placeholder={tStr('admin_news_form_body_ph')}
                 placeholderTextColor={t.placeholder}
                 multiline
               />
-              <Text style={styles.label}>Etiqueta (opcional)</Text>
+              <Text style={styles.label}>{tStr('admin_news_label_tag')}</Text>
               <TextInput
                 style={styles.input}
                 value={formTag}
                 onChangeText={setFormTag}
-                placeholder="Ej: Horarios"
+                placeholder={tStr('admin_news_form_tag_ph')}
                 placeholderTextColor={t.placeholder}
               />
               <View style={styles.row}>
                 <Switch value={formPinned} onValueChange={setFormPinned} trackColor={{ false: t.border, true: t.brand }} thumbColor="#fff" />
-                <Text style={styles.switchLabel}>Fijada (aparece primero)</Text>
+                <Text style={styles.switchLabel}>{tStr('admin_news_switch_pinned')}</Text>
               </View>
               <View style={styles.row}>
                 <Switch value={formActive} onValueChange={setFormActive} trackColor={{ false: t.border, true: t.brand }} thumbColor="#fff" />
-                <Text style={styles.switchLabel}>Visible para clientes y coaches</Text>
+                <Text style={styles.switchLabel}>{tStr('admin_news_switch_visible')}</Text>
               </View>
               <View style={styles.actions}>
                 <TouchableOpacity style={styles.btn} onPress={saveItem} disabled={saving} activeOpacity={0.9}>
-                  <Text style={styles.btnText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
+                  <Text style={styles.btnText}>{saving ? tStr('admin_news_saving') : tStr('admin_news_save')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.btn, { backgroundColor: t.inputBg, borderColor: t.overlayBorder }]}
                   onPress={cancelForm}
                   activeOpacity={0.9}
                 >
-                  <Text style={[styles.btnText, { color: t.text }]}>Cancelar</Text>
+                  <Text style={[styles.btnText, { color: t.text }]}>{tStr('admin_news_cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -300,24 +313,24 @@ export default function AdminNovedadesScreen() {
             </View>
           ) : items.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No hay novedades. Creá una con "Nueva".</Text>
+              <Text style={styles.emptyText}>{tStr('admin_news_empty')}</Text>
             </View>
           ) : (
             items.map((row) => (
               <View key={row.id} style={styles.card}>
                 <View style={styles.cardRow}>
                   <Text style={styles.cardTitle} numberOfLines={2}>
-                    {row.title || 'Sin título'}
+                    {row.title || tStr('admin_news_no_title')}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {row.pinned && (
                       <View style={[styles.badge, styles.badgePinned]}>
-                        <Text style={{ color: t.brand, fontSize: 10, fontWeight: '700' }}>FIJA</Text>
+                        <Text style={{ color: t.brand, fontSize: 10, fontWeight: '700' }}>{tStr('admin_news_pinned')}</Text>
                       </View>
                     )}
                     {!row.is_active && (
                       <View style={[styles.badge, styles.badgeInactive]}>
-                        <Text style={{ color: t.subText, fontSize: 10 }}>Oculta</Text>
+                        <Text style={{ color: t.subText, fontSize: 10 }}>{tStr('admin_news_hidden')}</Text>
                       </View>
                     )}
                   </View>
@@ -328,14 +341,16 @@ export default function AdminNovedadesScreen() {
                 </Text>
                 <View style={[styles.actions, { marginTop: 12 }]}>
                   <TouchableOpacity style={styles.btn} onPress={() => openEdit(row)} activeOpacity={0.9}>
-                    <Text style={styles.btnText}>Editar</Text>
+                    <Text style={styles.btnText}>{tStr('admin_news_edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.btn, { backgroundColor: t.inputBg, borderColor: t.overlayBorder }]}
                     onPress={() => toggleActive(row)}
                     activeOpacity={0.9}
                   >
-                    <Text style={[styles.btnText, { color: t.text }]}>{row.is_active ? 'Ocultar' : 'Mostrar'}</Text>
+                    <Text style={[styles.btnText, { color: t.text }]}>
+                      {row.is_active ? tStr('admin_news_hide') : tStr('admin_news_show')}
+                    </Text>
                   </TouchableOpacity>
                   {row.is_active && (
                     <TouchableOpacity
@@ -343,7 +358,7 @@ export default function AdminNovedadesScreen() {
                       onPress={() => deleteItem(row)}
                       activeOpacity={0.9}
                     >
-                      <Text style={t.buttonDangerText}>Eliminar</Text>
+                      <Text style={t.buttonDangerText}>{tStr('admin_news_delete_btn')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>

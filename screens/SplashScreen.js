@@ -5,11 +5,13 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import LogoCompleto from '../components/LogoCompleto';
+import { useLocale } from '../contexts/LocaleContext';
 
 const SPLASH_DURATION_MS = 2200;
 
 export default function SplashScreen() {
   const navigation = useNavigation();
+  const { t: tStr } = useLocale();
   const goneRef = useRef(false);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function SplashScreen() {
     >
       <View style={styles.center}>
         <LogoCompleto height={155} style={styles.logo} />
-        <Text style={[styles.byWaitomo, { color: fe.subText }]}>by WAITOMO</Text>
+        <Text style={[styles.byWaitomo, { color: fe.subText }]}>{tStr('splash_by_waitomo')}</Text>
       </View>
     </TouchableOpacity>
   );

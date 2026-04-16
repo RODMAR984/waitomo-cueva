@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 import { getThemeTokens, hexToRgba } from '../theme/colors';
 import { imageUriToArrayBuffer } from '../utils/imageUriToArrayBuffer';
@@ -80,30 +81,10 @@ const applyLightness = (hex, lightness = 50) => {
   return `#${ch(rgb.r).toString(16).padStart(2, '0')}${ch(rgb.g).toString(16).padStart(2, '0')}${ch(rgb.b).toString(16).padStart(2, '0')}`;
 };
 
-const PRESET_LABELS = {
-  dark_vivid: 'Oscuro vivo',
-  dark_minimal: 'Oscuro minimal',
-  light_clean: 'Claro limpio',
-  light_warm: 'Claro cálido',
-};
-
 /** Atajos de color de fuente (opcional; pisá el del preset) */
 const TEXT_QUICK = ['#f8fafc', '#e2e8f0', '#fef08a', '#0f172a', '#431407', '#fce7f3', '#ecfccb'];
 
-const PRESET_HINTS = {
-  dark_vivid: 'Cian/azul en secundarios, paneles con mucho acento.',
-  dark_minimal: 'Zinc neutro, acento casi solo en botones.',
-  light_clean: 'Blanco + gris frío, sombra suave.',
-  light_warm: 'Crema, bordes melocotón, marrón en secundarios.',
-};
-
 const TEXT_SECOND_QUICK = ['#94a3b8', '#64748b', '#a8a29e', '#78716c', '#0ea5e9', '#9a3412', '#4b5563'];
-
-const BG_TYPE_LABELS = {
-  solid: 'Sólido',
-  gradient: 'Degradado',
-  image: 'Imagen',
-};
 
 function isStorageBucketMissingError(err) {
   const msg = String(err?.message || err || '');
@@ -112,7 +93,12 @@ function isStorageBucketMissingError(err) {
 
 export default function ConfiguraTuEspacioScreen() {
   const navigation = useNavigation();
+  const { t: tStr } = useLocale();
   const { user, refreshOrganization, refreshProfile } = useAuth() || {};
+
+  const presetLabel = (k) => tStr(`fe_preset_${k}`);
+  const presetHint = (k) => tStr(`fe_preset_hint_${k}`);
+  const bgTypeLabel = (k) => tStr(`fe_bg_${k}`);
   const [name, setName] = useState('');
   const [type, setType] = useState('gym');
   const [accentColor, setAccentColor] = useState('#818cf8');
@@ -143,14 +129,14 @@ export default function ConfiguraTuEspacioScreen() {
     if (validTextSecondary) feats.text_secondary_color = validTextSecondary;
     return {
       id: 'preview-fitengine-local',
-      name: 'Preview',
+      name: tStr('fe_preview_org_name'),
       accent_color: validAccent,
       theme_preset: themePreset,
       features: Object.keys(feats).length ? feats : undefined,
       background_type: backgroundType,
       background_url: backgroundType === 'image' ? resolvedImageUri : null,
     };
-  }, [validAccent, validTextColor, validTextSecondary, themePreset, backgroundType, resolvedImageUri]);
+  }, [validAccent, validTextColor, validTextSecondary, themePreset, backgroundType, resolvedImageUri, tStr]);
 
   const previewTokens = useMemo(
     () => getThemeTokens(previewMode, previewOrg),
@@ -345,7 +331,7 @@ export default function ConfiguraTuEspacioScreen() {
       setPickingLogo(true);
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso', 'Se necesita acceso a la galería para subir el logo.');
+        Alert.alert(tStr('fe_alert_perm_gallery_logo_title'), tStr('fe_alert_perm_gallery_logo_body'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -357,7 +343,7 @@ export default function ConfiguraTuEspacioScreen() {
       if (result.canceled || !result.assets?.[0]?.uri) return;
       setLogoLocalUri(result.assets[0].uri);
     } catch (e) {
-      Alert.alert('Logo', e?.message || 'No se pudo seleccionar la imagen.');
+      Alert.alert(tStr('fe_alert_logo_pick_fail_title'), e?.message || tStr('fe_alert_pick_image_fail'));
     } finally {
       setPickingLogo(false);
     }
@@ -383,7 +369,7 @@ export default function ConfiguraTuEspacioScreen() {
       setPickingBackground(true);
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso', 'Se necesita acceso a la galería para elegir el fondo.');
+        Alert.alert(tStr('fe_alert_bg_perm_title'), tStr('fe_alert_bg_perm_body'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -395,7 +381,7 @@ export default function ConfiguraTuEspacioScreen() {
       if (result.canceled || !result.assets?.[0]?.uri) return;
       setBackgroundLocalUri(result.assets[0].uri);
     } catch (e) {
-      Alert.alert('Fondo', e?.message || 'No se pudo seleccionar la imagen.');
+      Alert.alert(tStr('fe_alert_bg_pick_fail_title'), e?.message || tStr('fe_alert_pick_image_fail'));
     } finally {
       setPickingBackground(false);
     }
@@ -419,11 +405,11 @@ export default function ConfiguraTuEspacioScreen() {
   const handleCrear = async () => {
     const n = (name || '').trim();
     if (!n) {
-      Alert.alert('Nombre', 'Escribí el nombre de tu gym o marca.');
+      Alert.alert(tStr('fe_alert_name_title'), tStr('fe_alert_name_body'));
       return;
     }
     if (!user?.id) {
-      Alert.alert('Sesión', 'Tenés que estar logueado.');
+      Alert.alert(tStr('fe_alert_session_title'), tStr('fe_alert_session_body'));
       return;
     }
     setSaving(true);
@@ -451,7 +437,7 @@ export default function ConfiguraTuEspacioScreen() {
         .select('id')
         .single();
       if (orgError) throw orgError;
-      if (!org?.id) throw new Error('No se creó la organización.');
+      if (!org?.id) throw new Error(tStr('fe_alert_create_org_fail'));
 
       let storageSkipped = false;
 
@@ -538,11 +524,9 @@ export default function ConfiguraTuEspacioScreen() {
 
       const goAdmin = () => navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
       if (storageSkipped) {
-        Alert.alert(
-          'Espacio creado',
-          'Tu gym quedó registrado. Las imágenes no se subieron porque faltan buckets en Supabase Storage: creá los buckets públicos "org-logos" y "org-backgrounds" (o ejecutá las migraciones del proyecto). Podés subir logo y fondo después en Configuración del gym.',
-          [{ text: 'Entendido', onPress: goAdmin }],
-        );
+        Alert.alert(tStr('fe_alert_space_created_title'), tStr('fe_alert_space_created_body'), [
+          { text: tStr('fe_alert_understood'), onPress: goAdmin },
+        ]);
       } else {
         goAdmin();
       }
@@ -553,7 +537,7 @@ export default function ConfiguraTuEspacioScreen() {
         err?.details ||
         err?.hint ||
         (typeof err === 'string' ? err : JSON.stringify(err));
-      Alert.alert('Error', msg || 'No se pudo crear el espacio.');
+      Alert.alert(tStr('gym_config_alert_title_error'), msg || tStr('fe_alert_create_fail'));
     } finally {
       setSaving(false);
     }
@@ -600,12 +584,10 @@ export default function ConfiguraTuEspacioScreen() {
           contentContainerStyle={styles.scrollContent}
           nestedScrollEnabled
         >
-          <Text style={styles.title}>Configurá tu espacio</Text>
-          <Text style={styles.subtitle}>
-            Los cambios se ven al instante en la vista previa. El acento y el tema no usan la paleta Waitomo.
-          </Text>
+          <Text style={styles.title}>{tStr('fe_setup_title')}</Text>
+          <Text style={styles.subtitle}>{tStr('fe_setup_subtitle')}</Text>
 
-          <Text style={styles.sectionTitle}>Vista previa</Text>
+          <Text style={styles.sectionTitle}>{tStr('fe_setup_preview')}</Text>
           <View style={styles.previewWrap}>
             <View style={styles.previewPhone}>
               {renderPreviewBackground()}
@@ -624,16 +606,16 @@ export default function ConfiguraTuEspacioScreen() {
                     )}
                   </View>
                   <Text style={styles.previewBrand} numberOfLines={1}>
-                    {(name || '').trim() || 'Nombre del espacio'}
+                    {(name || '').trim() || tStr('fe_setup_name_placeholder')}
                   </Text>
                 </View>
                 <View style={styles.previewBody}>
                   <View style={styles.previewCard}>
                     <Text style={[styles.previewCardText, { color: previewTokens.text, fontWeight: '700' }]}>
-                      {PRESET_LABELS[themePreset] || themePreset}
+                      {presetLabel(themePreset)}
                     </Text>
                     <Text style={[styles.previewCardText, { color: previewTokens.subText, marginTop: 6, fontSize: 11 }]}>
-                      {`Secundario · ${BG_TYPE_LABELS[backgroundType] || backgroundType}`}
+                      {tStr('fe_setup_secondary_line').replace('{{type}}', bgTypeLabel(backgroundType))}
                     </Text>
                   </View>
                 </View>
@@ -641,35 +623,39 @@ export default function ConfiguraTuEspacioScreen() {
             </View>
           </View>
 
-          <Text style={styles.label}>Nombre (gym o marca)</Text>
+          <Text style={styles.label}>{tStr('fe_setup_name_label')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ej. Mi Gym"
+            placeholder={tStr('fe_setup_name_ph')}
             placeholderTextColor={FE.muted}
             value={name}
             onChangeText={setName}
           />
 
-          <Text style={styles.label}>Tipo</Text>
+          <Text style={styles.label}>{tStr('fe_setup_type_label')}</Text>
           <View style={styles.row}>
             <TouchableOpacity
               style={[styles.typeBtn, type === 'gym' && styles.typeBtnActive]}
               onPress={() => setType('gym')}
             >
-              <Text style={[styles.typeBtnText, type === 'gym' && styles.typeBtnTextActive]}>Gym</Text>
+              <Text style={[styles.typeBtnText, type === 'gym' && styles.typeBtnTextActive]}>
+                {tStr('fe_setup_type_gym')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.typeBtn, type === 'coach' && styles.typeBtnActive]}
               onPress={() => setType('coach')}
             >
-              <Text style={[styles.typeBtnText, type === 'coach' && styles.typeBtnTextActive]}>Coach</Text>
+              <Text style={[styles.typeBtnText, type === 'coach' && styles.typeBtnTextActive]}>
+                {tStr('fe_setup_type_coach')}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.label}>Color de acento</Text>
+          <Text style={styles.label}>{tStr('fe_setup_accent_label')}</Text>
           <View style={styles.colorRow}>
             <View style={[styles.colorPreview, { backgroundColor: validAccent }]} />
-            <Text style={styles.colorHint}>Deslizá y tocá un matiz, o editá el HEX.</Text>
+            <Text style={styles.colorHint}>{tStr('fe_setup_accent_hint')}</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hueScroller}>
             {HUES.map((color) => (
@@ -705,7 +691,7 @@ export default function ConfiguraTuEspacioScreen() {
           </ScrollView>
           <TextInput
             style={styles.input}
-            placeholder="#818cf8"
+            placeholder={tStr('fe_setup_hex_ph')}
             placeholderTextColor={FE.muted}
             value={accentColor}
             onChangeText={setAccentColor}
@@ -713,7 +699,7 @@ export default function ConfiguraTuEspacioScreen() {
           />
 
           <View style={styles.pickerBlock}>
-            <Text style={styles.label}>Preset de tema</Text>
+            <Text style={styles.label}>{tStr('fe_setup_preset_label')}</Text>
             <View style={styles.chipRow}>
               {['dark_vivid', 'dark_minimal', 'light_clean', 'light_warm'].map((preset) => (
                 <TouchableOpacity
@@ -722,20 +708,18 @@ export default function ConfiguraTuEspacioScreen() {
                   style={[styles.chip, themePreset === preset && styles.chipActive]}
                 >
                   <Text style={[styles.chipText, themePreset === preset && styles.chipTextActive]}>
-                    {PRESET_LABELS[preset] || preset}
+                    {presetLabel(preset)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
             <Text style={[styles.subtitle, { marginTop: 8, marginBottom: 0, fontSize: 12 }]}>
-              {PRESET_HINTS[themePreset] || ''}
+              {presetHint(themePreset)}
             </Text>
           </View>
 
-          <Text style={styles.label}>Texto principal (opcional)</Text>
-          <Text style={[styles.subtitle, { marginBottom: 8, fontSize: 12 }]}>
-            Vacío = el preset. HEX #RRGGBB.
-          </Text>
+          <Text style={styles.label}>{tStr('fe_setup_text_primary_label')}</Text>
+          <Text style={[styles.subtitle, { marginBottom: 8, fontSize: 12 }]}>{tStr('fe_setup_text_primary_hint')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hueScroller}>
             {TEXT_QUICK.map((c) => (
               <TouchableOpacity
@@ -752,16 +736,16 @@ export default function ConfiguraTuEspacioScreen() {
           </ScrollView>
           <TextInput
             style={styles.input}
-            placeholder="#f8fafc u omitir"
+            placeholder={tStr('fe_setup_text_primary_ph')}
             placeholderTextColor={FE.muted}
             value={textColor}
             onChangeText={setTextColor}
             autoCapitalize="none"
           />
 
-          <Text style={styles.label}>Texto secundario (opcional)</Text>
+          <Text style={styles.label}>{tStr('fe_setup_text_secondary_label')}</Text>
           <Text style={[styles.subtitle, { marginBottom: 8, fontSize: 12 }]}>
-            Subtítulos y ayudas. Elegí un tono que contraste con el principal; si vacío, se ajusta solo con el preset o desde el principal.
+            {tStr('fe_setup_text_secondary_hint')}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hueScroller}>
             {TEXT_SECOND_QUICK.map((c) => (
@@ -779,7 +763,7 @@ export default function ConfiguraTuEspacioScreen() {
           </ScrollView>
           <TextInput
             style={styles.input}
-            placeholder="#94a3b8 u omitir"
+            placeholder={tStr('fe_setup_text_secondary_ph')}
             placeholderTextColor={FE.muted}
             value={textSecondaryColor}
             onChangeText={setTextSecondaryColor}
@@ -787,7 +771,7 @@ export default function ConfiguraTuEspacioScreen() {
           />
 
           <View style={styles.pickerBlock}>
-            <Text style={styles.label}>Tipo de fondo</Text>
+            <Text style={styles.label}>{tStr('fe_setup_bg_type_label')}</Text>
             <View style={styles.chipRow}>
               {['solid', 'gradient', 'image'].map((bt) => (
                 <TouchableOpacity
@@ -796,7 +780,7 @@ export default function ConfiguraTuEspacioScreen() {
                   style={[styles.chip, backgroundType === bt && styles.chipActive]}
                 >
                   <Text style={[styles.chipText, backgroundType === bt && styles.chipTextActive]}>
-                    {BG_TYPE_LABELS[bt] || bt}
+                    {bgTypeLabel(bt)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -804,7 +788,7 @@ export default function ConfiguraTuEspacioScreen() {
             {backgroundType === 'image' && (
               <>
                 <Text style={[styles.subtitle, { marginBottom: 8, fontSize: 12 }]}>
-                  En la app se aplica un velo oscuro sobre la foto para que el texto se lea bien aunque la imagen sea muy clara.
+                  {tStr('fe_setup_bg_image_hint')}
                 </Text>
                 <View style={styles.bgPreviewWrap}>
                   {resolvedImageUri ? (
@@ -822,14 +806,14 @@ export default function ConfiguraTuEspacioScreen() {
                     {pickingBackground ? (
                       <ActivityIndicator size="small" color={validAccent} />
                     ) : (
-                      <Text style={styles.logoBtnText}>Elegir imagen de fondo</Text>
+                      <Text style={styles.logoBtnText}>{tStr('fe_setup_pick_bg')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.urlSectionLabel}>O pegá una URL de imagen (opcional)</Text>
+                <Text style={styles.urlSectionLabel}>{tStr('fe_setup_url_section')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="https://..."
+                  placeholder={tStr('fe_setup_url_ph')}
                   placeholderTextColor={FE.muted}
                   value={backgroundUrl}
                   onChangeText={setBackgroundUrl}
@@ -842,7 +826,7 @@ export default function ConfiguraTuEspacioScreen() {
           </View>
 
           <View style={styles.pickerBlock}>
-            <Text style={styles.label}>Logo de la organización</Text>
+            <Text style={styles.label}>{tStr('fe_setup_logo_label')}</Text>
             <View style={styles.logoWrap}>
               {logoLocalUri ? (
                 <Image source={{ uri: logoLocalUri }} style={styles.logoImg} resizeMode="cover" />
@@ -854,7 +838,7 @@ export default function ConfiguraTuEspacioScreen() {
               {pickingLogo ? (
                 <ActivityIndicator size="small" color={validAccent} />
               ) : (
-                <Text style={styles.logoBtnText}>Elegir logo</Text>
+                <Text style={styles.logoBtnText}>{tStr('fe_setup_pick_logo')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -863,7 +847,7 @@ export default function ConfiguraTuEspacioScreen() {
             {saving ? (
               <ActivityIndicator size="small" color={FE.text} />
             ) : (
-              <Text style={styles.btnText}>Crear y entrar al Admin</Text>
+              <Text style={styles.btnText}>{tStr('fe_setup_submit')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

@@ -26,15 +26,28 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTrainingData } from '../contexts/TrainingDataContext';
+import { plansMatchForBlocks } from '../utils/trainingBlockPlan';
+import { splitTextWithRmTokens, RM_HIGHLIGHT_COLOR } from '../utils/rmPattern';
+import {
+  fetchTrabajoDiaFeedMessages,
+  insertTrabajoDiaFeedMessage,
+  rowToFeedPayload,
+} from '../utils/trabajoDiaFeedSupabase';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { formatYmdLocal } from '../utils/formatYmdLocal';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
+import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
+import { evaluateWorkoutEntitlement } from '../utils/clientWorkoutEntitlement';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -51,7 +64,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
   // ================== PARAMS ==================
   const { plan, planKey, planValue, fecha, horario: paramHorario, hora: paramHora } = route.params || {};
   const horario = paramHorario ?? paramHora;
-  const fechaEfectiva = fecha || (() => { const d = new Date(); return d.toISOString().slice(0, 10); })();
+  const fechaEfectiva = fecha || formatYmdLocal(new Date());
   const {
     bloques,
     updateRM,
@@ -59,12 +72,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
     calculateWeight,
     saveUserNote,
     userNotes,
-    sendChatMessage,
-    chatMessages,
     refreshTrigger,
     hydrated,
+    refreshTrainingBlocksFromServer,
   } = useTrainingData();
-  const { role } = useAuth();
+  const { role, organization, profile, user } = useAuth();
+  const effectiveOrgId = organization?.id ?? profile?.organization_id ?? null;
   const isAdminLike = role === 'superadmin' || role === 'coach';
 
   // ================== STATE ==================
@@ -79,6 +92,11 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
   const [notesCollapsed, setNotesCollapsed] = useState(false);
   const [rmCollapsed, setRmCollapsed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [feedRows, setFeedRows] = useState([]);
+  const [feedTick, setFeedTick] = useState(0);
+  const [clientAbonoRow, setClientAbonoRow] = useState(null);
+  const [clientAbonoLoading, setClientAbonoLoading] = useState(true);
+  const [clientFreeGrant, setClientFreeGrant] = useState(null);
 
   // ✅ seed para rotación SOLO al entrar a esta pantalla
   const [bgSeed, setBgSeed] = useState(0);
@@ -227,6 +245,15 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         blockLineHighlighted: {
           color: t.brand,
           fontWeight: '700',
+        },
+        blockLineRmToken: {
+          color: RM_HIGHLIGHT_COLOR,
+          fontWeight: '700',
+        },
+        blockLineRmHint: {
+          color: t.subText,
+          fontSize: 12,
+          fontWeight: '500',
         },
 
         // Enlaces a video
@@ -485,6 +512,18 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         refreshSpinner: {
           marginBottom: 10,
         },
+
+        lockScroll: { flexGrow: 1, justifyContent: 'center', paddingVertical: 40 },
+        lockCta: {
+          alignItems: 'center',
+          borderRadius: 12,
+          marginTop: 12,
+          paddingVertical: 12,
+          ...t.buttonPrimary,
+        },
+        lockCtaText: { ...t.buttonPrimaryText, fontWeight: '600' },
+        lockBack: { alignItems: 'center', marginTop: 20, paddingVertical: 8 },
+        lockBackText: { color: t.subText, fontSize: 14 },
       }),
     [t],
   );
@@ -565,6 +604,75 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
     return s.replace(/\s+/g, '_');
   }, [plan, planKey, planNombreCorregido]);
 
+  const planCanonForEntitlement = useMemo(() => {
+    return (
+      normalizePlanKey(planKey) ||
+      normalizePlanKey(planKeyNormalized) ||
+      normalizePlanKey(planValueEfectivo) ||
+      null
+    );
+  }, [planKey, planKeyNormalized, planValueEfectivo]);
+
+  useEffect(() => {
+    if (isAdminLike || !user?.id) {
+      setClientAbonoLoading(false);
+      setClientAbonoRow(null);
+      return undefined;
+    }
+    let alive = true;
+    (async () => {
+      setClientAbonoLoading(true);
+      try {
+        const row = await fetchLatestUserAbono(user.id);
+        if (alive) setClientAbonoRow(row);
+      } catch {
+        if (alive) setClientAbonoRow(null);
+      } finally {
+        if (alive) setClientAbonoLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [isAdminLike, user?.id]);
+
+  useEffect(() => {
+    if (isAdminLike) {
+      setClientFreeGrant(null);
+      return undefined;
+    }
+    let alive = true;
+    (async () => {
+      const g = await resolveFreeClassGrant(user?.id);
+      if (alive) setClientFreeGrant(g);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [isAdminLike, user?.id]);
+
+  const workoutEntitlement = useMemo(() => {
+    if (isAdminLike) return { ok: true };
+    return evaluateWorkoutEntitlement({
+      planCanonKey: planCanonForEntitlement,
+      organizationId: effectiveOrgId,
+      abonoRow: clientAbonoRow,
+      abonoLoading: clientAbonoLoading,
+      freeClassGrant: clientFreeGrant,
+      fechaYmd: String(fechaEfectiva).slice(0, 10),
+      horarioNormalized: horarioEfectivo,
+    });
+  }, [
+    isAdminLike,
+    planCanonForEntitlement,
+    effectiveOrgId,
+    clientAbonoRow,
+    clientAbonoLoading,
+    clientFreeGrant,
+    fechaEfectiva,
+    horarioEfectivo,
+  ]);
+
   // ✅ rotación SOLO al entrar (focus)
   useFocusEffect(
     useCallback(() => {
@@ -579,7 +687,8 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
     if (!bloques || !Array.isArray(bloques)) return [];
     const fechaKey = fechaEfectiva.slice(0, 10);
     return bloques.filter((b) => {
-      const samePlan = String(b.plan || '').trim() === planValueEfectivo;
+      if (effectiveOrgId && b.organization_id && b.organization_id !== effectiveOrgId) return false;
+      const samePlan = plansMatchForBlocks(b.plan, planValueEfectivo);
       const bFechaKey = b.fechaKey || (b.fecha ? String(b.fecha).slice(0, 10) : '');
       const sameDate = bFechaKey === fechaKey;
       if (!samePlan || !sameDate) return false;
@@ -587,7 +696,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       const bHora = normalizeHora(b.hora || b.horario);
       return bHora === horarioEfectivo;
     });
-  }, [bloques, planValueEfectivo, fechaEfectiva, horarioEfectivo]);
+  }, [bloques, planValueEfectivo, fechaEfectiva, horarioEfectivo, effectiveOrgId]);
 
   // ================== NOTAS DE USUARIO ==================
   const userNoteKey = useMemo(() => {
@@ -609,7 +718,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       collapsed: notesCollapsed,
       rmCollapsed,
     });
-    Alert.alert('Notas guardadas', 'Tus notas personales se han guardado para este día/horario.');
+    Alert.alert(tStr('trabajo_dia_notes_saved_title'), tStr('trabajo_dia_notes_saved_body'));
   };
 
   const handleDeleteNote = () => {
@@ -653,7 +762,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
   const saveRM = () => {
     const parsed = parseFloat(currentRM.replace(',', '.'));
     if (Number.isNaN(parsed) || parsed <= 0) {
-      Alert.alert('Dato inválido', 'Ingresá un RM válido en kilos.');
+      Alert.alert(tStr('trabajo_dia_rm_invalid_title'), tStr('trabajo_dia_rm_invalid_body'));
       return;
     }
     updateRM(currentExercise, parsed);
@@ -662,140 +771,213 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
 
   const getExistingRMs = useCallback(() => Object.entries(getRM() || {}), [getRM]);
 
-  // ================== CHAT ==================
-  const GLOBAL_CHAT_KEY = 'global_trabajo_del_dia';
-  const PLAN_FEED_PREFIX = 'plan_feed_';
-  const planFeedKey = `${PLAN_FEED_PREFIX}${planValueEfectivo}`;
-  const chatKey = `chat_${String(planValueEfectivo)}_${fechaEfectiva}${horarioEfectivo ? `_${horarioEfectivo}` : ''}`;
-
+  // ================== CHAT (feed en Supabase: trabajo_dia_feed_messages) ==================
   const [sendToPlan, setSendToPlan] = useState(true);
   const [sendToDay, setSendToDay] = useState(true);
 
+  useEffect(() => {
+    if (!hydrated || !effectiveOrgId) {
+      setFeedRows([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      const { data, error } = await fetchTrabajoDiaFeedMessages({
+        organizationId: effectiveOrgId,
+        planValueForKey: planValueEfectivo,
+        fechaYmd: fechaEfectiva.slice(0, 10),
+        horarioNormalized: horarioEfectivo,
+      });
+      if (!alive) return;
+      if (error) {
+        setFeedRows([]);
+        return;
+      }
+      setFeedRows(data || []);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [hydrated, effectiveOrgId, planValueEfectivo, fechaEfectiva, horarioEfectivo, feedTick]);
+
   const messagesMerged = useMemo(() => {
     if (!hydrated) return [];
-    const globalMsgs = isAdminLike
-      ? (chatMessages && chatMessages[GLOBAL_CHAT_KEY]) || []
-      : [];
-    const planMsgs = (chatMessages && chatMessages[planFeedKey]) || [];
-    const dayMsgs = (chatMessages && chatMessages[chatKey]) || [];
-
+    const mapped = (feedRows || []).map(rowToFeedPayload).filter((m) => m && m.id);
+    const visible = isAdminLike
+      ? mapped
+      : mapped.filter((m) => m.scope !== 'global');
     const messageMap = new Map();
-
-    globalMsgs.forEach((msg) => {
-      if (!msg || !msg.id) return;
-      const scope = typeof msg.scope === 'string' && msg.scope ? msg.scope : 'global';
-      messageMap.set(msg.id, { ...msg, scope });
+    visible.forEach((msg) => {
+      messageMap.set(msg.id, msg);
     });
-
-    planMsgs.forEach((msg) => {
-      if (!msg || !msg.id) return;
-      const scope = typeof msg.scope === 'string' && msg.scope ? msg.scope : 'plan';
-      messageMap.set(msg.id, { ...msg, scope });
-    });
-
-    dayMsgs.forEach((msg) => {
-      if (!msg || !msg.id) return;
-      const scope = typeof msg.scope === 'string' && msg.scope ? msg.scope : 'day';
-      messageMap.set(msg.id, { ...msg, scope });
-    });
-
     return Array.from(messageMap.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-  }, [chatMessages, planFeedKey, chatKey, refreshTrigger, hydrated, isAdminLike]);
+  }, [feedRows, hydrated, isAdminLike]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const text = (chatMessage || '').trim();
     if (!text) return;
     if (!sendToPlan && !sendToDay) {
-      Alert.alert('Elegí un destino', 'Activá "Al plan" y/o "A este día/horario".');
+      Alert.alert(tStr('trabajo_dia_chat_dest_title'), tStr('trabajo_dia_chat_dest_body'));
+      return;
+    }
+    if (!user?.id || !effectiveOrgId) {
+      Alert.alert(tStr('trabajo_dia_chat_dest_title'), tStr('chat_hint_no_org'));
       return;
     }
     const baseId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    let scope = '';
-    if (sendToPlan && sendToDay) scope = 'plan+day';
-    else if (sendToPlan) scope = 'plan';
-    else if (sendToDay) scope = 'day';
+    const displayName = profile?.full_name || profile?.username || tStr('common_user');
+    const ts = Date.now();
 
-    const payload = {
-      text,
-      user: 'Usuario',
-      timestamp: Date.now(),
-      isUser: true,
-      id: baseId,
-      scope,
-    };
-
-    if (sendToPlan) sendChatMessage(planFeedKey, payload);
-    if (sendToDay) sendChatMessage(chatKey, payload);
+    try {
+      if (sendToPlan) {
+        const r1 = await insertTrabajoDiaFeedMessage({
+          organizationId: effectiveOrgId,
+          feedKind: 'plan',
+          planKey: planValueEfectivo,
+          sessionDate: null,
+          slotLabel: null,
+          authorId: user.id,
+          payload: {
+            text,
+            user: displayName,
+            timestamp: ts,
+            isUser: true,
+            id: `${baseId}_plan`,
+            scope: sendToDay ? 'plan+day' : 'plan',
+          },
+          clientMsgId: `${baseId}_plan`,
+        });
+        if (r1?.error?.message) console.warn('trabajo_dia_feed plan', r1.error.message);
+      }
+      if (sendToDay) {
+        const r2 = await insertTrabajoDiaFeedMessage({
+          organizationId: effectiveOrgId,
+          feedKind: 'day',
+          planKey: planValueEfectivo,
+          sessionDate: fechaEfectiva.slice(0, 10),
+          slotLabel: horarioEfectivo || null,
+          authorId: user.id,
+          payload: {
+            text,
+            user: displayName,
+            timestamp: ts,
+            isUser: true,
+            id: `${baseId}_day`,
+            scope: sendToPlan ? 'plan+day' : 'day',
+          },
+          clientMsgId: `${baseId}_day`,
+        });
+        if (r2?.error?.message) console.warn('trabajo_dia_feed day', r2.error.message);
+      }
+      setFeedTick((x) => x + 1);
+    } catch (e) {
+      console.warn('trabajo_dia_feed send', e?.message);
+    }
     setChatMessage('');
     Keyboard.dismiss();
   };
 
   // ================== REFRESH ==================
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 900);
-  }, []);
+    try {
+      await refreshTrainingBlocksFromServer();
+      setFeedTick((x) => x + 1);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshTrainingBlocksFromServer]);
 
   // ================== RENDER SET LINE ==================
   const renderSetLine = (line, idx) => {
-  const tokens = String(line || '').split(/\s+/).filter(Boolean);
-
-  let found = null; // { pct, reps, exerciseName }
-
-  // Armamos un string “bonito” para mostrar la línea,
-  // pero cuando hay patrón lo renderizamos destacado.
-  const rendered = tokens.map((token, i) => {
-    const match = token.match(/^@(\d{1,3})%(\d+)rm(.+)$/i);
-
-    if (match) {
-      const [, pct, reps, exerciseRaw] = match;
-      const percentageNumber = parseFloat(pct);
-      const repsNumber = parseInt(reps, 10);
-      const rmType = `${repsNumber}RM`;
-      const exerciseName = String(exerciseRaw || '').trim();
-
-      found = { percentageNumber, repsNumber, exerciseName };
-
-      const weight = calculateWeight(exerciseName, percentageNumber, repsNumber);
-      const displayWeight =
-        weight != null && !Number.isNaN(weight) ? `${weight.toFixed(1)}kg` : '—';
-
-      return (
-        <Text key={`${idx}_pct_${i}`} style={styles.blockLineHighlighted}>
-          @{percentageNumber}%{rmType} ({exerciseName}) → {displayWeight}{' '}
-        </Text>
-      );
-    }
-
+    const segments = splitTextWithRmTokens(String(line || ''));
     return (
-      <Text key={`${idx}_word_${i}`} style={styles.blockLine}>
-        {token}{' '}
-      </Text>
+      <View key={`line_${idx}`} style={{ marginBottom: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+          {segments.map((seg, j) => {
+            if (seg.type === 'text') {
+              return (
+                <Text key={`${idx}_t_${j}`} style={styles.blockLine}>
+                  {seg.value}
+                </Text>
+              );
+            }
+            const pctNum = seg.pctNumber;
+            const rmStored = getRM(seg.exercise);
+            const hasNumericPct = !Number.isNaN(pctNum);
+            const weight =
+              hasNumericPct && rmStored != null
+                ? calculateWeight(pctNum, rmStored, seg.reps)
+                : null;
+            const displayWeight =
+              weight != null && !Number.isNaN(weight) ? `${weight.toFixed(1)} kg` : null;
+            const pctLabel = hasNumericPct ? `${pctNum}%` : `${seg.pctRaw}%`;
+            const tokenShown = displayWeight || seg.full;
+
+            return (
+              <TouchableOpacity
+                key={`${idx}_rm_${j}`}
+                activeOpacity={0.75}
+                onPress={() => openRMModal(seg.exercise, pctLabel)}
+              >
+                <Text style={styles.blockLineRmToken}>
+                  {tokenShown}
+                  {!displayWeight && rmStored == null ? (
+                    <Text style={styles.blockLineRmHint}> {tStr('trabajo_rm_tap_completar')}</Text>
+                  ) : null}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
     );
-  });
-
-  return (
-    <View key={`line_${idx}`} style={{ marginBottom: 6 }}>
-      {/* ✅ La línea puede tener múltiples <Text>, pero el contenedor es View */}
-      <Text style={styles.blockLine}>{rendered}</Text>
-
-      {/* ✅ Botón afuera del Text */}
-      {found?.exerciseName && (
-        <TouchableOpacity
-          onPress={() => openRMModal(found.exerciseName, `${found.percentageNumber}%`)}
-          style={{ marginTop: 6 }}
-        >
-          <Text style={styles.blockLineHighlighted}>
-            ⚙️ Ajustar RM de {found.exerciseName}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-};
-
+  };
 
   // ================== UI ==================
+  if (!isAdminLike && !workoutEntitlement.ok) {
+    if (workoutEntitlement.reason === 'loading') {
+      return (
+        <BackgroundWrapper screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
+          <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color={t.brand} />
+          </View>
+        </BackgroundWrapper>
+      );
+    }
+    return (
+      <BackgroundWrapper screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
+        <View style={styles.container}>
+          <ScrollView contentContainerStyle={styles.lockScroll} keyboardShouldPersistTaps="handled">
+            <View style={styles.panel}>
+              <View style={styles.panelHeader}>
+                <Text style={styles.planTitle}>{tStr('client_trabajo_locked_title')}</Text>
+                <Text style={styles.planSubtitle}>{tStr('client_trabajo_locked_body')}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.lockCta}
+                onPress={() => navigation.navigate('PlanSelector')}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.lockCtaText}>{tStr('client_entitlement_go_plans')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.lockCta}
+                onPress={() => navigation.navigate('AbonosPases')}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.lockCtaText}>{tStr('client_entitlement_go_pay')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.lockBack} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+                <Text style={styles.lockBackText}>{tStr('common_back')}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
+
   return (
     <BackgroundWrapper
       screen="TrabajoDelDia"
@@ -867,8 +1049,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                       ? bloque.contenido
                       : String(bloque.contenido || '').split('\n');
 
-                    const videoLinks = Array.isArray(bloque.videos) ? bloque.videos : [];
-                    const coachNotes = bloque.coachNotes || '';
+                    const videoLinks = Array.isArray(bloque.videoLinks)
+                      ? bloque.videoLinks
+                      : Array.isArray(bloque.videos)
+                        ? bloque.videos
+                        : [];
+                    const coachNotes = bloque.notas || bloque.coachNotes || '';
 
                     return (
                       <View key={bloque.id} style={styles.blockCard}>
@@ -880,7 +1066,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                             <Text style={styles.blockTitle}>{bloque.titulo || tStr('trabajo_bloque_sin_titulo')}</Text>
                             <View style={styles.blockMetaRow}>
                               <Text style={styles.blockMetaText}>
-                                {bloque.horario || horarioEfectivo || tStr('trabajo_horario')}
+                                {bloque.hora || bloque.horario || horarioEfectivo || tStr('trabajo_horario')}
                               </Text>
                               {!!bloque.tipo && (
                                 <View style={styles.blockTypeTag}>
@@ -1149,7 +1335,8 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>{tStr('trabajo_modal_ajustar_rm')}</Text>
                 <Text style={styles.modalSubtitle}>
-                  {currentExercise} {currentPercentage ? `@${currentPercentage}` : ''}
+                  {currentExercise}
+                  {currentPercentage ? ` · ${currentPercentage}` : ''}
                 </Text>
                 <TextInput
                   style={styles.input}

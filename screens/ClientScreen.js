@@ -16,7 +16,7 @@ import {
   Animated,
 } from 'react-native';
 
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -27,6 +27,17 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 import { navigationRef } from '../navigationRef';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { formatYmdLocal } from '../utils/formatYmdLocal';
+import {
+  evaluateTrabajoHoyButton,
+  evaluateCalendarioAccess,
+  evaluateClientCommunityAccess,
+  isUserAbonoActive,
+} from '../utils/clientWorkoutEntitlement';
+import { clearFreeClassGrant } from '../utils/freeClassGrantStorage';
+import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../utils/freeClassPolicy';
+import { cancelTrialClassGrantServer, resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -79,20 +90,6 @@ const PLAN_KEY_TO_ADMIN_VALUE = {
   all_access: 'all_access',
 };
 
-const normalizePlanKey = (raw) => {
-  const s = String(raw || '').toLowerCase().trim();
-  if (!s) return null;
-  if (s.includes('cross')) return 'cross';
-  if (s.includes('hyrox')) return 'hyrox';
-  if (s.includes('evol')) return 'evolucion';
-  if (s.includes('stretch')) return 'stretching';
-  if (s.includes('yoga')) return 'yoga';
-  if (s.includes('open')) return 'openbox';
-  if (s.includes('oly') || s.includes('olímp')) return 'oly';
-  if (s.includes('all')) return 'all_access';
-  return s.replace(/\s+/g, '_');
-};
-
 const isHttp = (s) => /^https?:\/\//i.test(String(s || ''));
 
 const fmtDate = (isoOrDate) => {
@@ -131,7 +128,7 @@ const CHAT_LAST_OPEN = 'waitomo_chat_last_open';
 // ---------- SCREEN ----------
 export default function ClientScreen() {
   const { t } = useThemeContext();
-  const { t: tStr } = useLocale();
+  const { t: tStr, locale } = useLocale();
   const navigation = useNavigation();
 
   const {
@@ -150,6 +147,7 @@ export default function ClientScreen() {
     hasStaffMembership,
     hasClientMembership,
     persistActiveAppMode,
+    updateProfile,
   } = useAuth() || {};
   const saludo = tStr(getGreetingKey(new Date().getHours()));
 
@@ -247,6 +245,24 @@ export default function ClientScreen() {
     };
   }, [activePlanId, profile?.plan_actual, profile?.planActual]);
 
+  // Si hay plan en la app (contexto / storage) pero profiles.plan_actual sigue null, guardarlo en Supabase (chat RLS, etc.)
+  useEffect(() => {
+    if (!user?.id || typeof updateProfile !== 'function') return;
+    if (initialProfileSyncDone !== true || planLoading) return;
+    if (!planKey) return;
+    const db = (profile?.plan_actual ?? profile?.planActual ?? '').trim();
+    if (db) return;
+    updateProfile({ plan_actual: planKey });
+  }, [
+    user?.id,
+    planKey,
+    planLoading,
+    profile?.plan_actual,
+    profile?.planActual,
+    initialProfileSyncDone,
+    updateProfile,
+  ]);
+
   const canonId = planKey ? (PLAN_CANON_ID[planKey] || planKey) : null;
   const planLabel = planKey ? (PLAN_LABELS[planKey] || planKey.toUpperCase()) : 'Sin plan activo';
   const planObj = canonId ? { id: canonId, title: planLabel, active: true } : null;
@@ -254,6 +270,7 @@ export default function ClientScreen() {
   // ✅ abono: solo para mostrar fechas/estado (NO define el plan)
   const [abonoRow, setAbonoRow] = useState(null);
   const [abonoLoading, setAbonoLoading] = useState(true);
+  const [freeClassGrant, setFreeClassGrant] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -329,6 +346,50 @@ export default function ClientScreen() {
     };
   }, [user?.id]);
 
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        const g = await resolveFreeClassGrant(user?.id);
+        if (alive) setFreeClassGrant(g);
+      })();
+      return () => {
+        alive = false;
+      };
+    }, [user?.id]),
+  );
+
+  useEffect(() => {
+    if (isUserAbonoActive(abonoRow)) {
+      clearFreeClassGrant();
+      setFreeClassGrant(null);
+    }
+  }, [abonoRow?.id, abonoRow?.status, abonoRow?.end_date]);
+
+  const orgForEntitlement = organization?.id || profile?.organization_id || null;
+
+  // ---------------------------------------------
+  // Novedades (gym_news) — preview con ticker, timeout y fallback
+  // ---------------------------------------------
+  const [novedades, setNovedades] = useState([]);
+  const [novedadesLoading, setNovedadesLoading] = useState(true);
+  const [novedadesTickerIndex, setNovedadesTickerIndex] = useState(0);
+  const novedadesTickerPausedRef = useRef(false);
+  const novedadesMarqueeAnim = useRef(new Animated.Value(0)).current;
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  const communityAccess = useMemo(
+    () =>
+      evaluateClientCommunityAccess({
+        planCanonKey: planKey,
+        organizationId: orgForEntitlement,
+        abonoRow,
+        abonoLoading,
+        freeClassGrant,
+      }),
+    [planKey, orgForEntitlement, abonoRow, abonoLoading, freeClassGrant],
+  );
+
   const abonoStatusKey = getAbonoStatusKey(abonoRow?.status);
   const abonoStatusLabel = abonoStatusKey ? tStr(abonoStatusKey) : (abonoRow?.status || '—');
   const startFmt = fmtDate(abonoRow?.start_date);
@@ -391,6 +452,24 @@ export default function ClientScreen() {
       Alert.alert(tStr('client_no_plan'), tStr('client_no_plan_message'));
       return;
     }
+    const cal = evaluateCalendarioAccess({
+      planCanonKey: planKey,
+      organizationId: orgForEntitlement,
+      abonoRow,
+      abonoLoading,
+      freeClassGrant,
+    });
+    if (!cal.ok) {
+      if (cal.reason === 'loading') return;
+      Alert.alert(tStr('client_calendario_locked_title'), tStr('client_calendario_locked_body'), [
+        { text: tStr('common_ok'), style: 'cancel' },
+        {
+          text: tStr('client_entitlement_go_pay'),
+          onPress: () => safeNavigate(['AbonosPases', 'AbonosPasesScreen']),
+        },
+      ]);
+      return;
+    }
     const ok = safeNavigate(['Calendario', 'CalendarioScreen'], {
       plan: planObj,
       planKey: canonId,
@@ -402,25 +481,134 @@ export default function ClientScreen() {
     if (!ok) Alert.alert(tStr('client_route_not_found'), tStr('client_calendario_missing'));
   };
 
-  const goTrabajoHoy = () => {
+  const goManageFreeClass = () => {
     if (!planObj) {
       Alert.alert(tStr('client_no_plan'), tStr('client_no_plan_message'));
       return;
     }
+    const ok = safeNavigate(['FreeClassRequest', 'FreeClassRequestScreen'], { plan: planObj });
+    if (!ok) Alert.alert(tStr('client_route_not_found'), tStr('client_freeclass_missing'));
+  };
+
+  const handleCancelFreeClass = () => {
+    const g = freeClassGrant;
+    if (!g?.fechaYmd || !g.slotLabel || !g.organizationId) {
+      Alert.alert(tStr('freeclass_cancel_error_title'), tStr('freeclass_cancel_error_body'));
+      return;
+    }
+    Alert.alert(
+      tStr('freeclass_cancel_confirm_title'),
+      tStr('freeclass_cancel_confirm_body').replace(
+        '{{hours}}',
+        String(FREE_CLASS_CANCEL_NOTICE_HOURS),
+      ),
+      [
+      { text: tStr('common_cancel'), style: 'cancel' },
+      {
+        text: tStr('freeclass_cancel_confirm_cta'),
+        style: 'destructive',
+        onPress: async () => {
+          const res = await cancelTrialClassGrantServer({
+            organizationId: g.organizationId,
+            planCanonId: g.planCanonId,
+            fechaYmd: g.fechaYmd,
+            slotLabel: g.slotLabel,
+            minNoticeHours: FREE_CLASS_CANCEL_NOTICE_HOURS,
+          });
+          if (!res.ok) {
+            if (res.reason === 'too_late_to_cancel') {
+              Alert.alert(
+                tStr('freeclass_cancel_late_title'),
+                tStr('freeclass_cancel_late_body').replace(
+                  '{{hours}}',
+                  String(FREE_CLASS_CANCEL_NOTICE_HOURS),
+                ),
+              );
+              return;
+            }
+            Alert.alert(tStr('freeclass_cancel_error_title'), tStr('freeclass_cancel_error_body'));
+            return;
+          }
+          await clearFreeClassGrant();
+          setFreeClassGrant(null);
+          Alert.alert(tStr('freeclass_cancel_done_title'), tStr('freeclass_cancel_done_body'));
+        },
+      },
+    ]);
+  };
+
+  const goTrabajoHoy = () => {
+    if (!planObj || !planKey) {
+      Alert.alert(tStr('client_no_plan'), tStr('client_no_plan_message'), [
+        { text: tStr('common_cancel'), style: 'cancel' },
+        {
+          text: tStr('client_entitlement_go_plans'),
+          onPress: () => safeNavigate(['PlanSelector', 'PlanSelectorScreen']),
+        },
+      ]);
+      return;
+    }
+    const th = evaluateTrabajoHoyButton({
+      planCanonKey: planKey,
+      organizationId: orgForEntitlement,
+      abonoRow,
+      abonoLoading,
+      freeClassGrant,
+    });
+    if (th.reason === 'loading') return;
+    if (!th.ok) {
+      const g = freeClassGrant;
+      const gPlanOk = g && normalizePlanKey(g.planCanonId) === normalizePlanKey(planKey);
+      const gOrgOk =
+        !g?.organizationId ||
+        !orgForEntitlement ||
+        String(g.organizationId) === String(orgForEntitlement);
+      const todayYmd = formatYmdLocal(new Date());
+      if (g && gPlanOk && gOrgOk && g.fechaYmd && g.fechaYmd !== todayYmd) {
+        const d = new Date(`${g.fechaYmd}T12:00:00`);
+        const dateStr = d.toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        });
+        Alert.alert(
+          tStr('client_free_class_other_day_title'),
+          tStr('client_free_class_other_day_body')
+            .replace('{{date}}', dateStr)
+            .replace('{{time}}', g.slotLabel || ''),
+        );
+        return;
+      }
+      Alert.alert(tStr('client_entitlement_no_sub_title'), tStr('client_entitlement_no_sub_body'), [
+        { text: tStr('common_cancel'), style: 'cancel' },
+        {
+          text: tStr('client_entitlement_go_plans'),
+          onPress: () => safeNavigate(['PlanSelector', 'PlanSelectorScreen']),
+        },
+        {
+          text: tStr('client_entitlement_go_pay'),
+          onPress: () => safeNavigate(['AbonosPases', 'AbonosPasesScreen']),
+        },
+      ]);
+      return;
+    }
     const planValue = planKey ? (PLAN_KEY_TO_ADMIN_VALUE[planKey] || planKey) : canonId;
-    const hoy = new Date();
-    const fechaHoy = hoy.toISOString().slice(0, 10);
-    const ok = safeNavigate(['TrabajoDelDia', 'TrabajoDelDiaScreen'], {
+    const fechaNav = th.fechaYmd || formatYmdLocal(new Date());
+    const navParams = {
       from: 'ClientScreen',
       plan: { ...planObj, nombre: planLabel, planValue },
       planKey: canonId,
       planValue,
-      fecha: fechaHoy,
+      fecha: fechaNav,
       userData: {
         hasMedicalCertificate: aptoMedico,
         createdAt: profile?.created_at || null,
       },
-    });
+    };
+    if (th.horario) {
+      navParams.horario = th.horario;
+    }
+    const ok = safeNavigate(['TrabajoDelDia', 'TrabajoDelDiaScreen'], navParams);
     if (!ok) Alert.alert(tStr('client_route_not_found'), tStr('client_trabajo_missing'));
   };
 
@@ -431,23 +619,24 @@ export default function ClientScreen() {
     });
   };
 
-  const goNovedades = () => {
-    safeNavigate(['Novedades', 'NovedadesScreen']);
-  };
-
   const goChat = () => {
+    if (communityAccess.reason === 'loading') return;
+    if (!communityAccess.ok) {
+      Alert.alert(tStr('client_community_locked_title'), tStr('client_community_locked_body'), [
+        { text: tStr('common_ok'), style: 'cancel' },
+        {
+          text: tStr('client_entitlement_go_pay'),
+          onPress: () => safeNavigate(['AbonosPases', 'AbonosPasesScreen']),
+        },
+        {
+          text: tStr('client_entitlement_go_plans'),
+          onPress: () => safeNavigate(['PlanSelector', 'PlanSelectorScreen']),
+        },
+      ]);
+      return;
+    }
     safeNavigate(['ChatCanales', 'ChatCanalesScreen']);
   };
-
-  // ---------------------------------------------
-  // Novedades (gym_news) — preview con ticker, timeout y fallback
-  // ---------------------------------------------
-  const [novedades, setNovedades] = useState([]);
-  const [novedadesLoading, setNovedadesLoading] = useState(true);
-  const [novedadesTickerIndex, setNovedadesTickerIndex] = useState(0);
-  const novedadesTickerPausedRef = useRef(false);
-  const novedadesMarqueeAnim = useRef(new Animated.Value(0)).current;
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -456,9 +645,23 @@ export default function ClientScreen() {
     }, 5000);
     (async () => {
       try {
+        if (abonoLoading) return;
+        if (!communityAccess.ok) {
+          if (alive) {
+            setNovedades([]);
+            setNovedadesLoading(false);
+          }
+          return;
+        }
+        const orgN = organization?.id || profile?.organization_id || null;
+        if (!orgN) {
+          if (alive) setNovedades([]);
+          return;
+        }
         const { data, error } = await supabase
           .from('gym_news')
           .select('id, title, body, image_url, tag, pinned, created_at')
+          .eq('organization_id', orgN)
           .eq('is_active', true)
           .order('pinned', { ascending: false })
           .order('created_at', { ascending: false })
@@ -476,7 +679,28 @@ export default function ClientScreen() {
       alive = false;
       clearTimeout(t);
     };
-  }, []);
+  }, [organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok]);
+
+  const goNovedades = useCallback(() => {
+    if (communityAccess.reason === 'loading') return;
+    if (!communityAccess.ok) {
+      Alert.alert(tStr('client_community_locked_title'), tStr('client_community_locked_body'), [
+        { text: tStr('common_ok'), style: 'cancel' },
+        {
+          text: tStr('client_entitlement_go_pay'),
+          onPress: () => safeNavigate(['AbonosPases', 'AbonosPasesScreen']),
+        },
+        {
+          text: tStr('client_entitlement_go_plans'),
+          onPress: () => safeNavigate(['PlanSelector', 'PlanSelectorScreen']),
+        },
+      ]);
+      return;
+    }
+    const current = novedades[novedadesTickerIndex];
+    const params = current?.id ? { focusId: current.id } : undefined;
+    safeNavigate(['Novedades', 'NovedadesScreen'], params);
+  }, [communityAccess.ok, communityAccess.reason, novedades, novedadesTickerIndex, safeNavigate, tStr]);
 
   useEffect(() => {
     if (novedades.length <= 1) return;
@@ -514,16 +738,26 @@ export default function ClientScreen() {
         if (alive) setUnreadChatCount(0);
         return;
       }
+      if (abonoLoading || !communityAccess.ok) {
+        if (alive) setUnreadChatCount(0);
+        return;
+      }
       try {
         const lastOpen = await AsyncStorage.getItem(CHAT_LAST_OPEN);
         if (!lastOpen) {
           if (alive) setUnreadChatCount(0);
           return;
         }
-        const { data: channels } = await supabase
-          .from('chat_channels')
-          .select('id')
-          .eq('plan_id', planKey);
+        const orgChat = organization?.id || profile?.organization_id || null;
+        if (!orgChat) {
+          if (alive) setUnreadChatCount(0);
+          return;
+        }
+        let chQuery = supabase.from('chat_channels').select('id').eq('organization_id', orgChat);
+        if (planKey && planKey !== 'all_access') {
+          chQuery = chQuery.eq('plan_id', planKey);
+        }
+        const { data: channels } = await chQuery;
         const channelIds = (channels || []).map((c) => c.id);
         if (channelIds.length === 0) {
           if (alive) setUnreadChatCount(0);
@@ -544,7 +778,7 @@ export default function ClientScreen() {
       }
     })();
     return () => { alive = false; };
-  }, [user?.id, planKey]);
+  }, [user?.id, planKey, organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok]);
 
   // Si hay user pero no perfil (cuenta borrada o sin completar), ir a completar registro.
   useEffect(() => {
@@ -905,10 +1139,58 @@ export default function ClientScreen() {
         },
         secondaryBtnText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: 14 },
 
+        freeClassCard: {
+          marginTop: 14,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.boxBg,
+          padding: 14,
+        },
+        freeClassTitle: { color: t.text, fontSize: 15, fontWeight: '800' },
+        freeClassMeta: { color: t.subText ?? t.placeholder, fontSize: 13, marginTop: 6, lineHeight: 18 },
+        freeClassActions: { flexDirection: 'row', marginTop: 12, gap: 10 },
+        freeClassAction: {
+          flex: 1,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          paddingVertical: 10,
+          alignItems: 'center',
+          backgroundColor: hexToRgba(t.brand, 0.08),
+        },
+        freeClassActionPrimary: {
+          ...t.buttonPrimary,
+          borderColor: 'transparent',
+        },
+        freeClassActionText: { color: t.text, fontWeight: '700', fontSize: 13 },
+        freeClassActionTextPrimary: { ...t.buttonPrimaryText, fontWeight: '800', fontSize: 13 },
+
         footerInfo: { marginTop: 4, fontSize: 11, color: t.placeholder, textAlign: 'center' },
       }),
     [t]
   );
+
+  const freeClassPanel = useMemo(() => {
+    const g = freeClassGrant;
+    if (!g?.fechaYmd || !g.slotLabel) return null;
+    if (isUserAbonoActive(abonoRow)) return null;
+    if (
+      g.organizationId &&
+      orgForEntitlement &&
+      String(g.organizationId) !== String(orgForEntitlement)
+    ) {
+      return null;
+    }
+    try {
+      const d = new Date(`${g.fechaYmd}T12:00:00`);
+      const loc = locale === 'en' ? 'en-US' : 'es-AR';
+      const dateStr = d.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
+      return { dateStr, timeStr: g.slotLabel };
+    } catch {
+      return { dateStr: g.fechaYmd, timeStr: g.slotLabel };
+    }
+  }, [freeClassGrant, abonoRow, orgForEntitlement, locale]);
 
   const planActivoDescripcion =
     planKey === 'all_access'
@@ -995,6 +1277,35 @@ export default function ClientScreen() {
                 <Text style={styles.planPillText}>{tStr('client_trabajo_hoy')}</Text>
               </TouchableOpacity>
             </View>
+
+            {freeClassPanel ? (
+              <View style={styles.freeClassCard}>
+                <Text style={styles.freeClassTitle}>{tStr('client_freeclass_card_title')}</Text>
+                <Text style={styles.freeClassMeta}>
+                  {tStr('client_freeclass_card_body')
+                    .replace('{{date}}', freeClassPanel.dateStr)
+                    .replace('{{time}}', freeClassPanel.timeStr || '')}
+                </Text>
+                <Text style={[styles.freeClassMeta, { marginTop: 8 }]}>
+                  {tStr('client_freeclass_card_policy').replace(
+                    '{{hours}}',
+                    String(FREE_CLASS_CANCEL_NOTICE_HOURS),
+                  )}
+                </Text>
+                <View style={styles.freeClassActions}>
+                  <TouchableOpacity style={styles.freeClassAction} onPress={handleCancelFreeClass} activeOpacity={0.9}>
+                    <Text style={styles.freeClassActionText}>{tStr('client_freeclass_card_cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.freeClassAction, styles.freeClassActionPrimary]}
+                    onPress={goManageFreeClass}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.freeClassActionTextPrimary}>{tStr('client_freeclass_card_change')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
           </View>
 
           <Text style={styles.footerInfo}>{tStr('client_reservas_hint')}</Text>

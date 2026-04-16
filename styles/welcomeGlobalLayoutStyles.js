@@ -1,7 +1,8 @@
 import { StyleSheet } from 'react-native';
 
 /** Estética compartida: WelcomeGlobal + WelcomeDualChoice (logo, CTAs, locale). */
-export function createWelcomeGlobalLayoutStyles(t, fe) {
+export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0) {
+  const safeTop = typeof topInset === 'number' ? topInset : 0;
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -9,7 +10,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe) {
     },
     topBar: {
       position: 'absolute',
-      top: 18,
+      top: 10 + safeTop,
       right: 18,
       zIndex: 20,
     },

@@ -11,7 +11,8 @@
 
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.waitomofitengine.cueva"
+      "bundleIdentifier": "com.waitomofitengine.cueva",
+      "associatedDomains": ["applinks:fitengine.app", "applinks:www.fitengine.app"]
     },
 
     "android": {
@@ -20,7 +21,26 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "fitengine.app",
+              "pathPrefix": "/join"
+            },
+            {
+              "scheme": "https",
+              "host": "www.fitengine.app",
+              "pathPrefix": "/join"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
 
     "web": {
@@ -35,7 +55,13 @@
     ],
 
     "extra": {
-      "waitomoOrganizationId": ""
+      "waitomoOrganizationId": "",
+      "fitengineLinksBaseUrl": "https://fitengine.app",
+      "fitengineWebAppUrl": "https://app.fitengine.app",
+      "fitengineMarketingSiteUrl": "https://waitomofitengine.com",
+      "fitenginePrivacyUrl": "https://www.waitomofitengine.com",
+      "fitengineTermsUrl": "https://www.waitomofitengine.com",
+      "fitengineSupportEmail": ""
     }
   }
 }

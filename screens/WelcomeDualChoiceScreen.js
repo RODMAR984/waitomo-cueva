@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocale } from '../contexts/LocaleContext';
 import LogoCompleto from '../components/LogoCompleto';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,12 +16,13 @@ import { createWelcomeGlobalLayoutStyles } from '../styles/welcomeGlobalLayoutSt
 import { useWelcomeRouting } from '../hooks/useWelcomeRouting';
 
 export default function WelcomeDualChoiceScreen() {
+  const insets = useSafeAreaInsets();
   const { t: tStr, locale, setLocale } = useLocale();
   const { session, authNavigationReady, logout } = useAuth() || {};
 
   const { onDualClient, onDualStaff } = useWelcomeRouting();
 
-  const styles = useMemo(() => createWelcomeGlobalLayoutStyles(fitT, fe), []);
+  const styles = useMemo(() => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top), [insets.top]);
 
   const onLogout = async () => {
     try {

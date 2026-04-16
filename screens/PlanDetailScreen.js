@@ -4,7 +4,7 @@
 // - Overlays/bordes: ahora usan waitomo.overlayBg / waitomo.overlayBorder
 // - Funcionalidad preservada: setPlan seguro, navegación a Registro/FreeClass/Abonos y Volver
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,25 +14,18 @@ import {
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { usePlanContext } from '../contexts/PlanContext';
-import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { useAuth } from '../contexts/AuthContext';
 import { IMAGENES_POR_PLAN } from '../utils/imagenesFijas';
-
-// ---------- helpers ----------
-const hexToRgba = (hex, alpha = 1) => {
-  const clean = String(hex).replace('#', '');
-  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
-  const r = parseInt(full.slice(0, 2), 16) || 0;
-  const g = parseInt(full.slice(2, 4), 16) || 0;
-  const b = parseInt(full.slice(4, 6), 16) || 0;
-  return `rgba(${r},${g},${b},${alpha})`;
-};
+import { normalizePlanKey } from '../utils/planKeyNormalize';
 
 export default function PlanDetailScreen({ route, navigation }) {
   const plan = route?.params?.plan;
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
+  const { session, profile, updateProfile } = useAuth() || {};
+  const planPersistedFor = useRef(null);
 
   // Intentamos usar el contexto de forma segura (sin romper si no hay provider)
   let setPlanSafe;
@@ -51,6 +44,27 @@ export default function PlanDetailScreen({ route, navigation }) {
       setPlanSafe({ ...plan, images, nombre });
     }
   }, [plan]); // preservamos comportamiento del original
+
+  // Guardar plan elegido en profiles.plan_actual (antes solo existía en contexto → Supabase quedaba null y el chat fallaba por RLS)
+  useEffect(() => {
+    if (!plan?.id || !session?.user?.id || typeof updateProfile !== 'function') return;
+    const canonical = normalizePlanKey(plan.id);
+    if (!canonical) return;
+    const cur = profile?.plan_actual ? normalizePlanKey(profile.plan_actual) : null;
+    if (cur === canonical) return;
+    const key = `${session.user.id}:${canonical}`;
+    if (planPersistedFor.current === key) return;
+
+    let cancelled = false;
+    (async () => {
+      const row = await updateProfile({ plan_actual: canonical });
+      if (cancelled) return;
+      if (row?.id) planPersistedFor.current = key;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [plan?.id, session?.user?.id, profile?.plan_actual, updateProfile]);
 
   // Navegaciones: propagamos SIEMPRE el plan y el resto de params
   const handleVolver = () => navigation.goBack();
@@ -97,7 +111,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           textAlign: 'center',
         },
         emptyTitle: {
-          color: t.brand2,
+          color: t.text,
           fontSize: 18,
           fontWeight: '700',
           marginBottom: 12,
@@ -144,13 +158,14 @@ export default function PlanDetailScreen({ route, navigation }) {
           paddingBottom: 20,
         },
         subtitle: {
-          color: t.brand2,
+          color: t.subText,
           fontSize: 16,
           marginTop: 4,
           textAlign: 'center',
         },
+        /** Título del plan: tipografía principal de la org (features.text_color → t.text), no solo acento/borde. */
         title: {
-          color: t.brand,
+          color: t.text,
           fontSize: 26,
           fontWeight: 'bold',
           textAlign: 'center',

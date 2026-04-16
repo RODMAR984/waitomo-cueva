@@ -1,6 +1,6 @@
 // NovedadesScreen — Lista de gym_news con cards y accordion (tap para expandir)
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,18 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
-import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
+import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
+import { evaluateClientCommunityAccess } from '../utils/clientWorkoutEntitlement';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -47,18 +51,92 @@ const formatDate = (iso) => {
 
 export default function NovedadesScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const focusNewsId = route.params?.focusId;
   const { t: tStr } = useLocale();
+  const { t } = useThemeContext();
+  const { organization, profile, user } = useAuth() || {};
+  const orgId = organization?.id ?? profile?.organization_id ?? null;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  const [abonoRow, setAbonoRow] = useState(null);
+  const [abonoLoading, setAbonoLoading] = useState(true);
+  const [freeClassGrant, setFreeClassGrant] = useState(null);
+
+  const planCanon = useMemo(() => normalizePlanKey(profile?.plan_actual ?? profile?.planActual), [
+    profile?.plan_actual,
+    profile?.planActual,
+  ]);
+
+  const communityAccess = useMemo(
+    () =>
+      evaluateClientCommunityAccess({
+        planCanonKey: planCanon,
+        organizationId: orgId,
+        abonoRow,
+        abonoLoading,
+        freeClassGrant,
+      }),
+    [planCanon, orgId, abonoRow, abonoLoading, freeClassGrant],
+  );
+
+  useEffect(() => {
+    if (!user?.id) {
+      setAbonoLoading(false);
+      setAbonoRow(null);
+      return undefined;
+    }
+    let alive = true;
+    (async () => {
+      setAbonoLoading(true);
+      try {
+        const row = await fetchLatestUserAbono(user.id);
+        if (alive) setAbonoRow(row);
+      } catch {
+        if (alive) setAbonoRow(null);
+      } finally {
+        if (alive) setAbonoLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        const g = await resolveFreeClassGrant(user?.id);
+        if (alive) setFreeClassGrant(g);
+      })();
+      return () => {
+        alive = false;
+      };
+    }, [user?.id]),
+  );
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
+        if (abonoLoading) return;
+        if (!communityAccess.ok) {
+          if (alive) {
+            setItems([]);
+            setLoading(false);
+          }
+          return;
+        }
+        if (!orgId) {
+          if (alive) setItems([]);
+          return;
+        }
         const { data, error } = await supabase
           .from('gym_news')
           .select('id, title, body, image_url, tag, pinned, created_at')
+          .eq('organization_id', orgId)
           .eq('is_active', true)
           .order('pinned', { ascending: false })
           .order('created_at', { ascending: false });
@@ -72,9 +150,13 @@ export default function NovedadesScreen() {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [orgId, abonoLoading, communityAccess.ok]);
 
-  const { t } = useThemeContext();
+  useEffect(() => {
+    if (!focusNewsId || !items.length) return;
+    const hit = items.some((row) => row.id === focusNewsId);
+    if (hit) setExpandedId(focusNewsId);
+  }, [focusNewsId, items]);
 
   const styles = useMemo(
     () =>
@@ -172,6 +254,15 @@ export default function NovedadesScreen() {
         {loading ? (
           <View style={styles.empty}>
             <ActivityIndicator size="large" color={t.brand} />
+          </View>
+        ) : !communityAccess.ok ? (
+          <View style={styles.empty}>
+            <Text style={[styles.emptyText, { textAlign: 'center', fontWeight: '800', color: t.text }]}>
+              {tStr('client_community_locked_title')}
+            </Text>
+            <Text style={[styles.emptyText, { textAlign: 'center', marginTop: 10, lineHeight: 20 }]}>
+              {tStr('client_community_locked_body')}
+            </Text>
           </View>
         ) : items.length === 0 ? (
           <View style={styles.empty}>

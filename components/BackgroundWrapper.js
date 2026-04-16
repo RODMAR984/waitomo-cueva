@@ -158,6 +158,15 @@ export default function BackgroundWrapper({
     );
   }
 
+  // Configuración del gym: fallback plano (Waitomo, sin URL de imagen, etc.) — después de intentar fondo org.
+  if (screenLower === 'gymconfig') {
+    return (
+      <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
+        {children}
+      </View>
+    );
+  }
+
   // PRIMERO: TRABAJO DEL DIA Y ADMIN - ROTACIÓN ENTRE TODAS LAS IMÁGENES (Waitomo / sin org)
   if (isTrabajoODiaOAdmin) {
     const source = TRABAJO_DIA_BACKGROUNDS[randomIndex];

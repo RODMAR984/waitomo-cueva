@@ -3,10 +3,18 @@
 // - Persiste en AsyncStorage y en Supabase (profiles.theme_mode)
 // - t = getThemeTokens(effectiveMode, organization) — Waitomo fijo, otras orgs con accent_color + preset
 
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from 'react';
 import { DarkTheme as NavDarkTheme, DefaultTheme as NavLightTheme } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getThemeTokens } from '../theme/colors';
+import { getThemeTokens, getThemeTokensNeutralShell } from '../theme/colors';
 import { useAuth } from './AuthContext';
 import { supabase } from '../supabaseClient';
 
@@ -23,19 +31,41 @@ const ThemeContext = createContext({
   mode: 'dark',
   setMode: () => {},
   isDark: true,
-  t: getThemeTokens('dark'),
+  t: getThemeTokensNeutralShell('dark'),
 });
 
 export const ThemeProvider = ({ children }) => {
-  const { profile, organization } = useAuth() || {};
+  const { profile, organization, user } = useAuth() || {};
   const [mode, setModeState] = useState('dark');
+  /** Evita flashes neutral→org cuando `organization` es null un instante (refresh, race al hidratar). */
+  const lastOrgForThemeRef = useRef(null);
+  const lastUserIdForThemeRef = useRef(null);
+
+  useEffect(() => {
+    const uid = user?.id ?? null;
+    if (uid !== lastUserIdForThemeRef.current) {
+      lastUserIdForThemeRef.current = uid;
+      if (!uid) lastOrgForThemeRef.current = null;
+    }
+    if (organization?.id) {
+      lastOrgForThemeRef.current = organization;
+    }
+  }, [user?.id, organization]);
 
   const effectiveMode = useMemo(() => getEffectiveMode(mode), [mode]);
   const isDark = effectiveMode === 'dark';
-  const t = useMemo(
-    () => getThemeTokens(effectiveMode, organization),
-    [effectiveMode, organization],
-  );
+  const t = useMemo(() => {
+    const resolvedOrg =
+      organization?.id != null
+        ? organization
+        : user?.id && lastOrgForThemeRef.current?.id
+          ? lastOrgForThemeRef.current
+          : null;
+    if (!resolvedOrg?.id) {
+      return getThemeTokensNeutralShell(effectiveMode);
+    }
+    return getThemeTokens(effectiveMode, resolvedOrg);
+  }, [effectiveMode, organization, user?.id]);
 
   // Cargar modo: primero AsyncStorage, luego si hay profile.theme_mode lo aplicamos y sincronizamos
   useEffect(() => {

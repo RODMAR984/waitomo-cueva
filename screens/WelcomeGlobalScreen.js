@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useLocale } from '../contexts/LocaleContext';
 import LogoCompleto from '../components/LogoCompleto';
@@ -13,6 +14,7 @@ import { useWelcomeRouting } from '../hooks/useWelcomeRouting';
 
 export default function WelcomeGlobalScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { t: tStr, locale, setLocale } = useLocale();
   const {
     session,
@@ -50,7 +52,10 @@ export default function WelcomeGlobalScreen() {
 
   const showGuestActions = !session?.user?.id;
 
-  const layoutStyles = useMemo(() => createWelcomeGlobalLayoutStyles(fitT, fe), []);
+  const layoutStyles = useMemo(
+    () => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top),
+    [insets.top],
+  );
 
   if (session?.user?.id && !authNavigationReady) {
     return (
@@ -134,6 +139,13 @@ export default function WelcomeGlobalScreen() {
               activeOpacity={0.8}
             >
               <Text style={layoutStyles.linkText}>{tStr('welcome_create_gym_coach_short')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={layoutStyles.linkRow}
+              onPress={() => navigation.navigate('JoinWithInvite')}
+              activeOpacity={0.8}
+            >
+              <Text style={layoutStyles.linkText}>{tStr('welcome_join_with_code')}</Text>
             </TouchableOpacity>
           </View>
         )}

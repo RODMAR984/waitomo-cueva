@@ -12,8 +12,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
+  ScrollView,
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -26,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { supabase } from '../supabaseClient';
+import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -125,7 +125,14 @@ export default function LoginScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        kav: { flex: 1, padding: 20, paddingTop: 60 },
+        kav: { flex: 1 },
+        scrollContent: {
+          flexGrow: 1,
+          justifyContent: 'center',
+          padding: 20,
+          paddingTop: 60,
+          paddingBottom: 8,
+        },
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
@@ -207,9 +214,10 @@ export default function LoginScreen() {
    * needsFitEngineSpaceSetup engloba intent gym_owner y “sin org ajena empleado”.
    */
   const navigateByRole = useCallback(
-    (effectiveRole) => {
-      const finalRole = effectiveRole || contextRole || 'cliente';
-      const orgId = profile?.organization_id || null;
+    (effectiveRole, profileOverride) => {
+      const p = profileOverride !== undefined ? profileOverride : profile;
+      const finalRole = effectiveRole || p?.role || contextRole || 'cliente';
+      const orgId = p?.organization_id || null;
 
       if (finalRole === 'superadmin') {
         navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
@@ -232,17 +240,17 @@ export default function LoginScreen() {
       }
 
       // Entró por flujo staff/org pero aún no terminó de crear/configurar su organización
-      if (forStaff && (!profile || !orgId)) {
+      if (forStaff && (!p || !orgId)) {
         navigation.reset({ index: 0, routes: [{ name: 'ConfiguraTuEspacio', params: { email } }] });
         return;
       }
 
-      if (!profile) {
+      if (!p) {
         navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
         return;
       }
 
-      navigation.reset({ index: 0, routes: [{ name: 'ClientTabs' }] });
+      navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(p) }] });
     },
     [
       navigation,
@@ -318,7 +326,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Falta info', 'Completá email y contraseña.');
+      Alert.alert(tStr('login_alert_missing_title'), tStr('login_alert_missing_body'));
       return;
     }
 
@@ -341,7 +349,7 @@ export default function LoginScreen() {
         setShowStaffAccessChoice(true);
         return;
       }
-      navigateByRole(effectiveRole);
+      navigateByRole(effectiveRole, loggedProfile);
     } catch (error) {
       console.log('Error login Supabase:', error);
       const msg = String(error?.message || '');
@@ -359,17 +367,15 @@ export default function LoginScreen() {
             if (logout) await logout();
           } catch (_) {}
           Alert.alert(
-            'Credenciales incorrectas',
-            'Había una sesión con otro correo. La cerramos para que puedas iniciar con la cuenta correcta. Volvé a ingresar email y contraseña.',
+            tStr('login_alert_wrong_creds_other_session_title'),
+            tStr('login_alert_wrong_creds_other_session_body'),
           );
           return;
         }
       }
 
-      const message =
-        error?.message ||
-        'No se pudo iniciar sesión. Revisá los datos o intentá de nuevo.';
-      Alert.alert('Error', message);
+      const message = error?.message || tStr('login_error_signin_generic');
+      Alert.alert(tStr('gym_config_alert_title_error'), message);
     } finally {
       if (isMountedRef.current) setSubmitting(false);
     }
@@ -381,18 +387,12 @@ export default function LoginScreen() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      Alert.alert(
-        'Email requerido',
-        'Escribí el email con el que te registraste para enviarte el enlace.',
-      );
+      Alert.alert(tStr('login_alert_email_required_title'), tStr('login_alert_email_required_body'));
       return;
     }
 
     if (!requestPasswordReset) {
-      Alert.alert(
-        'Próximamente',
-        'La recuperación de contraseña todavía no está activada en el servidor.',
-      );
+      Alert.alert(tStr('login_alert_reset_soon_title'), tStr('login_alert_reset_soon_body'));
       return;
     }
 
@@ -400,20 +400,16 @@ export default function LoginScreen() {
       setIsSendingReset(true);
       await requestPasswordReset(email.trim().toLowerCase());
 
-      Alert.alert(
-        'Revisá tu email',
-        'Si existe una cuenta con ese email, te enviamos un enlace para restablecer la contraseña.',
-      );
+      Alert.alert(tStr('login_alert_reset_check_email_title'), tStr('login_alert_reset_check_email_body'));
     } catch (error) {
       console.log('Error en handleForgotPassword:', error?.message);
-      let mensaje = 'No se pudo enviar el email. Probá de nuevo en unos minutos.';
+      let mensaje = tStr('login_error_reset_send');
 
       if (error?.message?.includes('rate limit')) {
-        mensaje =
-          'Demasiados intentos seguidos. Esperá unos minutos antes de volver a probar.';
+        mensaje = tStr('login_error_reset_rate_limit');
       }
 
-      Alert.alert('Error', mensaje);
+      Alert.alert(tStr('gym_config_alert_title_error'), mensaje);
     } finally {
       if (isMountedRef.current) setIsSendingReset(false);
     }
@@ -421,7 +417,11 @@ export default function LoginScreen() {
 
   const handleOAuthLogin = async (provider) => {
     if (!signInWithProvider) {
-      Alert.alert('Error', `${provider === 'google' ? 'Google' : 'Apple'} no está disponible.`);
+      const pName = tStr(provider === 'google' ? 'login_provider_google' : 'login_provider_apple');
+      Alert.alert(
+        tStr('gym_config_alert_title_error'),
+        tStr('login_oauth_unavailable').replace('{{provider}}', pName),
+      );
       return;
     }
     setOauthSubmitting(true);
@@ -444,9 +444,10 @@ export default function LoginScreen() {
     } catch (e) {
       if (forStaff) AsyncStorage.removeItem(OAUTH_SIGNUP_STAFF_KEY);
       console.log(`❌ [LoginScreen] ${provider} OAuth error =>`, e?.message || e);
+      const pName = tStr(provider === 'google' ? 'login_provider_google' : 'login_provider_apple');
       Alert.alert(
-        'Error',
-        e?.message || `No se pudo iniciar sesión con ${provider === 'google' ? 'Google' : 'Apple'}.`,
+        tStr('gym_config_alert_title_error'),
+        e?.message || tStr('login_oauth_signin_fail').replace('{{provider}}', pName),
       );
     } finally {
       clearTimeout(safetyTimer);
@@ -476,12 +477,17 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.kav}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{ flex: 1, justifyContent: 'center' }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View>
             {/* Marca plataforma: logo completo (triangulo + texto) */}
             <View style={{ alignItems: 'center', marginBottom: 12 }}>
               <LogoCompleto height={50} />
-              <Text style={{ color: fe.subText, fontSize: 12, marginTop: 4 }}>powered by WAITOMO</Text>
+              <Text style={{ color: fe.subText, fontSize: 12, marginTop: 4 }}>{tStr('login_brand_powered')}</Text>
             </View>
             <View style={styles.panel}>
               {showStaffAccessChoice ? (
@@ -607,15 +613,25 @@ export default function LoginScreen() {
                   <Text style={styles.linkText}>{tStr('login_no_account_plans')}</Text>
                 </TouchableOpacity>
               )}
+              {!fromRegistro && !forStaff && (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('JoinWithInvite')}
+                  disabled={disabled}
+                  style={{ marginTop: 10 }}
+                >
+                  <Text style={styles.linkText}>{tStr('welcome_join_with_code')}</Text>
+                </TouchableOpacity>
+              )}
                 </>
               )}
             </View>
-            {/* Footer atribución (spec): discreto */}
-            <View style={{ alignItems: 'center', marginTop: 16, paddingBottom: 24 }}>
-              <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.8 }}>FitEngine by WAITOMO</Text>
+            {/* Misma atribución que GymConfig: logo + © */}
+            <View style={{ alignItems: 'center', marginTop: 24, paddingBottom: 16 }}>
+              <LogoCompleto height={30} style={{ marginBottom: 6 }} />
+              <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.8 }}>{tStr('gym_config_footer')}</Text>
             </View>
           </View>
-        </TouchableWithoutFeedback>
+        </ScrollView>
       </KeyboardAvoidingView>
     </BackgroundWrapper>
   );

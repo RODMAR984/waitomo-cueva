@@ -14,6 +14,7 @@ import {
   Image,
   Platform,
   BackHandler,
+  Share,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,10 +23,15 @@ import * as ImagePicker from 'expo-image-picker';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 import { getThemeTokens } from '../theme/colors';
 import { imageUriToArrayBuffer } from '../utils/imageUriToArrayBuffer';
 import LogoCompleto from '../components/LogoCompleto';
+import * as Clipboard from 'expo-clipboard';
+import { generateClientInviteCode } from '../utils/clientInviteCode';
+import { buildClientInvitePublicLink } from '../utils/fitengineUrls';
+import { FULL_HEX_CHOICE_GYM } from '../utils/gymColorPalette';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -39,46 +45,20 @@ const hexToRgba = (hex, alpha) => {
 const BUCKET_ORG_LOGOS = 'org-logos';
 const BUCKET_ORG_BACKGROUNDS = 'org-backgrounds';
 
-const PRESET_LABELS_GYM = {
-  dark_vivid: 'Oscuro vivo',
-  dark_minimal: 'Oscuro minimal',
-  light_clean: 'Claro limpio',
-  light_warm: 'Claro cálido',
-};
 
-const PRESET_HINTS_GYM = {
-  dark_vivid: 'Acento en paneles + textos fríos (cian/azul). Muy “neon”.',
-  dark_minimal: 'Casi blanco y negro + zinc; el acento casi solo en botones.',
-  light_clean: 'Blanco frío, bordes grises, sombra suave tipo SaaS.',
-  light_warm: 'Crema, bordes melocotón, marrón en subtítulos.',
-};
-
-const TEXT_QUICK_GYM = [
-  '#f8fafc', '#e2e8f0', '#cbd5e1', '#94a3b8', '#a5b4fc', '#818cf8', '#c4b5fd', '#93c5fd',
-  '#67e8f9', '#5eead4', '#86efac', '#bef264', '#fef08a', '#fed7aa', '#fda4af', '#fce7f3',
-  '#fecdd3', '#ecfccb', '#d9f99d', '#ffffff', '#0f172a', '#1e293b', '#334155', '#431407',
-  '#7c2d12', '#881337', '#4c1d95', '#14532d',
-];
-/** Secundario: subtítulos y ayudas (elige un tono que contraste con el principal). */
-const TEXT_SECOND_QUICK_GYM = [
-  '#f1f5f9', '#cbd5e1', '#94a3b8', '#64748b', '#4b5563', '#475569', '#334155', '#1f2937',
-  '#a8a29e', '#78716c', '#57534e', '#0ea5e9', '#38bdf8', '#22d3ee', '#14b8a6', '#34d399',
-  '#a3e635', '#eab308', '#fb923c', '#f472b6', '#c084fc', '#c2410c', '#9a3412', '#be185d',
-  '#9d174d', '#6b21a8', '#166534',
-];
 const TEXT_PALETTES_GYM = [
-  { key: 'neon', label: 'Neon', primary: '#e2e8f0', secondary: '#22d3ee' },
-  { key: 'minimal', label: 'Minimal', primary: '#f8fafc', secondary: '#a1a1aa' },
-  { key: 'clean', label: 'Clean', primary: '#0f172a', secondary: '#475569' },
-  { key: 'warm', label: 'Warm', primary: '#431407', secondary: '#9a3412' },
-  { key: 'rose', label: 'Rose', primary: '#fce7f3', secondary: '#be185d' },
-  { key: 'forest', label: 'Forest', primary: '#ecfccb', secondary: '#166534' },
-  { key: 'gold', label: 'Gold', primary: '#fef08a', secondary: '#a16207' },
-  { key: 'ocean', label: 'Ocean', primary: '#93c5fd', secondary: '#0369a1' },
-  { key: 'studio', label: 'Studio', primary: '#fafafa', secondary: '#71717a' },
-  { key: 'lavender', label: 'Lavanda', primary: '#ede9fe', secondary: '#6d28d9' },
-  { key: 'slate', label: 'Slate', primary: '#e2e8f0', secondary: '#475569' },
-  { key: 'coral', label: 'Coral', primary: '#fff7ed', secondary: '#ea580c' },
+  { key: 'neon', labelKey: 'gym_palette_neon', primary: '#e2e8f0', secondary: '#22d3ee' },
+  { key: 'minimal', labelKey: 'gym_palette_minimal', primary: '#f8fafc', secondary: '#a1a1aa' },
+  { key: 'clean', labelKey: 'gym_palette_clean', primary: '#0f172a', secondary: '#475569' },
+  { key: 'warm', labelKey: 'gym_palette_warm', primary: '#431407', secondary: '#9a3412' },
+  { key: 'rose', labelKey: 'gym_palette_rose', primary: '#fce7f3', secondary: '#be185d' },
+  { key: 'forest', labelKey: 'gym_palette_forest', primary: '#ecfccb', secondary: '#166534' },
+  { key: 'gold', labelKey: 'gym_palette_gold', primary: '#fef08a', secondary: '#a16207' },
+  { key: 'ocean', labelKey: 'gym_palette_ocean', primary: '#93c5fd', secondary: '#0369a1' },
+  { key: 'studio', labelKey: 'gym_palette_studio', primary: '#fafafa', secondary: '#71717a' },
+  { key: 'lavender', labelKey: 'gym_palette_lavender', primary: '#ede9fe', secondary: '#6d28d9' },
+  { key: 'slate', labelKey: 'gym_palette_slate', primary: '#e2e8f0', secondary: '#475569' },
+  { key: 'coral', labelKey: 'gym_palette_coral', primary: '#fff7ed', secondary: '#ea580c' },
 ];
 const HEX_TEXT_COLOR = /^#([0-9A-F]{6})$/i;
 
@@ -91,6 +71,7 @@ const getEffectiveMode = (mode) => {
 export default function GymConfigScreen() {
   const navigation = useNavigation();
   const { t, mode } = useThemeContext();
+  const { t: tStr } = useLocale();
   const { user, profile, organization, refreshOrganization } = useAuth() || {};
   const orgId = organization?.id || profile?.organization_id;
 
@@ -107,9 +88,18 @@ export default function GymConfigScreen() {
   const [textSecondaryColor, setTextSecondaryColor] = useState(
     organization?.features?.text_secondary_color || ''
   );
+  const [surfaceColor, setSurfaceColor] = useState(organization?.features?.ui_surface_color || '');
+  const [borderColor, setBorderColor] = useState(organization?.features?.ui_border_color || '');
+  const [overlayColor, setOverlayColor] = useState(organization?.features?.ui_overlay_color || '');
+  const [clientWelcomeMessage, setClientWelcomeMessage] = useState(
+    organization?.features?.client_welcome_message || ''
+  );
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBackground, setUploadingBackground] = useState(false);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  /** Paleta completa plegada por defecto (menos invasiva). */
+  const [paletteOpenKey, setPaletteOpenKey] = useState(null);
 
   useEffect(() => {
     if (organization) {
@@ -122,6 +112,10 @@ export default function GymConfigScreen() {
       setBackgroundLocalUri(null);
       setTextColor(organization.features?.text_color || organization.text_color || '');
       setTextSecondaryColor(organization.features?.text_secondary_color || '');
+      setSurfaceColor(organization.features?.ui_surface_color || '');
+      setBorderColor(organization.features?.ui_border_color || '');
+      setOverlayColor(organization.features?.ui_overlay_color || '');
+      setClientWelcomeMessage(organization.features?.client_welcome_message || '');
     }
   }, [
     organization?.id,
@@ -161,10 +155,16 @@ export default function GymConfigScreen() {
   const validTextSecondary = HEX_TEXT_COLOR.test((textSecondaryColor || '').trim())
     ? textSecondaryColor.trim()
     : null;
+  const validSurfaceColor = HEX_TEXT_COLOR.test((surfaceColor || '').trim()) ? surfaceColor.trim() : null;
+  const validBorderColor = HEX_TEXT_COLOR.test((borderColor || '').trim()) ? borderColor.trim() : null;
+  const validOverlayColor = HEX_TEXT_COLOR.test((overlayColor || '').trim()) ? overlayColor.trim() : null;
   const previewOrg = useMemo(() => {
     const feats = {};
     if (validTextColor) feats.text_color = validTextColor;
     if (validTextSecondary) feats.text_secondary_color = validTextSecondary;
+    if (validSurfaceColor) feats.ui_surface_color = validSurfaceColor;
+    if (validBorderColor) feats.ui_border_color = validBorderColor;
+    if (validOverlayColor) feats.ui_overlay_color = validOverlayColor;
     return {
       id: organization?.id,
       name: name || organization?.name,
@@ -180,6 +180,9 @@ export default function GymConfigScreen() {
     themePreset,
     validTextColor,
     validTextSecondary,
+    validSurfaceColor,
+    validBorderColor,
+    validOverlayColor,
   ]);
   const previewTokensCurrent = useMemo(
     () => getThemeTokens(getEffectiveMode(mode), previewOrg),
@@ -190,13 +193,13 @@ export default function GymConfigScreen() {
 
   const pickAndUploadLogo = async () => {
     if (!orgId) {
-      Alert.alert('Error', 'No hay organización cargada.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_err_no_org'));
       return;
     }
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso', 'Se necesita acceso a la galería para subir el logo.');
+        Alert.alert(tStr('gym_config_perm_title'), tStr('gym_config_perm_gallery_logo'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -225,8 +228,8 @@ export default function GymConfigScreen() {
     } catch (e) {
       console.log('GymConfig logo upload:', e?.message || e);
       Alert.alert(
-        'Logo',
-        e?.message?.includes('Bucket') ? 'Creá el bucket "org-logos" en Supabase Storage (público) y volvé a intentar.' : (e?.message || 'No se pudo subir el logo.')
+        tStr('gym_config_logo_title'),
+        e?.message?.includes('Bucket') ? tStr('gym_config_logo_bucket_hint') : (e?.message || tStr('gym_config_logo_upload_fail')),
       );
     } finally {
       setUploadingLogo(false);
@@ -235,13 +238,13 @@ export default function GymConfigScreen() {
 
   const pickAndUploadBackground = async () => {
     if (!orgId) {
-      Alert.alert('Error', 'No hay organización cargada.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_err_no_org'));
       return;
     }
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso', 'Se necesita acceso a la galería para elegir el fondo.');
+        Alert.alert(tStr('gym_config_perm_title'), tStr('gym_config_perm_gallery_bg'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -272,7 +275,7 @@ export default function GymConfigScreen() {
         setBackgroundUrl(publicUrl);
       }
     } catch (e) {
-      Alert.alert('Fondo', e?.message || 'No se pudo subir la imagen de fondo.');
+      Alert.alert(tStr('gym_config_bg_title'), e?.message || tStr('gym_config_bg_upload_fail'));
     } finally {
       setUploadingBackground(false);
     }
@@ -281,15 +284,15 @@ export default function GymConfigScreen() {
   const save = async () => {
     const trimmedName = (name || '').trim();
     if (!trimmedName) {
-      Alert.alert('Nombre', 'El nombre de la organización es obligatorio.');
+      Alert.alert(tStr('gym_config_name_title'), tStr('gym_config_name_required'));
       return;
     }
     if (!orgId) {
-      Alert.alert('Error', 'No hay organización cargada.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_err_no_org'));
       return;
     }
     if (!canEdit) {
-      Alert.alert('Sin permiso', 'Solo el dueño de la organización puede editar la configuración.');
+      Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
       return;
     }
     setSaving(true);
@@ -302,6 +305,16 @@ export default function GymConfigScreen() {
       else delete prevFeatures.text_color;
       if (validTextSecondary) prevFeatures.text_secondary_color = validTextSecondary;
       else delete prevFeatures.text_secondary_color;
+      if (validSurfaceColor) prevFeatures.ui_surface_color = validSurfaceColor;
+      else delete prevFeatures.ui_surface_color;
+      if (validBorderColor) prevFeatures.ui_border_color = validBorderColor;
+      else delete prevFeatures.ui_border_color;
+      if (validOverlayColor) prevFeatures.ui_overlay_color = validOverlayColor;
+      else delete prevFeatures.ui_overlay_color;
+
+      const welcomeTrim = (clientWelcomeMessage || '').trim();
+      if (welcomeTrim) prevFeatures.client_welcome_message = welcomeTrim;
+      else delete prevFeatures.client_welcome_message;
 
       const { error } = await supabase
         .from('organizations')
@@ -317,14 +330,94 @@ export default function GymConfigScreen() {
         .eq('id', orgId);
       if (error) throw error;
       if (typeof refreshOrganization === 'function') await refreshOrganization();
-      Alert.alert('Guardado', 'La configuración se actualizó correctamente.');
+      Alert.alert(tStr('gym_config_saved_title'), tStr('gym_config_saved_body'));
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo guardar.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_save_fail'));
     } finally {
       setSaving(false);
     }
   };
+
+  const ensureOrRotateInviteCode = useCallback(async () => {
+    if (!orgId || !canEdit) return;
+    setInviteBusy(true);
+    try {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const next = generateClientInviteCode();
+        const { error } = await supabase
+          .from('organizations')
+          .update({ client_invite_code: next })
+          .eq('id', orgId);
+        if (!error) {
+          if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
+          Alert.alert(tStr('gym_config_invite_ready_title'), tStr('gym_config_invite_ready_body'));
+          return;
+        }
+        const msg = String(error.message || '');
+        if (!msg.toLowerCase().includes('duplicate') && error.code !== '23505') {
+          throw error;
+        }
+      }
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_invite_unique_fail'));
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_save_fail'));
+    } finally {
+      setInviteBusy(false);
+    }
+  }, [orgId, canEdit, refreshOrganization, tStr]);
+
+  const copyInviteCodeOnly = useCallback(async () => {
+    const c = String(organization?.client_invite_code || '').trim();
+    if (!c) {
+      Alert.alert(tStr('gym_config_invites_title'), tStr('gym_config_invites_need_code'));
+      return;
+    }
+    try {
+      await Clipboard.setStringAsync(c);
+      Alert.alert(
+        tStr('gym_config_copied_title'),
+        tStr('gym_config_copy_code_help'),
+      );
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_copy_fail'));
+    }
+  }, [organization?.client_invite_code, tStr]);
+
+  const copyInviteDeepLink = useCallback(async () => {
+    const c = String(organization?.client_invite_code || '').trim();
+    if (!c) {
+      Alert.alert(tStr('gym_config_invites_title'), tStr('gym_config_invites_need_code'));
+      return;
+    }
+    const url = buildClientInvitePublicLink(c);
+    try {
+      await Clipboard.setStringAsync(url);
+      Alert.alert(
+        tStr('gym_config_copied_title'),
+        tStr('gym_config_copy_link_help'),
+      );
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_copy_fail'));
+    }
+  }, [organization?.client_invite_code, tStr]);
+
+  const shareInviteMessage = useCallback(async () => {
+    const c = String(organization?.client_invite_code || '').trim();
+    if (!c) {
+      Alert.alert(tStr('gym_config_invites_title'), tStr('gym_config_invites_need_code'));
+      return;
+    }
+    const gym = String((name || organization?.name || 'tu gym')).trim();
+    const message = tStr('gym_invite_share_message').replace('{{gym}}', gym).replace('{{code}}', c);
+    try {
+      await Share.share({ message, title: 'FitEngine' });
+    } catch (e) {
+      if (e?.message !== 'User did not share') {
+        Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_share_fail'));
+      }
+    }
+  }, [organization?.client_invite_code, name, organization?.name, tStr]);
 
   const styles = useMemo(
     () =>
@@ -334,6 +427,9 @@ export default function GymConfigScreen() {
         backBtn: { padding: 8, marginLeft: -8 },
         title: { color: t.text, fontSize: 22, fontWeight: '800', marginLeft: 8 },
         scroll: { paddingBottom: 40 },
+        sectionHeading: { color: t.text, fontSize: 18, fontWeight: '800', marginBottom: 8 },
+        sectionIntro: { color: t.subText, fontSize: 13, lineHeight: 19, marginBottom: 18 },
+        subHeading: { color: t.text, fontSize: 15, fontWeight: '800', marginBottom: 10 },
         block: { marginBottom: 20 },
         label: { color: t.subText, fontSize: 13, marginBottom: 8, fontWeight: '600' },
         input: {
@@ -373,13 +469,39 @@ export default function GymConfigScreen() {
         previewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
         previewBadge: { borderRadius: 8, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1 },
         previewBadgeText: { fontSize: 13, fontWeight: '700' },
-        paletteRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+        liveSimBlock: {
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.boxBg,
+          padding: 12,
+          marginBottom: 6,
+        },
+        liveLegendWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10, marginBottom: 8 },
+        liveLegendItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginRight: 10,
+          marginBottom: 8,
+          paddingVertical: 4,
+          paddingHorizontal: 8,
+          borderRadius: 8,
+          backgroundColor: hexToRgba(t.brand, 0.06),
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+        },
+        liveLegendDot: { width: 14, height: 14, borderRadius: 7, marginRight: 6, borderWidth: 1, borderColor: 'rgba(148,163,184,0.5)' },
+        liveLegendLabel: { color: t.subText, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+        liveLegendPreset: { color: t.text, fontSize: 11, fontWeight: '700', maxWidth: 100 },
+        paletteRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, width: '100%' },
         paletteBtn: {
           borderWidth: 1,
           borderRadius: 10,
           paddingVertical: 9,
           paddingHorizontal: 10,
           minWidth: 92,
+          marginRight: 8,
+          marginBottom: 8,
         },
         paletteSwatches: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
         paletteDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, marginRight: 6 },
@@ -398,22 +520,118 @@ export default function GymConfigScreen() {
           marginBottom: 6,
         },
         bgPreviewImg: { width: '100%', height: '100%' },
+        colorGridScroll: { maxHeight: 280, marginTop: 8 },
+        colorGridWrap: { flexDirection: 'row', flexWrap: 'wrap', alignContent: 'flex-start', paddingBottom: 8 },
+        colorGridChip: { width: 28, height: 28, borderRadius: 6, margin: 3, borderWidth: 1 },
+        paletteToggleRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: 11,
+          paddingHorizontal: 12,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.inputBg,
+          marginTop: 8,
+        },
+        paletteToggleLabel: { flex: 1, marginLeft: 8, color: t.text, fontSize: 14, fontWeight: '700' },
+        paletteToggleHint: { color: t.placeholder, fontSize: 12, marginRight: 8 },
+        palettePreviewSwatch: {
+          width: 22,
+          height: 22,
+          borderRadius: 6,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+        },
       }),
     [t]
   );
 
+  const renderFullColorGrid = useCallback(
+    (val, setVal) => (
+      <ScrollView
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+        style={styles.colorGridScroll}
+        contentContainerStyle={styles.colorGridWrap}
+      >
+        {FULL_HEX_CHOICE_GYM.map((c) => {
+          const active = String(val || '').toLowerCase().trim() === c.toLowerCase();
+          return (
+            <TouchableOpacity
+              key={c}
+              disabled={!canEdit}
+              onPress={() => canEdit && setVal(c)}
+              activeOpacity={0.88}
+              style={[
+                styles.colorGridChip,
+                { backgroundColor: c },
+                {
+                  borderColor: active ? t.brand : 'rgba(148,163,184,0.55)',
+                  borderWidth: active ? 3 : 1,
+                },
+              ]}
+            />
+          );
+        })}
+      </ScrollView>
+    ),
+    [canEdit, styles, t.brand],
+  );
+
+  const renderCollapsiblePalette = useCallback(
+    (key, val, setVal, title) => {
+      const open = paletteOpenKey === key;
+      const trimmed = (val || '').trim();
+      const showSwatch = HEX_TEXT_COLOR.test(trimmed);
+      return (
+        <View>
+          <TouchableOpacity
+            style={styles.paletteToggleRow}
+            onPress={() => setPaletteOpenKey((prev) => (prev === key ? null : key))}
+            disabled={!canEdit}
+            activeOpacity={0.85}
+          >
+            <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={t.subText} />
+            <Text style={styles.paletteToggleLabel}>{title}</Text>
+            <Text style={styles.paletteToggleHint}>
+              {open
+                ? tStr('gym_palette_toggle_hide')
+                : tStr('gym_palette_toggle_count').replace('{{count}}', String(FULL_HEX_CHOICE_GYM.length))}
+            </Text>
+            {showSwatch ? (
+              <View style={[styles.palettePreviewSwatch, { backgroundColor: trimmed }]} />
+            ) : (
+              <View style={{ width: 22 }} />
+            )}
+          </TouchableOpacity>
+          {open ? renderFullColorGrid(val, setVal) : null}
+        </View>
+      );
+    },
+    [paletteOpenKey, canEdit, renderFullColorGrid, styles, t.subText, tStr],
+  );
+  const getColorInputTextStyle = useCallback(
+    (value) => {
+      const normalized = String(value || '').trim();
+      if (!HEX_TEXT_COLOR.test(normalized)) return null;
+      return { color: normalized, fontWeight: '700' };
+    },
+    [],
+  );
+
   if (!orgId) {
     return (
-      <BackgroundWrapper screen="admin">
+      <BackgroundWrapper screen="gymconfig">
         <View style={styles.screen}>
-          <Text style={styles.title}>Cargando...</Text>
+          <Text style={styles.title}>{tStr('gym_config_loading')}</Text>
         </View>
       </BackgroundWrapper>
     );
   }
 
   return (
-    <BackgroundWrapper screen="admin">
+    <BackgroundWrapper screen="gymconfig">
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.scroll}
@@ -424,33 +642,201 @@ export default function GymConfigScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={26} color={t.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Configuración del gym</Text>
+          <Text style={styles.title}>{tStr('gym_config_screen_title')}</Text>
         </View>
 
         <View style={styles.block}>
-          <Text style={styles.label}>Nombre de la organización</Text>
+          <Text style={styles.label}>{tStr('gym_config_org_name')}</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Ej. Waitomo Training"
+            placeholder={tStr('gym_config_org_name_ph')}
             placeholderTextColor={t.placeholder}
-            editable={isOwner}
+            editable={canEdit}
           />
         </View>
 
         <View style={styles.block}>
-          <Text style={styles.label}>Color de acento (hex)</Text>
+          <Text style={styles.label}>{tStr('gym_config_welcome_label')}</Text>
+          <Text style={styles.hint}>
+            {tStr('gym_config_welcome_hint')}
+          </Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { minHeight: 88, textAlignVertical: 'top' }]}
+            value={clientWelcomeMessage}
+            onChangeText={setClientWelcomeMessage}
+            placeholder={tStr('gym_config_welcome_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+            multiline
+          />
+        </View>
+
+        <View style={styles.block}>
+          <Text style={styles.label}>{tStr('gym_config_invites_new')}</Text>
+          <Text style={styles.hint}>
+            {tStr('gym_invite_hint_long')}
+          </Text>
+          <Text style={[styles.input, { fontWeight: '700', letterSpacing: 1 }]}>
+            {organization?.client_invite_code ? String(organization.client_invite_code).trim() : tStr('gym_config_no_code_placeholder')}
+          </Text>
+          {canEdit ? (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                <TouchableOpacity
+                  style={[styles.logoBtn, { marginTop: 0 }]}
+                  onPress={ensureOrRotateInviteCode}
+                  disabled={inviteBusy || saving}
+                  activeOpacity={0.85}
+                >
+                  {inviteBusy ? (
+                    <ActivityIndicator size="small" color={t.brand} />
+                  ) : (
+                    <Text style={styles.logoBtnText}>
+                      {organization?.client_invite_code ? tStr('gym_config_regenerate_code') : tStr('gym_config_generate_code')}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.logoBtn, { marginTop: 0 }]}
+                  onPress={copyInviteCodeOnly}
+                  disabled={!organization?.client_invite_code}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.logoBtnText}>{tStr('gym_invite_copy_code')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.logoBtn, { marginTop: 0 }]}
+                  onPress={shareInviteMessage}
+                  disabled={!organization?.client_invite_code}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.logoBtnText}>{tStr('gym_invite_share')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.logoBtn, { marginTop: 0 }]}
+                  onPress={copyInviteDeepLink}
+                  disabled={!organization?.client_invite_code}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.logoBtnText}>{tStr('gym_invite_copy_link')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={{ marginBottom: 6 }}>
+          <Text style={styles.sectionHeading}>{tStr('gym_config_section_ui')}</Text>
+          <Text style={styles.sectionIntro}>
+            {tStr('gym_config_section_ui_intro')}
+          </Text>
+        </View>
+
+        <View style={styles.block}>
+          <Text style={styles.subHeading}>{tStr('gym_config_preset_heading')}</Text>
+          <Text style={styles.hint}>
+            {tStr('gym_config_preset_hint')}
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
+            {['dark_vivid', 'dark_minimal', 'light_clean', 'light_warm'].map((preset) => (
+              <TouchableOpacity
+                key={preset}
+                onPress={() => canEdit && setThemePreset(preset)}
+                style={[
+                  { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: t.overlayBorder, marginRight: 8, marginBottom: 8 },
+                  themePreset === preset && { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.15) },
+                ]}
+              >
+                <Text style={{ color: themePreset === preset ? t.brand : t.subText, fontSize: 13, fontWeight: '700' }}>
+                  {tStr(`gym_preset_${preset}`) || preset}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.hint}>{tStr(`gym_preset_hint_${themePreset}`) || ''}</Text>
+          <Text style={styles.hint}>{tStr('gym_config_theme_global_hint')}</Text>
+        </View>
+
+        <View style={styles.block}>
+          <Text style={styles.subHeading}>{tStr('gym_config_accent_heading')}</Text>
+          <Text style={styles.hint}>{tStr('gym_config_accent_hint')}</Text>
+          <Text style={styles.label}>{tStr('gym_config_hex_label')}</Text>
+          <TextInput
+            style={[styles.input, getColorInputTextStyle(accentColor)]}
             value={accentColor}
             onChangeText={setAccentColor}
             placeholder="#00dddd"
             placeholderTextColor={t.placeholder}
-            editable={isOwner}
+            editable={canEdit}
           />
-          <Text style={styles.hint}>Se usa en botones y destacados. Ej: #00dddd</Text>
-          {[{ key: 'dark', label: 'Preview oscuro', token: previewTokensDark }, { key: 'light', label: 'Preview claro', token: previewTokensLight }].map(({ key, label, token }) => (
+          {renderCollapsiblePalette('accent', accentColor, setAccentColor, tStr('gym_palette_title_accent'))}
+        </View>
+
+        <View style={styles.liveSimBlock}>
+          <Text style={[styles.subHeading, { marginBottom: 4 }]}>{tStr('gym_live_title')}</Text>
+          <Text style={[styles.hint, { marginBottom: 0 }]}>
+            {tStr('gym_live_hint').replace('{{mode}}', String(getEffectiveMode(mode)))}
+          </Text>
+          <View style={styles.liveLegendWrap}>
+            <View style={styles.liveLegendItem}>
+              <Text style={styles.liveLegendLabel}>{tStr('gym_legend_style')}</Text>
+              <Text style={styles.liveLegendPreset} numberOfLines={1}>
+                {tStr(`gym_preset_${themePreset}`) || themePreset}
+              </Text>
+            </View>
+            <View style={styles.liveLegendItem}>
+              <View
+                style={[
+                  styles.liveLegendDot,
+                  { backgroundColor: String(accentColor || '').trim() || previewTokensCurrent.brand },
+                ]}
+              />
+              <Text style={styles.liveLegendLabel}>{tStr('gym_legend_accent')}</Text>
+            </View>
+            <View style={styles.liveLegendItem}>
+              <View style={[styles.liveLegendDot, { backgroundColor: previewTokensCurrent.text }]} />
+              <Text style={styles.liveLegendLabel}>{tStr('gym_legend_text')}</Text>
+            </View>
+            <View style={styles.liveLegendItem}>
+              <View style={[styles.liveLegendDot, { backgroundColor: previewTokensCurrent.subText }]} />
+              <Text style={styles.liveLegendLabel}>{tStr('gym_legend_secondary_short')}</Text>
+            </View>
+            <View style={styles.liveLegendItem}>
+              <View style={[styles.liveLegendDot, { backgroundColor: previewTokensCurrent.boxBg }]} />
+              <Text style={styles.liveLegendLabel}>{tStr('gym_legend_surface')}</Text>
+            </View>
+            <View style={styles.liveLegendItem}>
+              <View
+                style={[
+                  styles.liveLegendDot,
+                  {
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderColor: previewTokensCurrent.overlayBorder,
+                  },
+                ]}
+              />
+              <Text style={styles.liveLegendLabel}>{tStr('gym_legend_border')}</Text>
+            </View>
+            <View style={styles.liveLegendItem}>
+              <View
+                style={[
+                  styles.liveLegendDot,
+                  {
+                    width: 22,
+                    borderRadius: 4,
+                    backgroundColor: previewTokensCurrent.screenOverlay,
+                    borderWidth: 1,
+                    borderColor: 'rgba(148,163,184,0.4)',
+                  },
+                ]}
+              />
+              <Text style={styles.liveLegendLabel}>{tStr('gym_legend_overlay')}</Text>
+            </View>
+          </View>
+          {[{ key: 'dark', labelKey: 'gym_preview_dark', token: previewTokensDark }, { key: 'light', labelKey: 'gym_preview_light', token: previewTokensLight }].map(({ key, labelKey, token }) => (
             <View
               key={key}
               style={[
@@ -462,12 +848,12 @@ export default function GymConfigScreen() {
                 },
               ]}
             >
-              <Text style={[styles.previewTitle, { color: token.text }]}>{label}</Text>
-              <Text style={{ color: token.text, fontSize: 17, fontWeight: '800', marginBottom: 4 }}>
-                Título principal
+              <Text style={[styles.previewTitle, { color: token.text }]}>{tStr(labelKey)}</Text>
+              <Text style={{ color: token.text, fontSize: 16, fontWeight: '800', marginBottom: 3 }}>
+                {tStr('gym_preview_main_title')}
               </Text>
-              <Text style={{ color: token.subText, fontSize: 14, marginBottom: 12 }}>
-                Texto secundario · placeholders
+              <Text style={{ color: token.subText, fontSize: 13, marginBottom: 10 }}>
+                {tStr('gym_preview_secondary_line')}
               </Text>
               <View style={styles.previewRow}>
                 <View
@@ -476,7 +862,7 @@ export default function GymConfigScreen() {
                     { backgroundColor: token.buttonPrimary.backgroundColor, borderColor: token.buttonPrimary.borderColor },
                   ]}
                 >
-                  <Text style={[styles.previewBadgeText, { color: token.buttonPrimaryText.color }]}>Acción</Text>
+                  <Text style={[styles.previewBadgeText, { color: token.buttonPrimaryText.color }]}>{tStr('gym_preview_action')}</Text>
                 </View>
                 <View
                   style={{
@@ -489,41 +875,38 @@ export default function GymConfigScreen() {
                     backgroundColor: token.inactiveTabBg,
                   }}
                 >
-                  <Text style={{ color: token.subText, fontSize: 11 }}>Tarjeta / panel</Text>
+                  <Text style={{ color: token.subText, fontSize: 11 }}>{tStr('gym_preview_card')}</Text>
                 </View>
               </View>
             </View>
           ))}
           <Text style={styles.hint}>
-            Vista actual según modo de la app: {getEffectiveMode(mode)} · texto: {previewTokensCurrent.text} · secundario: {previewTokensCurrent.subText}
+            {tStr('gym_preview_mode_line')
+              .replace('{{mode}}', String(getEffectiveMode(mode)))
+              .replace('{{text}}', String(previewTokensCurrent.text))
+              .replace('{{sub}}', String(previewTokensCurrent.subText))
+              .replace(
+                '{{surface}}',
+                validSurfaceColor ? tStr('gym_preview_suffix_surface').replace('{{c}}', validSurfaceColor) : '',
+              )
+              .replace(
+                '{{border}}',
+                validBorderColor ? tStr('gym_preview_suffix_border').replace('{{c}}', validBorderColor) : '',
+              )
+              .replace(
+                '{{overlay}}',
+                validOverlayColor ? tStr('gym_preview_suffix_overlay').replace('{{c}}', validOverlayColor) : '',
+              )}
           </Text>
         </View>
 
         <View style={styles.block}>
-          <Text style={styles.label}>Preset de tema</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {['dark_vivid', 'dark_minimal', 'light_clean', 'light_warm'].map((preset) => (
-              <TouchableOpacity
-                key={preset}
-                onPress={() => canEdit && setThemePreset(preset)}
-                style={[
-                  { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: t.overlayBorder },
-                  themePreset === preset && { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.15) },
-                ]}
-              >
-                <Text style={{ color: themePreset === preset ? t.brand : t.subText, fontSize: 13, fontWeight: '700' }}>
-                  {PRESET_LABELS_GYM[preset] || preset}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.hint}>{PRESET_HINTS_GYM[themePreset] || ''}</Text>
-          <Text style={styles.hint}>Cambiá también el modo claro/oscuro de la app en Configuración para ver presets claros.</Text>
-        </View>
-
-        <View style={styles.block}>
-          <Text style={styles.label}>Paletas rápidas (primario + secundario)</Text>
-          <Text style={styles.hint}>Aplican ambos colores juntos para mantener buena jerarquía visual.</Text>
+          <Text style={styles.subHeading}>{tStr('gym_config_text_heading')}</Text>
+          <Text style={styles.hint}>
+            {tStr('gym_config_text_intro')}
+          </Text>
+          <Text style={styles.label}>{tStr('gym_config_quick_palettes')}</Text>
+          <Text style={styles.hint}>{tStr('gym_config_quick_palettes_hint')}</Text>
           <View style={styles.paletteRow}>
             {TEXT_PALETTES_GYM.map((palette) => {
               const isActive =
@@ -549,7 +932,7 @@ export default function GymConfigScreen() {
                     <View style={[styles.paletteDot, { backgroundColor: palette.primary, borderColor: t.overlayBorder }]} />
                     <View style={[styles.paletteDot, { backgroundColor: palette.secondary, borderColor: t.overlayBorder }]} />
                   </View>
-                  <Text style={[styles.paletteLabel, { color: isActive ? t.brand : t.subText }]}>{palette.label}</Text>
+                  <Text style={[styles.paletteLabel, { color: isActive ? t.brand : t.subText }]}>{tStr(palette.labelKey)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -570,77 +953,117 @@ export default function GymConfigScreen() {
               },
             ]}
           >
-            <Text style={[styles.paletteLabel, { color: t.subText }]}>Limpiar override de textos</Text>
+            <Text style={[styles.paletteLabel, { color: t.subText }]}>{tStr('gym_config_clear_text')}</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.label, { marginTop: 16 }]}>{tStr('gym_config_text_primary_label')}</Text>
+          <Text style={styles.hint}>{tStr('gym_config_text_primary_hint')}</Text>
+          {renderCollapsiblePalette('textPrimary', textColor, setTextColor, tStr('gym_palette_title_text_primary'))}
+          <TextInput
+            style={[styles.input, getColorInputTextStyle(textColor)]}
+            value={textColor}
+            onChangeText={setTextColor}
+            placeholder={tStr('gym_config_text_primary_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+          />
+
+          <Text style={[styles.label, { marginTop: 16 }]}>{tStr('gym_config_text_secondary_label')}</Text>
+          <Text style={styles.hint}>
+            {tStr('gym_config_text_secondary_hint')}
+          </Text>
+          {renderCollapsiblePalette('textSecondary', textSecondaryColor, setTextSecondaryColor, tStr('gym_palette_title_text_secondary'))}
+          <TextInput
+            style={[styles.input, getColorInputTextStyle(textSecondaryColor)]}
+            value={textSecondaryColor}
+            onChangeText={setTextSecondaryColor}
+            placeholder={tStr('gym_config_text_secondary_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+          />
+        </View>
+
+        <View style={styles.block}>
+          <Text style={styles.subHeading}>{tStr('gym_config_surface_heading')}</Text>
+          <Text style={styles.hint}>
+            {tStr('gym_config_surface_intro')}
+          </Text>
+          <Text style={styles.label}>{tStr('gym_config_surface_label')}</Text>
+          <TextInput
+            style={[styles.input, getColorInputTextStyle(surfaceColor)]}
+            value={surfaceColor}
+            onChangeText={setSurfaceColor}
+            placeholder={tStr('gym_config_surface_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+          />
+          {renderCollapsiblePalette('surface', surfaceColor, setSurfaceColor, tStr('gym_palette_title_surface'))}
+          <Text style={[styles.label, { marginTop: 12 }]}>{tStr('gym_config_border_label')}</Text>
+          <TextInput
+            style={[styles.input, getColorInputTextStyle(borderColor)]}
+            value={borderColor}
+            onChangeText={setBorderColor}
+            placeholder={tStr('gym_config_border_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+          />
+          {renderCollapsiblePalette('border', borderColor, setBorderColor, tStr('gym_palette_title_border'))}
+          <TouchableOpacity
+            onPress={() => {
+              if (!canEdit) return;
+              setSurfaceColor('');
+              setBorderColor('');
+            }}
+            style={[
+              styles.paletteBtn,
+              {
+                marginTop: 10,
+                borderColor: t.overlayBorder,
+                backgroundColor: t.boxBg,
+                alignSelf: 'flex-start',
+              },
+            ]}
+          >
+            <Text style={[styles.paletteLabel, { color: t.subText }]}>{tStr('gym_config_clear_surface')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.block}>
-          <Text style={styles.label}>Texto principal (títulos y cuerpo)</Text>
-          <Text style={styles.hint}>Opcional. #RRGGBB. Vacío = el preset elige.</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {TEXT_QUICK_GYM.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  onPress={() => canEdit && setTextColor(c)}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: c,
-                    borderWidth: validTextColor?.toLowerCase() === c.toLowerCase() ? 3 : 1,
-                    borderColor: validTextColor?.toLowerCase() === c.toLowerCase() ? t.brand : t.overlayBorder,
-                  }}
-                />
-              ))}
-            </View>
-          </ScrollView>
-          <TextInput
-            style={styles.input}
-            value={textColor}
-            onChangeText={setTextColor}
-            placeholder="#f8fafc u omitir"
-            placeholderTextColor={t.placeholder}
-            editable={canEdit}
-          />
-        </View>
-
-        <View style={styles.block}>
-          <Text style={styles.label}>Texto secundario (subtítulos, ayudas, placeholders)</Text>
+          <Text style={styles.subHeading}>{tStr('gym_config_overlay_heading')}</Text>
           <Text style={styles.hint}>
-            Opcional. Elegí un color que contraste bien con el principal; si lo dejás vacío y definiste principal, se
-            suaviza desde el principal; si no, usa el preset.
+            {tStr('gym_config_overlay_intro')}
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {TEXT_SECOND_QUICK_GYM.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  onPress={() => canEdit && setTextSecondaryColor(c)}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: c,
-                    borderWidth: validTextSecondary?.toLowerCase() === c.toLowerCase() ? 3 : 1,
-                    borderColor: validTextSecondary?.toLowerCase() === c.toLowerCase() ? t.brand : t.overlayBorder,
-                  }}
-                />
-              ))}
-            </View>
-          </ScrollView>
+          <Text style={styles.label}>{tStr('gym_config_overlay_label')}</Text>
           <TextInput
-            style={styles.input}
-            value={textSecondaryColor}
-            onChangeText={setTextSecondaryColor}
-            placeholder="#94a3b8 u omitir"
+            style={[styles.input, getColorInputTextStyle(overlayColor)]}
+            value={overlayColor}
+            onChangeText={setOverlayColor}
+            placeholder={tStr('gym_config_overlay_ph')}
             placeholderTextColor={t.placeholder}
             editable={canEdit}
           />
+          {renderCollapsiblePalette('overlay', overlayColor, setOverlayColor, tStr('gym_palette_title_overlay'))}
+          <TouchableOpacity
+            onPress={() => {
+              if (!canEdit) return;
+              setOverlayColor('');
+            }}
+            style={[
+              styles.paletteBtn,
+              {
+                marginTop: 10,
+                borderColor: t.overlayBorder,
+                backgroundColor: t.boxBg,
+                alignSelf: 'flex-start',
+              },
+            ]}
+          >
+            <Text style={[styles.paletteLabel, { color: t.subText }]}>{tStr('gym_config_clear_overlay')}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.block}>
-          <Text style={styles.label}>Tipo de fondo (#20b)</Text>
+          <Text style={styles.label}>{tStr('gym_config_bg_type_label')}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {['solid', 'gradient', 'image'].map((bt) => (
               <TouchableOpacity
@@ -651,14 +1074,14 @@ export default function GymConfigScreen() {
                   backgroundType === bt && { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.15) },
                 ]}
               >
-                <Text style={{ color: backgroundType === bt ? t.brand : t.subText, fontSize: 13 }}>{bt}</Text>
+                <Text style={{ color: backgroundType === bt ? t.brand : t.subText, fontSize: 13 }}>{tStr(`gym_bg_type_${bt}`)}</Text>
               </TouchableOpacity>
             ))}
           </View>
           {backgroundType === 'image' && (
             <>
               <Text style={styles.hint}>
-                Si la foto es muy clara, la app aplica un velo oscuro para que títulos y textos sigan legibles.
+                {tStr('gym_config_bg_image_hint')}
               </Text>
               <View style={styles.bgPreviewWrap}>
                 {backgroundLocalUri || backgroundUrl ? (
@@ -676,7 +1099,7 @@ export default function GymConfigScreen() {
                   {uploadingBackground ? (
                     <ActivityIndicator size="small" color={t.brand} />
                   ) : (
-                    <Text style={styles.logoBtnText}>Elegir imagen de fondo</Text>
+                    <Text style={styles.logoBtnText}>{tStr('gym_config_pick_bg_image')}</Text>
                   )}
                 </TouchableOpacity>
               )}
@@ -684,7 +1107,7 @@ export default function GymConfigScreen() {
                 style={[styles.input, { marginTop: 10 }]}
                 value={backgroundUrl}
                 onChangeText={setBackgroundUrl}
-                placeholder="...o URL de imagen (opcional)"
+                placeholder={tStr('gym_config_bg_url_ph')}
                 placeholderTextColor={t.placeholder}
                 editable={canEdit}
               />
@@ -693,7 +1116,7 @@ export default function GymConfigScreen() {
         </View>
 
         <View style={styles.block}>
-          <Text style={styles.label}>Logo</Text>
+          <Text style={styles.label}>{tStr('gym_config_logo_section')}</Text>
           <View style={styles.logoWrap}>
             {logoUri ? (
               <Image source={{ uri: logoUri }} style={styles.logoImg} resizeMode="cover" />
@@ -706,7 +1129,7 @@ export default function GymConfigScreen() {
               {uploadingLogo ? (
                 <ActivityIndicator size="small" color={t.brand} />
               ) : (
-                <Text style={styles.logoBtnText}>Cambiar logo</Text>
+                <Text style={styles.logoBtnText}>{tStr('gym_config_change_logo')}</Text>
               )}
             </TouchableOpacity>
           )}
@@ -716,18 +1139,18 @@ export default function GymConfigScreen() {
           {saving ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.saveBtnText}>{canEdit ? 'Guardar cambios' : 'Sin permisos para guardar'}</Text>
+            <Text style={styles.saveBtnText}>{canEdit ? tStr('gym_config_save') : tStr('gym_config_save_denied')}</Text>
           )}
         </TouchableOpacity>
 
         {!canEdit && (
-          <Text style={styles.hint}>Solo el dueño de la organización puede editar esta configuración.</Text>
+          <Text style={styles.hint}>{tStr('gym_config_owner_only_hint')}</Text>
         )}
 
         {/* Footer atribución: logo completo (triangulo + texto) */}
         <View style={{ alignItems: 'center', marginTop: 32, paddingVertical: 20 }}>
           <LogoCompleto height={30} style={{ marginBottom: 6 }} />
-          <Text style={[styles.hint, { fontSize: 11, opacity: 0.8 }]}>FitEngine by WAITOMO © 2026</Text>
+          <Text style={[styles.hint, { fontSize: 11, opacity: 0.8 }]}>{tStr('gym_config_footer')}</Text>
         </View>
       </ScrollView>
     </BackgroundWrapper>

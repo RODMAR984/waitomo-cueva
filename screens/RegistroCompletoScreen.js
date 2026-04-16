@@ -25,7 +25,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
+import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -41,6 +43,7 @@ const hexToRgba = (hex, alpha = 1) => {
 export default function RegistroCompletoScreen({ route, navigation }) {
   const { plan, userData } = route?.params || {};
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
 
   // ✅ FIX: necesitamos user/ensureProfile para NO depender de profile hidratado
   const { user, profile, ensureProfile, updateProfile, uploadAvatar } = useAuth();
@@ -100,12 +103,16 @@ export default function RegistroCompletoScreen({ route, navigation }) {
       if (navigated) return;
       navigated = true;
 
+      const routeName = getClientPostAuthRouteName(perfilParaNav);
       navigation.reset({
         index: 0,
         routes: [
           {
-            name: 'ClientTabs',
-            params: { userData: perfilParaNav, plan },
+            name: routeName,
+            params:
+              routeName === 'ClientTabs'
+                ? { userData: perfilParaNav, plan }
+                : undefined,
           },
         ],
       });
@@ -115,18 +122,12 @@ export default function RegistroCompletoScreen({ route, navigation }) {
       setSaving(true);
 
       if (!edad || !sexo || !peso || !objetivos) {
-        Alert.alert(
-          '⚠️ Faltan datos',
-          'Completá al menos edad, sexo, peso y objetivos.'
-        );
+        Alert.alert(tStr('reg_complete_alert_missing_title'), tStr('reg_complete_alert_missing_body'));
         return;
       }
 
       if (!user?.id) {
-        Alert.alert(
-          'Sesión no encontrada',
-          'No se encontró el usuario actual. Volvé a iniciar sesión.'
-        );
+        Alert.alert(tStr('reg_complete_alert_no_session_title'), tStr('reg_complete_alert_no_session_body'));
         return;
       }
 
@@ -156,10 +157,7 @@ export default function RegistroCompletoScreen({ route, navigation }) {
               e?.message || e,
               e
             );
-            Alert.alert(
-              'No pudimos preparar tu perfil',
-              'Falló ensureProfile. Esto suele ser RLS/policies o un error real de DB. Mirá el log anterior (error REAL).'
-            );
+            Alert.alert(tStr('reg_complete_alert_ensure_fail_title'), tStr('reg_complete_alert_ensure_fail_body'));
             return;
           } finally {
             setSessionPending(false);
@@ -167,12 +165,12 @@ export default function RegistroCompletoScreen({ route, navigation }) {
         } else {
           setSessionPending(false);
           console.log('❌ [RegistroCompleto] ensureProfile NO existe en AuthContext');
-          Alert.alert('Error', 'ensureProfile no existe en AuthContext.');
+          Alert.alert(tStr('reg_complete_alert_no_ensure_title'), tStr('reg_complete_alert_no_ensure_body'));
           return;
         }
 
         if (!profileRef?.id) {
-          Alert.alert('Error', 'No se pudo asegurar el profile.');
+          Alert.alert(tStr('reg_complete_alert_profile_fail_title'), tStr('reg_complete_alert_profile_fail_body'));
           return;
         }
       }
@@ -260,10 +258,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           e
         );
 
-        Alert.alert(
-          'Error al guardar',
-          'Falló updateProfile (error REAL). Mirá el log anterior.'
-        );
+        Alert.alert(tStr('reg_complete_alert_save_fail_title'), tStr('reg_complete_alert_save_fail_body'));
         return;
       }
 
@@ -283,17 +278,14 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
       setTimeout(() => goPanel(perfilParaNav), 300);
 
       Alert.alert(
-        'Perfil completado',
-        'Guardamos tus datos. Ahora vas a tu panel.',
-        [{ text: 'Ir a mi panel', onPress: () => goPanel(perfilParaNav) }],
+        tStr('reg_complete_success_title'),
+        tStr('reg_complete_success_body'),
+        [{ text: tStr('reg_complete_go_panel'), onPress: () => goPanel(perfilParaNav) }],
         { cancelable: false }
       );
     } catch (e) {
       console.log('❌ [RegistroCompleto] handleContinuar error:', e?.message || e, e);
-      Alert.alert(
-        'Error',
-        'No se pudo guardar tu perfil. Mirá el log anterior (error REAL).'
-      );
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('reg_complete_error_final'));
     } finally {
       setSaving(false);
       setSessionPending(false);
@@ -447,7 +439,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.panel}>
-            <Text style={styles.title}>Completá tu perfil</Text>
+            <Text style={styles.title}>{tStr('reg_complete_title')}</Text>
 
             {/* ✅ FIX (estética): banner solo cuando ESTAMOS asegurando sesión (no por !profile) */}
             {sessionPending && (
@@ -457,12 +449,8 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.bannerText}>
-                    Preparando tu sesión… un segundo.
-                  </Text>
-                  <Text style={styles.bannerSub}>
-                    Estamos sincronizando tu perfil.
-                  </Text>
+                  <Text style={styles.bannerText}>{tStr('reg_complete_banner_main')}</Text>
+                  <Text style={styles.bannerSub}>{tStr('reg_complete_banner_sub')}</Text>
                 </View>
               </View>
             )}
@@ -472,14 +460,14 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
                 <Image source={{ uri: imagenPerfil }} style={styles.imagePreview} />
               ) : (
                 <View style={styles.imagePlaceholder}>
-                  <Text style={styles.placeholderText}>Subí tu foto de perfil</Text>
+                  <Text style={styles.placeholderText}>{tStr('reg_complete_photo_hint')}</Text>
                 </View>
               )}
             </TouchableOpacity>
 
             <TextInput
               style={styles.input}
-              placeholder="Edad"
+              placeholder={tStr('reg_complete_ph_edad')}
               placeholderTextColor={t.placeholder}
               keyboardType="numeric"
               value={edad}
@@ -487,14 +475,14 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
             />
             <TextInput
               style={styles.input}
-              placeholder="Sexo"
+              placeholder={tStr('reg_complete_ph_sexo')}
               placeholderTextColor={t.placeholder}
               value={sexo}
               onChangeText={setSexo}
             />
             <TextInput
               style={styles.input}
-              placeholder="Peso (kg)"
+              placeholder={tStr('reg_complete_ph_peso')}
               placeholderTextColor={t.placeholder}
               keyboardType="numeric"
               value={peso}
@@ -502,7 +490,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
             />
             <TextInput
               style={styles.input}
-              placeholder="Objetivos"
+              placeholder={tStr('reg_complete_ph_objetivos')}
               placeholderTextColor={t.placeholder}
               value={objetivos}
               onChangeText={setObjetivos}
@@ -510,7 +498,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
             />
             <TextInput
               style={styles.input}
-              placeholder="Lesiones (si tenés)"
+              placeholder={tStr('reg_complete_ph_lesiones')}
               placeholderTextColor={t.placeholder}
               value={lesiones}
               onChangeText={setLesiones}
@@ -518,7 +506,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
             />
             <TextInput
               style={styles.input}
-              placeholder="Observaciones"
+              placeholder={tStr('reg_complete_ph_obs')}
               placeholderTextColor={t.placeholder}
               value={observaciones}
               onChangeText={setObservaciones}
@@ -527,7 +515,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
 
             <TouchableOpacity style={styles.aptoButton} onPress={seleccionarApto}>
               <Text style={styles.aptoText}>
-                {aptoMedico ? '✅ Apto médico cargado' : 'Subir apto médico (opcional)'}
+                {aptoMedico ? tStr('reg_complete_apto_loaded') : tStr('reg_complete_apto_upload')}
               </Text>
             </TouchableOpacity>
 
@@ -536,7 +524,9 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
               onPress={handleContinuar}
               disabled={saving}
             >
-              <Text style={styles.buttonText}>{saving ? 'Guardando…' : 'Continuar'}</Text>
+              <Text style={styles.buttonText}>
+                {saving ? tStr('reg_complete_saving') : tStr('reg_complete_continue')}
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

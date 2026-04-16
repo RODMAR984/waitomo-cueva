@@ -19,6 +19,7 @@ import { PlanProvider } from './contexts/PlanContext';
 // Screens
 import WelcomeScreen from './screens/WelcomeScreen';
 import WelcomeGlobalScreen from './screens/WelcomeGlobalScreen';
+import WelcomeOrganizationScreen from './screens/WelcomeOrganizationScreen';
 import WelcomeDualChoiceScreen from './screens/WelcomeDualChoiceScreen';
 import HomeScreen from './screens/HomeScreen';
 
@@ -34,6 +35,9 @@ import HistorialScreen from './screens/HistorialScreen';
 import ProgresoScreen from './screens/ProgresoScreen';
 import PerfilUsuarioScreen from './screens/PerfilUsuarioScreen';
 import ConfigScreen from './screens/ConfigScreen';
+import AboutFitEngineScreen from './screens/AboutFitEngineScreen';
+import PrivacyScreen from './screens/PrivacyScreen';
+import TermsScreen from './screens/TermsScreen';
 import SeguridadScreen from './screens/SeguridadScreen';
 
 import FreeClassRequestScreen from './screens/FreeClassRequestScreen';
@@ -66,6 +70,7 @@ import GymConfigScreen from './screens/GymConfigScreen';
 import AdminPlanesScreen from './screens/AdminPlanesScreen';
 import AdminAbonosScreen from './screens/AdminAbonosScreen';
 import AsignarCoachesScreen from './screens/AsignarCoachesScreen';
+import OrgMembersScreen from './screens/OrgMembersScreen';
 
 // Splash (marca FitEngine + by WAITOMO)
 import SplashScreen from './screens/SplashScreen';
@@ -75,6 +80,9 @@ import CreaCuentaStaffScreen from './screens/CreaCuentaStaffScreen';
 import AdminLoginScreen from './screens/AdminLoginScreen';
 import RegistroOwnerScreen from './screens/RegistroOwnerScreen';
 import ConfiguraTuEspacioScreen from './screens/ConfiguraTuEspacioScreen';
+import JoinWithInviteCodeScreen from './screens/JoinWithInviteCodeScreen';
+
+import ClientInviteLinkHandler from './components/ClientInviteLinkHandler';
 
 // Imágenes generales (fondos dinámicos)
 import { registerGeneralImages } from './utils/getRandomGeneralImage';
@@ -149,6 +157,7 @@ function AuthGate({ children }) {
           routeName === 'WelcomeScreen' ||
           routeName === 'Login' ||
           routeName === 'LoginScreen' ||
+          routeName === 'JoinWithInvite' ||
           routeName === 'RegistroOwner' ||
           routeName === 'ConfiguraTuEspacio';
         if (isEntryScreen) return;
@@ -219,6 +228,7 @@ function AppContent() {
               } catch (_) {}
             }}
           >
+            <ClientInviteLinkHandler />
             <AuthGate>
                 <Stack.Navigator
                   initialRouteName="Splash"
@@ -227,6 +237,14 @@ function AppContent() {
                   {/* Entrada pública */}
                   <Stack.Screen name="Splash" component={SplashScreen} />
                   <Stack.Screen name="WelcomeGlobal" component={WelcomeGlobalScreen} />
+                  <Stack.Screen
+                    name="WelcomeOrganization"
+                    component={WelcomeOrganizationScreen}
+                  />
+                  <Stack.Screen
+                    name="WelcomeOrganizationScreen"
+                    component={WelcomeOrganizationScreen}
+                  />
                   <Stack.Screen name="WelcomeDualChoice" component={WelcomeDualChoiceScreen} />
                   <Stack.Screen name="Welcome" component={WelcomeScreen} />
                   {/* Alias legacy */}
@@ -239,6 +257,8 @@ function AppContent() {
                   <Stack.Screen name="Login" component={LoginScreen} />
                   {/* Alias legacy */}
                   <Stack.Screen name="LoginScreen" component={LoginScreen} />
+
+                  <Stack.Screen name="JoinWithInvite" component={JoinWithInviteCodeScreen} />
 
                   <Stack.Screen name="CreaCuentaStaff" component={CreaCuentaStaffScreen} />
                   <Stack.Screen name="CreaCuentaStaffScreen" component={CreaCuentaStaffScreen} />
@@ -272,6 +292,11 @@ function AppContent() {
 
                   <Stack.Screen name="Config" component={ConfigScreen} />
                   <Stack.Screen name="ConfigScreen" component={ConfigScreen} />
+                  <Stack.Screen name="AboutFitEngine" component={AboutFitEngineScreen} />
+                  <Stack.Screen name="PrivacyPolicy" component={PrivacyScreen} />
+                  <Stack.Screen name="PrivacyPolicyScreen" component={PrivacyScreen} />
+                  <Stack.Screen name="TermsOfUse" component={TermsScreen} />
+                  <Stack.Screen name="TermsOfUseScreen" component={TermsScreen} />
 
                   <Stack.Screen name="Seguridad" component={SeguridadScreen} />
                   {/* Alias legacy */}
@@ -428,6 +453,8 @@ function AppContent() {
                     name="AsignarCoachesScreen"
                     component={AsignarCoachesScreen}
                   />
+                  <Stack.Screen name="OrgMembers" component={OrgMembersScreen} />
+                  <Stack.Screen name="OrgMembersScreen" component={OrgMembersScreen} />
                 </Stack.Navigator>
               </AuthGate>
             </NavigationContainer>

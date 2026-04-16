@@ -38,3 +38,10 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# dumps locales / archivos accidentales (no subir a GitHub)
+.tmp_public_dump.sql
+11.12.1
+
+# caché local del CLI de Supabase (no versionar)
+supabase/.temp/

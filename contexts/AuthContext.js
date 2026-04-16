@@ -15,7 +15,6 @@ import React, {
 } from 'react';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../supabaseClient';
 import * as Linking from 'expo-linking';
-import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -24,6 +23,11 @@ import {
   clearActiveAppMode,
 } from '../utils/activeAppModeStorage';
 import { imageUriToArrayBuffer } from '../utils/imageUriToArrayBuffer';
+import {
+  getPendingClientInviteCode,
+  clearPendingClientInviteCode,
+} from '../utils/pendingClientInviteStorage';
+import { getOAuthRedirectUriForSupabase } from '../utils/fitengineUrls';
 
 // No llamar aquí: al cargar la app "completa" una sesión pendiente y la siguiente openAuthSessionAsync
 // devuelve esa URL al instante (sesión fantasma). Se llama solo dentro de signInWithProvider.
@@ -460,7 +464,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('organizations')
-        .select('id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at')
+        .select(
+          'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,client_invite_code'
+        )
         .eq('id', orgId)
         .maybeSingle();
       if (error) {
@@ -856,6 +862,66 @@ export const AuthProvider = ({ children }) => {
     await fetchProfile(userId, session?.access_token);
   }, [session?.user?.id, session?.access_token]);
 
+  const joinOrganizationWithInviteCode = useCallback(
+    async (rawCode) => {
+      const code = String(rawCode || '').trim();
+      if (!code) return { ok: false, error: 'empty_code' };
+      try {
+        const { data, error } = await supabase.rpc('join_organization_with_invite', { p_code: code });
+        if (error) {
+          console.log('join_organization_with_invite rpc:', error?.message || error);
+          return { ok: false, error: 'rpc', message: error.message };
+        }
+        const j = data && typeof data === 'object' ? data : {};
+        if (!j.ok) return j;
+        await refreshProfile();
+        if (j.organization_id) await refreshOrganization(String(j.organization_id));
+        else await refreshOrganization();
+        return j;
+      } catch (e) {
+        console.log('join_organization_with_invite exception:', e?.message || e);
+        return { ok: false, error: 'exception', message: e?.message };
+      }
+    },
+    [refreshProfile, refreshOrganization]
+  );
+
+  const pendingInviteAppliedRef = useRef(null);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      pendingInviteAppliedRef.current = null;
+    }
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.user?.id || !profile?.id) return;
+    if (initialProfileSyncDone === false) return;
+    let cancelled = false;
+    (async () => {
+      const code = await getPendingClientInviteCode();
+      if (!code || cancelled) return;
+      if (pendingInviteAppliedRef.current === code) return;
+      const res = await joinOrganizationWithInviteCode(code);
+      if (cancelled) return;
+      if (res?.ok) {
+        pendingInviteAppliedRef.current = code;
+        await clearPendingClientInviteCode();
+      } else {
+        await clearPendingClientInviteCode();
+        console.log('🟠 pending client invite no aplicado:', res?.error || res);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.user?.id,
+    profile?.id,
+    initialProfileSyncDone,
+    joinOrganizationWithInviteCode,
+  ]);
+
   // -------------------------
   // ✅ ENSURE PROFILE (igual a tu versión, sin tocar lógica)
   // -------------------------
@@ -1169,7 +1235,7 @@ export const AuthProvider = ({ children }) => {
       lastFetchedUserIdRef.current = null;
       lastAvatarCleanupUserIdRef.current = null;
       setInitialProfileSyncDone(true);
-      return;
+      return null;
     }
 
     // No usar `!profile` aquí: en llamadas seguidas (restore + onAuthStateChange) el closure
@@ -1184,7 +1250,7 @@ export const AuthProvider = ({ children }) => {
           lastFetchedUserId: lastFetchedUserIdRef.current,
           note: 'profile en log puede ser null por closure de React; no indica estado real',
         });
-        return;
+        return profileRef.current;
       }
       console.log('🧠 SYNC: ref coincide pero sin profile en estado → fetch forzado', { userId });
     }
@@ -1196,7 +1262,7 @@ export const AuthProvider = ({ children }) => {
           note: 'restore + onAuthStateChange suelen disparar 2+; el primero hace el SELECT',
         });
       }
-      return;
+      return profileRef.current?.id === userId ? profileRef.current : null;
     }
 
     console.log('🧠 SYNC CHECK', {
@@ -1208,6 +1274,7 @@ export const AuthProvider = ({ children }) => {
 
     setInitialProfileSyncDone(false);
     profileSyncInFlightRef.current = userId;
+    let syncedProfile = null;
     try {
       console.log('🧠 SYNC → fetchProfile(userId, accessToken)');
       let p = await fetchProfile(userId, accessToken);
@@ -1224,6 +1291,7 @@ export const AuthProvider = ({ children }) => {
         const pAct = p?.plan_actual ? String(p.plan_actual) : null;
         setActivePlanId(pAct);
         await setPlanActualStorage(pAct);
+        syncedProfile = p;
       } else {
         const { data: refData, error: refErr } = await supabase.auth.refreshSession();
         if (refErr || !refData?.user) {
@@ -1240,11 +1308,12 @@ export const AuthProvider = ({ children }) => {
           lastFetchedUserIdRef.current = null;
           lastAvatarCleanupUserIdRef.current = null;
           await setPlanActualStorage(null);
-          return;
+          return null;
         }
         setProfile(null);
         setOrganization(null);
         setRole(null);
+        syncedProfile = null;
       }
 
       lastFetchedUserIdRef.current = userId;
@@ -1256,6 +1325,7 @@ export const AuthProvider = ({ children }) => {
 
     // En segundo plano para no bloquear OAuth/Login (fetchUserPlans puede hacer timeout con RLS).
     fetchUserPlans(userId).catch(() => {});
+    return syncedProfile;
   };
 
   // -------------------------
@@ -1610,8 +1680,8 @@ export const AuthProvider = ({ children }) => {
         password,
       });
       if (error) throw error;
-      await syncFromSession(data?.session || null);
-      return { user: data?.user || null, profile };
+      const syncedProfile = await syncFromSession(data?.session || null);
+      return { user: data?.user || null, profile: syncedProfile ?? null };
     } finally {
       setLoading(false);
     }
@@ -1626,7 +1696,7 @@ export const AuthProvider = ({ children }) => {
       const allowed = ['google', 'apple'];
       if (!allowed.includes(provider)) throw new Error('Proveedor no habilitado.');
 
-      const redirectTo = AuthSession.makeRedirectUri({ scheme: 'waitomo' });
+      const redirectTo = getOAuthRedirectUriForSupabase();
       console.log('🟡 OAUTH redirectTo =>', redirectTo);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -1899,6 +1969,7 @@ export const AuthProvider = ({ children }) => {
       uploadAvatar,
       refreshOrganization,
       refreshProfile,
+      joinOrganizationWithInviteCode,
 
       isAdmin,
       isCoach,
@@ -1928,6 +1999,7 @@ export const AuthProvider = ({ children }) => {
       persistActiveAppMode,
       refreshOrganization,
       refreshProfile,
+      joinOrganizationWithInviteCode,
     ]
   );
 

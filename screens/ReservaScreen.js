@@ -17,22 +17,26 @@ import {
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
-
-// ---------- datos estáticos (preservados) ----------
-const horarios = [
-  { id: '1', dia: 'Lunes', hora: '08:00' },
-  { id: '2', dia: 'Martes', hora: '10:00' },
-  { id: '3', dia: 'Miércoles', hora: '14:00' },
-  { id: '4', dia: 'Jueves', hora: '18:00' },
-  { id: '5', dia: 'Viernes', hora: '20:00' },
-];
+import { useLocale } from '../contexts/LocaleContext';
 
 export default function ReservaScreen({ route, navigation }) {
   const plan = route?.params?.plan ?? null;
   const fondo = route?.params?.fondo ?? (!plan ? getRandomGeneralImage() : null);
 
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
   const [selectedId, setSelectedId] = useState(null);
+
+  const horarios = useMemo(
+    () => [
+      { id: '1', diaKey: 'cal_weekday_mon', hora: '08:00' },
+      { id: '2', diaKey: 'cal_weekday_tue', hora: '10:00' },
+      { id: '3', diaKey: 'cal_weekday_wed', hora: '14:00' },
+      { id: '4', diaKey: 'cal_weekday_thu', hora: '18:00' },
+      { id: '5', diaKey: 'cal_weekday_fri', hora: '20:00' },
+    ],
+    [],
+  );
 
   const styles = useMemo(
     () =>
@@ -118,9 +122,11 @@ export default function ReservaScreen({ route, navigation }) {
   const reservar = useCallback(
     (item) => {
       setSelectedId(item.id);
-      Alert.alert('✅ Reserva realizada', `${item.dia} a las ${item.hora}`);
+      const day = tStr(item.diaKey);
+      const msg = tStr('reserva_done_body').replace('{{day}}', day).replace('{{time}}', item.hora);
+      Alert.alert(tStr('reserva_done_title'), msg);
     },
-    [setSelectedId],
+    [setSelectedId, tStr],
   );
 
   const renderItem = ({ item }) => {
@@ -131,7 +137,7 @@ export default function ReservaScreen({ route, navigation }) {
         style={[styles.item, selected && styles.itemSelected]}
       >
         <Text style={[styles.itemText, selected && styles.itemTextSelected]}>
-          {item.dia} - {item.hora}
+          {tStr(item.diaKey)} - {item.hora}
         </Text>
       </TouchableOpacity>
     );
@@ -142,7 +148,7 @@ export default function ReservaScreen({ route, navigation }) {
       <View style={styles.root}>
         <View style={styles.content}>
           <View style={styles.panelTitle}>
-            <Text style={styles.titulo}>Seleccioná un horario</Text>
+            <Text style={styles.titulo}>{tStr('reserva_pick_title')}</Text>
           </View>
 
           <FlatList
@@ -157,18 +163,18 @@ export default function ReservaScreen({ route, navigation }) {
             <TouchableOpacity
               onPress={() => {
                 if (!selectedId) {
-                  Alert.alert('⏰ Seleccioná un horario');
+                  Alert.alert(tStr('reserva_pick_alert'));
                   return;
                 }
                 navigation.goBack();
               }}
               style={styles.confirmar}
             >
-              <Text style={styles.confirmarTxt}>Confirmar y volver</Text>
+              <Text style={styles.confirmarTxt}>{tStr('reserva_confirm_back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.volver}>
-              <Text style={styles.volverTxt}>Volver</Text>
+              <Text style={styles.volverTxt}>{tStr('common_back')}</Text>
             </TouchableOpacity>
           </View>
         </View>

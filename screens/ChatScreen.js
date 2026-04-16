@@ -1,6 +1,6 @@
 // ChatScreen — Mensajes de un canal; envía mensajes y suscripción en tiempo real
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,8 +21,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
+import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
+import { evaluateCalendarioAccess } from '../utils/clientWorkoutEntitlement';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -33,44 +37,78 @@ const hexToRgba = (hex, alpha = 1) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
-const formatTime = (iso) => {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '';
-  }
-};
+/** Badge «STAFF» en burbujas del chat para roles de equipo */
+const STAFF_CHAT_ROLES = new Set(['coach', 'admin', 'superadmin']);
 
 export default function ChatScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const { user, profile } = useAuth() || {};
+  const { t: tStr, locale } = useLocale();
+  const { user, profile, organization, organizationMemberships } = useAuth() || {};
   const channelId = route.params?.channelId;
-  const channelName = route.params?.channelName || 'Chat';
+  const channelName = route.params?.channelName || tStr('chat_title');
+
+  const formatTime = (iso) => {
+    if (!iso) return '';
+    try {
+      const loc = locale === 'en' ? 'en-US' : 'es-AR';
+      return new Date(iso).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
 
   const [messages, setMessages] = useState([]);
+  /** userId -> display name */
   const [profiles, setProfiles] = useState({});
+  /** userId -> profiles.role (coach, admin, …) */
+  const [profileRoles, setProfileRoles] = useState({});
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [accessOk, setAccessOk] = useState(false);
 
-  const displayNameFor = (userId, fallback = 'Usuario') => {
-    if (userId === user?.id) return profile?.full_name || profile?.username || 'Vos';
-    return profiles[userId] || fallback;
+  const staffRoles = useMemo(() => new Set(['owner', 'coach', 'admin', 'superadmin']), []);
+
+  const isStaffForOrg = useCallback(
+    (orgId) => {
+      if (!orgId) return false;
+      const r = String(profile?.role || '').toLowerCase();
+      if (r === 'superadmin') return true;
+      const list = Array.isArray(organizationMemberships) ? organizationMemberships : [];
+      return list.some(
+        (m) =>
+          m?.active &&
+          m?.organization_id === orgId &&
+          staffRoles.has(String(m?.role || '').toLowerCase()),
+      );
+    },
+    [organizationMemberships, profile?.role, staffRoles],
+  );
+
+  const displayNameFor = (userId, fallback) => {
+    const fb = fallback ?? tStr('common_user');
+    if (userId === user?.id) return profile?.full_name || profile?.username || tStr('chat_you');
+    return profiles[userId] || fb;
   };
 
   const fetchProfiles = async (userIds) => {
-    if (!userIds?.length) return {};
-    const { data } = await supabase.from('profiles').select('id, full_name, username').in('id', userIds);
-    const map = {};
+    if (!userIds?.length) return { names: {}, roles: {} };
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, role')
+      .in('id', userIds);
+    const names = {};
+    const roles = {};
     (data || []).forEach((p) => {
       const name = (p.full_name || p.username || '').trim();
-      map[p.id] = name || 'Usuario';
+      names[p.id] = name || tStr('common_user');
+      roles[p.id] = p.role || null;
     });
-    return map;
+    return { names, roles };
   };
 
   useEffect(() => {
@@ -79,11 +117,63 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (!channelId) {
+      setAccessLoading(false);
+      setAccessOk(false);
+      return undefined;
+    }
+    let alive = true;
+    (async () => {
+      setAccessLoading(true);
+      try {
+        const { data: ch, error: chErr } = await supabase
+          .from('chat_channels')
+          .select('organization_id, plan_id')
+          .eq('id', channelId)
+          .maybeSingle();
+        if (!alive) return;
+        if (chErr || !ch?.organization_id) {
+          setAccessOk(false);
+          return;
+        }
+        const orgId = ch.organization_id;
+        if (isStaffForOrg(orgId)) {
+          setAccessOk(true);
+          return;
+        }
+        const orgForUser = organization?.id ?? profile?.organization_id ?? null;
+        const channelPlan = normalizePlanKey(ch.plan_id);
+        const [abonoRow, grant] = await Promise.all([
+          user?.id ? fetchLatestUserAbono(user.id) : Promise.resolve(null),
+          resolveFreeClassGrant(user?.id),
+        ]);
+        const ent = evaluateCalendarioAccess({
+          planCanonKey: channelPlan,
+          organizationId: orgForUser,
+          abonoRow,
+          abonoLoading: false,
+          freeClassGrant: grant,
+        });
+        setAccessOk(!!ent.ok);
+      } catch {
+        if (alive) setAccessOk(false);
+      } finally {
+        if (alive) setAccessLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [channelId, user?.id, profile?.plan_actual, profile?.planActual, organization?.id, profile?.organization_id, isStaffForOrg]);
+
+  useEffect(() => {
+    if (!channelId || !accessOk) {
       setLoading(false);
+      setMessages([]);
       return;
     }
     let alive = true;
     (async () => {
+      setLoading(true);
       try {
         const { data, error } = await supabase
           .from('chat_messages')
@@ -97,7 +187,8 @@ export default function ChatScreen() {
         const ids = [...new Set(list.map((m) => m.user_id))];
         const profs = await fetchProfiles(ids);
         if (!alive) return;
-        setProfiles((prev) => ({ ...prev, ...profs }));
+        setProfiles((prev) => ({ ...prev, ...profs.names }));
+        setProfileRoles((prev) => ({ ...prev, ...profs.roles }));
       } catch {
         if (alive) setMessages([]);
       } finally {
@@ -105,7 +196,7 @@ export default function ChatScreen() {
       }
     })();
     return () => { alive = false; };
-  }, [channelId]);
+  }, [channelId, accessOk]);
 
   useEffect(() => {
     if (user?.id && (profile?.full_name || profile?.username)) {
@@ -114,10 +205,13 @@ export default function ChatScreen() {
         [user.id]: profile.full_name || profile.username || 'Vos',
       }));
     }
-  }, [user?.id, profile?.full_name, profile?.username]);
+    if (user?.id && profile?.role) {
+      setProfileRoles((prev) => ({ ...prev, [user.id]: profile.role }));
+    }
+  }, [user?.id, profile?.full_name, profile?.username, profile?.role]);
 
   useEffect(() => {
-    if (!channelId) return;
+    if (!channelId || !accessOk) return;
     const channel = supabase
       .channel(`chat:${channelId}`)
       .on(
@@ -132,7 +226,8 @@ export default function ChatScreen() {
           setProfiles((prev) => {
             if (prev[newRow.user_id]) return prev;
             fetchProfiles([newRow.user_id]).then((next) => {
-              setProfiles((p) => ({ ...p, ...next }));
+              setProfiles((p) => ({ ...p, ...next.names }));
+              setProfileRoles((r) => ({ ...r, ...next.roles }));
             });
             return prev;
           });
@@ -143,11 +238,11 @@ export default function ChatScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [channelId]);
+  }, [channelId, accessOk]);
 
   const send = async () => {
     const text = (body || '').trim();
-    if (!text || !user?.id || !channelId || sending) return;
+    if (!text || !user?.id || !channelId || sending || !accessOk) return;
     setSending(true);
     try {
       const { data: inserted, error } = await supabase
@@ -163,12 +258,14 @@ export default function ChatScreen() {
       setBody('');
       if (inserted) {
         setMessages((prev) => [...prev, inserted]);
-        setProfiles((prev) => (prev[user.id] ? prev : { ...prev, [user.id]: profile?.full_name || profile?.username || 'Vos' }));
+        setProfiles((prev) =>
+          prev[user.id] ? prev : { ...prev, [user.id]: profile?.full_name || profile?.username || tStr('chat_you') },
+        );
       }
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn('Chat send error', e?.message || e);
-      Alert.alert('Error al enviar', e?.message || 'No se pudo enviar el mensaje.');
+      Alert.alert(tStr('chat_send_error_title'), e?.message || tStr('chat_send_error_body'));
     } finally {
       setSending(false);
     }
@@ -206,8 +303,24 @@ export default function ChatScreen() {
           borderBottomRightRadius: 16,
           borderBottomLeftRadius: 4,
         },
-        msgSender: { color: t.placeholder, fontSize: 11, marginBottom: 2 },
-        msgSenderMe: { color: t.onBrand, fontSize: 11, marginBottom: 2 },
+        senderRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 6,
+          marginBottom: 2,
+        },
+        msgSender: { color: t.placeholder, fontSize: 11 },
+        msgSenderMe: { color: t.onBrand, fontSize: 11 },
+        staffBadge: {
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderRadius: 6,
+          backgroundColor: hexToRgba(t.brand, 0.2),
+          borderWidth: 1,
+          borderColor: hexToRgba(t.brand, 0.45),
+        },
+        staffBadgeText: { color: t.brand, fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
         msgBody: { color: t.text, fontSize: 15 },
         msgBodyMe: { color: t.text, fontSize: 15 },
         msgTime: { color: t.placeholder, fontSize: 10, marginTop: 4 },
@@ -220,7 +333,7 @@ export default function ChatScreen() {
           paddingBottom: Math.max(insets.bottom || 0, Platform.OS === 'android' ? 28 : 12) + (Platform.OS === 'ios' ? 16 : 0),
           borderTopWidth: 1,
           borderTopColor: t.overlayBorder,
-          backgroundColor: hexToRgba(colors.dark.background, 0.95),
+          backgroundColor: hexToRgba(t.bg, 0.96),
         },
         input: {
           flex: 1,
@@ -247,16 +360,25 @@ export default function ChatScreen() {
         empty: { paddingVertical: 40, alignItems: 'center' },
         emptyText: { color: t.placeholder, fontSize: 15 },
       }),
-    [t, insets.bottom]
+    [t, insets.bottom, locale]
   );
 
   const renderMessage = ({ item }) => {
     const isMe = item.user_id === user?.id;
-    const name = displayNameFor(item.user_id, 'Miembro');
+    const name = displayNameFor(item.user_id, tStr('chat_member'));
+    const r = profileRoles[item.user_id];
+    const showStaff = r && STAFF_CHAT_ROLES.has(r);
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
         <View style={[styles.msgBubble, isMe && styles.msgBubbleMe]}>
-          <Text style={isMe ? styles.msgSenderMe : styles.msgSender}>{name}</Text>
+          <View style={styles.senderRow}>
+            <Text style={isMe ? styles.msgSenderMe : styles.msgSender}>{name}</Text>
+            {showStaff ? (
+              <View style={styles.staffBadge}>
+                <Text style={styles.staffBadgeText}>STAFF</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={isMe ? styles.msgBodyMe : styles.msgBody}>{item.body}</Text>
           <Text style={isMe ? styles.msgTimeMe : styles.msgTime}>{formatTime(item.created_at)}</Text>
         </View>
@@ -279,7 +401,20 @@ export default function ChatScreen() {
         keyboardVerticalOffset={0}
       >
         <View style={{ flex: 1 }}>
-          {loading ? (
+          {accessLoading ? (
+            <View style={[styles.empty, { flex: 1, justifyContent: 'center' }]}>
+              <ActivityIndicator size="large" color={t.brand} />
+            </View>
+          ) : !accessOk ? (
+            <View style={[styles.empty, { flex: 1, justifyContent: 'center', paddingHorizontal: 22 }]}>
+              <Text style={[styles.emptyText, { textAlign: 'center', fontSize: 16, fontWeight: '800', color: t.text }]}>
+                {tStr('client_community_locked_title')}
+              </Text>
+              <Text style={[styles.emptyText, { textAlign: 'center', marginTop: 10, lineHeight: 20 }]}>
+                {tStr('client_community_locked_body')}
+              </Text>
+            </View>
+          ) : loading ? (
             <View style={[styles.empty, { flex: 1, justifyContent: 'center' }]}>
               <ActivityIndicator size="large" color={t.brand} />
             </View>
@@ -292,7 +427,7 @@ export default function ChatScreen() {
             renderItem={renderMessage}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>Nadie escribió aún. ¡Escribí el primer mensaje!</Text>
+                <Text style={styles.emptyText}>{tStr('chat_empty_thread')}</Text>
               </View>
             }
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
@@ -303,7 +438,7 @@ export default function ChatScreen() {
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="Escribí un mensaje..."
+            placeholder={tStr('chat_placeholder')}
             placeholderTextColor={t.placeholder}
             value={body}
             onChangeText={setBody}
@@ -316,7 +451,7 @@ export default function ChatScreen() {
             onPress={send}
             disabled={!body.trim() || sending}
           >
-            <Ionicons name="send" size={20} color={colors.brand.primary} />
+            <Ionicons name="send" size={20} color={t.brand} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

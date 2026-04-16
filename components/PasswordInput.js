@@ -3,24 +3,27 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useLocale } from '../contexts/LocaleContext';
 
 export default function PasswordInput({
   value,
   onChangeText,
-  placeholder = 'Contraseña',
+  placeholder,
   placeholderTextColor = colors.dark.placeholder,
   style,
   containerStyle,
   ...rest
 }) {
+  const { t } = useLocale();
   const [visible, setVisible] = useState(false);
+  const ph = placeholder ?? t('login_password');
 
   return (
     <View style={[styles.wrapper, containerStyle]}>
       <TextInput
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={ph}
         placeholderTextColor={placeholderTextColor}
         secureTextEntry={!visible}
         style={[styles.inputBase, style]}

@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { supabase } from '../supabaseClient';
 
@@ -31,9 +32,27 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
+/** Entrada en pesos (ej. 25000 o 25.000 o 25000,50) → centavos para `price_cents`. */
+function pesosInputToCents(raw) {
+  const s = String(raw ?? '').trim().replace(/\s/g, '');
+  if (!s) return null;
+  let n;
+  if (s.includes(',')) {
+    const parts = s.split(',');
+    if (parts.length !== 2) return null;
+    const intPart = parts[0].replace(/\./g, '');
+    n = parseFloat(`${intPart}.${parts[1]}`);
+  } else {
+    n = parseFloat(s.replace(/\./g, ''));
+  }
+  if (Number.isNaN(n) || n < 0) return null;
+  return Math.round(n * 100);
+}
+
 export default function AdminAbonosScreen() {
   const navigation = useNavigation();
   const { t } = useThemeContext();
+  const { t: tStr, locale } = useLocale();
   const { profile, organization } = useAuth() || {};
   const orgId = organization?.id || profile?.organization_id;
 
@@ -47,7 +66,7 @@ export default function AdminAbonosScreen() {
   const [formName, setFormName] = useState('');
   const [formDurationDays, setFormDurationDays] = useState('30');
   const [formIncludedSessions, setFormIncludedSessions] = useState('');
-  const [formPriceCents, setFormPriceCents] = useState('');
+  const [formPricePesos, setFormPricePesos] = useState('');
   const [filterPlanId, setFilterPlanId] = useState('');
 
   const isOwner = organization?.owner_id === profile?.id;
@@ -98,7 +117,9 @@ export default function AdminAbonosScreen() {
     setFormName(row.name || '');
     setFormDurationDays(row.duration_days != null ? String(row.duration_days) : '30');
     setFormIncludedSessions(row.included_sessions != null ? String(row.included_sessions) : '');
-    setFormPriceCents(row.price_cents != null ? String(row.price_cents) : '');
+    setFormPricePesos(
+      row.price_cents != null && row.price_cents > 0 ? String(Math.round(row.price_cents / 100)) : '',
+    );
     setShowNew(false);
   };
 
@@ -108,7 +129,7 @@ export default function AdminAbonosScreen() {
     setFormName('');
     setFormDurationDays('30');
     setFormIncludedSessions('');
-    setFormPriceCents('');
+    setFormPricePesos('');
     setShowNew(true);
   };
 
@@ -121,11 +142,11 @@ export default function AdminAbonosScreen() {
     const name = (formName || '').trim();
     const planId = (formPlanId || '').trim();
     if (!name || !planId) {
-      Alert.alert('Datos', 'Plan y nombre del abono son obligatorios.');
+      Alert.alert(tStr('admin_abonos_alert_data_title'), tStr('admin_abonos_alert_data_body'));
       return;
     }
     if (!orgId || !isOwner) {
-      Alert.alert('Sin permiso', 'Solo el dueño puede crear o editar abonos.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_abonos_no_permission'));
       return;
     }
     setSaving(true);
@@ -135,7 +156,7 @@ export default function AdminAbonosScreen() {
         name,
         duration_days: formDurationDays ? parseInt(formDurationDays, 10) : null,
         included_sessions: formIncludedSessions ? parseInt(formIncludedSessions, 10) : null,
-        price_cents: formPriceCents ? parseInt(formPriceCents, 10) : null,
+        price_cents: pesosInputToCents(formPricePesos),
         currency: 'ARS',
         is_active: true,
       };
@@ -149,7 +170,7 @@ export default function AdminAbonosScreen() {
       cancelForm();
       await loadAbonos();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo guardar.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_save_fail'));
     } finally {
       setSaving(false);
     }
@@ -161,13 +182,14 @@ export default function AdminAbonosScreen() {
       if (error) throw error;
       await loadAbonos();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo actualizar.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_update_fail'));
     }
   };
 
   const formatPrice = (cents) => {
-    if (cents == null) return '—';
-    return `$${Math.round(cents / 100).toLocaleString('es-AR')}`;
+    if (cents == null) return tStr('detalle_abono_dash');
+    const loc = locale === 'en' ? 'en-US' : 'es-AR';
+    return `$${Math.round(cents / 100).toLocaleString(loc)}`;
   };
 
   const styles = useMemo(
@@ -177,8 +199,28 @@ export default function AdminAbonosScreen() {
         header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
         backBtn: { padding: 8, marginLeft: -8 },
         title: { color: t.text, fontSize: 22, fontWeight: '800' },
+        /** Única acción primaria fuerte (ej. Nuevo). */
         btn: { ...t.buttonPrimary, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
         btnText: { ...t.buttonPrimaryText, fontSize: 14 },
+        /**
+         * Chips de filtro por plan (ej. Todos / CROSS TRAINING): mismo sistema que cajas/bordes de org
+         * (`boxBg`, `border` / `overlayBorder` desde Gym Config), no un recuadro “extra” solo con acento.
+         */
+        filterChip: {
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.inputBg,
+        },
+        filterChipActive: {
+          borderWidth: 2,
+          borderColor: t.border,
+          backgroundColor: t.boxBg,
+        },
+        filterChipText: { color: t.subText, fontSize: 13, fontWeight: '600' },
+        filterChipTextActive: { color: t.text, fontSize: 13, fontWeight: '700' },
         filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 },
         filterLabel: { color: t.subText, fontSize: 13 },
         list: { paddingBottom: 40 },
@@ -232,31 +274,37 @@ export default function AdminAbonosScreen() {
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
               <Ionicons name="arrow-back" size={26} color={t.text} />
             </TouchableOpacity>
-            <Text style={styles.title}>Abonos</Text>
+            <Text style={styles.title}>{tStr('admin_abonos_screen_title')}</Text>
             {isOwner && (
               <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>
-                <Text style={styles.btnText}>Nuevo</Text>
+                <Text style={styles.btnText}>{tStr('admin_plans_new')}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           {plans.length > 0 && (
             <View style={styles.filterRow}>
-              <Text style={styles.filterLabel}>Plan:</Text>
+              <Text style={styles.filterLabel}>{tStr('admin_abonos_filter_label')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
                 <TouchableOpacity
-                  style={[styles.btn, filterPlanId === '' ? {} : { backgroundColor: t.overlayBorder }]}
+                  style={[styles.filterChip, filterPlanId === '' && styles.filterChipActive]}
                   onPress={() => setFilterPlanId('')}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.btnText}>Todos</Text>
+                  <Text style={[styles.filterChipText, filterPlanId === '' && styles.filterChipTextActive]}>
+                    {tStr('admin_abonos_filter_all')}
+                  </Text>
                 </TouchableOpacity>
                 {plans.map((pl) => (
                   <TouchableOpacity
                     key={pl.id}
-                    style={[styles.btn, filterPlanId === pl.code ? {} : { backgroundColor: t.overlayBorder }, { marginLeft: 8 }]}
+                    style={[styles.filterChip, { marginLeft: 8 }, filterPlanId === pl.code && styles.filterChipActive]}
                     onPress={() => setFilterPlanId(pl.code)}
+                    activeOpacity={0.85}
                   >
-                    <Text style={styles.btnText}>{pl.title}</Text>
+                    <Text style={[styles.filterChipText, filterPlanId === pl.code && styles.filterChipTextActive]}>
+                      {pl.title}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -265,55 +313,59 @@ export default function AdminAbonosScreen() {
 
           {formVisible && isOwner && (
             <View style={styles.formWrap}>
-              <Text style={styles.label}>Plan (código) *</Text>
+              <Text style={styles.label}>{tStr('admin_abonos_label_plan')}</Text>
               <TextInput
                 style={styles.input}
                 value={formPlanId}
                 onChangeText={setFormPlanId}
-                placeholder="cross"
+                placeholder={tStr('admin_abonos_ph_plan')}
                 placeholderTextColor={t.placeholder}
               />
-              <Text style={styles.label}>Nombre del abono *</Text>
+              <Text style={styles.label}>{tStr('admin_abonos_label_name')}</Text>
               <TextInput
                 style={styles.input}
                 value={formName}
                 onChangeText={setFormName}
-                placeholder="4 clases / mes"
+                placeholder={tStr('admin_abonos_ph_name')}
                 placeholderTextColor={t.placeholder}
               />
-              <Text style={styles.label}>Días de duración</Text>
+              <Text style={styles.label}>{tStr('admin_abonos_label_days')}</Text>
               <TextInput
                 style={styles.input}
                 value={formDurationDays}
                 onChangeText={setFormDurationDays}
-                placeholder="30"
+                placeholder={tStr('admin_abonos_ph_days')}
                 placeholderTextColor={t.placeholder}
                 keyboardType="number-pad"
               />
-              <Text style={styles.label}>Clases incluidas (vacío = ilimitado)</Text>
+              <Text style={styles.label}>{tStr('admin_abonos_label_sessions')}</Text>
               <TextInput
                 style={styles.input}
                 value={formIncludedSessions}
                 onChangeText={setFormIncludedSessions}
-                placeholder="4, 8, 12..."
+                placeholder={tStr('admin_abonos_ph_sessions')}
                 placeholderTextColor={t.placeholder}
                 keyboardType="number-pad"
               />
-              <Text style={styles.label}>Precio en centavos (ej: 25000 = $250)</Text>
+              <Text style={styles.label}>{tStr('admin_abonos_label_price')}</Text>
               <TextInput
                 style={styles.input}
-                value={formPriceCents}
-                onChangeText={setFormPriceCents}
-                placeholder="25000"
+                value={formPricePesos}
+                onChangeText={setFormPricePesos}
+                placeholder={tStr('admin_abonos_ph_price')}
                 placeholderTextColor={t.placeholder}
-                keyboardType="number-pad"
+                keyboardType="decimal-pad"
               />
               <View style={styles.row}>
                 <TouchableOpacity style={[styles.btn, { flex: 1 }]} onPress={saveAbono} disabled={saving}>
-                  {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnText}>Guardar</Text>}
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.btnText}>{tStr('common_save')}</Text>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.btn, { flex: 1, backgroundColor: t.overlayBorder }]} onPress={cancelForm}>
-                  <Text style={styles.btnText}>Cancelar</Text>
+                  <Text style={styles.btnText}>{tStr('common_cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -325,7 +377,7 @@ export default function AdminAbonosScreen() {
             </View>
           ) : abonos.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No hay abonos para este plan. Creá uno desde "Nuevo".</Text>
+              <Text style={styles.emptyText}>{tStr('admin_abonos_empty')}</Text>
             </View>
           ) : (
             abonos.map((a) => (
@@ -333,14 +385,28 @@ export default function AdminAbonosScreen() {
                 <View style={styles.cardLeft}>
                   <Text style={styles.cardTitle}>{a.name}</Text>
                   <Text style={styles.cardMeta}>
-                    {a.plan_id} · {a.duration_days != null ? `${a.duration_days} días` : '—'} · {a.included_sessions != null ? `${a.included_sessions} clases` : 'ilimitado'} · {formatPrice(a.price_cents)} · {a.is_active ? 'Activo' : 'Inactivo'}
+                    {a.plan_id} ·{' '}
+                    {a.duration_days != null
+                      ? tStr('admin_abonos_days_short').replace('{{n}}', String(a.duration_days))
+                      : tStr('detalle_abono_dash')}{' '}
+                    ·{' '}
+                    {a.included_sessions != null
+                      ? tStr('admin_abonos_sessions_short').replace('{{n}}', String(a.included_sessions))
+                      : tStr('admin_abonos_unlimited')}{' '}
+                    · {formatPrice(a.price_cents)} ·{' '}
+                    {a.is_active ? tStr('admin_plans_state_on') : tStr('admin_plans_state_off')}
                   </Text>
                 </View>
                 {isOwner && (
                   <>
-                    <Switch value={!!a.is_active} onValueChange={() => toggleActive(a)} trackColor={{ false: t.overlayBorder, true: t.brand }} />
+                    <Switch
+                      value={!!a.is_active}
+                      onValueChange={() => toggleActive(a)}
+                      trackColor={{ false: t.overlayBorder, true: hexToRgba(t.brand, 0.35) }}
+                      thumbColor={a.is_active ? t.brand : undefined}
+                    />
                     <TouchableOpacity onPress={() => openEdit(a)} style={{ padding: 8 }}>
-                      <Ionicons name="pencil" size={22} color={t.brand} />
+                      <Ionicons name="pencil" size={22} color={t.subText} />
                     </TouchableOpacity>
                   </>
                 )}

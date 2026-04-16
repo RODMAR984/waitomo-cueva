@@ -18,10 +18,12 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 
 export default function PlanChatScreen({ route }) {
   const { plan } = route.params;
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
   const { user } = useAuth();
 
   const [messages, setMessages] = useState([]);
@@ -96,14 +98,19 @@ export default function PlanChatScreen({ route }) {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={styles.title}>{plan.title} – Chat</Text>
+        <Text style={styles.title}>
+          {plan.title}
+          {tStr('plan_chat_title_suffix')}
+        </Text>
 
         <FlatList
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.msg}>
-              <Text style={styles.msgUser}>{item.user_id === user.id ? 'Vos' : 'Usuario'}:</Text>
+              <Text style={styles.msgUser}>
+                {item.user_id === user.id ? tStr('plan_chat_you') : tStr('plan_chat_other')}:
+              </Text>
               <Text style={styles.msgText}>{item.message}</Text>
             </View>
           )}
@@ -114,7 +121,7 @@ export default function PlanChatScreen({ route }) {
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder="Escribe un mensaje..."
+            placeholder={tStr('plan_chat_placeholder')}
             placeholderTextColor={t.placeholder}
             style={styles.input}
           />

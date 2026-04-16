@@ -18,11 +18,13 @@ import { useNavigation } from '@react-navigation/native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { getThemeTokens } from '../theme/colors';
 
 export default function AdminLoginScreen() {
   const { isDark } = useThemeContext();
+  const { t: tStr } = useLocale();
   const t = useMemo(() => getThemeTokens(isDark ? 'dark' : 'light', null), [isDark]);
   const navigation = useNavigation();
   const { login, logout, profile, session, loading } = useAuth();
@@ -46,10 +48,7 @@ export default function AdminLoginScreen() {
     }
     if (profile?.role != null) {
       logout().catch(() => {});
-      Alert.alert(
-        'Sin acceso',
-        'Esta cuenta no tiene acceso de administrador. Usá el acceso staff o cliente según corresponda.'
-      );
+      Alert.alert(tStr('admin_login_no_access_title'), tStr('admin_login_no_access_body'));
     }
   }, [session?.user?.id, profile?.id, profile?.role, loading, navigation, logout]);
 
@@ -57,7 +56,7 @@ export default function AdminLoginScreen() {
     const e = (email || '').trim().toLowerCase();
     const p = (password || '').trim();
     if (!e || !p) {
-      Alert.alert('Falta info', 'Ingresá email y contraseña de administrador.');
+      Alert.alert(tStr('admin_login_missing_title'), tStr('admin_login_missing_body'));
       return;
     }
     try {
@@ -68,10 +67,8 @@ export default function AdminLoginScreen() {
         const msg = err?.message || '';
         const isInvalidCreds = /invalid|credencial|credentials|incorrect|wrong/i.test(msg);
         Alert.alert(
-          'Error',
-          isInvalidCreds
-            ? 'Email o contraseña incorrectos. La cuenta administrador debe existir en Supabase (Authentication → Users) y tener role superadmin en la tabla profiles.'
-            : msg || 'No se pudo iniciar sesión.'
+          tStr('gym_config_alert_title_error'),
+          isInvalidCreds ? tStr('admin_login_error_invalid') : msg || tStr('admin_login_error_generic'),
         );
       }
     } finally {
@@ -142,13 +139,11 @@ export default function AdminLoginScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.screen}>
             <View style={styles.panel}>
-              <Text style={styles.title}>Acceso administrador</Text>
-              <Text style={styles.subtitle}>
-                Solo la cuenta con role superadmin. La cuenta se crea en Supabase: Authentication → Add user; luego en profiles poné role = superadmin para ese id.
-              </Text>
+              <Text style={styles.title}>{tStr('admin_login_title')}</Text>
+              <Text style={styles.subtitle}>{tStr('admin_login_subtitle')}</Text>
 
               <TextInput
-                placeholder="Email"
+                placeholder={tStr('login_email')}
                 placeholderTextColor={t.placeholder}
                 style={styles.input}
                 keyboardType="email-address"
@@ -157,7 +152,7 @@ export default function AdminLoginScreen() {
                 onChangeText={setEmail}
               />
               <PasswordInput
-                placeholder="Contraseña"
+                placeholder={tStr('login_password')}
                 placeholderTextColor={t.placeholder}
                 style={styles.input}
                 containerStyle={{ marginBottom: 12 }}
@@ -171,7 +166,7 @@ export default function AdminLoginScreen() {
                 disabled={submitting}
               >
                 <Text style={styles.buttonText}>
-                  {submitting ? 'Verificando...' : 'Entrar'}
+                  {submitting ? tStr('admin_login_verifying') : tStr('admin_login_enter')}
                 </Text>
               </TouchableOpacity>
 
@@ -179,7 +174,7 @@ export default function AdminLoginScreen() {
                 style={styles.backLink}
                 onPress={() => navigation.goBack()}
               >
-                <Text style={styles.backLinkText}>Volver</Text>
+                <Text style={styles.backLinkText}>{tStr('common_back')}</Text>
               </TouchableOpacity>
             </View>
           </View>

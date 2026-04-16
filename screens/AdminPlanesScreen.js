@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { supabase } from '../supabaseClient';
 
@@ -31,11 +32,17 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
-const MODES = [{ label: 'Clases', value: 'class' }, { label: 'Programa', value: 'program' }];
-
 export default function AdminPlanesScreen() {
   const navigation = useNavigation();
   const { t } = useThemeContext();
+  const { t: tStr } = useLocale();
+  const MODES = useMemo(
+    () => [
+      { label: tStr('admin_plans_mode_class'), value: 'class' },
+      { label: tStr('admin_plans_mode_program'), value: 'program' },
+    ],
+    [tStr],
+  );
   const { profile, organization } = useAuth() || {};
   const orgId = organization?.id || profile?.organization_id;
 
@@ -104,11 +111,11 @@ export default function AdminPlanesScreen() {
     const code = (formCode || '').trim().toLowerCase().replace(/\s+/g, '_');
     const title = (formTitle || '').trim();
     if (!code || !title) {
-      Alert.alert('Datos', 'Código y título son obligatorios (ej: cross, CROSS TRAINING).');
+      Alert.alert(tStr('admin_plans_alert_data_title'), tStr('admin_plans_alert_data_body'));
       return;
     }
     if (!orgId || !isOwner) {
-      Alert.alert('Sin permiso', 'Solo el dueño puede crear o editar planes.');
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_plans_no_permission'));
       return;
     }
     setSaving(true);
@@ -135,7 +142,7 @@ export default function AdminPlanesScreen() {
       cancelForm();
       await loadPlans();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo guardar.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_save_fail'));
     } finally {
       setSaving(false);
     }
@@ -147,7 +154,7 @@ export default function AdminPlanesScreen() {
       if (error) throw error;
       await loadPlans();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'No se pudo actualizar.');
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_update_fail'));
     }
   };
 
@@ -211,59 +218,63 @@ export default function AdminPlanesScreen() {
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
               <Ionicons name="arrow-back" size={26} color={t.text} />
             </TouchableOpacity>
-            <Text style={styles.title}>Planes</Text>
+            <Text style={styles.title}>{tStr('admin_plans_screen_title')}</Text>
             {isOwner && (
               <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>
-                <Text style={styles.btnText}>Nuevo</Text>
+                <Text style={styles.btnText}>{tStr('admin_plans_new')}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           {formVisible && isOwner && (
             <View style={styles.formWrap}>
-              <Text style={styles.label}>Código (ej: cross, pase_total) *</Text>
+              <Text style={styles.label}>{tStr('admin_plans_label_code')}</Text>
               <TextInput
                 style={styles.input}
                 value={formCode}
                 onChangeText={setFormCode}
-                placeholder="cross"
+                placeholder={tStr('admin_plans_ph_code')}
                 placeholderTextColor={t.placeholder}
                 editable={!editingId}
               />
-              <Text style={styles.label}>Título *</Text>
+              <Text style={styles.label}>{tStr('admin_plans_label_title')}</Text>
               <TextInput
                 style={styles.input}
                 value={formTitle}
                 onChangeText={setFormTitle}
-                placeholder="CROSS TRAINING"
+                placeholder={tStr('admin_plans_ph_title')}
                 placeholderTextColor={t.placeholder}
               />
-              <Text style={styles.label}>Subtítulo</Text>
+              <Text style={styles.label}>{tStr('admin_plans_label_sub')}</Text>
               <TextInput
                 style={styles.input}
                 value={formSubtitle}
                 onChangeText={setFormSubtitle}
-                placeholder="Clases grupales"
+                placeholder={tStr('admin_plans_ph_sub')}
                 placeholderTextColor={t.placeholder}
               />
-              <Text style={styles.label}>Orden</Text>
+              <Text style={styles.label}>{tStr('admin_plans_label_order')}</Text>
               <TextInput
                 style={styles.input}
                 value={formOrder}
                 onChangeText={setFormOrder}
-                placeholder="0"
+                placeholder={tStr('admin_plans_ph_order')}
                 placeholderTextColor={t.placeholder}
                 keyboardType="number-pad"
               />
               <View style={styles.row}>
                 <TouchableOpacity style={[styles.btn, { flex: 1 }]} onPress={savePlan} disabled={saving}>
-                  {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnText}>Guardar</Text>}
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.btnText}>{tStr('common_save')}</Text>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.btn, { flex: 1, backgroundColor: t.overlayBorder }]}
                   onPress={cancelForm}
                 >
-                  <Text style={styles.btnText}>Cancelar</Text>
+                  <Text style={styles.btnText}>{tStr('common_cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -275,14 +286,17 @@ export default function AdminPlanesScreen() {
             </View>
           ) : plans.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No hay planes. Creá uno desde "Nuevo".</Text>
+              <Text style={styles.emptyText}>{tStr('admin_plans_empty')}</Text>
             </View>
           ) : (
             plans.map((p) => (
               <View key={p.id} style={styles.card}>
                 <View style={styles.cardLeft}>
                   <Text style={styles.cardTitle}>{p.title}</Text>
-                  <Text style={styles.cardMeta}>{p.code} · orden {p.order} · {p.active ? 'Activo' : 'Inactivo'}</Text>
+                  <Text style={styles.cardMeta}>
+                    {p.code} · {tStr('admin_plans_meta_order')} {p.order} ·{' '}
+                    {p.active ? tStr('admin_plans_state_on') : tStr('admin_plans_state_off')}
+                  </Text>
                 </View>
                 {isOwner && (
                   <>

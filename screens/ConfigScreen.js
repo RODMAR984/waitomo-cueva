@@ -323,6 +323,21 @@ const ConfigScreen = () => {
             </View>
           </View>
 
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="information-circle-outline" size={18} color={t.text} />
+              <Text style={styles.sectionTitle}>{tStr('config_section_app')}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.row, styles.rowLast, { borderBottomWidth: 0 }]}
+              onPress={() => navigation.navigate('AboutFitEngine')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.rowLabel}>{tStr('config_about_link')}</Text>
+              <Ionicons name="chevron-forward" size={20} color={t.subText} />
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
             <Ionicons name="arrow-back" size={18} color={t.primaryText} />
             <Text style={styles.backButtonText}>{tStr('config_back')}</Text>
