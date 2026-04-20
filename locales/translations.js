@@ -37,6 +37,9 @@ export const translations = {
     about_privacy: 'Política de privacidad',
     about_terms: 'Términos de uso',
     about_support: 'Contacto / soporte',
+    about_phone_support: 'Teléfono (consultas y reclamos)',
+    about_phone_note:
+      'Número de contacto de la plataforma. Para temas de tu gimnasio, consultá también en recepción.',
     about_open_fail: 'No se pudo abrir el enlace.',
     legal_last_updated_label: 'Última actualización:',
     privacy_title: 'Política de privacidad',
@@ -1254,6 +1257,9 @@ export const translations = {
     about_privacy: 'Privacy policy',
     about_terms: 'Terms of use',
     about_support: 'Contact / support',
+    about_phone_support: 'Phone (inquiries and complaints)',
+    about_phone_note:
+      'Platform contact number. For gym-specific matters, also ask at reception.',
     about_open_fail: 'Could not open the link.',
     legal_last_updated_label: 'Last updated:',
     privacy_title: 'Privacy policy',

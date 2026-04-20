@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import PropTypes from 'prop-types';
 import * as Clipboard from 'expo-clipboard';
+import Constants from 'expo-constants';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useTrainingData } from '../contexts/TrainingDataContext';
@@ -70,6 +71,11 @@ export default function PagoScreen({ navigation, route }) {
     planKey: routePlanKey,
     skipProfileCompletion = false,
   } = route?.params || {};
+
+  /** En release (EAS) oculto por defecto. En `expo start` (__DEV__) visible. Para probar APK: app.json → extra.showPaidShortcut true */
+  const showPaidShortcut =
+    (typeof __DEV__ !== 'undefined' && __DEV__) ||
+    Constants.expoConfig?.extra?.showPaidShortcut === true;
   const [paymentId, setPaymentId] = useState(null);
   const [paymentUrl, setPaymentUrl] = useState(null);
 
@@ -369,9 +375,11 @@ export default function PagoScreen({ navigation, route }) {
               <Text style={styles.btnTextOn}>{tStr('pago_btn_cash')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btnSecondary} onPress={handlePagoConfirmado}>
-              <Text style={styles.btnText}>{tStr('pago_btn_paid')}</Text>
-            </TouchableOpacity>
+            {showPaidShortcut ? (
+              <TouchableOpacity style={styles.btnSecondary} onPress={handlePagoConfirmado}>
+                <Text style={styles.btnText}>{tStr('pago_btn_paid')}</Text>
+              </TouchableOpacity>
+            ) : null}
 
             <View style={styles.volverWrap}>
               <TouchableOpacity onPress={() => navigation.goBack()}>

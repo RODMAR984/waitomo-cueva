@@ -42,8 +42,10 @@ export function getFitEngineUrls() {
     /** Privacidad / términos: por defecto sitio marketing; cambiar en app.json cuando existan /privacidad /terminos. */
     privacyUrl: pick('fitenginePrivacyUrl', 'EXPO_PUBLIC_FITENGINE_PRIVACY_URL', marketing),
     termsUrl: pick('fitengineTermsUrl', 'EXPO_PUBLIC_FITENGINE_TERMS_URL', marketing),
-    /** Opcional en app.json; vacío = ocultar fila de contacto en Acerca de. Valor por defecto en repo: contacto@waitomofitengine.com (crear buzón o reemplazar). */
+    /** Opcional en app.json; vacío = ocultar fila de contacto en Acerca de. */
     supportEmail: pick('fitengineSupportEmail', 'EXPO_PUBLIC_FITENGINE_SUPPORT_EMAIL', ''),
+    /** Teléfono para reclamos / consultas (opcional). Formato libre; en la app se usa tel: sin espacios. */
+    supportPhone: pick('fitengineSupportPhone', 'EXPO_PUBLIC_FITENGINE_SUPPORT_PHONE', ''),
   };
 }
 

@@ -63,6 +63,8 @@
       "fitenginePrivacyUrl": "https://waitomofitengine.com",
       "fitengineTermsUrl": "https://waitomofitengine.com",
       "fitengineSupportEmail": "soporte@waitomo.com",
+      "fitengineSupportPhone": "",
+      "showPaidShortcut": false,
       "eas": {
         "projectId": "b5e327c8-d83e-46ce-8b1c-3ab56b1300c6"
       }

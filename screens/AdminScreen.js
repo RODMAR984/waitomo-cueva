@@ -17,6 +17,7 @@ import {
   Keyboard,
   Dimensions,
   TouchableWithoutFeedback,
+  Pressable,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -208,55 +209,50 @@ const MultiHorarioDropdown = memo(function MultiHorarioDropdown({
         </Text>
         <Ionicons name="time-outline" size={18} color={t.brand} />
       </TouchableOpacity>
-      {open && (
-        <TouchableWithoutFeedback onPress={() => setOpen(false)}>
-          <View style={styles.dropdownBackdrop}>
-            <View
-              style={styles.dropdownList}
-              onStartShouldSetResponder={() => true}
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setOpen(false)}
+      >
+        <View style={styles.modalHourPickerRoot}>
+          <Pressable style={styles.modalHourPickerBackdrop} onPress={() => setOpen(false)} />
+          <View style={styles.dropdownListModal}>
+            <View style={styles.dropdownListHeader}>
+              <Text style={styles.dropdownListHeaderText}>{tStr('admin_horarios')}</Text>
+            </View>
+            <ScrollView
+              style={styles.dropdownHoursScroll}
+              contentContainerStyle={styles.dropdownHoursScrollContent}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+              bounces={false}
             >
-              <View style={styles.dropdownListHeader}>
-                <Text style={styles.dropdownListHeaderText}>{tStr('admin_horarios')}</Text>
-              </View>
-              <ScrollView
-                style={styles.dropdownHoursScroll}
-                contentContainerStyle={styles.dropdownHoursScrollContent}
-                showsVerticalScrollIndicator={true}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-              >
-                {items.map((label) => {
-                  const selected = horariosSeleccionados.includes(label);
-                  return (
-                    <TouchableOpacity
-                      key={label}
-                      onPress={() => toggleHour(label)}
-                      style={[
-                        styles.dropdownItem,
-                        selected && styles.dropdownItemSelected,
-                      ]}
-                    >
-                      <Text style={styles.dropdownItemText}>{label}</Text>
-                      {selected && (
-                        <Ionicons name="checkmark" size={18} color={t.brand} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-
-              <View style={styles.dropdownActions}>
-                <TouchableOpacity
-                  onPress={() => setOpen(false)}
-                  style={styles.dropdownDoneBtn}
-                >
-                  <Text style={styles.dropdownDoneText}>{tStr('admin_listo')}</Text>
-                </TouchableOpacity>
-              </View>
+              {items.map((label) => {
+                const selected = horariosSeleccionados.includes(label);
+                return (
+                  <TouchableOpacity
+                    key={label}
+                    activeOpacity={0.7}
+                    onPress={() => toggleHour(label)}
+                    style={[styles.dropdownItem, selected && styles.dropdownItemSelected]}
+                  >
+                    <Text style={styles.dropdownItemText}>{label}</Text>
+                    {selected && <Ionicons name="checkmark" size={18} color={t.brand} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <View style={styles.dropdownActions}>
+              <TouchableOpacity onPress={() => setOpen(false)} style={styles.dropdownDoneBtn}>
+                <Text style={styles.dropdownDoneText}>{tStr('admin_listo')}</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </TouchableWithoutFeedback>
-      )}
+        </View>
+      </Modal>
     </View>
   );
 });
@@ -730,6 +726,31 @@ export default function AdminScreen(props) {
           paddingVertical: 24,
           zIndex: 50,
         },
+        /** Modal de horarios: fuera del ScrollView padre para que el scroll no se trabe */
+        modalHourPickerRoot: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 18,
+        },
+        modalHourPickerBackdrop: {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'rgba(0,0,0,0.62)',
+        },
+        dropdownListModal: {
+          backgroundColor: t.boxBg,
+          borderColor: t.overlayBorder,
+          borderRadius: 16,
+          borderWidth: 1,
+          width: Math.min(width * 0.92, 420),
+          maxHeight: Math.min(Dimensions.get('window').height * 0.72, 460),
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOpacity: 0.35,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 24,
+        },
         dropdownList: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
@@ -759,7 +780,7 @@ export default function AdminScreen(props) {
 
         dropdownScroll: { maxHeight: 220 },
         dropdownHoursScroll: {
-          flex: 1,
+          maxHeight: Math.min(Dimensions.get('window').height * 0.44, 340),
         },
         dropdownHoursScrollContent: {
           paddingBottom: 16,

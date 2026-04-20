@@ -20,7 +20,9 @@ export default function AboutFitEngineScreen() {
   const { profile } = useAuth();
 
   const version = Constants.expoConfig?.version || '—';
-  const { supportEmail } = useMemo(() => getFitEngineUrls(), []);
+  const { supportEmail, supportPhone } = useMemo(() => getFitEngineUrls(), []);
+
+  const phoneDial = useMemo(() => String(supportPhone || '').replace(/[^\d+]/g, ''), [supportPhone]);
 
   const openMail = useCallback(async () => {
     const e = String(supportEmail || '').trim();
@@ -32,6 +34,16 @@ export default function AboutFitEngineScreen() {
       Alert.alert(tStr('gym_config_alert_title_error'), tStr('about_open_fail'));
     }
   }, [supportEmail, tStr]);
+
+  const openPhone = useCallback(async () => {
+    if (!phoneDial) return;
+    const tel = `tel:${phoneDial}`;
+    try {
+      await Linking.openURL(tel);
+    } catch (_) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('about_open_fail'));
+    }
+  }, [phoneDial, tStr]);
 
   const styles = useMemo(
     () =>
@@ -143,6 +155,21 @@ export default function AboutFitEngineScreen() {
                 <Ionicons name="mail-outline" size={22} color={t.subText} />
               </TouchableOpacity>
               <Text style={styles.supportFootnote}>{tStr('about_support_note')}</Text>
+            </>
+          )}
+
+          {!!String(supportPhone || '').trim() && (
+            <>
+              <TouchableOpacity style={styles.linkBtn} onPress={openPhone} activeOpacity={0.85}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linkLabel}>{tStr('about_phone_support')}</Text>
+                  <Text style={[styles.hint, { textAlign: 'left', marginBottom: 0, marginTop: 4 }]}>
+                    {supportPhone}
+                  </Text>
+                </View>
+                <Ionicons name="call-outline" size={22} color={t.subText} />
+              </TouchableOpacity>
+              <Text style={styles.supportFootnote}>{tStr('about_phone_note')}</Text>
             </>
           )}
 
