@@ -15,14 +15,3 @@ export const IMAGENES_POR_PLAN = {
 };
 
 export const IMAGEN_WELCOME = require('../assets/plan_image/bg_welcome_glow.jpg');
-
-// DEBUG: Verificar que todas las imágenes cargan
-console.log('🖼️ IMAGENES_POR_PLAN cargadas:');
-Object.keys(IMAGENES_POR_PLAN).forEach(key => {
-  const image = IMAGENES_POR_PLAN[key];
-  if (image) {
-    console.log(`  ✅ ${key}: CARGADA CORRECTAMENTE`);
-  } else {
-    console.log(`  ❌ ${key}: NO SE PUDO CARGAR - Verificar ruta`);
-  }
-});

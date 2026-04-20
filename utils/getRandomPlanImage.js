@@ -2,14 +2,16 @@
 // Mantiene funcionalidad original: retorna imagen del plan o fallback.
 // Sin estilos, sin dependencias visuales. 100% ESLint safe.
 
+// Misma convención que utils/imagenesFijas.js (solo .jpg). Mezclar .jpg y .png con el mismo nombre base
+// rompe mergeReleaseResources en Android (Duplicate resources).
 const planImages = {
-  cross: [require('../assets/plan_image/cross/plan_cross.png')],
-  evolucion: [require('../assets/plan_image/evolucion/plan_evolucion.png')],
-  hyrox: [require('../assets/plan_image/hyrox/plan_hyrox_1.png')],
-  oly: [require('../assets/plan_image/oly/plan_oly.png')],
-  openbox: [require('../assets/plan_image/openbox/plan_openbox.png')],
-  stretching: [require('../assets/plan_image/stretching/plan_stretching.png')],
-  yoga: [require('../assets/plan_image/yoga/plan_yoga.png')],
+  cross: [require('../assets/plan_image/cross/plan_cross.jpg')],
+  evolucion: [require('../assets/plan_image/evolucion/plan_evolucion.jpg')],
+  hyrox: [require('../assets/plan_image/hyrox/plan_hyrox_1.jpg')],
+  oly: [require('../assets/plan_image/oly/plan_oly.jpg')],
+  openbox: [require('../assets/plan_image/openbox/plan_openbox.jpg')],
+  stretching: [require('../assets/plan_image/stretching/plan_stretching.jpg')],
+  yoga: [require('../assets/plan_image/yoga/plan_yoga.jpg')],
 };
 
 /**
@@ -45,7 +47,7 @@ export default function getRandomPlanImage(planName) {
  * Si querés extender el sistema (ej. nuevos planes), podés usar:
  *
  * import { addPlanImage } from '../utils/getRandomPlanImage';
- * addPlanImage('nuevoPlan', require('../assets/plan_image/nuevoPlan/plan_nuevo.png'));
+ * addPlanImage('nuevoPlan', require('../assets/plan_image/nuevoPlan/plan_nuevo.jpg'));
  */
 
 export function addPlanImage(planKey, image) {
