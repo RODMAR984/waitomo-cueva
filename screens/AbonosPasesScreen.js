@@ -21,6 +21,7 @@ import { supabase } from '../supabaseClient';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
 
 const hexToRgbaLocal = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -38,8 +39,8 @@ export default function AbonosPasesScreen({ navigation, route }) {
   const bottomSafe = Math.max(insets.bottom || 0, Platform.OS === 'android' ? 24 : 0);
 
   // ✅ PARCHE: traemos session/loading/profile para decidir flujo correcto
-  const { user, session, loading, profile } = useAuth();
-  const organizationId = profile?.organization_id || null;
+  const { user, session, loading, profile, organization } = useAuth();
+  const organizationId = organization?.id || profile?.organization_id || null;
 
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -65,7 +66,14 @@ export default function AbonosPasesScreen({ navigation, route }) {
   }
 
   const planKeyRaw = plan?.id ?? plan?.name ?? plan?.nombre ?? plan?.plan_id ?? '';
-  const planKey = String(planKeyRaw).toLowerCase().trim();
+  const planKeyInput = String(planKeyRaw).toLowerCase().trim();
+  const planKey = normalizePlanKey(planKeyInput) || planKeyInput;
+  const rowPlanCanon = (value) => {
+    const raw = String(value || '').toLowerCase().trim();
+    const norm = normalizePlanKey(raw) || raw;
+    if (norm === 'pase_total') return 'all_access';
+    return norm;
+  };
   const isEvolucion = soloEvolucion || planKey === 'evolucion' ||
     /evoluci[oó]n/i.test(String(plan?.title ?? plan?.nombre ?? ''));
   const isPaseTotal = planKey === 'pase_total';
@@ -103,7 +111,8 @@ export default function AbonosPasesScreen({ navigation, route }) {
     const money = formatMoney(row?.price_cents, currency);
 
     // Ciclo Evolución: no usar "Acceso ilimitado"; son rutinas personalizadas por frecuencia
-    const isEvolRow = row?.plan_id === 'evolucion';
+    const rowPlan = rowPlanCanon(row?.plan_id);
+    const isEvolRow = rowPlan === 'evolucion';
     const subtitle = isEvolRow
       ? (duration ? `Rutina personalizada • ${duration} días` : 'Rutina personalizada')
       : isUnlimited
@@ -112,13 +121,13 @@ export default function AbonosPasesScreen({ navigation, route }) {
 
     const isFeatured =
       !isEvolRow &&
-      ((row?.plan_id === planKey && isUnlimited && duration === 30) ||
-       (row?.plan_id === 'all_access' && isUnlimited && duration === 30));
+      ((rowPlan === planKey && isUnlimited && duration === 30) ||
+       (rowPlan === 'all_access' && isUnlimited && duration === 30));
 
     return {
       // compat: pantallas siguientes ya esperan un "abono" que viaja por params
       id: row?.id,
-      plan_id: row?.plan_id,
+      plan_id: rowPlan,
       title: row?.name,
       subtitle,
       price: money || 'Precio a definir',
@@ -187,17 +196,21 @@ export default function AbonosPasesScreen({ navigation, route }) {
         // - pase_total  → SOLO abonos de Pase Total (plan_id all_access en BD)
         // - evolucion   → si llegara acá, solo abonos de evolucion (Rookie/Scaled/Atleta)
         // - universo 1 → solo abonos de ESA actividad (4/8/12/Pase Libre), sin mezclar otras
-        const planIds = isPaseTotal ? ['all_access'] : isEvolucion ? ['evolucion'] : [planKey];
+        const planIds = isPaseTotal
+          ? ['all_access']
+          : isEvolucion
+            ? ['evolucion']
+            : Array.from(new Set([planKey, planKeyInput].filter(Boolean)));
         let q = supabase
           .from('abonos')
           .select(
             'id, plan_id, name, duration_days, included_sessions, price_cents, currency, is_active, organization_id'
           )
-          .eq('is_active', true)
-          .in('plan_id', planIds);
-        if (organizationId) {
-          q = q.eq('organization_id', organizationId);
-        }
+          .eq('is_active', true);
+        // Regla robusta: primero scope por org; luego filtramos por clave canónica en app.
+        // Evita romper cuando cada org usa IDs tipo Yoga_pase_mensual, cross_pase_full, etc.
+        if (organizationId) q = q.eq('organization_id', organizationId);
+        else q = q.in('plan_id', planIds);
         const { data, error } = await q;
 
         if (error) throw error;
@@ -206,10 +219,14 @@ export default function AbonosPasesScreen({ navigation, route }) {
         // ❌ No queremos mostrar el Pase Libre de 90 días (doc: eliminarlo de la app)
         rows = rows.filter((r) => Number(r?.duration_days || 0) !== 90);
         if (isEvolucion) {
-          rows = rows.filter((r) => String(r?.plan_id || '').toLowerCase() === 'evolucion');
-        }
-        if (isPaseTotal) {
-          rows = rows.filter((r) => String(r?.plan_id || '').toLowerCase() === 'all_access');
+          rows = rows.filter((r) => rowPlanCanon(r?.plan_id) === 'evolucion');
+        } else if (isPaseTotal) {
+          rows = rows.filter((r) => rowPlanCanon(r?.plan_id) === 'all_access');
+        } else {
+          rows = rows.filter((r) => {
+            const rp = rowPlanCanon(r?.plan_id);
+            return rp === planKey || rp === 'all_access';
+          });
         }
 
         let ui = rows.map(toUI).sort(sortAbonos);
@@ -218,7 +235,6 @@ export default function AbonosPasesScreen({ navigation, route }) {
           ui = ui.filter((a) => a.plan_id === 'all_access');
           if (ui.length > 1) ui = [ui[0]]; // Pase Total debe tener una sola opción visible
         }
-
         if (alive) setAbonos(ui);
       } catch (e) {
         console.log('❌ AbonosPases: error cargando abonos:', e?.message || e);
@@ -369,6 +385,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
           plan,
           userData,
           abono: abonoSeleccionado,
+          skipProfileCompletion: true,
         });
         return;
       }

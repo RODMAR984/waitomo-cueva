@@ -9,6 +9,8 @@ export const translations = {
     config_light: 'Claro',
     config_auto: 'Automático',
     config_defaultThemeHint: 'Por defecto: Oscuro. Automático sigue el modo de tu teléfono.',
+    config_theme_locked_by_org:
+      'Tu gym definió la apariencia: el modo claro/oscuro sigue el preset del espacio (no se puede cambiar desde acá).',
     config_notifications: 'Notificaciones',
     config_notif_messages: 'Mensajes / chat',
     config_notif_messages_hint: 'Avisos de nuevos mensajes',
@@ -28,38 +30,17 @@ export const translations = {
     about_title: 'Acerca de',
     about_tagline: 'FitEngine es la plataforma de entrenamiento y gestión para tu gym. Marca: WAITOMO.',
     about_version_label: 'Versión',
-    about_legal_hint: 'Privacidad y términos se abren dentro de la app.',
+    about_legal_hint:
+      'Textos legales actualizados (abr. 2026). El responsable identificado es Rodrigo Pérez Pulti; la razón social comercial podrá actualizarse cuando incorpores la entidad.',
+    about_support_note:
+      'Si el correo de plataforma no respondiera, consultá con tu gimnasio o los canales que te indiquen en recepción.',
     about_privacy: 'Política de privacidad',
     about_terms: 'Términos de uso',
     about_support: 'Contacto / soporte',
     about_open_fail: 'No se pudo abrir el enlace.',
     legal_last_updated_label: 'Última actualización:',
     privacy_title: 'Política de privacidad',
-    privacy_section_data_title: 'Datos que recopilamos',
-    privacy_section_data_body:
-      'Recopilamos los datos que cargás en tu perfil y tus interacciones dentro de la app (por ejemplo, planes, bloques, mensajes y progreso) para brindar el servicio.',
-    privacy_section_usage_title: 'Cómo usamos tus datos',
-    privacy_section_usage_body:
-      'Usamos la información para mostrar tu entrenamiento, habilitar funciones según tu plan y mejorar la experiencia del gimnasio y del usuario.',
-    privacy_section_sharing_title: 'Cómo compartimos datos',
-    privacy_section_sharing_body:
-      'No vendemos tus datos. Solo se comparten con el staff autorizado de tu organización y con proveedores técnicos necesarios para operar la plataforma.',
-    privacy_section_rights_title: 'Tus derechos',
-    privacy_section_rights_body:
-      'Podés solicitar actualización o eliminación de tu información desde soporte del gimnasio o del equipo de FitEngine.',
     terms_title: 'Términos de uso',
-    terms_section_access_title: 'Acceso y cuenta',
-    terms_section_access_body:
-      'El acceso al contenido depende de tu perfil, plan y estado de abono. Mantené tus datos de cuenta actualizados y no compartas tus credenciales.',
-    terms_section_content_title: 'Uso del contenido',
-    terms_section_content_body:
-      'Las rutinas y recomendaciones son para uso personal dentro del servicio contratado y no reemplazan asesoramiento médico profesional.',
-    terms_section_payments_title: 'Planes y pagos',
-    terms_section_payments_body:
-      'La disponibilidad de clases, rutinas y funciones puede variar según el plan contratado y el estado de pago informado por tu organización.',
-    terms_section_conduct_title: 'Uso responsable',
-    terms_section_conduct_body:
-      'No está permitido usar la app para acciones fraudulentas, suplantación de identidad o actividades que afecten a otros usuarios o al gimnasio.',
 
     // Common
     common_back: 'Volver',
@@ -272,6 +253,8 @@ export const translations = {
     // PlanSelector
     plan_selector_welcome_prefix: 'Bienvenido a',
     plan_selector_programs_section: 'Elegí tu programa',
+    plan_selector_home_abono_title: 'Tu actividad y abono',
+    plan_selector_home_abono_cta: 'Ver vigencia y detalle',
     welcome_join_with_code: 'Tengo código de invitación de mi gym',
     invite_title: 'Unirme con código',
     invite_hint:
@@ -353,11 +336,22 @@ export const translations = {
     gym_config_preset_hint:
       'Define el “carácter” (contraste, paneles). El acento se aplica encima; no sustituye textos, cajas ni overlay salvo que no configures las capas 3–5.',
     gym_config_theme_global_hint: 'El modo claro/oscuro global está en Configuración de la app.',
+    gym_reset_fitengine_cta: 'Volver a estética FitEngine (base)',
+    gym_reset_fitengine_title: 'Restaurar base FitEngine',
+    gym_reset_fitengine_body:
+      'Se aplican acento cian, preset «Oscuro vivo» y se borran textos/cajas/overlay personalizados. Podés guardar después.',
+    gym_reset_fitengine_applied_title: 'Listo',
+    gym_reset_fitengine_applied_body:
+      'Se guardó la estética base FitEngine (acento, preset y capas de texto/cajas). Los clientes la verán al actualizar.',
+    gym_lock_client_theme_title: 'Fijar tema para clientes',
+    gym_lock_client_theme_hint:
+      'Si está activo, los socios no pueden forzar claro/oscuro en Configuración: la app sigue el preset de arriba (evita mezclas feas).',
     gym_preset_dark_vivid: 'Oscuro vivo',
     gym_preset_dark_minimal: 'Oscuro minimal',
     gym_preset_light_clean: 'Claro limpio',
     gym_preset_light_warm: 'Claro cálido',
-    gym_preset_hint_dark_vivid: 'Acento en paneles + textos fríos (cian/azul). Muy “neon”.',
+    gym_preset_hint_dark_vivid:
+      'Acento en paneles y acciones; textos como en la base FitEngine (gris/cian suave), sin párrafos azul cielo.',
     gym_preset_hint_dark_minimal: 'Casi monocromo + zinc; el acento casi solo en botones.',
     gym_preset_hint_light_clean: 'Blanco frío, bordes grises, sombra suave tipo SaaS.',
     gym_preset_hint_light_warm: 'Crema, bordes melocotón, marrón en subtítulos.',
@@ -982,14 +976,24 @@ export const translations = {
     client_greeting_night: 'Buenas noches',
     client_welcome_panel: 'Bienvenido a tu panel de entrenamiento.',
     client_plan: 'Plan',
+    client_ver_planes: 'Ver planes y actividades',
+    client_metric_plan_open_programs: 'Tocá para ver programas y abonos',
+    client_metric_plan_hint_a11y: 'Abrir lista de programas del gimnasio',
+    client_activity_prev: 'Actividad anterior',
+    client_activity_next: 'Siguiente actividad',
+    client_activity_switch_hint: 'Usá las flechas para cambiar la actividad en la que operás.',
+    client_otra_actividad: 'Contratar u otra actividad',
+    client_plan_switch_error_title: 'No se pudo cambiar',
+    client_plan_switch_error_body: 'No pudimos actualizar tu actividad. Probá de nuevo.',
     client_apto_medico: 'Apto médico',
     client_apto_ok: 'OK',
     client_apto_pendiente: 'Pendiente',
     client_apto_ready: 'Listo para entrenar.',
     client_apto_upload: 'Subilo desde tu perfil.',
     client_loading_abono: 'Cargando estado del abono…',
-    client_no_abono: 'Sin datos de abono cargados. Tocá para ver planes y abonos.',
+    client_no_abono: 'Sin abono registrado para esta actividad. En la siguiente pantalla podés elegir un programa y contratar.',
     client_abono_start: 'Inicio',
+    client_abono_tap_programs_hint: 'Tocá la caja del plan para ver programas y abonos.',
     client_abono_end: 'Vence',
     client_days: 'días',
     client_plan_activo: 'Plan activo',
@@ -1222,6 +1226,8 @@ export const translations = {
     config_light: 'Light',
     config_auto: 'Auto',
     config_defaultThemeHint: 'Default: Dark. Auto follows your device mode.',
+    config_theme_locked_by_org:
+      'Your gym locked the look: light/dark follows the space preset (you can’t override it here).',
     config_notifications: 'Notifications',
     config_notif_messages: 'Messages / chat',
     config_notif_messages_hint: 'New message alerts',
@@ -1241,38 +1247,17 @@ export const translations = {
     about_title: 'About',
     about_tagline: 'FitEngine is your gym’s training and operations platform. Brand: WAITOMO.',
     about_version_label: 'Version',
-    about_legal_hint: 'Privacy and terms open inside the app.',
+    about_legal_hint:
+      'Legal texts updated (Apr 2026). The identified controller is Rodrigo Pérez Pulti; the trade name may be updated when you register a company entity.',
+    about_support_note:
+      'If the platform email does not reply, contact your gym or the channels they provide at reception.',
     about_privacy: 'Privacy policy',
     about_terms: 'Terms of use',
     about_support: 'Contact / support',
     about_open_fail: 'Could not open the link.',
     legal_last_updated_label: 'Last updated:',
     privacy_title: 'Privacy policy',
-    privacy_section_data_title: 'Data we collect',
-    privacy_section_data_body:
-      'We collect the data you provide in your profile and your in-app interactions (for example plans, workout blocks, messages, and progress) to deliver the service.',
-    privacy_section_usage_title: 'How we use data',
-    privacy_section_usage_body:
-      'We use this information to show your training, enable features based on your plan, and improve the gym and user experience.',
-    privacy_section_sharing_title: 'How we share data',
-    privacy_section_sharing_body:
-      'We do not sell your data. It is only shared with authorized staff from your organization and technical providers needed to operate the platform.',
-    privacy_section_rights_title: 'Your rights',
-    privacy_section_rights_body:
-      'You can request updates or deletion of your information through your gym support or the FitEngine team.',
     terms_title: 'Terms of use',
-    terms_section_access_title: 'Access and account',
-    terms_section_access_body:
-      'Access to content depends on your profile, plan, and membership status. Keep your account information updated and do not share your credentials.',
-    terms_section_content_title: 'Content usage',
-    terms_section_content_body:
-      'Workouts and recommendations are for personal use within the contracted service and do not replace professional medical advice.',
-    terms_section_payments_title: 'Plans and payments',
-    terms_section_payments_body:
-      'Class, workout, and feature availability may vary according to the contracted plan and payment status managed by your organization.',
-    terms_section_conduct_title: 'Responsible use',
-    terms_section_conduct_body:
-      'Using the app for fraud, identity impersonation, or actions that harm other users or the gym is not allowed.',
 
     common_back: 'Back',
     common_cancel: 'Cancel',
@@ -1473,6 +1458,8 @@ export const translations = {
 
     plan_selector_welcome_prefix: 'Welcome to',
     plan_selector_programs_section: 'Choose your program',
+    plan_selector_home_abono_title: 'Your activity & pass',
+    plan_selector_home_abono_cta: 'View validity & details',
     welcome_join_with_code: 'I have my gym’s invite code',
     invite_title: 'Join with code',
     invite_hint:
@@ -1554,11 +1541,22 @@ export const translations = {
     gym_config_preset_hint:
       'Sets the “character” (contrast, panels). Accent applies on top; it does not replace text, boxes or overlay unless you skip layers 3–5.',
     gym_config_theme_global_hint: 'Global light/dark mode is under App settings.',
+    gym_reset_fitengine_cta: 'Reset to FitEngine base look',
+    gym_reset_fitengine_title: 'Restore FitEngine base',
+    gym_reset_fitengine_body:
+      'Applies cyan accent, “Dark vivid” preset, and clears custom text/surface/border/overlay. Save to apply.',
+    gym_reset_fitengine_applied_title: 'Done',
+    gym_reset_fitengine_applied_body:
+      'FitEngine base look saved (accent, preset, and text/surface layers). Members will see it after refresh.',
+    gym_lock_client_theme_title: 'Lock theme for members',
+    gym_lock_client_theme_hint:
+      'When on, members can’t force light/dark in Settings—the app follows the preset above (avoids bad mixes).',
     gym_preset_dark_vivid: 'Dark vivid',
     gym_preset_dark_minimal: 'Dark minimal',
     gym_preset_light_clean: 'Light clean',
     gym_preset_light_warm: 'Light warm',
-    gym_preset_hint_dark_vivid: 'Accent on panels + cool text (cyan/blue). Very “neon”.',
+    gym_preset_hint_dark_vivid:
+      'Accent on panels and actions; body text matches the FitEngine base (soft grey/cyan), not sky-blue paragraphs.',
     gym_preset_hint_dark_minimal: 'Almost monochrome + zinc; accent mostly on buttons.',
     gym_preset_hint_light_clean: 'Cool white, gray borders, soft SaaS-style shadow.',
     gym_preset_hint_light_warm: 'Cream, peach borders, brown subtitles.',
@@ -2176,14 +2174,24 @@ export const translations = {
     client_greeting_night: 'Good night',
     client_welcome_panel: 'Welcome to your training panel.',
     client_plan: 'Plan',
+    client_ver_planes: 'View plans & activities',
+    client_metric_plan_open_programs: 'Tap to browse programs & passes',
+    client_metric_plan_hint_a11y: 'Open your gym’s program list',
+    client_activity_prev: 'Previous activity',
+    client_activity_next: 'Next activity',
+    client_activity_switch_hint: 'Use the arrows to switch the activity you are using.',
+    client_otra_actividad: 'Add another activity',
+    client_plan_switch_error_title: 'Could not switch',
+    client_plan_switch_error_body: 'We could not update your activity. Please try again.',
     client_apto_medico: 'Medical clearance',
     client_apto_ok: 'OK',
     client_apto_pendiente: 'Pending',
     client_apto_ready: 'Ready to train.',
     client_apto_upload: 'Upload it from your profile.',
     client_loading_abono: 'Loading plan status…',
-    client_no_abono: 'No plan data loaded. Tap to view plans.',
+    client_no_abono: 'No pass on file for this activity. On the next screen you can pick a program and purchase.',
     client_abono_start: 'Start',
+    client_abono_tap_programs_hint: 'Tap the plan card to browse programs and passes.',
     client_abono_end: 'Ends',
     client_days: 'days',
     client_plan_activo: 'Active plan',

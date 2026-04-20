@@ -26,6 +26,7 @@ import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -57,12 +58,18 @@ const todayISO = () => {
 
 export default function PagoScreen({ navigation, route }) {
   const { createPayment, markAsPaid } = useTrainingData();
-  const { user: ctxUser } = useAuth() || {};
+  const { user: ctxUser, updateProfile } = useAuth() || {};
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
 
   const defaultPlan = { id: 'admin', title: 'Pago', nombre: 'admin' };
-  const { plan = defaultPlan, userData, abono, planKey: routePlanKey } = route?.params || {};
+  const {
+    plan = defaultPlan,
+    userData,
+    abono,
+    planKey: routePlanKey,
+    skipProfileCompletion = false,
+  } = route?.params || {};
   const [paymentId, setPaymentId] = useState(null);
   const [paymentUrl, setPaymentUrl] = useState(null);
 
@@ -76,6 +83,7 @@ export default function PagoScreen({ navigation, route }) {
       routePlanKey ||
       'admin'
     ).toLowerCase().trim();
+  const planCanon = normalizePlanKey(planId) || planId;
 
   const parsePrecio = (v) => {
     if (typeof v === 'number') return v;
@@ -164,7 +172,7 @@ export default function PagoScreen({ navigation, route }) {
         .insert({
           user_id: userId,
           abono_id: abonoId,
-          plan_id: planId,
+          plan_id: planCanon,
           status: 'active',            // ✅ para destrabar panel inmediatamente
           start_date: startDate,
           end_date: endDate,
@@ -175,7 +183,7 @@ export default function PagoScreen({ navigation, route }) {
       if (e1) {
         console.log('❌ crearAbonoReal: insert user_abonos error:', e1?.message || e1);
       } else {
-        console.log('✅ crearAbonoReal: user_abonos creado', { userId, planId, abonoId });
+        console.log('✅ crearAbonoReal: user_abonos creado', { userId, planId: planCanon, abonoId });
       }
 
       // 2) legacy: user_plans (por compat)
@@ -184,7 +192,7 @@ export default function PagoScreen({ navigation, route }) {
           .from('user_plans')
           .insert({
             user_id: userId,
-            plan_id: planId,
+            plan_id: planCanon,
             activo: true,
           });
 
@@ -201,15 +209,40 @@ export default function PagoScreen({ navigation, route }) {
   };
 
   const handlePagoConfirmado = async () => {
-    console.log('🟢 PagoScreen: click YA PAGUÉ');
+    // Flujo cliente existente: no pedir completar perfil otra vez.
+    if (skipProfileCompletion) {
+      await crearAbonoReal();
+      if (userId) {
+        let updatedPlan = false;
+        if (typeof updateProfile === 'function') {
+          try {
+            await updateProfile({ plan_actual: planCanon });
+            updatedPlan = true;
+          } catch (e) {
+            // fallback below
+          }
+        }
+        if (!updatedPlan) {
+          // Fallback defensivo: persistir plan_actual aunque updateProfile falle por estado de contexto.
+          try {
+            await supabase.from('profiles').update({ plan_actual: planCanon }).eq('id', userId);
+          } catch (e) {
+            // no fatal: el abono ya fue creado
+          }
+        }
+      }
+      if (paymentId && markAsPaid) {
+        Promise.resolve()
+          .then(() => markAsPaid(paymentId, { metodo: 'confirmado_usuario' }))
+          .catch(() => {});
+      }
+      navigation.reset({ index: 0, routes: [{ name: 'ClientTabs' }] });
+      return;
+    }
 
-    // ✅ 1) Navegar SIEMPRE (nunca clavar UI)
-    navigation.navigate('RegistroCompleto', { plan, userData, abono, planKey: planId });
-
-    // ✅ 2) Crear abono real en DB (sin bloquear UI)
+    // Flujo legacy / alta nueva: mantener registro completo.
+    navigation.navigate('RegistroCompleto', { plan, userData, abono, planKey: planCanon });
     crearAbonoReal();
-
-    // ✅ 3) Marcar pago local si existiera paymentId (no bloquear)
     if (paymentId && markAsPaid) {
       Promise.resolve()
         .then(() => markAsPaid(paymentId, { metodo: 'confirmado_usuario' }))

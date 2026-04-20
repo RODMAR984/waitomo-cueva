@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useThemeContext } from '../contexts/ThemeContext';
@@ -48,7 +49,7 @@ const animatedValues = (() => {
   return arr;
 })();
 
-export default function PlanSelectorScreen({ navigation }) {
+export default function PlanSelectorScreen({ navigation, route }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const insets = useSafeAreaInsets();
@@ -63,6 +64,7 @@ export default function PlanSelectorScreen({ navigation }) {
   const clientWelcomeMessage = (organization?.features?.client_welcome_message || '').trim();
   const showOrgHeader = !!(effectiveOrgId && (orgName || logoUri));
   const sessionUserId = session?.user?.id;
+  const clientHome = route?.params?.clientHomeContext || null;
   const waitingOrgForAuthedUser =
     !!sessionUserId && !effectiveOrgId && initialProfileSyncDone === false;
 
@@ -282,6 +284,44 @@ export default function PlanSelectorScreen({ navigation }) {
           fontSize: 14,
           fontWeight: '600',
         },
+        homeAbonoCard: {
+          marginBottom: 18,
+          padding: 16,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.boxBg,
+        },
+        homeAbonoKicker: {
+          color: t.subText,
+          fontSize: 11,
+          fontWeight: '800',
+          letterSpacing: 0.6,
+          textTransform: 'uppercase',
+        },
+        homeAbonoPlan: {
+          color: t.text,
+          fontSize: 18,
+          fontWeight: '800',
+          marginTop: 8,
+        },
+        homeAbonoHint: {
+          color: t.subText,
+          fontSize: 12,
+          lineHeight: 17,
+          marginTop: 8,
+        },
+        homeAbonoRow: {
+          marginTop: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        },
+        homeAbonoCta: {
+          color: t.brand,
+          fontSize: 13,
+          fontWeight: '800',
+        },
       }),
     [t],
   );
@@ -370,12 +410,56 @@ export default function PlanSelectorScreen({ navigation }) {
                 {tStr('plan_selector_welcome_prefix')} {orgName}
               </Text>
               {clientWelcomeMessage ? <Text style={styles.orgMessage}>{clientWelcomeMessage}</Text> : null}
-              <Text style={styles.sectionLabel}>{tStr('plan_selector_programs_section')}</Text>
             </>
           ) : null}
 
           {!waitingOrgForAuthedUser && !showOrgHeader ? (
             <Text style={[styles.header, { marginTop: 8 }]}>{tStr('plan_selector_header')}</Text>
+          ) : null}
+
+          {!waitingOrgForAuthedUser && clientHome && sessionUserId ? (
+            <TouchableOpacity
+              style={styles.homeAbonoCard}
+              activeOpacity={0.88}
+              onPress={() => {
+                const h = clientHome;
+                try {
+                  navigation.navigate('DetalleAbono', {
+                    planKey: h.planKey,
+                    subscription: h.abonoRow || null,
+                    plan: h.planKey ? { id: h.planKey, title: h.planLabel } : null,
+                  });
+                } catch {
+                  try {
+                    navigation.navigate('DetalleAbonoScreen', {
+                      planKey: h.planKey,
+                      subscription: h.abonoRow || null,
+                      plan: h.planKey ? { id: h.planKey, title: h.planLabel } : null,
+                    });
+                  } catch {
+                    // ignore
+                  }
+                }
+              }}
+            >
+              <Text style={styles.homeAbonoKicker}>{tStr('plan_selector_home_abono_title')}</Text>
+              <Text style={styles.homeAbonoPlan} numberOfLines={2}>
+                {clientHome.planLabel || '—'}
+              </Text>
+              {!!clientHome.planHintLine && (
+                <Text style={styles.homeAbonoHint} numberOfLines={4}>
+                  {clientHome.planHintLine}
+                </Text>
+              )}
+              <View style={styles.homeAbonoRow}>
+                <Text style={styles.homeAbonoCta}>{tStr('plan_selector_home_abono_cta')}</Text>
+                <Ionicons name="chevron-forward" size={20} color={t.brand} />
+              </View>
+            </TouchableOpacity>
+          ) : null}
+
+          {!waitingOrgForAuthedUser && showOrgHeader ? (
+            <Text style={styles.sectionLabel}>{tStr('plan_selector_programs_section')}</Text>
           ) : null}
 
           {!waitingOrgForAuthedUser && loading ? (

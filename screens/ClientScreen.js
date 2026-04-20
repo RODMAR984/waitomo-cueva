@@ -34,6 +34,7 @@ import {
   evaluateCalendarioAccess,
   evaluateClientCommunityAccess,
   isUserAbonoActive,
+  abonoCoversUserPlan,
 } from '../utils/clientWorkoutEntitlement';
 import { clearFreeClassGrant } from '../utils/freeClassGrantStorage';
 import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../utils/freeClassPolicy';
@@ -66,6 +67,8 @@ const PLAN_LABELS = {
   oly: 'OLY',
   all_access: 'Pase libre (acceso total)',
 };
+
+const PLAN_ACTIVITY_ORDER = Object.keys(PLAN_LABELS);
 
 const PLAN_CANON_ID = {
   cross: 'cross',
@@ -148,6 +151,7 @@ export default function ClientScreen() {
     hasClientMembership,
     persistActiveAppMode,
     updateProfile,
+    userPlans,
   } = useAuth() || {};
   const saludo = tStr(getGreetingKey(new Date().getHours()));
 
@@ -263,14 +267,11 @@ export default function ClientScreen() {
     updateProfile,
   ]);
 
-  const canonId = planKey ? (PLAN_CANON_ID[planKey] || planKey) : null;
-  const planLabel = planKey ? (PLAN_LABELS[planKey] || planKey.toUpperCase()) : 'Sin plan activo';
-  const planObj = canonId ? { id: canonId, title: planLabel, active: true } : null;
-
-  // ✅ abono: solo para mostrar fechas/estado (NO define el plan)
-  const [abonoRow, setAbonoRow] = useState(null);
+  // ✅ abonos activos: fechas/estado por actividad (el plan mostrado viene de plan_actual / activePlanId)
+  const [userAbonosActive, setUserAbonosActive] = useState([]);
   const [abonoLoading, setAbonoLoading] = useState(true);
   const [freeClassGrant, setFreeClassGrant] = useState(null);
+  const [planSwitching, setPlanSwitching] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -279,16 +280,15 @@ export default function ClientScreen() {
       try {
         if (!user?.id) {
           if (alive) {
-            setAbonoRow(null);
+            setUserAbonosActive([]);
             setAbonoLoading(false);
           }
           return;
         }
 
         // eslint-disable-next-line no-console
-        console.log('🔄 ClientScreen: cargando abono para user', user.id);
+        console.log('🔄 ClientScreen: cargando user_abonos para user', user.id);
 
-        // Timeout de seguridad: si Supabase se cuelga, no dejamos el spinner eterno
         let timeoutId = null;
         const timeoutPromise = new Promise((_, reject) => {
           timeoutId = setTimeout(
@@ -304,13 +304,12 @@ export default function ClientScreen() {
           )
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(1);
+          .limit(25);
 
         const raced = await Promise.race([queryPromise, timeoutPromise]);
 
         if (timeoutId) clearTimeout(timeoutId);
 
-        // Si vino del timeoutPromise, es un Error y lo propagamos
         if (raced instanceof Error) {
           throw raced;
         }
@@ -323,16 +322,21 @@ export default function ClientScreen() {
           throw error;
         }
 
-        const row = Array.isArray(data) ? data[0] : null;
+        const list = Array.isArray(data)
+          ? data.filter((r) => {
+              const s = String(r?.status || '').toLowerCase();
+              return s === 'active' || s === 'pending';
+            })
+          : [];
         if (alive) {
-          setAbonoRow(row || null);
+          setUserAbonosActive(list);
           setAbonoLoading(false);
         }
       } catch (e) {
         // eslint-disable-next-line no-console
         console.log('❌ ClientScreen: catch en carga de abono:', e?.message || e);
         if (alive) {
-          setAbonoRow(null);
+          setUserAbonosActive([]);
           setAbonoLoading(false);
         }
       }
@@ -345,6 +349,82 @@ export default function ClientScreen() {
       alive = false;
     };
   }, [user?.id]);
+
+  const orgForEntitlement = organization?.id || profile?.organization_id || null;
+
+  /** Solo planes contratados (abonos activos) + clase de prueba agendada; no el catálogo de la org. */
+  const contractedKeys = useMemo(() => {
+    const set = new Set();
+    userAbonosActive.forEach((r) => {
+      const k = normalizePlanKey(r.plan_id);
+      if (k) set.add(k);
+    });
+    (Array.isArray(userPlans) ? userPlans : []).forEach((r) => {
+      const k = normalizePlanKey(r?.plan_id);
+      if (k) set.add(k);
+    });
+    if (freeClassGrant?.planCanonId) {
+      const g = normalizePlanKey(freeClassGrant.planCanonId);
+      if (g) set.add(g);
+    }
+    const arr = Array.from(set);
+    arr.sort((a, b) => {
+      const ia = PLAN_ACTIVITY_ORDER.indexOf(a);
+      const ib = PLAN_ACTIVITY_ORDER.indexOf(b);
+      const sa = ia === -1 ? 999 : ia;
+      const sb = ib === -1 ? 999 : ib;
+      if (sa !== sb) return sa - sb;
+      return String(a).localeCompare(String(b));
+    });
+    return arr;
+  }, [userAbonosActive, userPlans, freeClassGrant]);
+
+  /**
+   * Plan con el que operamos en UI y abono: si profile apunta a algo no contratado, caemos al primero contratado.
+   */
+  const effectivePlanKey = useMemo(() => {
+    if (!planKey) return contractedKeys[0] || null;
+    if (contractedKeys.length === 0) return planKey;
+    if (contractedKeys.includes(planKey)) return planKey;
+    return contractedKeys[0];
+  }, [contractedKeys, planKey]);
+
+  const canonId = effectivePlanKey ? (PLAN_CANON_ID[effectivePlanKey] || effectivePlanKey) : null;
+  const planLabel = effectivePlanKey
+    ? (PLAN_LABELS[effectivePlanKey] || String(effectivePlanKey).toUpperCase())
+    : tStr('client_no_plan');
+  const planObj = canonId ? { id: canonId, title: planLabel, active: true } : null;
+
+  const abonoRow = useMemo(() => {
+    const pk = effectivePlanKey;
+    if (!pk) {
+      const activeAny = userAbonosActive.find((r) => isUserAbonoActive(r));
+      if (activeAny) return activeAny;
+      return userAbonosActive[0] || null;
+    }
+    const rows = userAbonosActive.filter((r) => abonoCoversUserPlan(r, pk));
+    if (rows.length === 0) return null;
+    const active = rows.find((r) => isUserAbonoActive(r));
+    return active || rows[0];
+  }, [userAbonosActive, effectivePlanKey]);
+
+  // Perfil desfasado (plan_actual = yoga pero solo abono cross): alinear a un plan contratado.
+  useEffect(() => {
+    if (!user?.id || typeof updateProfile !== 'function') return;
+    if (planLoading || abonoLoading) return;
+    if (contractedKeys.length === 0) return;
+    if (!planKey || contractedKeys.includes(planKey)) return;
+    const next = contractedKeys[0];
+    if (!next) return;
+    updateProfile({ plan_actual: next });
+  }, [
+    user?.id,
+    planKey,
+    contractedKeys,
+    planLoading,
+    abonoLoading,
+    updateProfile,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -366,8 +446,6 @@ export default function ClientScreen() {
     }
   }, [abonoRow?.id, abonoRow?.status, abonoRow?.end_date]);
 
-  const orgForEntitlement = organization?.id || profile?.organization_id || null;
-
   // ---------------------------------------------
   // Novedades (gym_news) — preview con ticker, timeout y fallback
   // ---------------------------------------------
@@ -381,13 +459,13 @@ export default function ClientScreen() {
   const communityAccess = useMemo(
     () =>
       evaluateClientCommunityAccess({
-        planCanonKey: planKey,
+        planCanonKey: effectivePlanKey,
         organizationId: orgForEntitlement,
         abonoRow,
         abonoLoading,
         freeClassGrant,
       }),
-    [planKey, orgForEntitlement, abonoRow, abonoLoading, freeClassGrant],
+    [effectivePlanKey, orgForEntitlement, abonoRow, abonoLoading, freeClassGrant],
   );
 
   const abonoStatusKey = getAbonoStatusKey(abonoRow?.status);
@@ -408,19 +486,8 @@ export default function ClientScreen() {
       const dl = typeof daysLeft === 'number' ? ` • ${daysLeft} ${tStr('client_days')}` : '';
       return `${abonoStatusLabel} • ${tStr('client_abono_end')}: ${endFmt}${dl}`;
     }
-    return `${abonoStatusLabel} • Tocá para ver detalle.`;
+    return `${abonoStatusLabel} • ${tStr('client_abono_tap_programs_hint')}`;
   })();
-
-  // Siempre a DetalleAbono: con abono muestra fechas/estado; sin abono muestra "No hay abono" + botón a planes.
-  // Así no mandamos al usuario directo a la lista de planes (flujo que parece registro).
-  const goPlanAbonoDetail = () => {
-    const ok = safeNavigate(['DetalleAbono', 'DetalleAbonoScreen'], {
-      planKey: canonId,
-      plan: planObj,
-      subscription: abonoRow || null,
-    });
-    if (!ok) Alert.alert(tStr('client_route_not_found'), tStr('client_detalle_abono_missing'));
-  };
 
   // ✅ navegación robusta (tabs -> stack padre)
   const safeNavigate = useCallback(
@@ -447,13 +514,57 @@ export default function ClientScreen() {
     [navigation]
   );
 
+  const goPlanSelector = useCallback(() => {
+    safeNavigate(['PlanSelector', 'PlanSelectorScreen']);
+  }, [safeNavigate]);
+
+  /** Caja "Plan": lista clara de programas → cada plan lleva a detalle y abonos (PlanSelector → PlanDetail → Abonos). */
+  const goPlanHub = useCallback(() => {
+    safeNavigate(['PlanSelector', 'PlanSelectorScreen'], {
+      clientHomeContext: {
+        planKey: canonId,
+        planLabel,
+        planHintLine,
+        abonoRow: abonoRow || null,
+      },
+    });
+  }, [safeNavigate, canonId, planLabel, planHintLine, abonoRow]);
+
+  const switchActivity = useCallback(
+    async (canonRaw) => {
+      const canon = normalizePlanKey(canonRaw);
+      if (!canon || canon === effectivePlanKey || typeof updateProfile !== 'function') return;
+      setPlanSwitching(true);
+      try {
+        await updateProfile({ plan_actual: canon });
+      } catch (e) {
+        Alert.alert(tStr('client_plan_switch_error_title'), tStr('client_plan_switch_error_body'));
+      } finally {
+        setPlanSwitching(false);
+      }
+    },
+    [effectivePlanKey, updateProfile, tStr]
+  );
+
+  const cycleActivity = useCallback(
+    (delta) => {
+      if (contractedKeys.length < 2) return;
+      const ix = contractedKeys.indexOf(effectivePlanKey);
+      const base = ix >= 0 ? ix : 0;
+      const n = contractedKeys.length;
+      const nextIx = (base + delta + n * 10) % n;
+      switchActivity(contractedKeys[nextIx]);
+    },
+    [contractedKeys, effectivePlanKey, switchActivity]
+  );
+
   const goCalendario = () => {
     if (!planObj) {
       Alert.alert(tStr('client_no_plan'), tStr('client_no_plan_message'));
       return;
     }
     const cal = evaluateCalendarioAccess({
-      planCanonKey: planKey,
+      planCanonKey: effectivePlanKey,
       organizationId: orgForEntitlement,
       abonoRow,
       abonoLoading,
@@ -538,7 +649,7 @@ export default function ClientScreen() {
   };
 
   const goTrabajoHoy = () => {
-    if (!planObj || !planKey) {
+    if (!planObj || !effectivePlanKey) {
       Alert.alert(tStr('client_no_plan'), tStr('client_no_plan_message'), [
         { text: tStr('common_cancel'), style: 'cancel' },
         {
@@ -549,7 +660,7 @@ export default function ClientScreen() {
       return;
     }
     const th = evaluateTrabajoHoyButton({
-      planCanonKey: planKey,
+      planCanonKey: effectivePlanKey,
       organizationId: orgForEntitlement,
       abonoRow,
       abonoLoading,
@@ -558,7 +669,7 @@ export default function ClientScreen() {
     if (th.reason === 'loading') return;
     if (!th.ok) {
       const g = freeClassGrant;
-      const gPlanOk = g && normalizePlanKey(g.planCanonId) === normalizePlanKey(planKey);
+      const gPlanOk = g && normalizePlanKey(g.planCanonId) === normalizePlanKey(effectivePlanKey);
       const gOrgOk =
         !g?.organizationId ||
         !orgForEntitlement ||
@@ -592,7 +703,9 @@ export default function ClientScreen() {
       ]);
       return;
     }
-    const planValue = planKey ? (PLAN_KEY_TO_ADMIN_VALUE[planKey] || planKey) : canonId;
+    const planValue = effectivePlanKey
+      ? (PLAN_KEY_TO_ADMIN_VALUE[effectivePlanKey] || effectivePlanKey)
+      : canonId;
     const fechaNav = th.fechaYmd || formatYmdLocal(new Date());
     const navParams = {
       from: 'ClientScreen',
@@ -619,7 +732,7 @@ export default function ClientScreen() {
     });
   };
 
-  const goChat = () => {
+  const goChat = useCallback(() => {
     if (communityAccess.reason === 'loading') return;
     if (!communityAccess.ok) {
       Alert.alert(tStr('client_community_locked_title'), tStr('client_community_locked_body'), [
@@ -635,8 +748,54 @@ export default function ClientScreen() {
       ]);
       return;
     }
-    safeNavigate(['ChatCanales', 'ChatCanalesScreen']);
-  };
+    // Staff: sigue viendo todos los canales.
+    if (hasStaffMembership) {
+      safeNavigate(['ChatCanales', 'ChatCanalesScreen']);
+      return;
+    }
+    const orgN = organization?.id ?? profile?.organization_id ?? null;
+    const ctx =
+      effectivePlanKey ||
+      normalizePlanKey(activePlanId) ||
+      normalizePlanKey(profile?.plan_actual ?? profile?.planActual);
+    if (!orgN || !ctx) {
+      safeNavigate(['ChatCanales', 'ChatCanalesScreen']);
+      return;
+    }
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('chat_channels')
+          .select('id, name, plan_id')
+          .eq('organization_id', orgN);
+        if (error) throw error;
+        const rows = Array.isArray(data) ? data : [];
+        const match = rows.find((r) => normalizePlanKey(r.plan_id) === ctx);
+        if (match) {
+          const ok = safeNavigate(['Chat', 'ChatScreen'], {
+            channelId: match.id,
+            channelName: match.name || match.plan_id,
+          });
+          if (ok) return;
+        }
+      } catch {
+        /* ir a lista */
+      }
+      safeNavigate(['ChatCanales', 'ChatCanalesScreen']);
+    })();
+  }, [
+    communityAccess.ok,
+    communityAccess.reason,
+    hasStaffMembership,
+    organization?.id,
+    profile?.organization_id,
+    effectivePlanKey,
+    activePlanId,
+    profile?.plan_actual,
+    profile?.planActual,
+    safeNavigate,
+    tStr,
+  ]);
 
   useEffect(() => {
     let alive = true;
@@ -734,7 +893,7 @@ export default function ClientScreen() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!user?.id || !planKey) {
+      if (!user?.id || !effectivePlanKey) {
         if (alive) setUnreadChatCount(0);
         return;
       }
@@ -754,8 +913,8 @@ export default function ClientScreen() {
           return;
         }
         let chQuery = supabase.from('chat_channels').select('id').eq('organization_id', orgChat);
-        if (planKey && planKey !== 'all_access') {
-          chQuery = chQuery.eq('plan_id', planKey);
+        if (effectivePlanKey && effectivePlanKey !== 'all_access') {
+          chQuery = chQuery.eq('plan_id', effectivePlanKey);
         }
         const { data: channels } = await chQuery;
         const channelIds = (channels || []).map((c) => c.id);
@@ -778,7 +937,7 @@ export default function ClientScreen() {
       }
     })();
     return () => { alive = false; };
-  }, [user?.id, planKey, organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok]);
+  }, [user?.id, effectivePlanKey, organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok]);
 
   // Si hay user pero no perfil (cuenta borrada o sin completar), ir a completar registro.
   useEffect(() => {
@@ -1008,6 +1167,18 @@ export default function ClientScreen() {
         metricLabel: { color: t.metallicGrey ?? t.subText, fontSize: 11 },
         metricValue: { color: t.text, fontSize: 15, fontWeight: 'bold' },
         metricHint: { marginTop: 6, color: t.placeholder, fontSize: 10, lineHeight: 14 },
+        metricPlanLink: {
+          marginTop: 8,
+          fontSize: 11,
+          fontWeight: '700',
+          color: t.brand,
+        },
+        metricPlanCue: {
+          marginTop: 10,
+          fontSize: 12,
+          fontWeight: '800',
+          color: t.brand,
+        },
 
         sectionTitle: { color: t.subText, fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
 
@@ -1025,6 +1196,45 @@ export default function ClientScreen() {
         planTitle: { color: t.text, fontSize: 17, fontWeight: '800' },
         planSubtitle: { color: t.subText, fontSize: 12, marginTop: 6, textAlign: 'center' },
         planDates: { marginTop: 10, color: t.placeholder, fontSize: 11, textAlign: 'center' },
+
+        activityNavOuter: {
+          alignSelf: 'stretch',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 6,
+          minHeight: 72,
+        },
+        activityNavBtn: {
+          width: 44,
+          height: 48,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: hexToRgba(t.brand, 0.06),
+        },
+        activityNavCenter: {
+          flex: 1,
+          paddingHorizontal: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        activityNavTitle: {
+          color: t.text,
+          fontSize: 16,
+          fontWeight: '800',
+          textAlign: 'center',
+        },
+        activityNavHint: {
+          marginTop: 4,
+          color: t.placeholder,
+          fontSize: 10,
+          textAlign: 'center',
+        },
+        activityAddLink: { marginTop: 8, alignSelf: 'center' },
+        activityAddLinkText: { color: t.brand, fontSize: 12, fontWeight: '700' },
 
         pillRow: { flexDirection: 'row', marginTop: 12 },
         planPillBtn: {
@@ -1193,11 +1403,13 @@ export default function ClientScreen() {
   }, [freeClassGrant, abonoRow, orgForEntitlement, locale]);
 
   const planActivoDescripcion =
-    planKey === 'all_access'
+    effectivePlanKey === 'all_access'
       ? tStr('client_plan_all_access_desc')
-      : planKey
+      : effectivePlanKey
         ? tStr('client_plan_reserve_desc')
         : tStr('client_plan_choose_desc');
+
+  const hasMultipleActivities = contractedKeys.length > 1;
 
   return (
     <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
@@ -1230,8 +1442,10 @@ export default function ClientScreen() {
           <View style={styles.metricsRow}>
             <TouchableOpacity
               style={styles.metricBox}
-              onPress={goPlanAbonoDetail}
+              onPress={goPlanHub}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`${tStr('client_plan')}: ${planLabel}. ${tStr('client_metric_plan_hint_a11y')}`}
             >
               <Text style={styles.metricLabel}>{tStr('client_plan')}</Text>
               {planLoading ? (
@@ -1242,6 +1456,7 @@ export default function ClientScreen() {
                 <Text style={styles.metricValue}>{planLabel}</Text>
               )}
               <Text style={styles.metricHint}>{planHintLine}</Text>
+              <Text style={styles.metricPlanCue}>{tStr('client_metric_plan_open_programs')}</Text>
             </TouchableOpacity>
 
             <View style={[styles.metricBox, styles.metricBoxLast]}>
@@ -1256,7 +1471,44 @@ export default function ClientScreen() {
           <Text style={styles.sectionTitle}>{tStr('client_plan_activo')}</Text>
 
           <View style={styles.planBox}>
-            <Text style={styles.planTitle}>{planLabel}</Text>
+            {hasMultipleActivities ? (
+              <View style={{ alignSelf: 'stretch' }}>
+                <View style={styles.activityNavOuter}>
+                  <TouchableOpacity
+                    style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
+                    onPress={() => cycleActivity(-1)}
+                    disabled={planSwitching}
+                    accessibilityRole="button"
+                    accessibilityLabel={tStr('client_activity_prev')}
+                  >
+                    <Ionicons name="chevron-back" size={26} color={t.brand} />
+                  </TouchableOpacity>
+                  <View style={styles.activityNavCenter}>
+                    <Text style={styles.activityNavTitle} numberOfLines={2}>
+                      {planLabel}
+                    </Text>
+                    <Text style={styles.activityNavHint}>{tStr('client_activity_switch_hint')}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
+                    onPress={() => cycleActivity(1)}
+                    disabled={planSwitching}
+                    accessibilityRole="button"
+                    accessibilityLabel={tStr('client_activity_next')}
+                  >
+                    <Ionicons name="chevron-forward" size={26} color={t.brand} />
+                  </TouchableOpacity>
+                </View>
+                {planSwitching ? (
+                  <ActivityIndicator style={{ marginTop: 6 }} color={t.brand} size="small" />
+                ) : null}
+                <TouchableOpacity style={styles.activityAddLink} onPress={goPlanSelector} activeOpacity={0.85}>
+                  <Text style={styles.activityAddLinkText}>{tStr('client_otra_actividad')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.planTitle}>{planLabel}</Text>
+            )}
             <Text style={styles.planSubtitle}>{planActivoDescripcion}</Text>
 
             {!!(startFmt || endFmt) && (

@@ -20,6 +20,8 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { abonoCoversUserPlan, isUserAbonoActive } from '../utils/clientWorkoutEntitlement';
 
 // helpers
 const hexToRgba = (hex, alpha = 1) => {
@@ -55,7 +57,11 @@ const daysLeft = (endIso) => {
 
 export default function DetalleAbonoScreen({ navigation, route }) {
   const { user, profile } = useAuth() || {};
-  const planKey = route?.params?.planKey || profile?.plan_actual || null;
+
+  const effectivePlanKey = useMemo(
+    () => normalizePlanKey(route?.params?.planKey || route?.params?.plan?.id || profile?.plan_actual),
+    [route?.params?.planKey, route?.params?.plan?.id, profile?.plan_actual],
+  );
 
   const [loading, setLoading] = useState(true);
   const [sub, setSub] = useState(route?.params?.subscription || null);
@@ -71,17 +77,29 @@ export default function DetalleAbonoScreen({ navigation, route }) {
       try {
         if (!user?.id) return;
 
-        // 1) Traer último abono del usuario
+        // 1) Traer abonos recientes y elegir el que corresponde al plan actual (p. ej. Yoga), no solo el último creado
         const { data, error } = await supabase
           .from('user_abonos')
           .select('id, user_id, abono_id, plan_id, status, start_date, end_date, sessions_total, sessions_used, created_at')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(1);
+          .limit(40);
 
         if (error) throw error;
 
-        const row = Array.isArray(data) ? data[0] : null;
+        const rows = Array.isArray(data) ? data : [];
+        const pk = effectivePlanKey;
+        let candidates = pk ? rows.filter((r) => abonoCoversUserPlan(r, pk)) : rows;
+        if (candidates.length === 0 && pk) {
+          candidates = rows;
+        }
+
+        const row =
+          candidates.find((r) => isUserAbonoActive(r)) ||
+          candidates.find((r) => String(r?.status || '').toLowerCase() === 'pending') ||
+          candidates[0] ||
+          null;
+
         if (!row) {
           if (alive) {
             setSub(null);
@@ -122,7 +140,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
     return () => {
       alive = false;
     };
-  }, [user?.id]);
+  }, [user?.id, effectivePlanKey]);
 
   const start = sub?.start_date ? fmtDate(sub.start_date) : null;
   const end = sub?.end_date ? fmtDate(sub.end_date) : null;
@@ -141,12 +159,13 @@ export default function DetalleAbonoScreen({ navigation, route }) {
   const dash = tStr('detalle_abono_dash');
 
   const handleRenovar = () => {
-    if (!planKey) {
+    const k = effectivePlanKey;
+    if (!k) {
       navigation.navigate('PlanSelector');
       return;
     }
     navigation.navigate('AbonosPases', {
-      plan: { id: String(planKey), name: String(planKey), title: String(planKey).toUpperCase() },
+      plan: { id: String(k), name: String(k), title: String(k).toUpperCase() },
       renewal: true,
     });
   };
