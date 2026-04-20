@@ -28,6 +28,13 @@
         <data android:scheme="waitomo"/>
         <data android:scheme="exp+waitomo-cueva"/>
       </intent-filter>
+      <intent-filter android:autoVerify="true" data-generated="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <data android:scheme="https" android:host="fitengine.app" android:pathPrefix="/join"/>
+        <data android:scheme="https" android:host="www.fitengine.app" android:pathPrefix="/join"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+      </intent-filter>
     </activity>
   </application>
 </manifest>
