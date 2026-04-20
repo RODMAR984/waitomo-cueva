@@ -223,6 +223,8 @@ export const translations = {
     pago_mp_checkout_unavailable_msg:
       'Falta desplegar la función en el servidor o credenciales MP. Podés usar transferencia u otro medio, o probá más tarde.',
     pago_mp_checkout_err: 'No se pudo abrir el pago con Mercado Pago. Intentá de nuevo.',
+    pago_international_note:
+      'Cobro en pesos (Argentina) con Mercado Pago. Si tu tarjeta o país no permite pagar acá, escribinos a soporte@waitomo.com o coordiná transferencia / datos con tu gym. Vamos ampliando medios según la demanda.',
 
     // Plan chat
     plan_chat_title_suffix: ' – Chat',
@@ -1441,6 +1443,8 @@ export const translations = {
     pago_mp_checkout_unavailable_msg:
       'The server function or MP credentials may be missing. Use bank transfer or try again later.',
     pago_mp_checkout_err: 'Could not open Mercado Pago checkout. Please try again.',
+    pago_international_note:
+      'Checkout is in Argentine pesos (ARS) via Mercado Pago. If your card or country isn’t supported, email soporte@waitomo.com or arrange bank transfer / details with your gym. We’ll add more payment options as demand grows.',
 
     plan_chat_title_suffix: ' – Chat',
     plan_chat_you: 'You',

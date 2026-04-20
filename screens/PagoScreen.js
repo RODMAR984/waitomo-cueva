@@ -316,6 +316,14 @@ export default function PagoScreen({ navigation, route }) {
           textAlign: 'center',
           opacity: 0.92,
         },
+        intlNote: {
+          color: t.subText,
+          fontSize: 12,
+          lineHeight: 17,
+          marginBottom: 18,
+          textAlign: 'center',
+          opacity: 0.88,
+        },
         btnPrimary: {
           alignItems: 'center',
           ...t.buttonPrimary,
@@ -378,6 +386,8 @@ export default function PagoScreen({ navigation, route }) {
             >
               <Text style={styles.btnTextOn}>{tStr('pago_btn_mercadopago')}</Text>
             </TouchableOpacity>
+
+            <Text style={styles.intlNote}>{tStr('pago_international_note')}</Text>
 
             <TouchableOpacity
               style={styles.btnPrimary}
