@@ -7,10 +7,16 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=8192"
+      },
       "android": { "buildType": "apk" }
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=8192"
+      },
       "android": { "buildType": "apk" }
     },
     "production": {
