@@ -8,13 +8,14 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.waitomofitengine.cueva",
-      "associatedDomains": ["applinks:fitengine.app", "applinks:www.fitengine.app"]
+      "associatedDomains": [
+        "applinks:fitengine.app",
+        "applinks:www.fitengine.app"
+      ]
     },
-
     "android": {
       "package": "com.waitomofitengine.cueva",
       "adaptiveIcon": {
@@ -38,22 +39,22 @@
               "pathPrefix": "/join"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
-
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
     },
-
     "plugins": [
       "expo-asset",
       "expo-font",
       "expo-web-browser"
     ],
-
     "extra": {
       "waitomoOrganizationId": "",
       "fitengineLinksBaseUrl": "https://fitengine.app",
@@ -61,7 +62,11 @@
       "fitengineMarketingSiteUrl": "https://waitomofitengine.com",
       "fitenginePrivacyUrl": "https://waitomofitengine.com",
       "fitengineTermsUrl": "https://waitomofitengine.com",
-      "fitengineSupportEmail": "soporte@waitomo.com"
-    }
+      "fitengineSupportEmail": "soporte@waitomo.com",
+      "eas": {
+        "projectId": "b5e327c8-d83e-46ce-8b1c-3ab56b1300c6"
+      }
+    },
+    "owner": "roperezpulti"
   }
 }
