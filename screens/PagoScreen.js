@@ -19,6 +19,7 @@ import {
 import PropTypes from 'prop-types';
 import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useTrainingData } from '../contexts/TrainingDataContext';
@@ -28,6 +29,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { createCheckoutPreference } from '../utils/mercadoPagoCheckout';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -121,7 +123,7 @@ export default function PagoScreen({ navigation, route }) {
         return { paymentId: null, paymentUrl: null };
       }
 
-      const res = await createPayment({
+      const res = createPayment({
         userId,
         planId,
         periodo,
@@ -138,7 +140,26 @@ export default function PagoScreen({ navigation, route }) {
         res?.paymentId ||
         null;
 
-      const url = res?.init_point || res?.payment_url || res?.url || null;
+      let url = res?.init_point || res?.payment_url || res?.url || null;
+
+      if (
+        pid &&
+        (metodo === 'mercadopago' || metodo === 'mp') &&
+        typeof monto === 'number' &&
+        monto > 0
+      ) {
+        try {
+          const { init_point: initPoint } = await createCheckoutPreference({
+            amount: monto,
+            title: `FitEngine · ${planCanon}`,
+            externalReference: pid,
+          });
+          url = initPoint;
+        } catch (e) {
+          console.warn('Checkout Pro MP:', e?.message || e);
+          url = null;
+        }
+      }
 
       setPaymentId(pid);
       setPaymentUrl(url);
@@ -284,8 +305,16 @@ export default function PagoScreen({ navigation, route }) {
           color: t.subText,
           fontSize: 20,
           fontWeight: 'bold',
-          marginBottom: 18,
+          marginBottom: 10,
           textAlign: 'center',
+        },
+        mpHint: {
+          color: t.subText,
+          fontSize: 13,
+          lineHeight: 18,
+          marginBottom: 16,
+          textAlign: 'center',
+          opacity: 0.92,
         },
         btnPrimary: {
           alignItems: 'center',
@@ -324,12 +353,27 @@ export default function PagoScreen({ navigation, route }) {
           <View style={styles.panel}>
             <Text style={styles.title}>{tStr('pago_title_select')}</Text>
 
+            <Text style={styles.mpHint}>{tStr('pago_mp_checkout_hint')}</Text>
+
             <TouchableOpacity
               style={styles.btnPrimary}
               onPress={async () => {
-                await crearIntentoPago('mp');
-                const url = paymentUrl || 'https://www.mercadopago.com.ar/';
-                try { await Linking.openURL(url); } catch {}
+                try {
+                  const r = await crearIntentoPago('mercadopago');
+                  const url = r?.paymentUrl;
+                  if (url && String(url).includes('mercadopago')) {
+                    await WebBrowser.openBrowserAsync(url);
+                  } else if (url) {
+                    await Linking.openURL(url);
+                  } else {
+                    Alert.alert(
+                      tStr('pago_mp_checkout_unavailable_title'),
+                      tStr('pago_mp_checkout_unavailable_msg'),
+                    );
+                  }
+                } catch (e) {
+                  Alert.alert(tStr('security_error_title'), tStr('pago_mp_checkout_err'));
+                }
               }}
             >
               <Text style={styles.btnTextOn}>{tStr('pago_btn_mercadopago')}</Text>

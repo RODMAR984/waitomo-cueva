@@ -217,6 +217,12 @@ export const translations = {
     pago_back: '⬅ Volver',
     pago_copied_title: '📋 Copiado',
     pago_copied_hint: 'Ya podés pegarlo en tu app de pago.',
+    pago_mp_checkout_hint:
+      'Mercado Pago: tarjeta débito/crédito, saldo en cuenta, cuotas y otras billeteras en una sola pantalla.',
+    pago_mp_checkout_unavailable_title: 'Checkout no disponible',
+    pago_mp_checkout_unavailable_msg:
+      'Falta desplegar la función en el servidor o credenciales MP. Podés usar transferencia u otro medio, o probá más tarde.',
+    pago_mp_checkout_err: 'No se pudo abrir el pago con Mercado Pago. Intentá de nuevo.',
 
     // Plan chat
     plan_chat_title_suffix: ' – Chat',
@@ -1429,6 +1435,12 @@ export const translations = {
     pago_back: '⬅ Back',
     pago_copied_title: '📋 Copied',
     pago_copied_hint: 'You can paste it in your payment app.',
+    pago_mp_checkout_hint:
+      'Mercado Pago: debit/credit, account balance, installments and other wallets in one checkout.',
+    pago_mp_checkout_unavailable_title: 'Checkout unavailable',
+    pago_mp_checkout_unavailable_msg:
+      'The server function or MP credentials may be missing. Use bank transfer or try again later.',
+    pago_mp_checkout_err: 'Could not open Mercado Pago checkout. Please try again.',
 
     plan_chat_title_suffix: ' – Chat',
     plan_chat_you: 'You',
