@@ -1,6 +1,6 @@
 // AdminAbonosScreen — CRUD de abonos por plan/organización. Fase 4.
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -51,6 +52,8 @@ function pesosInputToCents(raw) {
 
 export default function AdminAbonosScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const saveLockRef = useRef(false);
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const { profile, organization } = useAuth() || {};
@@ -82,34 +85,39 @@ export default function AdminAbonosScreen() {
     }
   };
 
-  const loadAbonos = async () => {
-    if (!orgId) return;
-    setLoading(true);
-    try {
-      let q = supabase
-        .from('abonos')
-        .select('id, plan_id, name, duration_days, included_sessions, price_cents, currency, is_active')
-        .eq('organization_id', orgId)
-        .order('created_at', { ascending: false });
-      if (filterPlanId) q = q.eq('plan_id', filterPlanId);
-      const { data, error } = await q;
-      if (error) throw error;
-      setAbonos(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.log('AdminAbonos load:', e?.message || e);
-      setAbonos([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadAbonos = useCallback(
+    async (opts = {}) => {
+      const { silent, filterOverride } = opts;
+      const effectiveFilter = filterOverride !== undefined ? filterOverride : filterPlanId;
+      if (!orgId) return;
+      if (!silent) setLoading(true);
+      try {
+        let q = supabase
+          .from('abonos')
+          .select('id, plan_id, name, duration_days, included_sessions, price_cents, currency, is_active')
+          .eq('organization_id', orgId)
+          .order('created_at', { ascending: false });
+        if (effectiveFilter) q = q.eq('plan_id', effectiveFilter);
+        const { data, error } = await q;
+        if (error) throw error;
+        setAbonos(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.log('AdminAbonos load:', e?.message || e);
+        setAbonos([]);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [orgId, filterPlanId],
+  );
 
   useEffect(() => {
     loadPlans();
   }, [orgId]);
 
   useEffect(() => {
-    loadAbonos();
-  }, [orgId, filterPlanId]);
+    loadAbonos({ silent: false });
+  }, [loadAbonos]);
 
   const openEdit = (row) => {
     setEditingId(row.id);
@@ -127,7 +135,7 @@ export default function AdminAbonosScreen() {
     setEditingId(null);
     setFormPlanId(plans[0]?.code || '');
     setFormName('');
-    setFormDurationDays('30');
+    setFormDurationDays('');
     setFormIncludedSessions('');
     setFormPricePesos('');
     setShowNew(true);
@@ -139,6 +147,7 @@ export default function AdminAbonosScreen() {
   };
 
   const saveAbono = async () => {
+    if (saveLockRef.current || saving) return;
     const name = (formName || '').trim();
     const planId = (formPlanId || '').trim();
     if (!name || !planId) {
@@ -149,12 +158,14 @@ export default function AdminAbonosScreen() {
       Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_abonos_no_permission'));
       return;
     }
+    saveLockRef.current = true;
     setSaving(true);
     try {
+      const durationParsed = formDurationDays ? parseInt(formDurationDays, 10) : NaN;
       const payload = {
         plan_id: planId,
         name,
-        duration_days: formDurationDays ? parseInt(formDurationDays, 10) : null,
+        duration_days: !Number.isNaN(durationParsed) && durationParsed > 0 ? durationParsed : 30,
         included_sessions: formIncludedSessions ? parseInt(formIncludedSessions, 10) : null,
         price_cents: pesosInputToCents(formPricePesos),
         currency: 'ARS',
@@ -166,13 +177,15 @@ export default function AdminAbonosScreen() {
       } else {
         const { error } = await supabase.from('abonos').insert({ ...payload, organization_id: orgId });
         if (error) throw error;
+        setFilterPlanId('');
       }
       cancelForm();
-      await loadAbonos();
+      await loadAbonos({ silent: true, filterOverride: '' });
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_save_fail'));
     } finally {
       setSaving(false);
+      saveLockRef.current = false;
     }
   };
 
@@ -180,7 +193,7 @@ export default function AdminAbonosScreen() {
     try {
       const { error } = await supabase.from('abonos').update({ is_active: !row.is_active }).eq('id', row.id);
       if (error) throw error;
-      await loadAbonos();
+      await loadAbonos({ silent: true });
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_update_fail'));
     }
@@ -191,6 +204,8 @@ export default function AdminAbonosScreen() {
     const loc = locale === 'en' ? 'en-US' : 'es-AR';
     return `$${Math.round(cents / 100).toLocaleString(loc)}`;
   };
+
+  const phColor = useMemo(() => hexToRgba(t.subText, 0.48), [t.subText]);
 
   const styles = useMemo(
     () =>
@@ -256,6 +271,7 @@ export default function AdminAbonosScreen() {
           backgroundColor: t.inputBg,
           marginBottom: 12,
           fontSize: 15,
+          fontWeight: '400',
         },
         row: { flexDirection: 'row', gap: 10, marginTop: 8 },
         empty: { paddingVertical: 40, alignItems: 'center' },
@@ -264,12 +280,20 @@ export default function AdminAbonosScreen() {
     [t]
   );
 
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8) + 28;
+
   const formVisible = showNew || editingId;
 
   return (
     <BackgroundWrapper screen="admin">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <View style={styles.header}>
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
               <Ionicons name="arrow-back" size={26} color={t.text} />
@@ -319,7 +343,7 @@ export default function AdminAbonosScreen() {
                 value={formPlanId}
                 onChangeText={setFormPlanId}
                 placeholder={tStr('admin_abonos_ph_plan')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={phColor}
               />
               <Text style={styles.label}>{tStr('admin_abonos_label_name')}</Text>
               <TextInput
@@ -327,7 +351,7 @@ export default function AdminAbonosScreen() {
                 value={formName}
                 onChangeText={setFormName}
                 placeholder={tStr('admin_abonos_ph_name')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={phColor}
               />
               <Text style={styles.label}>{tStr('admin_abonos_label_days')}</Text>
               <TextInput
@@ -335,7 +359,7 @@ export default function AdminAbonosScreen() {
                 value={formDurationDays}
                 onChangeText={setFormDurationDays}
                 placeholder={tStr('admin_abonos_ph_days')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={phColor}
                 keyboardType="number-pad"
               />
               <Text style={styles.label}>{tStr('admin_abonos_label_sessions')}</Text>
@@ -344,7 +368,7 @@ export default function AdminAbonosScreen() {
                 value={formIncludedSessions}
                 onChangeText={setFormIncludedSessions}
                 placeholder={tStr('admin_abonos_ph_sessions')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={phColor}
                 keyboardType="number-pad"
               />
               <Text style={styles.label}>{tStr('admin_abonos_label_price')}</Text>
@@ -353,7 +377,7 @@ export default function AdminAbonosScreen() {
                 value={formPricePesos}
                 onChangeText={setFormPricePesos}
                 placeholder={tStr('admin_abonos_ph_price')}
-                placeholderTextColor={t.placeholder}
+                placeholderTextColor={phColor}
                 keyboardType="decimal-pad"
               />
               <View style={styles.row}>

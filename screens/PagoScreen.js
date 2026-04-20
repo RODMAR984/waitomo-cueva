@@ -93,8 +93,11 @@ export default function PagoScreen({ navigation, route }) {
     return 0;
   };
 
-  // monto puede ser 0 => NO frenamos flujo
-  const monto = parsePrecio(abono?.precio) || parsePrecio(userData?.precio ?? plan?.precio ?? 0);
+  // monto puede ser 0 => NO frenamos flujo (priorizar centavos desde BD; evita parse AR "$ 3.000" → 3)
+  const monto =
+    abono?.price_cents != null && Number.isFinite(Number(abono.price_cents))
+      ? Number(abono.price_cents) / 100
+      : parsePrecio(abono?.precio) || parsePrecio(userData?.precio ?? plan?.precio ?? 0);
   const periodo = new Date().toISOString().slice(0, 7); // YYYY-MM
 
   const copiarDatos = async (texto) => {
