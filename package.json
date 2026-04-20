@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "lint:waitomo": "eslint . --ext .js,.jsx --fix",
     "i18n:check": "node scripts/i18n-check.cjs",
-    "i18n:scan": "node scripts/i18n-scan-literals.cjs"
+    "i18n:scan": "node scripts/i18n-scan-literals.cjs",
+    "preflight": "node scripts/preflight.cjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

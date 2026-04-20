@@ -7,7 +7,7 @@ import { fitengineLogoColors as fe } from '../theme/colors';
 import LogoCompleto from '../components/LogoCompleto';
 import { useLocale } from '../contexts/LocaleContext';
 
-const SPLASH_DURATION_MS = 2200;
+const SPLASH_DURATION_MS = 1600;
 
 export default function SplashScreen() {
   const navigation = useNavigation();

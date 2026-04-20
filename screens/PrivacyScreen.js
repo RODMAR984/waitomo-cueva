@@ -6,11 +6,14 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { getPrivacyBody } from '../content/legal';
 
 export default function PrivacyScreen({ navigation }) {
   const { profile } = useAuth() || {};
   const { t } = useThemeContext();
-  const { t: tStr } = useLocale();
+  const { locale, t: tStr } = useLocale();
+
+  const body = useMemo(() => getPrivacyBody(locale), [locale]);
 
   const styles = useMemo(
     () =>
@@ -36,18 +39,10 @@ export default function PrivacyScreen({ navigation }) {
           textAlign: 'center',
           marginBottom: 16,
         },
-        sectionTitle: {
-          fontSize: 16,
-          fontWeight: '700',
-          color: t.text,
-          marginTop: 10,
-          marginBottom: 6,
-        },
         body: {
           fontSize: 14,
           color: t.subText,
-          lineHeight: 20,
-          marginBottom: 8,
+          lineHeight: 22,
         },
         backButton: {
           marginTop: 16,
@@ -71,18 +66,7 @@ export default function PrivacyScreen({ navigation }) {
         <View style={styles.panel}>
           <Text style={styles.title}>{tStr('privacy_title')}</Text>
           <Text style={styles.subtitle}>{tStr('legal_last_updated_label')} 2026-04-16</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('privacy_section_data_title')}</Text>
-          <Text style={styles.body}>{tStr('privacy_section_data_body')}</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('privacy_section_usage_title')}</Text>
-          <Text style={styles.body}>{tStr('privacy_section_usage_body')}</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('privacy_section_sharing_title')}</Text>
-          <Text style={styles.body}>{tStr('privacy_section_sharing_body')}</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('privacy_section_rights_title')}</Text>
-          <Text style={styles.body}>{tStr('privacy_section_rights_body')}</Text>
+          <Text style={styles.body}>{body}</Text>
 
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
             <Ionicons name="arrow-back" size={18} color={t.primaryText} />

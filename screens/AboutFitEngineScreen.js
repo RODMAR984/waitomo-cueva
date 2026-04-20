@@ -25,7 +25,7 @@ export default function AboutFitEngineScreen() {
   const openMail = useCallback(async () => {
     const e = String(supportEmail || '').trim();
     if (!e) return;
-    const mailto = `mailto:${encodeURIComponent(e)}`;
+    const mailto = `mailto:${e}`;
     try {
       await Linking.openURL(mailto);
     } catch (_) {
@@ -60,6 +60,15 @@ export default function AboutFitEngineScreen() {
         versionLabel: { fontSize: 13, color: t.subText },
         versionValue: { fontSize: 15, fontWeight: '700', color: t.text },
         hint: { fontSize: 12, color: t.subText, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
+        supportFootnote: {
+          fontSize: 11,
+          color: t.subText,
+          textAlign: 'center',
+          lineHeight: 16,
+          marginTop: -4,
+          marginBottom: 12,
+          paddingHorizontal: 8,
+        },
         linkBtn: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -123,15 +132,18 @@ export default function AboutFitEngineScreen() {
           </TouchableOpacity>
 
           {!!String(supportEmail || '').trim() && (
-            <TouchableOpacity style={styles.linkBtn} onPress={openMail} activeOpacity={0.85}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.linkLabel}>{tStr('about_support')}</Text>
-                <Text style={[styles.hint, { textAlign: 'left', marginBottom: 0, marginTop: 4 }]}>
-                  {supportEmail}
-                </Text>
-              </View>
-              <Ionicons name="mail-outline" size={22} color={t.subText} />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity style={styles.linkBtn} onPress={openMail} activeOpacity={0.85}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linkLabel}>{tStr('about_support')}</Text>
+                  <Text style={[styles.hint, { textAlign: 'left', marginBottom: 0, marginTop: 4 }]}>
+                    {supportEmail}
+                  </Text>
+                </View>
+                <Ionicons name="mail-outline" size={22} color={t.subText} />
+              </TouchableOpacity>
+              <Text style={styles.supportFootnote}>{tStr('about_support_note')}</Text>
+            </>
           )}
 
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>

@@ -1,5 +1,4 @@
-// CreaCuentaStaffScreen — Alta de staff (coach/admin). Fondo tipo Welcome.
-// Email + contraseña o Continuar con Google → perfil con role 'coach'. Redirige a AdminLite.
+// CreaCuentaStaffScreen — Alta staff/coach. Misma estética que Login (neutral + FitEngine tokens).
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
@@ -13,21 +12,20 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import LogoCompleto from '../components/LogoCompleto';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
-import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { getThemeTokens } from '../theme/colors';
+import { fitengineLogoColors as fe } from '../theme/colors';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
 export default function CreaCuentaStaffScreen() {
-  const { isDark } = useThemeContext();
-  const t = useMemo(() => getThemeTokens(isDark ? 'dark' : 'light', null), [isDark]);
   const { t: tStr } = useLocale();
   const navigation = useNavigation();
   const { register, signInWithProvider, session, profile, loading, needsFitEngineSpaceSetup, authNavigationReady } =
@@ -42,10 +40,11 @@ export default function CreaCuentaStaffScreen() {
   const [oauthSubmitting, setOauthSubmitting] = useState(false);
 
   useEffect(() => {
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  // Tras OAuth staff: FitEngine sin org propia → ConfiguraTuEspacio; si no, panel.
   useEffect(() => {
     if (!mountedRef.current) return;
     if (!session?.user?.id || loading) return;
@@ -134,38 +133,40 @@ export default function CreaCuentaStaffScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        screen: {
-          flex: 1,
-          padding: 24,
-          paddingTop: 56,
+        kav: { flex: 1 },
+        scrollContent: {
+          flexGrow: 1,
           justifyContent: 'center',
+          padding: 20,
+          paddingTop: 52,
+          paddingBottom: 24,
         },
         panel: {
-          backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
+          backgroundColor: fe.panelBg,
+          borderColor: fe.panelBorder,
           borderRadius: 16,
           borderWidth: 1,
           padding: 20,
         },
         title: {
-          color: t.text,
+          color: fe.text,
           fontSize: 22,
           fontWeight: 'bold',
           marginBottom: 8,
           textAlign: 'center',
         },
         subtitle: {
-          color: t.subText,
+          color: fe.subText,
           fontSize: 14,
           marginBottom: 20,
           textAlign: 'center',
         },
         input: {
-          backgroundColor: t.inputBg,
-          borderColor: t.overlayBorder,
+          backgroundColor: fe.inputBg,
+          borderColor: fe.inputBorder,
           borderRadius: 10,
           borderWidth: 1,
-          color: t.text,
+          color: fe.text,
           paddingHorizontal: 14,
           paddingVertical: 12,
           marginBottom: 12,
@@ -173,19 +174,21 @@ export default function CreaCuentaStaffScreen() {
         },
         button: {
           alignItems: 'center',
-          ...t.buttonPrimary,
+          backgroundColor: fe.buttonBg,
+          borderColor: fe.buttonBorder,
+          borderWidth: 1,
           borderRadius: 10,
           padding: 16,
           marginTop: 8,
         },
-        buttonText: { ...t.buttonPrimaryText, fontSize: 16 },
+        buttonText: { color: fe.buttonText, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
         link: {
           marginTop: 20,
           alignSelf: 'center',
         },
-        linkText: { color: t.subText, fontSize: 14, textDecorationLine: 'underline' },
+        linkText: { color: fe.subText, fontSize: 14, textDecorationLine: 'underline' },
         separatorText: {
-          color: t.subText,
+          color: fe.subText,
           marginTop: 16,
           marginBottom: 8,
           textAlign: 'center',
@@ -193,99 +196,118 @@ export default function CreaCuentaStaffScreen() {
         },
         socialButton: {
           alignItems: 'center',
-          ...t.buttonPrimary,
+          backgroundColor: fe.buttonBg,
+          borderColor: fe.buttonBorder,
+          borderWidth: 1,
           borderRadius: 10,
           padding: 16,
           marginTop: 10,
         },
-        socialButtonText: { ...t.buttonPrimaryText, fontWeight: 'bold', textAlign: 'center' },
+        socialButtonText: { color: fe.buttonText, fontWeight: 'bold', textAlign: 'center' },
       }),
-    [t]
+    [],
   );
 
   const disabled = submitting || oauthSubmitting;
 
   return (
-    <BackgroundWrapper screen="Welcome">
+    <BackgroundWrapper screen="neutral">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={styles.kav}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.screen}>
-            <View style={styles.panel}>
-              <Text style={styles.title}>{tStr('creacuenta_staff_title')}</Text>
-              <Text style={styles.subtitle}>{tStr('creacuenta_staff_subtitle')}</Text>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View>
+              <View style={{ alignItems: 'center', marginBottom: 14 }}>
+                <LogoCompleto height={52} />
+                <Text style={{ color: fe.subText, fontSize: 12, marginTop: 6 }}>{tStr('login_brand_powered')}</Text>
+              </View>
 
-              <TextInput
-                placeholder={tStr('creacuenta_staff_ph_name')}
-              placeholderTextColor={t.placeholder}
-              style={styles.input}
-              value={fullName}
-              onChangeText={setFullName}
-                autoCapitalize="words"
-              />
-              <TextInput
-              placeholder={tStr('login_email')}
-              placeholderTextColor={t.placeholder}
-              style={styles.input}
-              keyboardType="email-address"
-              autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-              <PasswordInput
-                placeholder={tStr('creacuenta_staff_ph_password_help')}
-                placeholderTextColor={t.placeholder}
-                style={styles.input}
-                containerStyle={{ marginBottom: 12 }}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <PasswordInput
-                placeholder={tStr('creacuenta_staff_ph_confirm')}
-                placeholderTextColor={t.placeholder}
-                style={styles.input}
-                containerStyle={{ marginBottom: 12 }}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
+              <View style={styles.panel}>
+                <Text style={styles.title}>{tStr('creacuenta_staff_title')}</Text>
+                <Text style={styles.subtitle}>{tStr('creacuenta_staff_subtitle')}</Text>
 
-              <TouchableOpacity style={styles.button} onPress={handleCrear} disabled={disabled}>
-                <Text style={styles.buttonText}>
-                  {submitting ? tStr('creacuenta_staff_creating') : tStr('creacuenta_staff_btn_create')}
-                </Text>
-              </TouchableOpacity>
+                <TextInput
+                  placeholder={tStr('creacuenta_staff_ph_name')}
+                  placeholderTextColor={fe.placeholder}
+                  style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCapitalize="words"
+                />
+                <TextInput
+                  placeholder={tStr('login_email')}
+                  placeholderTextColor={fe.placeholder}
+                  style={styles.input}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+                <PasswordInput
+                  placeholder={tStr('creacuenta_staff_ph_password_help')}
+                  placeholderTextColor={fe.placeholder}
+                  style={styles.input}
+                  containerStyle={{ marginBottom: 12 }}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <PasswordInput
+                  placeholder={tStr('creacuenta_staff_ph_confirm')}
+                  placeholderTextColor={fe.placeholder}
+                  style={styles.input}
+                  containerStyle={{ marginBottom: 12 }}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
 
-              <Text style={styles.separatorText}>{tStr('creacuenta_staff_or')}</Text>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => handleOAuth('google')}
-                disabled={disabled}
-              >
-                <Text style={styles.socialButtonText}>
-                  {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_google')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, { marginTop: 10 }]}
-                onPress={() => handleOAuth('apple')}
-                disabled={disabled}
-              >
-                <Text style={styles.socialButtonText}>
-                  {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_apple')}
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={handleCrear} disabled={disabled}>
+                  <Text style={styles.buttonText}>
+                    {submitting ? tStr('creacuenta_staff_creating') : tStr('creacuenta_staff_btn_create')}
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.link}
-                onPress={() => navigation.navigate('Login', { forStaff: true })}
-              >
-                <Text style={styles.linkText}>{tStr('creacuenta_staff_has_account')}</Text>
-              </TouchableOpacity>
+                <Text style={styles.separatorText}>{tStr('creacuenta_staff_or')}</Text>
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={() => handleOAuth('google')}
+                  disabled={disabled}
+                >
+                  <Text style={styles.socialButtonText}>
+                    {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_google')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.socialButton, { marginTop: 10 }]}
+                  onPress={() => handleOAuth('apple')}
+                  disabled={disabled}
+                >
+                  <Text style={styles.socialButtonText}>
+                    {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_apple')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.link}
+                  onPress={() => navigation.navigate('Login', { forStaff: true })}
+                >
+                  <Text style={styles.linkText}>{tStr('creacuenta_staff_has_account')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ alignItems: 'center', marginTop: 22 }}>
+                <LogoCompleto height={28} style={{ marginBottom: 6, opacity: 0.85 }} />
+                <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.75 }}>{tStr('gym_config_footer')}</Text>
+              </View>
             </View>
-          </View>
-        </TouchableWithoutFeedback>
+          </TouchableWithoutFeedback>
+        </ScrollView>
       </KeyboardAvoidingView>
     </BackgroundWrapper>
   );

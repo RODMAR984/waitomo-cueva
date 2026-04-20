@@ -32,10 +32,18 @@ const ThemeContext = createContext({
   setMode: () => {},
   isDark: true,
   t: getThemeTokensNeutralShell('dark'),
+  clientThemeLocked: false,
 });
 
+function themePresetToBaseMode(preset) {
+  const p = String(preset || '').toLowerCase();
+  if (p.startsWith('light_')) return 'light';
+  return 'dark';
+}
+
 export const ThemeProvider = ({ children }) => {
-  const { profile, organization, user } = useAuth() || {};
+  const { profile, organization, user, hasClientMembership, hasStaffMembership, activeAppMode } =
+    useAuth() || {};
   const [mode, setModeState] = useState('dark');
   /** Evita flashes neutral→org cuando `organization` es null un instante (refresh, race al hidratar). */
   const lastOrgForThemeRef = useRef(null);
@@ -52,7 +60,31 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [user?.id, organization]);
 
-  const effectiveMode = useMemo(() => getEffectiveMode(mode), [mode]);
+  /** Si el gym lo activa: en experiencia cliente no mezclar preset de la org con claro/oscuro del perfil. */
+  const clientThemeLocked = useMemo(() => {
+    if (!organization?.features?.lock_client_theme) return false;
+    if (!hasClientMembership) return false;
+    if (hasStaffMembership && activeAppMode === 'staff') return false;
+    return true;
+  }, [
+    organization?.features?.lock_client_theme,
+    hasClientMembership,
+    hasStaffMembership,
+    activeAppMode,
+  ]);
+
+  const orgLockedBaseMode = useMemo(
+    () => themePresetToBaseMode(organization?.theme_preset),
+    [organization?.theme_preset],
+  );
+
+  const effectiveMode = useMemo(() => {
+    if (clientThemeLocked) {
+      return orgLockedBaseMode;
+    }
+    return getEffectiveMode(mode);
+  }, [clientThemeLocked, orgLockedBaseMode, mode]);
+
   const isDark = effectiveMode === 'dark';
   const t = useMemo(() => {
     const resolvedOrg =
@@ -135,8 +167,9 @@ export const ThemeProvider = ({ children }) => {
       setMode,
       isDark,
       t,
+      clientThemeLocked,
     }),
-    [theme, mode, setMode, isDark, t],
+    [theme, mode, setMode, isDark, t, clientThemeLocked],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

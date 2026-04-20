@@ -14,7 +14,7 @@ Esto **no** reemplaza las fases de abajo; es trabajo que ya quedó implementado 
 - Chat / novedades (app + RLS, trial por plan en canales).
 - Caché bloques cliente si el servidor devuelve vacío.
 
-**Seguimiento:** checklist manual y pendientes operativos → ver `REVISION_FLUJOS_Y_PUBLICACION.md` §0.3–0.4.
+**Seguimiento:** arranque ordenado → [`PILOTO_EMPEZAR_AQUI.md`](./PILOTO_EMPEZAR_AQUI.md); checklist unificado → [`CHECKLIST_PILOTO_OPERACION_Y_HUMO.md`](./CHECKLIST_PILOTO_OPERACION_Y_HUMO.md); detalle técnico → `REVISION_FLUJOS_Y_PUBLICACION.md` §0.3–0.4.
 
 ---
 
@@ -24,7 +24,7 @@ Esto **no** reemplaza las fases de abajo; es trabajo que ya quedó implementado 
 
 | # | Tema | Qué implica | Estado repo (orientativo) |
 |---|------|-------------|---------------------------|
-| 1 | Privacidad / términos | Enlaces legales coherentes (web + app). | Pantallas `PrivacyScreen` / `TermsScreen` registradas en `App.js`; URLs base en `app.json` → `expo.extra` (`fitenginePrivacyUrl`, `fitengineTermsUrl`, etc.). **Revisar** que las URLs finales apunten a páginas reales y completar `fitengineSupportEmail` si aplica. |
+| 1 | Privacidad / términos | Enlaces legales coherentes (web + app). | Texto legal **en la app** (`content/legal/`, ES/EN). `app.json`: URLs marketing; soporte **`soporte@waitomo.com`**. HTML opcional en `deploy/legal-stub-public/`. |
 | 2 | Acerca de + versión | Marca FitEngine/Waitomo + versión (`expo.version` / `app.json`). | `AboutFitEngineScreen` + rutas en `App.js`. **Revisar** copy y que la versión mostrada sea la deseada. |
 | 3 | Onboarding | Solo si confunde; tooltips o saltar. | **Pendiente criterio producto** (no bloquea piloto si el flujo actual alcanza). |
 
@@ -32,14 +32,14 @@ Esto **no** reemplaza las fases de abajo; es trabajo que ya quedó implementado 
 
 | # | Tema | Qué implica | Estado |
 |---|------|-------------|--------|
-| 4 | Contacto / soporte | `mailto:` o enlace desde Config. | `app.json` tiene `fitengineSupportEmail` vacío → **completar** y enganchar en Config si falta UI. |
-| 5 | Alta de gims | Checklist interno / documentación. | **Mayormente no-código**; puede vivir en otro doc o Notion. |
+| 4 | Contacto / soporte | `mailto:` o enlace desde Config. | `fitengineSupportEmail` **`soporte@waitomo.com`** (Acerca de); **activar buzón** en el dominio cuando corresponda. |
+| 5 | Alta de gims | Checklist interno / documentación. | Definido en [`CHECKLIST_PILOTO_OPERACION_Y_HUMO.md`](./CHECKLIST_PILOTO_OPERACION_Y_HUMO.md) §2. |
 
 ### Fase 3 — Calidad y estabilidad
 
 | # | Tema | Qué implica | Estado |
 |---|------|-------------|--------|
-| 6 | Lista de humo | 10–15 flujos fijos pre-release. | **Definir lista** (puede copiarse/ ampliarse desde §0.4 + §2 del otro doc). |
+| 6 | Lista de humo | 10–15 flujos fijos pre-release. | **15 ítems** en [`CHECKLIST_PILOTO_OPERACION_Y_HUMO.md`](./CHECKLIST_PILOTO_OPERACION_Y_HUMO.md) §3 (+ `REVISION…` §0.4). |
 | 7 | Otro dispositivo / red | Prueba manual. | **Pendiente ejecución** cuando haya build. |
 
 ### Fase 4 — Observabilidad (opcional)
@@ -81,12 +81,12 @@ Esto **no** reemplaza las fases de abajo; es trabajo que ya quedó implementado 
 
 ## D) Cómo seguimos en la práctica (para el agente / el equipo)
 
-1. **Seguir numerando por fases** (B): priorizar Fase 1 pendientes de verificación (URLs reales, soporte, copy) → Fase 2 → Fase 3.
+1. **Ejecutar** [`CHECKLIST_PILOTO_OPERACION_Y_HUMO.md`](./CHECKLIST_PILOTO_OPERACION_Y_HUMO.md): §1 (piloto) → §2 (alta gims) → §3 (humo) → §4 (migraciones).
 2. **En paralelo** cerrar QA del bloque técnico (memo **A** + `REVISION…` §0).
 3. **Cuando el mínimo (C) esté listo** → calendarizar piloto sin esperar Fase 6.
 4. **Fase 6** solo cuando checklist **`REVISION…` §2** esté razonablemente verde.
 
-**Siguiente paso sugerido:** Fase 1 — revisar/enlazar URLs legales finales + `fitengineSupportEmail` + entrada visible en Config (si falta). Luego Fase 2 punto 4.
+**Siguiente paso sugerido:** correr §3 humo en dispositivo real; activar buzón `soporte@waitomo.com` si aún no responde; fijar fecha piloto cuando §1 esté en verde.
 
 ---
 

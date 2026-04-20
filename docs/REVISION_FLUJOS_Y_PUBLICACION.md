@@ -2,6 +2,8 @@
 
 **Ruta producto / piloto / lanzamiento (memo por fases):** [`ROADMAP_MEMO_PRODUCTO_Y_LANZAMIENTO.md`](./ROADMAP_MEMO_PRODUCTO_Y_LANZAMIENTO.md).
 
+**Checklist operativo (piloto + alta gims + lista de humo):** [`CHECKLIST_PILOTO_OPERACION_Y_HUMO.md`](./CHECKLIST_PILOTO_OPERACION_Y_HUMO.md).
+
 ## Resumen ejecutivo
 
 - **¿Publicar ya en Apple y Google?** Depende de tu checklist interno. La app puede salir de Expo Go y publicarse cuando: (1) los flujos por plan estén validados, (2) tengas Sign in with Apple (si usas otros logins sociales), (3) tengas cuentas y builds listos (EAS, Apple Developer, Google Play).
@@ -32,6 +34,8 @@ Migraciones de referencia: `20250410400000_trial_class_grants_status_booking_rpc
 - **i18n:** `npm run i18n:check` OK.
 
 ### 0.3 Pendientes (lo que sigue a cargo vuestro / QA)
+
+Lista unificada (15 flujos + piloto + alta gym): [`CHECKLIST_PILOTO_OPERACION_Y_HUMO.md`](./CHECKLIST_PILOTO_OPERACION_Y_HUMO.md).
 
 1. **Probar en dispositivo real** (mismo checklist que antes): reservar → cambiar fecha → cancelar **dentro** del margen → cancelar **fuera** del margen (debe bloquear) → pasar el día de la clase (acceso trial cortado / no-show en servidor).
 2. **`supabase db push`** (o equivalente) en el proyecto **correcto** para aplicar `20250410420000` y `20250410421000` si aún no están en remoto.

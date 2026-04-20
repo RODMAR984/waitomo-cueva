@@ -6,11 +6,14 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { getTermsBody } from '../content/legal';
 
 export default function TermsScreen({ navigation }) {
   const { profile } = useAuth() || {};
   const { t } = useThemeContext();
-  const { t: tStr } = useLocale();
+  const { locale, t: tStr } = useLocale();
+
+  const body = useMemo(() => getTermsBody(locale), [locale]);
 
   const styles = useMemo(
     () =>
@@ -36,18 +39,10 @@ export default function TermsScreen({ navigation }) {
           textAlign: 'center',
           marginBottom: 16,
         },
-        sectionTitle: {
-          fontSize: 16,
-          fontWeight: '700',
-          color: t.text,
-          marginTop: 10,
-          marginBottom: 6,
-        },
         body: {
           fontSize: 14,
           color: t.subText,
-          lineHeight: 20,
-          marginBottom: 8,
+          lineHeight: 22,
         },
         backButton: {
           marginTop: 16,
@@ -71,18 +66,7 @@ export default function TermsScreen({ navigation }) {
         <View style={styles.panel}>
           <Text style={styles.title}>{tStr('terms_title')}</Text>
           <Text style={styles.subtitle}>{tStr('legal_last_updated_label')} 2026-04-16</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('terms_section_access_title')}</Text>
-          <Text style={styles.body}>{tStr('terms_section_access_body')}</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('terms_section_content_title')}</Text>
-          <Text style={styles.body}>{tStr('terms_section_content_body')}</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('terms_section_payments_title')}</Text>
-          <Text style={styles.body}>{tStr('terms_section_payments_body')}</Text>
-
-          <Text style={styles.sectionTitle}>{tStr('terms_section_conduct_title')}</Text>
-          <Text style={styles.body}>{tStr('terms_section_conduct_body')}</Text>
+          <Text style={styles.body}>{body}</Text>
 
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
             <Ionicons name="arrow-back" size={18} color={t.primaryText} />

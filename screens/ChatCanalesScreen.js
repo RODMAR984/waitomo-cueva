@@ -47,10 +47,12 @@ export default function ChatCanalesScreen() {
   const hasDbPlan = !!dbPlan;
   const hasLocalPlan = !!(activePlanId && String(activePlanId).trim());
 
-  const planCanon = useMemo(() => normalizePlanKey(profile?.plan_actual ?? profile?.planActual), [
-    profile?.plan_actual,
-    profile?.planActual,
-  ]);
+  /** Mismo criterio que ClientScreen: plan activo elegido (Welcome/selector) primero. */
+  const planCanon = useMemo(() => {
+    const fromCtx = normalizePlanKey(activePlanId);
+    if (fromCtx) return fromCtx;
+    return normalizePlanKey(profile?.plan_actual ?? profile?.planActual);
+  }, [activePlanId, profile?.plan_actual, profile?.planActual]);
 
   const communityAccess = useMemo(
     () =>
@@ -74,7 +76,7 @@ export default function ChatCanalesScreen() {
     AsyncStorage.setItem('waitomo_chat_last_open', new Date().toISOString()).catch(() => {});
   }, []);
 
-  const planRefetchKey = profile?.plan_actual ?? profile?.planActual;
+  const planRefetchKey = `${activePlanId ?? ''}|${profile?.plan_actual ?? profile?.planActual ?? ''}`;
 
   useEffect(() => {
     if (!user?.id) {
@@ -119,7 +121,7 @@ export default function ChatCanalesScreen() {
         setChannels(rows);
         return;
       }
-      const filtered = rows.filter((ch) =>
+      const entitled = rows.filter((ch) =>
         evaluateCalendarioAccess({
           planCanonKey: normalizePlanKey(ch.plan_id),
           organizationId: orgId,
@@ -128,13 +130,27 @@ export default function ChatCanalesScreen() {
           freeClassGrant,
         }).ok,
       );
-      setChannels(filtered);
+      // Cliente: solo el canal de la actividad / plan en el que está ahora (no mezclar Cross con Yoga, etc.).
+      let list = entitled;
+      if (!showAllChatChannels && planCanon) {
+        list = entitled.filter((ch) => normalizePlanKey(ch.plan_id) === planCanon);
+      }
+      setChannels(list);
     } catch {
       setChannels([]);
     } finally {
       setLoading(false);
     }
-  }, [orgId, communityAccess.ok, communityAccess.reason, showAllChatChannels, abonoRow, abonoLoading, freeClassGrant]);
+  }, [
+    orgId,
+    communityAccess.ok,
+    communityAccess.reason,
+    showAllChatChannels,
+    abonoRow,
+    abonoLoading,
+    freeClassGrant,
+    planCanon,
+  ]);
 
   useFocusEffect(
     useCallback(() => {

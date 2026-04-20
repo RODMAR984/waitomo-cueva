@@ -15,6 +15,7 @@ import {
   Platform,
   BackHandler,
   Share,
+  Switch,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,6 +99,10 @@ export default function GymConfigScreen() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBackground, setUploadingBackground] = useState(false);
   const [inviteBusy, setInviteBusy] = useState(false);
+  /** Si true, clientes no pueden forzar claro/oscuro en Config: sigue el preset del gym. */
+  const [lockClientTheme, setLockClientTheme] = useState(
+    !!organization?.features?.lock_client_theme,
+  );
   /** Paleta completa plegada por defecto (menos invasiva). */
   const [paletteOpenKey, setPaletteOpenKey] = useState(null);
 
@@ -116,6 +121,7 @@ export default function GymConfigScreen() {
       setBorderColor(organization.features?.ui_border_color || '');
       setOverlayColor(organization.features?.ui_overlay_color || '');
       setClientWelcomeMessage(organization.features?.client_welcome_message || '');
+      setLockClientTheme(!!organization.features?.lock_client_theme);
     }
   }, [
     organization?.id,
@@ -316,6 +322,9 @@ export default function GymConfigScreen() {
       if (welcomeTrim) prevFeatures.client_welcome_message = welcomeTrim;
       else delete prevFeatures.client_welcome_message;
 
+      if (lockClientTheme) prevFeatures.lock_client_theme = true;
+      else delete prevFeatures.lock_client_theme;
+
       const { error } = await supabase
         .from('organizations')
         .update({
@@ -338,6 +347,58 @@ export default function GymConfigScreen() {
       setSaving(false);
     }
   };
+
+  const applyFitEngineDefaults = useCallback(async () => {
+    if (!canEdit || !orgId) return;
+    setAccentColor('#00dddd');
+    setThemePreset('dark_vivid');
+    setTextColor('');
+    setTextSecondaryColor('');
+    setSurfaceColor('');
+    setBorderColor('');
+    setOverlayColor('');
+    setSaving(true);
+    try {
+      const prevFeatures =
+        organization?.features && typeof organization.features === 'object' && !Array.isArray(organization.features)
+          ? { ...organization.features }
+          : {};
+      delete prevFeatures.text_color;
+      delete prevFeatures.text_secondary_color;
+      delete prevFeatures.ui_surface_color;
+      delete prevFeatures.ui_border_color;
+      delete prevFeatures.ui_overlay_color;
+      const welcomeTrim = (clientWelcomeMessage || '').trim();
+      if (welcomeTrim) prevFeatures.client_welcome_message = welcomeTrim;
+      else delete prevFeatures.client_welcome_message;
+      if (lockClientTheme) prevFeatures.lock_client_theme = true;
+      else delete prevFeatures.lock_client_theme;
+
+      const { error } = await supabase
+        .from('organizations')
+        .update({
+          accent_color: '#00dddd',
+          theme_preset: 'dark_vivid',
+          features: prevFeatures,
+        })
+        .eq('id', orgId);
+      if (error) throw error;
+      if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
+      Alert.alert(tStr('gym_reset_fitengine_applied_title'), tStr('gym_reset_fitengine_applied_body'));
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_save_fail'));
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    canEdit,
+    orgId,
+    organization?.features,
+    clientWelcomeMessage,
+    lockClientTheme,
+    refreshOrganization,
+    tStr,
+  ]);
 
   const ensureOrRotateInviteCode = useCallback(async () => {
     if (!orgId || !canEdit) return;
@@ -637,6 +698,7 @@ export default function GymConfigScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
@@ -757,6 +819,42 @@ export default function GymConfigScreen() {
           </View>
           <Text style={styles.hint}>{tStr(`gym_preset_hint_${themePreset}`) || ''}</Text>
           <Text style={styles.hint}>{tStr('gym_config_theme_global_hint')}</Text>
+          {canEdit ? (
+            <TouchableOpacity
+              style={[styles.logoBtn, { marginTop: 12, alignSelf: 'flex-start', opacity: saving ? 0.6 : 1 }]}
+              onPress={() => applyFitEngineDefaults()}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={t.brand} />
+              ) : (
+                <Text style={styles.logoBtnText}>{tStr('gym_reset_fitengine_cta')}</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 16,
+              paddingVertical: 8,
+              gap: 12,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.subHeading}>{tStr('gym_lock_client_theme_title')}</Text>
+              <Text style={styles.hint}>{tStr('gym_lock_client_theme_hint')}</Text>
+            </View>
+            <Switch
+              value={lockClientTheme}
+              onValueChange={canEdit ? setLockClientTheme : undefined}
+              disabled={!canEdit}
+              trackColor={{ false: t.overlayBorder, true: t.brand }}
+              thumbColor="#f4ffff"
+            />
+          </View>
         </View>
 
         <View style={styles.block}>

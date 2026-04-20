@@ -31,10 +31,9 @@ const MODES = [
 
 const ConfigScreen = () => {
   const navigation = useNavigation();
-  const { t } = useThemeContext();
+  const { t, mode, setMode, clientThemeLocked } = useThemeContext();
   const { t: tStr, locale, setLocale } = useLocale();
   const { profile, updateProfile } = useAuth();
-  const { mode, setMode } = useThemeContext();
 
   const themeMode = profile?.theme_mode ?? mode ?? 'dark';
 
@@ -222,33 +221,39 @@ const ConfigScreen = () => {
             </View>
           </View>
 
-          {/* Apariencia */}
+          {/* Apariencia (el gym puede fijar tema según su preset; ver GymConfig) */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="color-palette-outline" size={18} color={t.text} />
               <Text style={styles.sectionTitle}>{tStr('config_appearance')}</Text>
             </View>
-            <View style={styles.modeRow}>
-              {MODES.map((m) => {
-                const isActive = themeMode === m.key;
-                const btnStyle = isActive
-                  ? { ...t.buttonPrimary, borderWidth: 2, borderColor: t.borderStrong ?? t.brand }
-                  : { backgroundColor: t.segmentInactiveBg ?? t.faintStrong, borderColor: t.overlayBorder, borderWidth: 1 };
-                const textColor = isActive ? (t.primaryText ?? '#f4ffff') : (t.segmentInactiveText ?? t.text);
-                return (
-                  <TouchableOpacity
-                    key={m.key}
-                    style={[styles.modeBtn, btnStyle]}
-                    onPress={() => handleModePress(m.key)}
-                    activeOpacity={0.9}
-                  >
-                    <Ionicons name={m.icon} size={18} color={textColor} />
-                    <Text style={[styles.modeBtnText, { color: textColor }]}>{tStr(m.labelKey)}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <Text style={styles.rowHint}>{tStr('config_defaultThemeHint')}</Text>
+            {clientThemeLocked ? (
+              <Text style={styles.rowHint}>{tStr('config_theme_locked_by_org')}</Text>
+            ) : (
+              <>
+                <View style={styles.modeRow}>
+                  {MODES.map((m) => {
+                    const isActive = themeMode === m.key;
+                    const btnStyle = isActive
+                      ? { ...t.buttonPrimary, borderWidth: 2, borderColor: t.borderStrong ?? t.brand }
+                      : { backgroundColor: t.segmentInactiveBg ?? t.faintStrong, borderColor: t.overlayBorder, borderWidth: 1 };
+                    const textColor = isActive ? (t.primaryText ?? '#f4ffff') : (t.segmentInactiveText ?? t.text);
+                    return (
+                      <TouchableOpacity
+                        key={m.key}
+                        style={[styles.modeBtn, btnStyle]}
+                        onPress={() => handleModePress(m.key)}
+                        activeOpacity={0.9}
+                      >
+                        <Ionicons name={m.icon} size={18} color={textColor} />
+                        <Text style={[styles.modeBtnText, { color: textColor }]}>{tStr(m.labelKey)}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={styles.rowHint}>{tStr('config_defaultThemeHint')}</Text>
+              </>
+            )}
           </View>
 
           {/* Notificaciones */}
