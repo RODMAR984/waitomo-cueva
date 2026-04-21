@@ -89,8 +89,45 @@ export default function AdminResumenScreen() {
   const [abonoByUser, setAbonoByUser] = useState({});
   const [pendingPayments, setPendingPayments] = useState([]);
   const [expandedSlots, setExpandedSlots] = useState({});
+  /** Tarjeta colapsada = solo franja + pastilla (como el mock). */
+  const [slotListOpen, setSlotListOpen] = useState({});
 
   const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
+
+  useEffect(() => {
+    setExpandedSlots({});
+    setSlotListOpen({});
+  }, [ymd]);
+
+  const longDateLabel = useMemo(() => {
+    try {
+      const [y, m, da] = ymd.split('-').map(Number);
+      if ([y, m, da].some((n) => Number.isNaN(n))) return ymd;
+      return new Date(y, m - 1, da).toLocaleDateString(dateLocale, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return ymd;
+    }
+  }, [ymd, dateLocale]);
+
+  const isSlotListOpen = useCallback(
+    (slotKey, trialsLen) => {
+      if (slotListOpen[slotKey] !== undefined) return slotListOpen[slotKey];
+      return trialsLen === 0;
+    },
+    [slotListOpen],
+  );
+
+  const toggleSlotList = useCallback((slotKey, trialsLen) => {
+    setSlotListOpen((prev) => {
+      const cur = prev[slotKey] !== undefined ? prev[slotKey] : trialsLen === 0;
+      return { ...prev, [slotKey]: !cur };
+    });
+  }, []);
 
   const load = useCallback(async () => {
     if (!orgId) {
@@ -367,86 +404,117 @@ export default function AdminResumenScreen() {
     () =>
       StyleSheet.create({
         root: { flex: 1 },
-        header: {
+        topBar: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingTop: Math.max(insets.top, 12) + 6,
-          paddingBottom: 10,
+          justifyContent: 'space-between',
+          paddingHorizontal: 12,
+          paddingTop: Math.max(insets.top, 10) + 4,
+          paddingBottom: 4,
         },
-        backBtn: { padding: 8, marginLeft: -8 },
-        title: {
+        backBtn: { padding: 10, marginLeft: -4 },
+        iconBtn: { padding: 10 },
+        hero: {
+          paddingHorizontal: 20,
+          paddingBottom: 14,
+        },
+        heroDateRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: 4,
+          marginBottom: 6,
+        },
+        dateNav: { padding: 8 },
+        longDate: {
           flex: 1,
-          color: t.brandText ?? t.brand,
-          fontSize: 18,
+          textAlign: 'center',
+          color: t.subText,
+          fontSize: 14,
+          fontWeight: '600',
+          paddingHorizontal: 6,
+        },
+        heroTitle: {
+          color: t.text,
+          fontSize: 28,
           fontWeight: '800',
-          marginHorizontal: 6,
-        },
-        dateRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 12,
-          paddingVertical: 8,
-          paddingHorizontal: 16,
-        },
-        dateNav: { padding: 10 },
-        dateText: { color: t.text, fontSize: 16, fontWeight: '700', minWidth: 160, textAlign: 'center' },
-        statsCard: {
-          marginHorizontal: 16,
-          marginBottom: 10,
-          padding: 12,
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: t.overlayBorder,
-          backgroundColor: t.boxBg,
-        },
-        statsText: { color: t.subText, fontSize: 13, lineHeight: 20 },
-        footnote: {
-          marginHorizontal: 16,
+          letterSpacing: -0.3,
           marginBottom: 12,
-          paddingHorizontal: 4,
+        },
+        heroDivider: {
+          height: StyleSheet.hairlineWidth,
+          backgroundColor: t.overlayBorder,
+          marginBottom: 10,
+        },
+        heroMeta: {
           color: t.placeholder,
           fontSize: 12,
           lineHeight: 18,
         },
+        heroFoot: {
+          color: t.placeholder,
+          fontSize: 11,
+          lineHeight: 16,
+          marginTop: 6,
+        },
+        screenTitle: {
+          color: t.text,
+          fontSize: 28,
+          fontWeight: '800',
+          paddingHorizontal: 20,
+          marginBottom: 8,
+        },
         sectionTitle: {
           color: t.text,
-          fontSize: 19,
+          fontSize: 16,
           fontWeight: '800',
-          marginHorizontal: 16,
+          marginHorizontal: 20,
           marginBottom: 10,
-          marginTop: 8,
+          marginTop: 18,
+        },
+        sectionHint: {
+          color: t.placeholder,
+          fontSize: 12,
+          marginHorizontal: 20,
+          marginTop: -6,
+          marginBottom: 10,
+          lineHeight: 17,
         },
         slotCard: {
-          marginHorizontal: 16,
-          marginBottom: 12,
-          borderRadius: 16,
+          marginHorizontal: 20,
+          marginBottom: 14,
+          borderRadius: 18,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
           overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOpacity: 0.12,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 3,
         },
         slotHead: {
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: t.overlayBorder,
-          backgroundColor: t.overlayBg ?? t.faintStrong,
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          backgroundColor: t.boxBg,
         },
-        slotTopLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-        slotHeadLine1: { color: t.text, fontSize: 23, fontWeight: '700', flex: 1 },
-        occupancyPill: {
+        slotTopLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+        slotTitleMain: { color: t.text, fontSize: 17, fontWeight: '800', flex: 1 },
+        countPill: {
+          minWidth: 40,
+          alignItems: 'center',
           paddingHorizontal: 10,
           paddingVertical: 5,
           borderRadius: 999,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          backgroundColor: hexToRgbaLocal(t.brand || '#22d3ee', 0.14),
         },
-        occupancyText: { color: t.text, fontSize: 12, fontWeight: '800' },
-        slotHeadLine2: { color: t.subText, fontSize: 12, marginTop: 4, lineHeight: 17 },
-        slotHeadLine3: { color: t.placeholder, fontSize: 11, marginTop: 5 },
+        countPillZero: { backgroundColor: hexToRgbaLocal(t.subText || '#94a3b8', 0.12) },
+        countPillHas: { backgroundColor: hexToRgbaLocal(t.brand || '#22d3ee', 0.2) },
+        countPillText: { color: t.text, fontSize: 13, fontWeight: '800' },
+        slotHeadLine2: { color: t.subText, fontSize: 13, marginTop: 8, lineHeight: 18 },
+        slotHeadLine3: { color: t.placeholder, fontSize: 12, marginTop: 4 },
         personRow: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -479,24 +547,20 @@ export default function AdminResumenScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: 14,
-          paddingVertical: 10,
+          paddingHorizontal: 16,
+          paddingVertical: 12,
         },
         moreCount: { color: t.subText, fontSize: 14, fontWeight: '600' },
         linkBtn: {
-          paddingHorizontal: 10,
           paddingVertical: 6,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: t.overlayBorder,
-          backgroundColor: t.inputBg,
+          paddingHorizontal: 4,
         },
-        linkTxt: { color: t.brand, fontSize: 13, fontWeight: '700' },
+        linkTxt: { color: t.brand, fontSize: 15, fontWeight: '700' },
         empty: { paddingVertical: 22, paddingHorizontal: 24, alignItems: 'center' },
         emptyText: { color: t.placeholder, textAlign: 'center', fontSize: 14, lineHeight: 20 },
-        err: { color: t.danger, marginHorizontal: 16, marginBottom: 10, fontSize: 14 },
+        err: { color: t.danger, marginHorizontal: 20, marginBottom: 10, fontSize: 14 },
         payRow: {
-          marginHorizontal: 16,
+          marginHorizontal: 20,
           marginBottom: 8,
           padding: 12,
           borderRadius: 12,
@@ -507,7 +571,7 @@ export default function AdminResumenScreen() {
         payLine: { color: t.text, fontSize: 14 },
         paySub: { color: t.subText, fontSize: 12, marginTop: 4 },
         cancelRow: {
-          marginHorizontal: 16,
+          marginHorizontal: 20,
           marginBottom: 6,
           paddingVertical: 8,
           paddingHorizontal: 12,
@@ -575,12 +639,13 @@ export default function AdminResumenScreen() {
     return (
       <BackgroundWrapper screen="admin">
         <View style={styles.root}>
-          <View style={styles.header}>
+          <View style={styles.topBar}>
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
               <Ionicons name="arrow-back" size={26} color={t.text} />
             </TouchableOpacity>
-            <Text style={styles.title}>{tStr('admin_resumen_title')}</Text>
+            <View style={{ flex: 1 }} />
           </View>
+          <Text style={styles.screenTitle}>{tStr('admin_resumen_title')}</Text>
           <View style={styles.empty}>
             <Text style={styles.emptyText}>{tStr('admin_resumen_no_org')}</Text>
           </View>
@@ -591,46 +656,47 @@ export default function AdminResumenScreen() {
 
   const { rows: agendaRows, orphans } = scheduleRows;
 
+  const statsLine = tStr('admin_resumen_stats')
+    .replace('{{blocks}}', String(stats.nBlocks))
+    .replace('{{trials}}', String(stats.nTrials))
+    .replace('{{abono}}', String(stats.nAbono))
+    .replace('{{trial}}', String(stats.nTrial))
+    .replace('{{debt}}', String(stats.nDebt))
+    .replace('{{other}}', String(stats.nOther));
+
   return (
     <BackgroundWrapper screen="admin">
       <View style={styles.root}>
-        <View style={styles.header}>
+        <View style={styles.topBar}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={26} color={t.text} />
           </TouchableOpacity>
-          <Text style={styles.title} numberOfLines={2}>
-            {tStr('admin_resumen_title')}
-          </Text>
+          <View style={{ flex: 1 }} />
           <TouchableOpacity
             onPress={onRefresh}
-            style={{ padding: 8 }}
+            style={styles.iconBtn}
             accessibilityLabel={tStr('common_refresh')}
           >
             <Ionicons name="refresh" size={22} color={t.brand} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.dateRow}>
-          <TouchableOpacity style={styles.dateNav} onPress={() => setYmd((d) => shiftYmd(d, -1))}>
-            <Ionicons name="chevron-back" size={26} color={t.brand} />
-          </TouchableOpacity>
-          <Text style={styles.dateText}>
-            {(() => {
-              try {
-                const [y, m, da] = ymd.split('-').map(Number);
-                return new Date(y, m - 1, da).toLocaleDateString(dateLocale, {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                });
-              } catch {
-                return ymd;
-              }
-            })()}
-          </Text>
-          <TouchableOpacity style={styles.dateNav} onPress={() => setYmd((d) => shiftYmd(d, 1))}>
-            <Ionicons name="chevron-forward" size={26} color={t.brand} />
-          </TouchableOpacity>
+        <View style={styles.hero}>
+          <View style={styles.heroDateRow}>
+            <TouchableOpacity style={styles.dateNav} onPress={() => setYmd((d) => shiftYmd(d, -1))}>
+              <Ionicons name="chevron-back" size={24} color={t.brand} />
+            </TouchableOpacity>
+            <Text style={styles.longDate} numberOfLines={2}>
+              {longDateLabel}
+            </Text>
+            <TouchableOpacity style={styles.dateNav} onPress={() => setYmd((d) => shiftYmd(d, 1))}>
+              <Ionicons name="chevron-forward" size={24} color={t.brand} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.heroTitle}>{tStr('admin_resumen_title')}</Text>
+          <View style={styles.heroDivider} />
+          <Text style={styles.heroMeta}>{statsLine}</Text>
+          <Text style={styles.heroFoot}>{tStr('admin_resumen_footnote')}</Text>
         </View>
 
         {loading ? (
@@ -646,67 +712,100 @@ export default function AdminResumenScreen() {
           >
             {error ? <Text style={styles.err}>{error}</Text> : null}
 
-            <View style={styles.statsCard}>
-              <Text style={styles.statsText}>
-                {tStr('admin_resumen_stats')
-                  .replace('{{blocks}}', String(stats.nBlocks))
-                  .replace('{{trials}}', String(stats.nTrials))
-                  .replace('{{abono}}', String(stats.nAbono))
-                  .replace('{{trial}}', String(stats.nTrial))
-                  .replace('{{debt}}', String(stats.nDebt))
-                  .replace('{{other}}', String(stats.nOther))}
-              </Text>
-            </View>
-
-            <Text style={styles.sectionTitle}>{tStr('admin_resumen_section_schedule')}</Text>
             {agendaRows.length === 0 ? (
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>{tStr('admin_resumen_empty_schedule')}</Text>
               </View>
             ) : (
-              agendaRows.map((row) => (
-                <View key={row.matchKey} style={styles.slotCard}>
-                  <View style={styles.slotHead}>
-                    <View style={styles.slotTopLine}>
-                      <Text style={styles.slotHeadLine1}>
-                        {tStr('admin_resumen_slot_line')
-                          .replace('{{plan}}', row.planTitle)
-                          .replace('{{slot}}', String(row.slotLabel || '—'))}
-                      </Text>
-                      <View style={styles.occupancyPill}>
-                        <Text style={styles.occupancyText}>
-                          {tStr('admin_resumen_count_people').replace('{{count}}', String(row.trials.length))}
-                        </Text>
+              agendaRows.map((row) => {
+                const slotOpen = isSlotListOpen(row.matchKey, row.trials.length);
+                return (
+                  <View key={row.matchKey} style={styles.slotCard}>
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onPress={() => toggleSlotList(row.matchKey, row.trials.length)}
+                    >
+                      <View style={styles.slotHead}>
+                        <View style={styles.slotTopLine}>
+                          <Text style={styles.slotTitleMain}>
+                            {tStr('admin_resumen_slot_header')
+                              .replace('{{slot}}', String(row.slotLabel || '—'))
+                              .replace('{{plan}}', row.planTitle)}
+                          </Text>
+                          <View
+                            style={[
+                              styles.countPill,
+                              row.trials.length ? styles.countPillHas : styles.countPillZero,
+                            ]}
+                          >
+                            <Text style={styles.countPillText}>{String(row.trials.length)}</Text>
+                          </View>
+                          <Ionicons
+                            name={slotOpen ? 'chevron-up' : 'chevron-down'}
+                            size={22}
+                            color={t.subText}
+                          />
+                        </View>
+                        {slotOpen ? (
+                          <>
+                            {row.titulo && row.titulo !== '—' ? (
+                              <Text style={styles.slotHeadLine2} numberOfLines={2}>
+                                {row.titulo}
+                              </Text>
+                            ) : null}
+                            <Text style={styles.slotHeadLine3}>
+                              {tStr('admin_resumen_coach_line').replace('{{coach}}', row.coachName)}
+                            </Text>
+                          </>
+                        ) : null}
                       </View>
-                    </View>
-                    <Text style={styles.slotHeadLine2} numberOfLines={2}>
-                      {row.titulo}
-                    </Text>
-                    <Text style={styles.slotHeadLine3}>
-                      {tStr('admin_resumen_coach_line').replace('{{coach}}', row.coachName)}
-                    </Text>
+                    </TouchableOpacity>
+                    {slotOpen ? renderTrialRows(row.trials, row.matchKey) : null}
                   </View>
-                  {renderTrialRows(row.trials, row.matchKey)}
-                </View>
-              ))
+                );
+              })
             )}
 
             {orphans.length ? (
               <>
-                <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{tStr('admin_resumen_section_orphan')}</Text>
-                {orphans.map((row) => (
-                  <View key={`orphan-${row.matchKey}`} style={styles.slotCard}>
-                    <View style={styles.slotHead}>
-                      <Text style={styles.slotHeadLine1}>
-                        {tStr('admin_resumen_slot_line')
-                          .replace('{{plan}}', row.planTitle)
-                          .replace('{{slot}}', String(row.slotLabel || '—'))}
-                      </Text>
-                      <Text style={styles.slotHeadLine2}>{tStr('admin_resumen_orphan_hint')}</Text>
+                <Text style={styles.sectionTitle}>{tStr('admin_resumen_section_orphan')}</Text>
+                <Text style={styles.sectionHint}>{tStr('admin_resumen_orphan_hint')}</Text>
+                {orphans.map((row) => {
+                  const oKey = `orphan-${row.matchKey}`;
+                  const slotOpen = isSlotListOpen(oKey, row.trials.length);
+                  return (
+                    <View key={oKey} style={styles.slotCard}>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => toggleSlotList(oKey, row.trials.length)}
+                      >
+                        <View style={styles.slotHead}>
+                          <View style={styles.slotTopLine}>
+                            <Text style={styles.slotTitleMain}>
+                              {tStr('admin_resumen_slot_header')
+                                .replace('{{slot}}', String(row.slotLabel || '—'))
+                                .replace('{{plan}}', row.planTitle)}
+                            </Text>
+                            <View
+                              style={[
+                                styles.countPill,
+                                row.trials.length ? styles.countPillHas : styles.countPillZero,
+                              ]}
+                            >
+                              <Text style={styles.countPillText}>{String(row.trials.length)}</Text>
+                            </View>
+                            <Ionicons
+                              name={slotOpen ? 'chevron-up' : 'chevron-down'}
+                              size={22}
+                              color={t.subText}
+                            />
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                      {slotOpen ? renderTrialRows(row.trials, oKey) : null}
                     </View>
-                    {renderTrialRows(row.trials)}
-                  </View>
-                ))}
+                  );
+                })}
               </>
             ) : null}
 
