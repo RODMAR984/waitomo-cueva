@@ -225,6 +225,8 @@ export const translations = {
     pago_mp_checkout_err: 'No se pudo abrir el pago con Mercado Pago. Intentá de nuevo.',
     pago_international_note:
       'Cobro en pesos (Argentina) con Mercado Pago. Si tu tarjeta o país no permite pagar acá, escribinos a soporte@waitomo.com o coordiná transferencia / datos con tu gym. Vamos ampliando medios según la demanda.',
+    pago_no_methods_configured:
+      'Tu gym aún no habilitó medios de pago. Pedile al administrador que active al menos uno en Configuración del gym.',
 
     // Plan chat
     plan_chat_title_suffix: ' – Chat',
@@ -289,7 +291,8 @@ export const translations = {
 
     admin_menu_perfil_sub: 'Cuenta y datos personales',
     admin_menu_marca_title: 'Marca y apariencia',
-    admin_menu_marca_sub: 'Logo, fondo, colores y mensaje opcional en el selector de planes',
+    admin_menu_marca_sub:
+      'Logo, fondo, colores, invitaciones, formas de pago a socios y mensaje opcional en el selector de planes',
     gym_invite_hint_long:
       'El enlace HTTPS (fitengine.app/join) es el mejor para mail y WhatsApp. El texto waitomo:// solo sirve con la app ya instalada en algunos chats.',
     gym_invite_copy_code: 'Copiar solo el código',
@@ -336,6 +339,17 @@ export const translations = {
     gym_config_welcome_hint:
       'Opcional. Aparece en el selector de programas, debajo de «Bienvenido a [tu gym]», antes de elegir plan.',
     gym_config_welcome_ph: 'Ej. Elegí el programa que te hayan indicado o el que más te guste.',
+    gym_config_payment_section_title: 'Formas de pago (socios)',
+    gym_config_payment_section_hint:
+      'Activá solo lo que ofrecés. Mercado Pago abre la página de checkout (tarjetas, saldo MP, cuotas). Transferencia / DNI / MODO copian el texto que cargues abajo.',
+    gym_config_payment_toggle_mp: 'Mercado Pago (checkout web)',
+    gym_config_payment_toggle_transfer: 'Transferencia bancaria',
+    gym_config_payment_toggle_dni: 'Cuenta DNI',
+    gym_config_payment_toggle_modo: 'MODO / otras billeteras',
+    gym_config_payment_toggle_cash: 'Efectivo en el box',
+    gym_config_payment_copy_transfer: 'Texto que copia el cliente (transferencia)',
+    gym_config_payment_copy_dni: 'Texto que copia el cliente (Cuenta DNI)',
+    gym_config_payment_copy_modo: 'Texto que copia el cliente (MODO / CVU)',
     gym_config_invites_new: 'Invitaciones (clientes nuevos)',
     gym_config_no_code_placeholder: '— (sin código aún)',
     gym_config_regenerate_code: 'Renovar código',
@@ -495,6 +509,30 @@ export const translations = {
     admin_nav_plans: 'Planes',
     admin_nav_abonos: 'Abonos',
     admin_nav_assign_coaches: 'Asignar coaches por plan',
+    admin_resumen_title: 'Resumen de hoy',
+    admin_resumen_sub: 'Agenda publicada, inscriptos por franja (app) y cobros pendientes',
+    admin_resumen_no_org: 'No hay organización cargada.',
+    admin_resumen_stats:
+      'Franjas con rutina: {{blocks}} · Inscriptos en app (hoy): {{trials}} (abono {{abono}} · solo prueba {{trial}} · debe {{debt}}) · Otros estados reserva: {{other}}',
+    admin_resumen_footnote:
+      'Los inscriptos por franja son reservas hechas en la app (clase de prueba). Los socios con abono sin reserva en app no aparecen acá hasta que exista reserva por cupo en servidor.',
+    admin_resumen_section_schedule: 'Agenda del día (rutinas publicadas)',
+    admin_resumen_empty_schedule: 'No hay rutinas publicadas para esta fecha. Cargalas desde el panel Administración (bloques del día).',
+    admin_resumen_section_orphan: 'Reservas en app sin franja publicada',
+    admin_resumen_orphan_hint: 'Hay reserva en app pero no coincide con ninguna rutina del día en el servidor.',
+    admin_resumen_section_other: 'Otras reservas del día (canceladas, consumidas, etc.)',
+    admin_resumen_section_billing: 'Cobros pendientes (caja)',
+    admin_resumen_empty_billing: 'Sin cobros pendientes registrados en caja.',
+    admin_resumen_slot_line: '{{plan}} · {{slot}}',
+    admin_resumen_coach_line: 'Coach: {{coach}}',
+    admin_resumen_no_bookings_slot: 'Nadie reservó esta franja en la app.',
+    admin_resumen_count_people: '{{count}} personas',
+    admin_resumen_more_people: '+ {{count}} más',
+    admin_resumen_view_all: 'ver todos',
+    admin_resumen_view_less: 'ver menos',
+    admin_resumen_badge_abono: 'Abono',
+    admin_resumen_badge_trial: 'Prueba',
+    admin_resumen_badge_debt: 'Debe',
     admin_alert_chat_no_channel_title: 'Sin canal',
     admin_alert_chat_no_channel_body:
       'No hay fila de chat para este plan en esta sede. Verificá que exista en Supabase (chat_channels) con el mismo plan_id que los planes del gym (p. ej. cross, hyrox) o ejecutá de nuevo las migraciones que siembran canales por organización.',
@@ -1130,6 +1168,8 @@ export const translations = {
     // Novedades
     novedades_title: 'Novedades',
     novedades_empty: 'No hay novedades por ahora.',
+    novedades_no_title: 'Sin título',
+    common_refresh: 'Actualizar',
 
     // TrabajoDelDia (principales)
     trabajo_workout: 'Entrenamiento',
@@ -1445,6 +1485,8 @@ export const translations = {
     pago_mp_checkout_err: 'Could not open Mercado Pago checkout. Please try again.',
     pago_international_note:
       'Checkout is in Argentine pesos (ARS) via Mercado Pago. If your card or country isn’t supported, email soporte@waitomo.com or arrange bank transfer / details with your gym. We’ll add more payment options as demand grows.',
+    pago_no_methods_configured:
+      'This gym has not enabled any payment methods yet. Ask an admin to turn on at least one in Gym settings.',
 
     plan_chat_title_suffix: ' – Chat',
     plan_chat_you: 'You',
@@ -1505,7 +1547,8 @@ export const translations = {
 
     admin_menu_perfil_sub: 'Account and profile',
     admin_menu_marca_title: 'Brand and look',
-    admin_menu_marca_sub: 'Logo, background, colors and optional welcome line on the plan picker',
+    admin_menu_marca_sub:
+      'Logo, background, colors, invites, member payment methods, and optional welcome line on the plan picker',
     gym_invite_hint_long:
       'The HTTPS link (fitengine.app/join) is best for email and WhatsApp. waitomo:// only works in some chats with the app already installed.',
     gym_invite_copy_code: 'Copy code only',
@@ -1552,6 +1595,17 @@ export const translations = {
     gym_config_welcome_hint:
       'Optional. Shown on the program picker, under “Welcome to [your gym]”, before choosing a plan.',
     gym_config_welcome_ph: 'e.g. Choose the program your coach suggested or the one you like most.',
+    gym_config_payment_section_title: 'Payment methods (members)',
+    gym_config_payment_section_hint:
+      'Enable only what you offer. Mercado Pago opens the web checkout (cards, MP balance, installments). Transfer / DNI / wallets copy the text you set below.',
+    gym_config_payment_toggle_mp: 'Mercado Pago (web checkout)',
+    gym_config_payment_toggle_transfer: 'Bank transfer',
+    gym_config_payment_toggle_dni: 'Cuenta DNI',
+    gym_config_payment_toggle_modo: 'MODO / other wallets',
+    gym_config_payment_toggle_cash: 'Cash at the box',
+    gym_config_payment_copy_transfer: 'Text copied for the client (bank transfer)',
+    gym_config_payment_copy_dni: 'Text copied for the client (Cuenta DNI)',
+    gym_config_payment_copy_modo: 'Text copied for the client (MODO / CVU)',
     gym_config_invites_new: 'Invites (new clients)',
     gym_config_no_code_placeholder: '— (no code yet)',
     gym_config_regenerate_code: 'New code',
@@ -1712,6 +1766,30 @@ export const translations = {
     admin_nav_plans: 'Plans',
     admin_nav_abonos: 'Memberships',
     admin_nav_assign_coaches: 'Assign coaches by plan',
+    admin_resumen_title: 'Today summary',
+    admin_resumen_sub: 'Published schedule, per-slot app sign-ups, and pending collections',
+    admin_resumen_no_org: 'No organization loaded.',
+    admin_resumen_stats:
+      'Published slots: {{blocks}} · App sign-ups today: {{trials}} (pass {{abono}} · trial only {{trial}} · owes {{debt}}) · Other booking states: {{other}}',
+    admin_resumen_footnote:
+      'Per-slot names are in-app trial bookings. Members with a pass but no server-side booking for that slot are not listed here yet.',
+    admin_resumen_section_schedule: 'Today schedule (published routines)',
+    admin_resumen_empty_schedule: 'No routines published for this date. Add them from Admin (daily blocks).',
+    admin_resumen_section_orphan: 'App bookings without a published slot',
+    admin_resumen_orphan_hint: 'There is an app booking but no matching daily block on the server for this date.',
+    admin_resumen_section_other: 'Other bookings today (cancelled, completed, etc.)',
+    admin_resumen_section_billing: 'Pending collections (cash desk)',
+    admin_resumen_empty_billing: 'No pending cash-desk charges.',
+    admin_resumen_slot_line: '{{plan}} · {{slot}}',
+    admin_resumen_coach_line: 'Coach: {{coach}}',
+    admin_resumen_no_bookings_slot: 'No one booked this slot in the app.',
+    admin_resumen_count_people: '{{count}} people',
+    admin_resumen_more_people: '+ {{count}} more',
+    admin_resumen_view_all: 'view all',
+    admin_resumen_view_less: 'view less',
+    admin_resumen_badge_abono: 'Pass',
+    admin_resumen_badge_trial: 'Trial',
+    admin_resumen_badge_debt: 'Owes',
     admin_alert_chat_no_channel_title: 'No channel',
     admin_alert_chat_no_channel_body:
       'There is no chat row for this plan at this location. Check Supabase table chat_channels (plan_id must match your gym plans, e.g. cross, hyrox) or re-run migrations that seed channels per organization.',
@@ -2336,6 +2414,8 @@ export const translations = {
 
     novedades_title: 'News',
     novedades_empty: 'No news for now.',
+    novedades_no_title: 'Untitled',
+    common_refresh: 'Refresh',
 
     trabajo_workout: 'Workout',
     trabajo_notes: 'Notes',

@@ -1,6 +1,6 @@
 // NovedadesScreen — Lista de gym_news con cards y accordion (tap para expandir)
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
@@ -18,10 +18,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { normalizePlanKey } from '../utils/planKeyNormalize';
-import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
-import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
-import { evaluateClientCommunityAccess } from '../utils/clientWorkoutEntitlement';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -35,11 +31,11 @@ const hexToRgba = (hex, alpha = 1) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
-const formatDate = (iso) => {
+const formatDate = (iso, dateLocale = 'es-ES') => {
   if (!iso) return '';
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString('es-AR', {
+    return d.toLocaleDateString(dateLocale, {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -53,82 +49,19 @@ export default function NovedadesScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const focusNewsId = route.params?.focusId;
-  const { t: tStr } = useLocale();
+  const { t: tStr, locale } = useLocale();
   const { t } = useThemeContext();
-  const { organization, profile, user } = useAuth() || {};
+  const { organization, profile } = useAuth() || {};
   const orgId = organization?.id ?? profile?.organization_id ?? null;
+  const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
-  const [abonoRow, setAbonoRow] = useState(null);
-  const [abonoLoading, setAbonoLoading] = useState(true);
-  const [freeClassGrant, setFreeClassGrant] = useState(null);
-
-  const planCanon = useMemo(() => normalizePlanKey(profile?.plan_actual ?? profile?.planActual), [
-    profile?.plan_actual,
-    profile?.planActual,
-  ]);
-
-  const communityAccess = useMemo(
-    () =>
-      evaluateClientCommunityAccess({
-        planCanonKey: planCanon,
-        organizationId: orgId,
-        abonoRow,
-        abonoLoading,
-        freeClassGrant,
-      }),
-    [planCanon, orgId, abonoRow, abonoLoading, freeClassGrant],
-  );
-
-  useEffect(() => {
-    if (!user?.id) {
-      setAbonoLoading(false);
-      setAbonoRow(null);
-      return undefined;
-    }
-    let alive = true;
-    (async () => {
-      setAbonoLoading(true);
-      try {
-        const row = await fetchLatestUserAbono(user.id);
-        if (alive) setAbonoRow(row);
-      } catch {
-        if (alive) setAbonoRow(null);
-      } finally {
-        if (alive) setAbonoLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [user?.id]);
-
-  useFocusEffect(
-    useCallback(() => {
-      let alive = true;
-      (async () => {
-        const g = await resolveFreeClassGrant(user?.id);
-        if (alive) setFreeClassGrant(g);
-      })();
-      return () => {
-        alive = false;
-      };
-    }, [user?.id]),
-  );
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        if (abonoLoading) return;
-        if (!communityAccess.ok) {
-          if (alive) {
-            setItems([]);
-            setLoading(false);
-          }
-          return;
-        }
         if (!orgId) {
           if (alive) setItems([]);
           return;
@@ -150,7 +83,7 @@ export default function NovedadesScreen() {
       }
     })();
     return () => { alive = false; };
-  }, [orgId, abonoLoading, communityAccess.ok]);
+  }, [orgId]);
 
   useEffect(() => {
     if (!focusNewsId || !items.length) return;
@@ -255,15 +188,6 @@ export default function NovedadesScreen() {
           <View style={styles.empty}>
             <ActivityIndicator size="large" color={t.brand} />
           </View>
-        ) : !communityAccess.ok ? (
-          <View style={styles.empty}>
-            <Text style={[styles.emptyText, { textAlign: 'center', fontWeight: '800', color: t.text }]}>
-              {tStr('client_community_locked_title')}
-            </Text>
-            <Text style={[styles.emptyText, { textAlign: 'center', marginTop: 10, lineHeight: 20 }]}>
-              {tStr('client_community_locked_body')}
-            </Text>
-          </View>
         ) : items.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>{tStr('novedades_empty')}</Text>
@@ -281,7 +205,7 @@ export default function NovedadesScreen() {
               >
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle} numberOfLines={expanded ? 10 : 2}>
-                    {row.title || 'Sin título'}
+                    {row.title || tStr('novedades_no_title')}
                   </Text>
                   <Ionicons
                     name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -296,7 +220,7 @@ export default function NovedadesScreen() {
                       <Text style={styles.tagText}>{row.tag}</Text>
                     </View>
                   ) : null}
-                  <Text style={styles.dateText}>{formatDate(row.created_at)}</Text>
+                  <Text style={styles.dateText}>{formatDate(row.created_at, dateLocale)}</Text>
                   {row.pinned ? (
                     <Ionicons name="pin" size={14} color={t.brand} style={styles.pinnedBadge} />
                   ) : null}

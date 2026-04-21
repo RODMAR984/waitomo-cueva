@@ -11,11 +11,16 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
 import PropTypes from 'prop-types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
@@ -33,6 +38,8 @@ const storageKeyCoaches = (orgId) =>
   `waitomo_coaches_by_plan_v1_${orgId || 'none'}`;
 
 export default function AsignarCoachesScreen({ route }) {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const { currentUser, isSuperAdmin, organization, organizationsOwnedByUser } = useAuth();
@@ -105,86 +112,101 @@ export default function AsignarCoachesScreen({ route }) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: {
-          backgroundColor: t.bg,
+        root: { flex: 1 },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingTop: Math.max(insets.top, 12) + 8,
+          paddingBottom: 12,
+        },
+        backBtn: { padding: 8, marginLeft: -8 },
+        title: {
           flex: 1,
+          color: t.brandText ?? t.brand,
+          fontSize: 18,
+          fontWeight: '800',
+          marginRight: 8,
         },
-        listContainer: {
-          padding: 16,
-          paddingBottom: 80,
+        scroll: { flex: 1 },
+        scrollContent: {
+          paddingHorizontal: 20,
+          paddingBottom: Math.max(insets.bottom, 28) + 24,
         },
-
-        // tarjeta/encabezado de plan
+        section: { marginBottom: 20 },
         card: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderRadius: 16,
           borderWidth: 1,
-          padding: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          marginBottom: 10,
         },
         planTitle: {
-          color: t.subText,
-          fontSize: 18,
+          color: t.text,
+          fontSize: 17,
           fontWeight: '700',
         },
-
-        // filas y bloques
-        block: { marginBottom: 14 },
+        planId: { color: t.subText, fontSize: 12, marginTop: 4 },
         row: {
           alignItems: 'center',
           flexDirection: 'row',
+          flexWrap: 'wrap',
           gap: 8,
-          justifyContent: 'space-between',
-          paddingVertical: 6,
+          marginTop: 10,
         },
-
-        // input + placeholder
         input: {
-          backgroundColor: t.boxBg,
+          backgroundColor: t.inputBg ?? t.boxBg,
           borderColor: t.overlayBorder,
           borderRadius: 10,
           borderWidth: 1,
           color: t.text,
-          flex: 1,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
+          flexGrow: 1,
+          flexShrink: 1,
+          minWidth: 120,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
         },
-
-        // botones
         addBtn: {
           alignItems: 'center',
           ...t.buttonPrimary,
           borderRadius: 10,
           justifyContent: 'center',
-          paddingHorizontal: 12,
-          paddingVertical: 8,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
         },
         addTxt: { ...t.buttonPrimaryText, fontWeight: '700' },
-
+        coachRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: 10,
+          paddingVertical: 8,
+          paddingHorizontal: 4,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: t.overlayBorder,
+        },
         delBtn: {
           alignItems: 'center',
           backgroundColor: t.danger,
           borderRadius: 10,
           justifyContent: 'center',
           paddingHorizontal: 12,
-          paddingVertical: 6,
+          paddingVertical: 8,
         },
-        delTxt: { ...t.buttonDangerText, fontWeight: '800' },
-
-        // textos
-        uidText: { color: t.text },
-        emptyText: { color: t.empty, marginTop: 8 },
-
-        // centro (no autorizado)
-        center: {
-          alignItems: 'center',
+        delTxt: { ...t.buttonDangerText, fontWeight: '700' },
+        uidText: { color: t.text, flex: 1, marginRight: 8, fontSize: 14 },
+        emptyText: { color: t.placeholder, marginTop: 10, fontSize: 14 },
+        centerWrap: {
           flex: 1,
           justifyContent: 'center',
-          padding: 24,
+          paddingHorizontal: 24,
+          paddingBottom: 40,
         },
-        centerMsg: { color: t.text, fontSize: 16, textAlign: 'center' },
+        centerMsg: { color: t.text, fontSize: 16, textAlign: 'center', lineHeight: 22 },
       }),
-    [t],
+    [t, insets.top, insets.bottom],
   );
 
   const placeholderColor = t.placeholder;
@@ -196,78 +218,89 @@ export default function AsignarCoachesScreen({ route }) {
     setInputByPlan((prev) => ({ ...prev, [planId]: '' }));
   };
 
-  const renderItem = ({ item }) => {
-    const list = coachesByPlan?.[item.id] || [];
-    return (
-      <View style={styles.block}>
-        {/* header del plan */}
-        <View style={styles.card}>
-          <Text style={styles.planTitle}>
-            {item.nombre}
-            {' '}
-            (
-            {item.id}
-            )
-          </Text>
-        </View>
-
-        {/* fila de alta */}
-        <View style={styles.row}>
-          <TextInput
-            placeholder={tStr('assign_coach_ph_user')}
-            placeholderTextColor={placeholderColor}
-            value={inputByPlan[item.id] || ''}
-            onChangeText={(t0) =>
-              setInputByPlan((prev) => ({ ...prev, [item.id]: t0 }))
-            }
-            style={styles.input}
-          />
-          <TouchableOpacity style={styles.addBtn} onPress={() => onAdd(item.id)}>
-            <Text style={styles.addTxt}>{tStr('assign_coach_add')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* listado de coaches */}
-        {list.length === 0 ? (
-          <Text style={styles.emptyText}>{tStr('assign_coach_empty')}</Text>
-        ) : (
-          <FlatList
-            data={list}
-            keyExtractor={(uid) => `${item.id}-${uid}`}
-            renderItem={({ item: uid }) => (
-              <View style={styles.row}>
-                <Text style={styles.uidText}>{uid}</Text>
-                <TouchableOpacity
-                  style={styles.delBtn}
-                  onPress={() => removeCoachFromPlan(item.id, uid)}
-                >
-                  <Text style={styles.delTxt}>{tStr('assign_coach_remove')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          />
-        )}
-      </View>
-    );
-  };
+  const headerEl = (
+    <View style={styles.header}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+        <Ionicons name="arrow-back" size={26} color={t.text} />
+      </TouchableOpacity>
+      <Text style={styles.title} numberOfLines={2}>
+        {tStr('admin_nav_assign_coaches')}
+      </Text>
+    </View>
+  );
 
   if (!autorizado) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.centerMsg}>{tStr('assign_coach_unauthorized')}</Text>
-      </View>
+      <BackgroundWrapper screen="admin">
+        <View style={styles.root}>
+          {headerEl}
+          <View style={styles.centerWrap}>
+            <Text style={styles.centerMsg}>{tStr('assign_coach_unauthorized')}</Text>
+          </View>
+        </View>
+      </BackgroundWrapper>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        contentContainerStyle={styles.listContainer}
-        data={plans}
-        keyExtractor={(p) => p.id}
-        renderItem={renderItem}
-      />
-    </View>
+    <BackgroundWrapper screen="admin">
+      <View style={styles.root}>
+        {headerEl}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {plans.map((item) => {
+            const list = coachesByPlan?.[item.id] || [];
+            return (
+              <View key={item.id} style={styles.section}>
+                <View style={styles.card}>
+                  <Text style={styles.planTitle}>{item.nombre}</Text>
+                  <Text style={styles.planId}>{item.id}</Text>
+
+                  <View style={styles.row}>
+                    <TextInput
+                      placeholder={tStr('assign_coach_ph_user')}
+                      placeholderTextColor={placeholderColor}
+                      value={inputByPlan[item.id] || ''}
+                      onChangeText={(t0) =>
+                        setInputByPlan((prev) => ({ ...prev, [item.id]: t0 }))
+                      }
+                      style={styles.input}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity style={styles.addBtn} onPress={() => onAdd(item.id)}>
+                      <Text style={styles.addTxt}>{tStr('assign_coach_add')}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {list.length === 0 ? (
+                    <Text style={styles.emptyText}>{tStr('assign_coach_empty')}</Text>
+                  ) : (
+                    list.map((uid) => (
+                      <View key={`${item.id}-${uid}`} style={styles.coachRow}>
+                        <Text style={styles.uidText} selectable>
+                          {uid}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.delBtn}
+                          onPress={() => removeCoachFromPlan(item.id, uid)}
+                        >
+                          <Text style={styles.delTxt}>{tStr('assign_coach_remove')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </BackgroundWrapper>
   );
 }
 

@@ -33,6 +33,7 @@ import * as Clipboard from 'expo-clipboard';
 import { generateClientInviteCode } from '../utils/clientInviteCode';
 import { buildClientInvitePublicLink } from '../utils/fitengineUrls';
 import { FULL_HEX_CHOICE_GYM } from '../utils/gymColorPalette';
+import { DEFAULT_CLIENT_PAYMENT_COPY } from '../utils/clientPaymentMethods';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -103,6 +104,21 @@ export default function GymConfigScreen() {
   const [lockClientTheme, setLockClientTheme] = useState(
     !!organization?.features?.lock_client_theme,
   );
+  const cpInit = organization?.features?.client_payment_methods;
+  const [pmMercadopago, setPmMercadopago] = useState(
+    !cpInit || cpInit.mercadopago !== false,
+  );
+  const [pmTransferencia, setPmTransferencia] = useState(
+    !cpInit || cpInit.transferencia !== false,
+  );
+  const [pmCuentaDni, setPmCuentaDni] = useState(!cpInit || cpInit.cuenta_dni !== false);
+  const [pmModo, setPmModo] = useState(!cpInit || cpInit.modo !== false);
+  const [pmEfectivo, setPmEfectivo] = useState(!cpInit || cpInit.efectivo !== false);
+  const [transferCopy, setTransferCopy] = useState(
+    typeof cpInit?.transfer_copy === 'string' ? cpInit.transfer_copy : '',
+  );
+  const [dniCopy, setDniCopy] = useState(typeof cpInit?.dni_copy === 'string' ? cpInit.dni_copy : '');
+  const [modoCopy, setModoCopy] = useState(typeof cpInit?.modo_copy === 'string' ? cpInit.modo_copy : '');
   /** Paleta completa plegada por defecto (menos invasiva). */
   const [paletteOpenKey, setPaletteOpenKey] = useState(null);
 
@@ -122,6 +138,26 @@ export default function GymConfigScreen() {
       setOverlayColor(organization.features?.ui_overlay_color || '');
       setClientWelcomeMessage(organization.features?.client_welcome_message || '');
       setLockClientTheme(!!organization.features?.lock_client_theme);
+      const cp = organization.features?.client_payment_methods;
+      if (cp && typeof cp === 'object' && !Array.isArray(cp)) {
+        setPmMercadopago(cp.mercadopago !== false);
+        setPmTransferencia(cp.transferencia !== false);
+        setPmCuentaDni(cp.cuenta_dni !== false);
+        setPmModo(cp.modo !== false);
+        setPmEfectivo(cp.efectivo !== false);
+        setTransferCopy(typeof cp.transfer_copy === 'string' ? cp.transfer_copy : '');
+        setDniCopy(typeof cp.dni_copy === 'string' ? cp.dni_copy : '');
+        setModoCopy(typeof cp.modo_copy === 'string' ? cp.modo_copy : '');
+      } else {
+        setPmMercadopago(true);
+        setPmTransferencia(true);
+        setPmCuentaDni(true);
+        setPmModo(true);
+        setPmEfectivo(true);
+        setTransferCopy('');
+        setDniCopy('');
+        setModoCopy('');
+      }
     }
   }, [
     organization?.id,
@@ -324,6 +360,17 @@ export default function GymConfigScreen() {
 
       if (lockClientTheme) prevFeatures.lock_client_theme = true;
       else delete prevFeatures.lock_client_theme;
+
+      prevFeatures.client_payment_methods = {
+        mercadopago: pmMercadopago,
+        transferencia: pmTransferencia,
+        cuenta_dni: pmCuentaDni,
+        modo: pmModo,
+        efectivo: pmEfectivo,
+        transfer_copy: (transferCopy || '').trim(),
+        dni_copy: (dniCopy || '').trim(),
+        modo_copy: (modoCopy || '').trim(),
+      };
 
       const { error } = await supabase
         .from('organizations')
@@ -733,6 +780,87 @@ export default function GymConfigScreen() {
             editable={canEdit}
             multiline
           />
+        </View>
+
+        <View style={styles.block}>
+          <Text style={styles.label}>{tStr('gym_config_payment_section_title')}</Text>
+          <Text style={styles.hint}>{tStr('gym_config_payment_section_hint')}</Text>
+
+          {[
+            ['mp', pmMercadopago, setPmMercadopago, 'gym_config_payment_toggle_mp'],
+            ['tr', pmTransferencia, setPmTransferencia, 'gym_config_payment_toggle_transfer'],
+            ['dn', pmCuentaDni, setPmCuentaDni, 'gym_config_payment_toggle_dni'],
+            ['mo', pmModo, setPmModo, 'gym_config_payment_toggle_modo'],
+            ['ef', pmEfectivo, setPmEfectivo, 'gym_config_payment_toggle_cash'],
+          ].map(([key, val, setVal, labelKey]) => (
+            <View
+              key={key}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: key === 'mp' ? 10 : 12,
+                paddingVertical: 4,
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.subHeading}>{tStr(labelKey)}</Text>
+              </View>
+              <Switch
+                value={val}
+                onValueChange={canEdit ? setVal : undefined}
+                disabled={!canEdit}
+                trackColor={{ false: t.overlayBorder, true: t.brand }}
+                thumbColor="#f4ffff"
+              />
+            </View>
+          ))}
+
+          {pmTransferencia ? (
+            <>
+              <Text style={[styles.label, { marginTop: 14 }]}>{tStr('gym_config_payment_copy_transfer')}</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 72, textAlignVertical: 'top' }]}
+                value={transferCopy}
+                onChangeText={setTransferCopy}
+                placeholder={DEFAULT_CLIENT_PAYMENT_COPY.transfer_copy}
+                placeholderTextColor={t.placeholder}
+                editable={canEdit}
+                multiline
+              />
+            </>
+          ) : null}
+
+          {pmCuentaDni ? (
+            <>
+              <Text style={[styles.label, { marginTop: 10 }]}>{tStr('gym_config_payment_copy_dni')}</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 72, textAlignVertical: 'top' }]}
+                value={dniCopy}
+                onChangeText={setDniCopy}
+                placeholder={DEFAULT_CLIENT_PAYMENT_COPY.dni_copy}
+                placeholderTextColor={t.placeholder}
+                editable={canEdit}
+                multiline
+              />
+            </>
+          ) : null}
+
+          {pmModo ? (
+            <>
+              <Text style={[styles.label, { marginTop: 10 }]}>{tStr('gym_config_payment_copy_modo')}</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 72, textAlignVertical: 'top' }]}
+                value={modoCopy}
+                onChangeText={setModoCopy}
+                placeholder={DEFAULT_CLIENT_PAYMENT_COPY.modo_copy}
+                placeholderTextColor={t.placeholder}
+                editable={canEdit}
+                multiline
+              />
+            </>
+          ) : null}
         </View>
 
         <View style={styles.block}>

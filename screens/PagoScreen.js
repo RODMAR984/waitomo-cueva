@@ -30,6 +30,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { createCheckoutPreference } from '../utils/mercadoPagoCheckout';
+import { resolveClientPaymentMethods } from '../utils/clientPaymentMethods';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -61,7 +62,7 @@ const todayISO = () => {
 
 export default function PagoScreen({ navigation, route }) {
   const { createPayment, markAsPaid } = useTrainingData();
-  const { user: ctxUser, updateProfile } = useAuth() || {};
+  const { user: ctxUser, updateProfile, organization } = useAuth() || {};
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
 
@@ -108,6 +109,17 @@ export default function PagoScreen({ navigation, route }) {
       : parsePrecio(abono?.precio) || parsePrecio(userData?.precio ?? plan?.precio ?? 0);
   const periodo = new Date().toISOString().slice(0, 7); // YYYY-MM
 
+  const paymentMethods = useMemo(
+    () => resolveClientPaymentMethods(organization?.features),
+    [organization?.features],
+  );
+  const anyPaymentMethod =
+    paymentMethods.mercadopago ||
+    paymentMethods.transferencia ||
+    paymentMethods.cuenta_dni ||
+    paymentMethods.modo ||
+    paymentMethods.efectivo;
+
   const copiarDatos = async (texto) => {
     await Clipboard.setStringAsync(texto);
     Alert.alert(tStr('pago_copied_title'), `${texto}\n\n${tStr('pago_copied_hint')}`);
@@ -149,9 +161,13 @@ export default function PagoScreen({ navigation, route }) {
         monto > 0
       ) {
         try {
+          const orgName = String(organization?.name || '').trim();
+          const title = orgName
+            ? `FitEngine · ${orgName} · ${planCanon}`
+            : `FitEngine · ${planCanon}`;
           const { init_point: initPoint } = await createCheckoutPreference({
             amount: monto,
-            title: `FitEngine · ${planCanon}`,
+            title,
             externalReference: pid,
           });
           url = initPoint;
@@ -361,73 +377,89 @@ export default function PagoScreen({ navigation, route }) {
           <View style={styles.panel}>
             <Text style={styles.title}>{tStr('pago_title_select')}</Text>
 
-            <Text style={styles.mpHint}>{tStr('pago_mp_checkout_hint')}</Text>
+            {!anyPaymentMethod ? (
+              <Text style={styles.mpHint}>{tStr('pago_no_methods_configured')}</Text>
+            ) : null}
 
-            <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={async () => {
-                try {
-                  const r = await crearIntentoPago('mercadopago');
-                  const url = r?.paymentUrl;
-                  if (url && String(url).includes('mercadopago')) {
-                    await WebBrowser.openBrowserAsync(url);
-                  } else if (url) {
-                    await Linking.openURL(url);
-                  } else {
-                    Alert.alert(
-                      tStr('pago_mp_checkout_unavailable_title'),
-                      tStr('pago_mp_checkout_unavailable_msg'),
-                    );
-                  }
-                } catch (e) {
-                  Alert.alert(tStr('security_error_title'), tStr('pago_mp_checkout_err'));
-                }
-              }}
-            >
-              <Text style={styles.btnTextOn}>{tStr('pago_btn_mercadopago')}</Text>
-            </TouchableOpacity>
+            {paymentMethods.mercadopago ? (
+              <>
+                <Text style={styles.mpHint}>{tStr('pago_mp_checkout_hint')}</Text>
 
-            <Text style={styles.intlNote}>{tStr('pago_international_note')}</Text>
+                <TouchableOpacity
+                  style={styles.btnPrimary}
+                  onPress={async () => {
+                    try {
+                      const r = await crearIntentoPago('mercadopago');
+                      const url = r?.paymentUrl;
+                      if (url && String(url).includes('mercadopago')) {
+                        await WebBrowser.openBrowserAsync(url);
+                      } else if (url) {
+                        await Linking.openURL(url);
+                      } else {
+                        Alert.alert(
+                          tStr('pago_mp_checkout_unavailable_title'),
+                          tStr('pago_mp_checkout_unavailable_msg'),
+                        );
+                      }
+                    } catch (e) {
+                      Alert.alert(tStr('security_error_title'), tStr('pago_mp_checkout_err'));
+                    }
+                  }}
+                >
+                  <Text style={styles.btnTextOn}>{tStr('pago_btn_mercadopago')}</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={async () => {
-                await copiarDatos('Alias: waitomo.gym / CBU: 0000003100001234567890');
-                await crearIntentoPago('transferencia');
-              }}
-            >
-              <Text style={styles.btnTextOn}>{tStr('pago_btn_transfer')}</Text>
-            </TouchableOpacity>
+                <Text style={styles.intlNote}>{tStr('pago_international_note')}</Text>
+              </>
+            ) : null}
 
-            <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={async () => {
-                await copiarDatos('Alias Cuenta DNI: waitomo.dni');
-                await crearIntentoPago('cuenta_dni');
-              }}
-            >
-              <Text style={styles.btnTextOn}>{tStr('pago_btn_dni')}</Text>
-            </TouchableOpacity>
+            {paymentMethods.transferencia ? (
+              <TouchableOpacity
+                style={styles.btnPrimary}
+                onPress={async () => {
+                  await copiarDatos(paymentMethods.transfer_copy);
+                  await crearIntentoPago('transferencia');
+                }}
+              >
+                <Text style={styles.btnTextOn}>{tStr('pago_btn_transfer')}</Text>
+              </TouchableOpacity>
+            ) : null}
 
-            <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={async () => {
-                await copiarDatos('Alias CVU: waitomo.billetera');
-                await crearIntentoPago('modo');
-              }}
-            >
-              <Text style={styles.btnTextOn}>{tStr('pago_btn_modo')}</Text>
-            </TouchableOpacity>
+            {paymentMethods.cuenta_dni ? (
+              <TouchableOpacity
+                style={styles.btnPrimary}
+                onPress={async () => {
+                  await copiarDatos(paymentMethods.dni_copy);
+                  await crearIntentoPago('cuenta_dni');
+                }}
+              >
+                <Text style={styles.btnTextOn}>{tStr('pago_btn_dni')}</Text>
+              </TouchableOpacity>
+            ) : null}
 
-            <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={async () => {
-                Alert.alert(tStr('pago_cash_alert'));
-                await crearIntentoPago('efectivo');
-              }}
-            >
-              <Text style={styles.btnTextOn}>{tStr('pago_btn_cash')}</Text>
-            </TouchableOpacity>
+            {paymentMethods.modo ? (
+              <TouchableOpacity
+                style={styles.btnPrimary}
+                onPress={async () => {
+                  await copiarDatos(paymentMethods.modo_copy);
+                  await crearIntentoPago('modo');
+                }}
+              >
+                <Text style={styles.btnTextOn}>{tStr('pago_btn_modo')}</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {paymentMethods.efectivo ? (
+              <TouchableOpacity
+                style={styles.btnPrimary}
+                onPress={async () => {
+                  Alert.alert(tStr('pago_cash_alert'));
+                  await crearIntentoPago('efectivo');
+                }}
+              >
+                <Text style={styles.btnTextOn}>{tStr('pago_btn_cash')}</Text>
+              </TouchableOpacity>
+            ) : null}
 
             {showPaidShortcut ? (
               <TouchableOpacity style={styles.btnSecondary} onPress={handlePagoConfirmado}>

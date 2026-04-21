@@ -65,6 +65,7 @@ import ChatScreen from './screens/ChatScreen';
 import AdminScreen from './screens/AdminScreen';
 import AdminLiteScreen from './screens/AdminLiteScreen';
 import AdminFinanzasScreen from './screens/AdminFinanzasScreen';
+import AdminResumenScreen from './screens/AdminResumenScreen';
 import AdminNovedadesScreen from './screens/AdminNovedadesScreen';
 import GymConfigScreen from './screens/GymConfigScreen';
 import AdminPlanesScreen from './screens/AdminPlanesScreen';
@@ -436,6 +437,8 @@ function AppContent() {
                     name="AdminFinanzasScreen"
                     component={AdminFinanzasScreen}
                   />
+                  <Stack.Screen name="AdminResumen" component={AdminResumenScreen} />
+                  <Stack.Screen name="AdminResumenScreen" component={AdminResumenScreen} />
                   <Stack.Screen name="AdminNovedades" component={AdminNovedadesScreen} />
                   <Stack.Screen name="AdminNovedadesScreen" component={AdminNovedadesScreen} />
                   <Stack.Screen name="GymConfig" component={GymConfigScreen} />

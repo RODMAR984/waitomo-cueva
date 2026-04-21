@@ -448,6 +448,14 @@ export default function AdminScreen(props) {
     () =>
       [
         {
+          key: 'resumen',
+          ion: 'today-outline',
+          title: tStr('admin_resumen_title'),
+          sub: tStr('admin_resumen_sub'),
+          onPress: () => navigation.navigate('AdminResumen'),
+          show: true,
+        },
+        {
           key: 'perfil',
           ion: 'person-outline',
           title: tStr('admin_mi_perfil'),
