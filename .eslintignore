@@ -36,6 +36,9 @@ firebase.json
 google-services.json
 app.config.js
 
+# Subárbol Vite/demo aparte del bundle Expo principal (evita ruido en eslint .)
+web/
+
 # Archivos que no deben ser analizados por ESLint
 *.log
 *.md

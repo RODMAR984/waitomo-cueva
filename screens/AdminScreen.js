@@ -16,14 +16,17 @@ import {
   Modal,
   Keyboard,
   Dimensions,
+  useWindowDimensions,
   TouchableWithoutFeedback,
   Pressable,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import VideoLinksThumbs from '../components/VideoLinksThumbs';
 import { useTrainingData } from '../contexts/TrainingDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
@@ -33,6 +36,14 @@ import { useLocale } from '../contexts/LocaleContext';
 import { normalizeBlockPlanKey } from '../utils/trainingBlockPlan';
 import { formatYmdLocal } from '../utils/formatYmdLocal';
 import { extractRmTags, splitTextWithRmTokens, RM_HIGHLIGHT_COLOR } from '../utils/rmPattern';
+import {
+  generateRoutineDraft,
+  rewriteBlockWithAi,
+  draftMessageWithAi,
+  normalizeRmPatternWithAi,
+} from '../utils/aiAssistant';
+import AdminAiPromptWithVoice from '../components/AdminAiPromptWithVoice';
+import useStaffAdminNavTiles from '../hooks/useStaffAdminNavTiles';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -42,8 +53,6 @@ const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   yoga: 'yoga',
   open_box: 'openbox',
 };
-
-const { width } = Dimensions.get('window');
 
 // Teal oscuro Waitomo para paneles/inputs (base fija, sin verdes)
 const BASE_TEAL = '#021b23';
@@ -111,23 +120,29 @@ const sumarDias = (baseDate, delta) => {
   return d;
 };
 
+const RM_PREVIEW_BASE = (extra = {}) => ({
+  fontSize: 15,
+  lineHeight: 22,
+  ...extra,
+  ...(Platform.OS === 'android' ? { textAlignVertical: 'center', includeFontPadding: false } : {}),
+});
+
 const renderPreviewWithRM = (text, styles) => {
   if (!text) return <Text style={styles.previewText}>—</Text>;
   const parts = splitTextWithRmTokens(text);
+  /** Un solo `Text` padre + hijos inline: el flujo respeta saltos y posición tal cual lo escribió el coach (sin fila flex centrada). */
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+    <Text style={styles.previewText}>
       {parts.map((seg, i) =>
         seg.type === 'text' ? (
-          <Text key={`p_${i}`} style={styles.previewText}>
-            {seg.value}
-          </Text>
+          <Text key={`p_${i}`}>{seg.value}</Text>
         ) : (
           <Text key={`rm_${i}`} style={styles.rmText}>
             {seg.full}
           </Text>
         ),
       )}
-    </View>
+    </Text>
   );
 };
 
@@ -257,15 +272,29 @@ const MultiHorarioDropdown = memo(function MultiHorarioDropdown({
   );
 });
 
-export default function AdminScreen(props) {
+export default function AdminScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { width: windowWidth } = useWindowDimensions();
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
-
-  const mode = (props && props.mode) || route?.params?.mode || 'full';
-  const isLite = mode === 'lite';
+  const STAFF_WEB_RAIL = 232;
+  const isDesktopWeb = Platform.OS === 'web' && windowWidth >= 1100;
+  /** Web ancho: navegación staff fija a la izquierda (negocio en escritorio). */
+  const isStaffWebDesktop = isDesktopWeb;
+  const panelWidth = isDesktopWeb
+    ? Math.min(
+        windowWidth - 40 - (isStaffWebDesktop ? STAFF_WEB_RAIL + 14 : 0),
+        1180,
+      )
+    : Math.max(320, Math.min(windowWidth - 20, 920));
+  const menuColumns = isDesktopWeb ? 3 : windowWidth >= 760 ? 2 : 1;
+  const menuGap = 12;
+  const menuTileWidth =
+    menuColumns === 1
+      ? panelWidth - 40
+      : (panelWidth - 40 - (menuColumns - 1) * menuGap) / menuColumns;
 
   const { bloques, saveBloques, refreshTrigger } = useTrainingData();
   const {
@@ -275,17 +304,10 @@ export default function AdminScreen(props) {
     logout,
     profile,
     organization,
-    organizationsOwnedByUser,
   } = useAuth();
   const myId = currentUser?.id || null;
   const myRole = rolesByUser?.[myId];
   const isSA = !!(myId && isSuperAdmin(myId));
-  const canEditGymConfig = useMemo(() => {
-    if (!profile?.id) return false;
-    if (isSA) return true;
-    if (organization?.owner_id === profile.id) return true;
-    return (organizationsOwnedByUser || []).some((o) => o?.id === organization?.id);
-  }, [isSA, profile?.id, organization?.id, organization?.owner_id, organizationsOwnedByUser]);
   const isCoach = myRole === 'coach';
   const coachPlanActual = profile?.plan_actual ? String(profile.plan_actual) : null;
 
@@ -387,6 +409,7 @@ export default function AdminScreen(props) {
 
   const [titulo, setTitulo] = useState('');
   const [contenido, setContenido] = useState('');
+  const [capacityInput, setCapacityInput] = useState('');
   const [coachNotes, setCoachNotes] = useState('');
   const [videoLinks, setVideoLinks] = useState('');
 
@@ -400,7 +423,15 @@ export default function AdminScreen(props) {
   const [moveTargetDate, setMoveTargetDate] = useState(null);
   const [moveTargetHora, setMoveTargetHora] = useState(null);
   const horariosDisponibles = useMemo(() => generarHorarios(), []);
-
+  const [aiModalVisible, setAiModalVisible] = useState(false);
+  const [aiMode, setAiMode] = useState('routine');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiOutput, setAiOutput] = useState('');
+  const [aiSuggestedTitle, setAiSuggestedTitle] = useState('');
+  const [aiCoachNotes, setAiCoachNotes] = useState('');
+  const [aiWarnings, setAiWarnings] = useState([]);
+  const [aiUsageLine, setAiUsageLine] = useState('');
 
   const policy = useMemo(
     () => plansDisponibles.find((p) => p.value === planSeleccionado)?.policy || 'SHARED',
@@ -444,92 +475,7 @@ export default function AdminScreen(props) {
     PLAN_VALUE_TO_CHAT_PLAN_ID[planSeleccionado] ||
     planSeleccionado;
 
-  const adminNavTiles = useMemo(
-    () =>
-      [
-        {
-          key: 'resumen',
-          ion: 'today-outline',
-          title: tStr('admin_resumen_title'),
-          sub: tStr('admin_resumen_sub'),
-          onPress: () => navigation.navigate('AdminResumen'),
-          show: true,
-        },
-        {
-          key: 'perfil',
-          ion: 'person-outline',
-          title: tStr('admin_mi_perfil'),
-          sub: tStr('admin_menu_perfil_sub'),
-          onPress: () => navigation.navigate('Perfil'),
-          show: true,
-        },
-        {
-          key: 'marca',
-          ion: 'color-wand-outline',
-          title: tStr('admin_menu_marca_title'),
-          sub: tStr('admin_menu_marca_sub'),
-          onPress: () => navigation.navigate('GymConfig'),
-          show: !!canEditGymConfig,
-        },
-        {
-          key: 'fin',
-          ion: 'wallet-outline',
-          title: tStr('admin_finanzas'),
-          sub: tStr('admin_menu_finanzas_sub'),
-          onPress: () => navigation.navigate('AdminFinanzas', { tab: 'cobros' }),
-          show: !isLite,
-        },
-        {
-          key: 'mem',
-          ion: 'people-outline',
-          title: tStr('admin_miembros'),
-          sub: tStr('admin_menu_miembros_sub'),
-          onPress: () => navigation.navigate('OrgMembers'),
-          show: !isLite,
-        },
-        {
-          key: 'nov',
-          ion: 'megaphone-outline',
-          title: tStr('admin_ver_novedades'),
-          sub: tStr('admin_menu_novedades_ver_sub'),
-          onPress: () => navigation.navigate('Novedades'),
-          show: true,
-        },
-        {
-          key: 'novadm',
-          ion: 'create-outline',
-          title: tStr('admin_gestionar_novedades'),
-          sub: tStr('admin_menu_novedades_edit_sub'),
-          onPress: () => navigation.navigate('AdminNovedades'),
-          show: !isLite,
-        },
-        {
-          key: 'planes',
-          ion: 'list-outline',
-          title: tStr('admin_nav_plans'),
-          sub: tStr('admin_menu_planes_sub'),
-          onPress: () => navigation.navigate('AdminPlanes'),
-          show: !isLite,
-        },
-        {
-          key: 'abonos',
-          ion: 'ticket-outline',
-          title: tStr('admin_nav_abonos'),
-          sub: tStr('admin_menu_abonos_sub'),
-          onPress: () => navigation.navigate('AdminAbonos'),
-          show: !isLite,
-        },
-        {
-          key: 'coaches',
-          ion: 'school-outline',
-          title: tStr('admin_nav_assign_coaches'),
-          sub: tStr('admin_menu_coaches_sub'),
-          onPress: () => navigation.navigate('AsignarCoaches'),
-          show: !isLite && !!canEditGymConfig,
-        },
-      ].filter((x) => x.show),
-    [navigation, tStr, canEditGymConfig, isLite],
-  );
+  const adminNavTiles = useStaffAdminNavTiles(navigation, tStr);
   const irAlChatDelPlan = async () => {
     try {
       const orgChat = organization?.id || profile?.organization_id || null;
@@ -562,6 +508,141 @@ export default function AdminScreen(props) {
     }
   };
 
+  const openAiModal = () => {
+    setAiModalVisible(true);
+    setAiOutput('');
+    setAiSuggestedTitle('');
+    setAiCoachNotes('');
+    setAiWarnings([]);
+    setAiUsageLine('');
+    setAiPrompt((prev) => {
+      if (prev.trim()) return prev;
+      if (aiMode === 'routine') return '';
+      return contenido || '';
+    });
+  };
+
+  const buildAiUsageLine = (usage) => {
+    const inT = Number(usage?.input_tokens || 0);
+    const outT = Number(usage?.output_tokens || 0);
+    const cents = Number(usage?.cost_usd_cents || 0);
+    return tStr('admin_ai_usage_line')
+      .replace('{{in}}', String(inT))
+      .replace('{{out}}', String(outT))
+      .replace('{{usd}}', (cents / 100).toFixed(4));
+  };
+
+  const generateWithAi = async () => {
+    if (!orgIdForPlans) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_ai_no_org'));
+      return;
+    }
+    const planForAi = planSeleccionado || '';
+    const slotForAi = horariosSeleccionados?.[0] || '';
+    const dateForAi = formatYmdLocal(fecha);
+    const promptText = String(aiPrompt || '').trim();
+
+    if (aiMode !== 'routine' && !promptText) {
+      Alert.alert(tStr('admin_ai_title'), tStr('admin_ai_prompt_required'));
+      return;
+    }
+
+    setAiBusy(true);
+    setAiOutput('');
+    setAiWarnings([]);
+    setAiUsageLine('');
+    try {
+      let out;
+      if (aiMode === 'routine') {
+        out = await generateRoutineDraft({
+          organizationId: orgIdForPlans,
+          targetClientId: null,
+          sessionDate: dateForAi,
+          slotLabel: slotForAi,
+          planKey: planForAi,
+          durationMinutes: 45,
+          focus: promptText,
+          extraNotes: coachNotes,
+        });
+      } else if (aiMode === 'rewrite') {
+        out = await rewriteBlockWithAi({
+          organizationId: orgIdForPlans,
+          rawText: promptText,
+          titleHint: titulo,
+          planKey: planForAi,
+          slotLabel: slotForAi,
+        });
+      } else if (aiMode === 'message') {
+        out = await draftMessageWithAi({
+          organizationId: orgIdForPlans,
+          rawText: promptText,
+          titleHint: titulo,
+          planKey: planForAi,
+          slotLabel: slotForAi,
+          sessionDate: dateForAi,
+          extraNotes: coachNotes,
+        });
+      } else {
+        out = await normalizeRmPatternWithAi({
+          organizationId: orgIdForPlans,
+          rawText: promptText,
+          planKey: planForAi,
+        });
+      }
+
+      const result = out?.result || {};
+      const textOut = String(result?.result_text || '').trim();
+      setAiOutput(textOut);
+      setAiSuggestedTitle(String(result?.title || '').trim());
+      setAiCoachNotes(String(result?.coach_notes || '').trim());
+      setAiWarnings(Array.isArray(result?.warnings) ? result.warnings : []);
+      setAiUsageLine(buildAiUsageLine(out?.usage || {}));
+    } catch (e) {
+      const msg = String(e?.message || '');
+      if (msg.toLowerCase().includes('quota')) {
+        Alert.alert(tStr('admin_ai_quota_title'), tStr('admin_ai_quota_body'));
+      } else {
+        const hint =
+          /non-2xx|edge function|functions\.invoke/i.test(msg)
+            ? `\n\n${tStr('admin_ai_error_edge_hint')}`
+            : '';
+        Alert.alert(tStr('gym_config_alert_title_error'), `${msg || tStr('admin_ai_error')}${hint}`);
+      }
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const applyAiResult = () => {
+    if (!aiOutput.trim()) return;
+    if (aiMode === 'routine') {
+      if (aiSuggestedTitle) setTitulo(aiSuggestedTitle);
+      setContenido(aiOutput);
+      if (aiCoachNotes) {
+        setCoachNotes((prev) => {
+          if (!prev.trim()) return aiCoachNotes;
+          if (prev.includes(aiCoachNotes)) return prev;
+          return `${prev.trim()}\n\n${aiCoachNotes}`;
+        });
+      }
+    } else if (aiMode === 'message') {
+      setCoachNotes((prev) => (prev.trim() ? `${prev.trim()}\n\n${aiOutput}` : aiOutput));
+    } else {
+      setContenido(aiOutput);
+    }
+    setAiModalVisible(false);
+  };
+
+  const copyAiResult = async () => {
+    if (!aiOutput.trim()) return;
+    try {
+      await Clipboard.setStringAsync(aiOutput);
+      Alert.alert(tStr('gym_config_copied_title'), tStr('admin_ai_copied'));
+    } catch {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_ai_copy_fail'));
+    }
+  };
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -576,7 +657,7 @@ export default function AdminScreen(props) {
           borderWidth: 1,
           marginBottom: 30,
           padding: 20,
-          width: width > 500 ? '90%' : '100%',
+          width: panelWidth,
         },
 
         headerRow: {
@@ -645,6 +726,18 @@ export default function AdminScreen(props) {
           marginBottom: 12,
           padding: 12,
         },
+        composerGrid: {
+          flexDirection: isDesktopWeb ? 'row' : 'column',
+          columnGap: 12,
+          rowGap: 12,
+          marginBottom: 8,
+        },
+        composerColMain: {
+          flex: isDesktopWeb ? 1.2 : 0,
+        },
+        composerColSide: {
+          flex: isDesktopWeb ? 1 : 0,
+        },
         textarea: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
@@ -663,7 +756,137 @@ export default function AdminScreen(props) {
           marginTop: 4,
           padding: 12,
         },
+        actionRow: {
+          flexDirection: isDesktopWeb ? 'row' : 'column',
+          columnGap: 10,
+          rowGap: 8,
+          alignItems: 'stretch',
+          marginTop: 4,
+        },
+        actionBtnWide: {
+          flex: isDesktopWeb ? 1 : 0,
+          marginBottom: isDesktopWeb ? 0 : 10,
+        },
+        managementGrid: {
+          flexDirection: isDesktopWeb ? 'row' : 'column',
+          columnGap: 12,
+          rowGap: 12,
+          marginTop: 8,
+        },
+        managementCol: {
+          flex: 1,
+          minWidth: 0,
+        },
+        sectionCard: {
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.inputBg,
+          padding: 12,
+        },
+        sectionCardTitle: {
+          color: t.text,
+          fontSize: 18,
+          fontWeight: '800',
+          marginBottom: 10,
+        },
+        sectionListScroll: {
+          maxHeight: isDesktopWeb ? 520 : undefined,
+        },
+        sectionListContent: {
+          paddingBottom: 4,
+        },
+        sectionEmptyText: {
+          color: t.placeholder,
+          textAlign: 'center',
+          paddingVertical: 10,
+        },
         primaryBtnTextOn: t.buttonPrimaryText,
+        aiBtn: {
+          alignItems: 'center',
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: t.brand,
+          backgroundColor: hexToRgbaLocal(t.brand, 0.12),
+          marginBottom: 12,
+          padding: 12,
+        },
+        aiBtnText: { color: t.brand, fontWeight: '700' },
+        aiModesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+        aiModePill: {
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.18)',
+          borderRadius: 999,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          backgroundColor: BASE_TEAL,
+        },
+        aiModePillOn: {
+          borderColor: t.brand,
+          backgroundColor: hexToRgbaLocal(t.brand, 0.22),
+        },
+        aiModeTxt: { color: t.subText, fontSize: 12, fontWeight: '700' },
+        aiModeTxtOn: { color: t.brand },
+        aiPromptRow: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: 8,
+          marginBottom: 12,
+        },
+        aiPromptInput: {
+          flex: 1,
+          backgroundColor: BASE_TEAL,
+          borderColor: 'rgba(255,255,255,0.16)',
+          borderRadius: 10,
+          borderWidth: 1,
+          color: t.text,
+          padding: 12,
+          minHeight: 84,
+        },
+        aiVoiceMicBtn: {
+          width: 48,
+          minHeight: 48,
+          marginTop: 2,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.16)',
+          backgroundColor: BASE_TEAL,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        aiVoiceMicBtnOn: {
+          borderColor: t.brand,
+          backgroundColor: hexToRgbaLocal(t.brand, 0.18),
+        },
+        aiVoiceHint: {
+          color: t.subText,
+          fontSize: 12,
+          marginBottom: 8,
+          marginTop: -8,
+        },
+        aiOutputBox: {
+          alignSelf: 'stretch',
+          backgroundColor: BASE_TEAL,
+          borderColor: 'rgba(255,255,255,0.16)',
+          borderWidth: 1,
+          borderRadius: 10,
+          padding: 10,
+          minHeight: 100,
+          marginTop: 10,
+        },
+        aiOutputText: { color: t.text, fontSize: 14, lineHeight: 20 },
+        aiWarnLine: { color: t.subText, fontSize: 12, marginTop: 6 },
+        aiActionsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+        aiActionBtn: {
+          flex: 1,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.16)',
+          borderRadius: 10,
+          alignItems: 'center',
+          paddingVertical: 10,
+          backgroundColor: BASE_TEAL,
+        },
+        aiActionTxt: { color: t.text, fontSize: 13, fontWeight: '700' },
 
         financeBtn: {
           alignSelf: 'flex-end',
@@ -678,14 +901,15 @@ export default function AdminScreen(props) {
         menuGrid: {
           flexDirection: 'row',
           flexWrap: 'wrap',
-          justifyContent: 'space-between',
+          columnGap: menuGap,
+          rowGap: menuGap,
+          justifyContent: menuColumns === 1 ? 'flex-start' : 'space-between',
           marginBottom: 8,
           marginTop: 4,
         },
         menuTile: {
-          width: (width - 56) / 2,
+          width: menuTileWidth,
           minHeight: 96,
-          marginBottom: 12,
           padding: 12,
           borderRadius: 14,
           borderWidth: 1,
@@ -750,7 +974,7 @@ export default function AdminScreen(props) {
           borderColor: t.overlayBorder,
           borderRadius: 16,
           borderWidth: 1,
-          width: Math.min(width * 0.92, 420),
+          width: Math.min(windowWidth * 0.92, 420),
           maxHeight: Math.min(Dimensions.get('window').height * 0.72, 460),
           overflow: 'hidden',
           shadowColor: '#000',
@@ -831,14 +1055,20 @@ export default function AdminScreen(props) {
           padding: 10,
         },
         previewTitle: { color: t.text, fontWeight: '600' },
-        previewRow: { flexDirection: 'row', flexWrap: 'wrap' },
-        previewText: { color: t.text },
+        /** Misma base tipográfica que el texto: evita desalineación %RM con el resto. */
+        previewRowBase: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          alignItems: 'baseline',
+        },
+        previewText: { color: t.text, ...RM_PREVIEW_BASE() },
         rmText: {
+          ...RM_PREVIEW_BASE(),
           backgroundColor: hexToRgbaLocal(RM_HIGHLIGHT_COLOR, 0.14),
           borderRadius: 4,
           color: RM_HIGHLIGHT_COLOR,
-          fontWeight: 'bold',
-          paddingHorizontal: 4,
+          fontWeight: '700',
+          paddingHorizontal: 2,
         },
 
         bloqueCard: {
@@ -867,7 +1097,30 @@ export default function AdminScreen(props) {
         noteTitle: { color: t.text, fontWeight: '600' },
         noteText: { color: t.text },
 
-        videoLink: { color: t.text, fontSize: 12, marginTop: 2 },
+        videoThumbRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          marginTop: 8,
+        },
+        videoThumb: {
+          alignItems: 'center',
+          borderColor: t.overlayBorder,
+          borderRadius: 10,
+          borderWidth: 1,
+          marginRight: 8,
+          marginTop: 8,
+          overflow: 'hidden',
+          width: 100,
+        },
+        videoImage: {
+          height: 56,
+          width: '100%',
+        },
+        videoLabel: {
+          color: t.text,
+          fontSize: 10,
+          padding: 4,
+        },
 
         chatContainer: {
           backgroundColor: t.inputBg,
@@ -926,9 +1179,10 @@ export default function AdminScreen(props) {
         togglePillActive: { backgroundColor: t.brand },
         toggleText: { color: t.text, fontWeight: '600' },
 
+        /* Siempre velo oscuro: con t.text claro (tema oscuro) hexToRgbaLocal(t.text,0.7) volvía todo blanco. */
         modalOverlay: {
           alignItems: 'center',
-          backgroundColor: hexToRgbaLocal(t.text, 0.7),
+          backgroundColor: 'rgba(0,0,0,0.58)',
           flex: 1,
           justifyContent: 'center',
         },
@@ -937,14 +1191,81 @@ export default function AdminScreen(props) {
           borderColor: t.overlayBorder,
           borderRadius: 15,
           borderWidth: 1,
-          maxHeight: '90%',
           padding: 20,
+        },
+        /** Solo modal “mover bloque”; el modal IA usa ScrollView externo sin tope rígido en la tarjeta. */
+        modalContentMoveMax: {
+          maxHeight: '90%',
+        },
+        /** Panel IA: fondo opaco (t.boxBg suele ser translúcido y se “mezcla” con el gym de fondo). */
+        modalContentAi: {
+          width: '92%',
+          maxWidth: 440,
+          alignSelf: 'center',
+          backgroundColor: BASE_TEAL_SOFT,
+          borderColor: 'rgba(255,255,255,0.14)',
+          elevation: 14,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.45,
+          shadowRadius: 16,
+        },
+        aiModalLayer: {
+          ...StyleSheet.absoluteFillObject,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 10,
+        },
+        aiModalScroll: {
+          maxHeight: Dimensions.get('window').height * 0.88,
+          width: '100%',
+        },
+        /* Sin flexGrow/center: si no, el contenido largo no scrollea y “se traba” el modal IA. */
+        aiModalScrollContent: {
+          alignItems: 'center',
+          paddingTop: 12,
+          paddingBottom: 32,
+        },
+        aiModesTitle: {
+          alignSelf: 'stretch',
+          color: t.subText,
+          fontSize: 12,
+          fontWeight: '700',
+          marginBottom: 6,
+        },
+        aiModeHintLine: {
+          alignSelf: 'stretch',
+          color: t.text,
+          fontSize: 12,
+          lineHeight: 17,
+          marginBottom: 10,
+          opacity: 0.95,
         },
         modalTitle: {
           color: t.text,
           fontSize: 18,
           fontWeight: 'bold',
           textAlign: 'center',
+        },
+        aiModalHeaderRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 4,
+        },
+        aiModalHeaderSpacer: {
+          width: 36,
+          height: 36,
+        },
+        aiModalCloseBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.16)',
+          backgroundColor: BASE_TEAL,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         modalItem: {
           alignItems: 'center',
@@ -966,8 +1287,9 @@ export default function AdminScreen(props) {
           flex: 1,
           marginHorizontal: 8,
         },
+
       }),
-    [t],
+    [t, panelWidth, menuColumns, menuGap, menuTileWidth, windowWidth, isDesktopWeb, STAFF_WEB_RAIL],
   );
 
   const updateBloquesArray = async (modifier) => {
@@ -988,6 +1310,11 @@ export default function AdminScreen(props) {
       return;
     }
 
+    const parsedCapacity = (() => {
+      const n = parseInt(String(capacityInput || '').trim(), 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })();
+
     if (editingBlockId) {
       await updateBloquesArray((arr) =>
         arr.map((b) =>
@@ -996,6 +1323,7 @@ export default function AdminScreen(props) {
                 ...b,
                 titulo: titulo.trim(),
                 contenido: contenido.trim(),
+                capacity: parsedCapacity,
                 notas: coachNotes.trim(),
                 videoLinks: videoLinks
                   .split('\n')
@@ -1011,6 +1339,7 @@ export default function AdminScreen(props) {
       setCoachNotes('');
       setVideoLinks('');
       setContenido('');
+      setCapacityInput('');
       setTitulo('');
       setHorariosSeleccionados([]);
       return;
@@ -1036,6 +1365,7 @@ export default function AdminScreen(props) {
         hora: h,
         titulo: titulo.trim(),
         contenido: contenido.trim(),
+        capacity: parsedCapacity,
         notas: coachNotes.trim(),
         videoLinks: videoLinks
           .split('\n')
@@ -1048,6 +1378,7 @@ export default function AdminScreen(props) {
     Alert.alert(tStr('admin_listo'), tStr('admin_creados_ok').replace('%d', String(nuevos.length)));
     setTitulo('');
     setContenido('');
+    setCapacityInput('');
     setCoachNotes('');
     setVideoLinks('');
     // NO limpiamos horariosSeleccionados acá para poder seguir creando bloques en el mismo/los mismos horarios
@@ -1111,6 +1442,7 @@ export default function AdminScreen(props) {
     setHorariosSeleccionados([b.hora]);
     setTitulo(b.titulo || '');
     setContenido(b.contenido || '');
+    setCapacityInput(b.capacity != null ? String(b.capacity) : '');
     setCoachNotes(b.notas || '');
     setVideoLinks((b.videoLinks || []).join('\n'));
   };
@@ -1151,6 +1483,9 @@ export default function AdminScreen(props) {
           <Text style={styles.bloqueMeta}>
             {new Date(b.fecha).toLocaleDateString(dateLocale)} — {b.hora}
           </Text>
+          {b.capacity ? (
+            <Text style={styles.bloqueMeta}>{tStr('admin_capacity_meta').replace('{{n}}', String(b.capacity))}</Text>
+          ) : null}
           {!!b.coachId && (
             <Text style={styles.bloqueCoach}>
               {tStr('admin_coach')}{' '}
@@ -1199,9 +1534,7 @@ export default function AdminScreen(props) {
       </View>
 
       {!!b.contenido && (
-        <View style={[styles.mt6, styles.rowWrap]}>
-          {renderPreviewWithRM(b.contenido, styles)}
-        </View>
+        <View style={styles.mt6}>{renderPreviewWithRM(b.contenido, styles)}</View>
       )}
       {!!b.notas && (
         <View style={styles.noteBox}>
@@ -1209,12 +1542,9 @@ export default function AdminScreen(props) {
           <Text style={styles.noteText}>{b.notas}</Text>
         </View>
       )}
-      {Array.isArray(b.videoLinks) &&
-        b.videoLinks.map((u, i) => (
-          <Text key={`${b.id}-v-${i}`} style={styles.videoLink}>
-            🔗 {u}
-          </Text>
-        ))}
+      {Array.isArray(b.videoLinks) && b.videoLinks.length > 0 ? (
+        <VideoLinksThumbs links={b.videoLinks} themeStyles={styles} placeholderColor={t.placeholder} />
+      ) : null}
     </View>
   );
 
@@ -1225,37 +1555,39 @@ export default function AdminScreen(props) {
         style={styles.screen}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          <View style={styles.panel}>
-            <View style={styles.headerRow}>
-              <Text style={styles.headerTitle}>{tStr('admin_panel')}</Text>
-              <TouchableOpacity style={styles.headerLogoutBtn} onPress={handleLogout}>
-                <Text style={styles.headerLogout}>{tStr('admin_salir')}</Text>
-              </TouchableOpacity>
-            </View>
+              contentContainerStyle={styles.scrollContainer}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+              <View style={styles.panel}>
+                <View style={styles.headerRow}>
+                  <Text style={styles.headerTitle}>{tStr('admin_panel')}</Text>
+                  <TouchableOpacity style={styles.headerLogoutBtn} onPress={handleLogout}>
+                    <Text style={styles.headerLogout}>{tStr('admin_salir')}</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <Text style={styles.title}>{tStr('admin_title')}</Text>
+                <Text style={styles.title}>{tStr('admin_title')}</Text>
 
-            <View style={styles.menuGrid}>
-              {adminNavTiles.map((tile) => (
-                <TouchableOpacity
-                  key={tile.key}
-                  style={styles.menuTile}
-                  onPress={tile.onPress}
-                  activeOpacity={0.88}
-                >
-                  <View style={styles.menuTileIconWrap}>
-                    <Ionicons name={tile.ion} size={20} color={t.brand} />
+                {!isStaffWebDesktop ? (
+                  <View style={styles.menuGrid}>
+                    {adminNavTiles.map((tile) => (
+                      <TouchableOpacity
+                        key={tile.key}
+                        style={styles.menuTile}
+                        onPress={tile.onPress}
+                        activeOpacity={0.88}
+                      >
+                        <View style={styles.menuTileIconWrap}>
+                          <Ionicons name={tile.ion} size={20} color={t.brand} />
+                        </View>
+                        <Text style={styles.menuTileTitle}>{tile.title}</Text>
+                        <Text style={styles.menuTileSub}>{tile.sub}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
-                  <Text style={styles.menuTileTitle}>{tile.title}</Text>
-                  <Text style={styles.menuTileSub}>{tile.sub}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                ) : null}
 
             {isCoach && !coachPlanActual ? (
               <View style={styles.block}>
@@ -1343,6 +1675,16 @@ export default function AdminScreen(props) {
               tStr={tStr}
             />
 
+            <Text style={styles.label}>{tStr('admin_capacity_label')}</Text>
+            <TextInput
+              value={capacityInput}
+              onChangeText={setCapacityInput}
+              placeholder={tStr('admin_capacity_placeholder')}
+              placeholderTextColor={t.placeholder}
+              style={styles.input}
+              keyboardType="number-pad"
+            />
+
             <Text style={styles.label}>{tStr('admin_titulo')}</Text>
             <TextInput
               value={titulo}
@@ -1353,93 +1695,261 @@ export default function AdminScreen(props) {
             />
 
             <Text style={styles.label}>{tStr('admin_contenido')}</Text>
-            <TextInput
-              value={contenido}
-              onChangeText={setContenido}
-              placeholder={tStr('admin_placeholder_contenido')}
-              placeholderTextColor={t.placeholder}
-              style={styles.textarea}
-              multiline
-            />
+            <View style={styles.composerGrid}>
+              <View style={styles.composerColMain}>
+                <TextInput
+                  value={contenido}
+                  onChangeText={setContenido}
+                  placeholder={tStr('admin_placeholder_contenido')}
+                  placeholderTextColor={t.placeholder}
+                  style={styles.textarea}
+                  multiline
+                />
 
-            <View style={styles.previewWrap}>
-              <Text style={styles.previewTitle}>{tStr('admin_preview_rm')}</Text>
-              <View style={styles.previewRow}>
-                {renderPreviewWithRM(contenido, styles)}
+                <View style={styles.previewWrap}>
+                  <Text style={styles.previewTitle}>{tStr('admin_preview_rm')}</Text>
+                  {renderPreviewWithRM(contenido, styles)}
+                </View>
+              </View>
+
+              <View style={styles.composerColSide}>
+                <Text style={styles.label}>{tStr('admin_notas_coach')}</Text>
+                <TextInput
+                  value={coachNotes}
+                  onChangeText={setCoachNotes}
+                  placeholder={tStr('admin_placeholder_notas')}
+                  placeholderTextColor={t.placeholder}
+                  style={styles.textarea}
+                  multiline
+                />
+
+                <Text style={styles.label}>{tStr('admin_links_video')}</Text>
+                <TextInput
+                  value={videoLinks}
+                  onChangeText={setVideoLinks}
+                  placeholder={tStr('admin_placeholder_links')}
+                  placeholderTextColor={t.placeholder}
+                  style={styles.textarea}
+                  multiline
+                />
+                {videoLinks.trim() ? (
+                  <VideoLinksThumbs
+                    links={videoLinks.split('\n').map((s) => s.trim()).filter(Boolean)}
+                    themeStyles={styles}
+                    placeholderColor={t.placeholder}
+                  />
+                ) : null}
+                <TouchableOpacity onPress={openAiModal} style={styles.aiBtn} activeOpacity={0.88}>
+                  <Text style={styles.aiBtnText}>{tStr('admin_ai_cta')}</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
-            <Text style={styles.label}>{tStr('admin_notas_coach')}</Text>
-            <TextInput
-              value={coachNotes}
-              onChangeText={setCoachNotes}
-              placeholder={tStr('admin_placeholder_notas')}
-              placeholderTextColor={t.placeholder}
-              style={styles.textarea}
-              multiline
-            />
-
-            <Text style={styles.label}>{tStr('admin_links_video')}</Text>
-            <TextInput
-              value={videoLinks}
-              onChangeText={setVideoLinks}
-              placeholder={tStr('admin_placeholder_links')}
-              placeholderTextColor={t.placeholder}
-              style={styles.textarea}
-              multiline
-            />
-
-            <TouchableOpacity onPress={crearBloques} style={styles.primaryBtn}>
-              <Text style={styles.primaryBtnTextOn}>
-                {isEditing ? tStr('admin_actualizar_bloque') : tStr('admin_crear_bloques')}
-              </Text>
-            </TouchableOpacity>
-
-            {clipboardBloque && !isEditing && (
-              <TouchableOpacity
-                onPress={pegarEnHorarios}
-                style={styles.primaryBtn}
-              >
+            <View style={styles.actionRow}>
+              <TouchableOpacity onPress={crearBloques} style={[styles.primaryBtn, styles.actionBtnWide]}>
                 <Text style={styles.primaryBtnTextOn}>
-                  {tStr('admin_pegar_horarios')}
+                  {isEditing ? tStr('admin_actualizar_bloque') : tStr('admin_crear_bloques')}
                 </Text>
               </TouchableOpacity>
-            )}
 
-            <Text style={[styles.title, styles.mt24]}>{tStr('admin_ultimos_dias')}</Text>
-            {lastWeekBlocks.length === 0 ? (
-              <Text style={styles.tacPlaceholder}>
-                {tStr('admin_sin_bloques')}
-              </Text>
-            ) : (
-              lastWeekBlocks.map((b) => <BloqueCard key={b.id} b={b} />)
-            )}
+              {clipboardBloque && !isEditing && (
+                <TouchableOpacity
+                  onPress={pegarEnHorarios}
+                  style={[styles.primaryBtn, styles.actionBtnWide]}
+                >
+                  <Text style={styles.primaryBtnTextOn}>
+                    {tStr('admin_pegar_horarios')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-            <Text style={[styles.title, styles.mt24]}>{tStr('admin_historico')}</Text>
-            {historicBlocks.length === 0 ? (
-              <Text style={styles.tacPlaceholder}>{tStr('admin_sin_historico')}</Text>
-            ) : (
-              historicBlocks.map((b) => <BloqueCard key={b.id} b={b} />)
-            )}
+            <View style={styles.managementGrid}>
+              <View style={styles.managementCol}>
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionCardTitle}>{tStr('admin_ultimos_dias')}</Text>
+                  {lastWeekBlocks.length === 0 ? (
+                    <Text style={styles.sectionEmptyText}>
+                      {tStr('admin_sin_bloques')}
+                    </Text>
+                  ) : (
+                    <ScrollView
+                      style={styles.sectionListScroll}
+                      contentContainerStyle={styles.sectionListContent}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={isDesktopWeb}
+                    >
+                      {lastWeekBlocks.map((b) => <BloqueCard key={b.id} b={b} />)}
+                    </ScrollView>
+                  )}
+                </View>
+              </View>
 
-            <Text style={[styles.title, styles.mt24]}>{tStr('admin_chat_plan')}</Text>
-            <TouchableOpacity
-              onPress={irAlChatDelPlan}
-              style={[styles.primaryBtn, { marginTop: 8 }]}
-            >
-              <Text style={styles.primaryBtnTextOn}>
-                {tStr('admin_ir_chat')} — {plansDisponibles.find((p) => p.value === planSeleccionado)?.label || planSeleccionado}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+              <View style={styles.managementCol}>
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
+                  {historicBlocks.length === 0 ? (
+                    <Text style={styles.sectionEmptyText}>{tStr('admin_sin_historico')}</Text>
+                  ) : (
+                    <ScrollView
+                      style={styles.sectionListScroll}
+                      contentContainerStyle={styles.sectionListContent}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={isDesktopWeb}
+                    >
+                      {historicBlocks.map((b) => <BloqueCard key={b.id} b={b} />)}
+                    </ScrollView>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            <View style={[styles.sectionCard, styles.mt24]}>
+              <Text style={styles.sectionCardTitle}>{tStr('admin_chat_plan')}</Text>
+              <TouchableOpacity
+                onPress={irAlChatDelPlan}
+                style={[styles.primaryBtn, { marginTop: 4, marginBottom: 0 }]}
+              >
+                <Text style={styles.primaryBtnTextOn}>
+                  {tStr('admin_ir_chat')} — {plansDisponibles.find((p) => p.value === planSeleccionado)?.label || planSeleccionado}
+                </Text>
+              </TouchableOpacity>
+            </View>
+              </View>
+            </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={aiModalVisible} transparent animationType="fade" onRequestClose={() => setAiModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setAiModalVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel={tStr('admin_ai_close_backdrop')}
+          />
+          <View style={styles.aiModalLayer} pointerEvents="box-none">
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              style={styles.aiModalScroll}
+              contentContainerStyle={styles.aiModalScrollContent}
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={[styles.modalContent, styles.modalContentAi]}>
+                <View style={styles.aiModalHeaderRow}>
+                  <View style={styles.aiModalHeaderSpacer} />
+                  <Text style={styles.modalTitle}>{tStr('admin_ai_title')}</Text>
+                  <TouchableOpacity
+                    onPress={() => setAiModalVisible(false)}
+                    style={styles.aiModalCloseBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={tStr('admin_ai_close_backdrop')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="close" size={20} color={t.text} />
+                  </TouchableOpacity>
+                </View>
+                <Text
+                  style={[
+                    styles.fs12,
+                    styles.tacSubtle,
+                    { marginTop: 6, marginBottom: 10, color: t.subText },
+                  ]}
+                >
+                  {tStr('admin_ai_hint')}
+                </Text>
+
+                <Text style={styles.aiModesTitle}>{tStr('admin_ai_modes_title')}</Text>
+                <View style={styles.aiModesRow}>
+                  {[
+                    ['routine', tStr('admin_ai_mode_routine')],
+                    ['rewrite', tStr('admin_ai_mode_rewrite')],
+                    ['rm_format', tStr('admin_ai_mode_rm')],
+                    ['message', tStr('admin_ai_mode_message')],
+                  ].map(([id, lbl]) => {
+                    const on = aiMode === id;
+                    return (
+                      <TouchableOpacity
+                        key={id}
+                        style={[styles.aiModePill, on && styles.aiModePillOn]}
+                        onPress={() => setAiMode(id)}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={[styles.aiModeTxt, on && styles.aiModeTxtOn]}>{lbl}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={styles.aiModeHintLine}>{tStr(`admin_ai_mode_hint_${aiMode}`)}</Text>
+
+                {aiModalVisible ? (
+                  <AdminAiPromptWithVoice
+                    aiPrompt={aiPrompt}
+                    setAiPrompt={setAiPrompt}
+                    aiBusy={aiBusy}
+                    tStr={tStr}
+                    locale={locale}
+                    modalVisible={aiModalVisible}
+                    styles={styles}
+                    placeholderColor={t.placeholder}
+                    brandColor={t.brand}
+                    subTextColor={t.subText}
+                  />
+                ) : null}
+
+                <TouchableOpacity
+                  onPress={generateWithAi}
+                  style={[styles.primaryBtn, { opacity: aiBusy ? 0.7 : 1 }]}
+                  disabled={aiBusy}
+                >
+                  <Text style={styles.primaryBtnTextOn}>
+                    {aiBusy ? tStr('admin_ai_generating') : tStr('admin_ai_generate')}
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.aiOutputBox}>
+                  {aiOutput.trim() ? (
+                    renderPreviewWithRM(aiOutput, styles)
+                  ) : (
+                    <Text style={styles.aiOutputText}>{tStr('admin_ai_empty')}</Text>
+                  )}
+                </View>
+                {aiSuggestedTitle ? (
+                  <Text style={styles.aiWarnLine}>
+                    {tStr('admin_ai_title_suggested').replace('{{title}}', aiSuggestedTitle)}
+                  </Text>
+                ) : null}
+                {aiCoachNotes ? (
+                  <Text style={styles.aiWarnLine}>
+                    {tStr('admin_ai_coach_notes').replace('{{notes}}', aiCoachNotes)}
+                  </Text>
+                ) : null}
+                {aiWarnings.map((w, i) => (
+                  <Text key={`aiw-${i}`} style={styles.aiWarnLine}>
+                    • {String(w)}
+                  </Text>
+                ))}
+                {aiUsageLine ? <Text style={styles.aiWarnLine}>{aiUsageLine}</Text> : null}
+
+                <View style={styles.aiActionsRow}>
+                  <TouchableOpacity style={styles.aiActionBtn} onPress={copyAiResult}>
+                    <Text style={styles.aiActionTxt}>{tStr('admin_ai_copy')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.aiActionBtn} onPress={applyAiResult}>
+                    <Text style={styles.aiActionTxt}>{tStr('admin_ai_apply')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={moveModalVisible} transparent animationType="fade">
         <TouchableWithoutFeedback onPress={() => setMoveModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, styles.modalContentMoveMax]}>
                 <Text style={styles.modalTitle}>{tStr('admin_mover_bloque')}</Text>
 
                 <Text style={styles.label}>{tStr('admin_fecha_destino')}</Text>

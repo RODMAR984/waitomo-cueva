@@ -57,6 +57,7 @@ export function rowToBloque(row) {
     titulo: row.titulo || '',
     contenido: row.contenido || '',
     notas: row.notas || '',
+    capacity: row.capacity != null ? Number(row.capacity) : null,
     videoLinks: Array.isArray(videoLinks) ? videoLinks : [],
     rmTags: Array.isArray(rmTags) ? rmTags : [],
     updated_at_remote: row.updated_at,
@@ -84,6 +85,10 @@ export function bloqueToRow(b, organizationId, defaultCoachId) {
     titulo: b.titulo || '',
     contenido: b.contenido || '',
     notas: b.notas || '',
+    capacity:
+      b.capacity == null || Number.isNaN(Number(b.capacity)) || Number(b.capacity) <= 0
+        ? null
+        : Number(b.capacity),
     video_links: Array.isArray(b.videoLinks) ? b.videoLinks : [],
     rm_tags: Array.isArray(b.rmTags) ? b.rmTags : [],
     client_block_id: b.id,
@@ -182,7 +187,7 @@ export async function fetchTrainingBlocksForOrg(organizationId) {
   const { data, error } = await supabase
     .from('training_daily_blocks')
     .select(
-      'id, organization_id, plan_key, coach_id, fecha, slot_label, titulo, contenido, notas, video_links, rm_tags, client_block_id, updated_at',
+      'id, organization_id, plan_key, coach_id, fecha, slot_label, titulo, contenido, notas, capacity, video_links, rm_tags, client_block_id, updated_at',
     )
     .eq('organization_id', organizationId)
     .order('fecha', { ascending: false })

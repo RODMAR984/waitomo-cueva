@@ -1,5 +1,7 @@
-// Panel resumen admin: agenda del día (rutinas publicadas) + inscriptos por franja (reservas en app)
-// + reservas sin franja publicada + cancelaciones del día + cobros pendientes (caja).
+// Panel resumen admin: agenda del día (rutinas publicadas) + inscriptos por horario (reservas en app)
+// + reservas sin bloque publicado + otras + cobros pendientes (caja).
+
+const DEFAULT_CUPO_DEMO = 10;
 
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
@@ -10,6 +12,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +29,8 @@ import { formatYmdLocal } from '../utils/formatYmdLocal';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
 import { isUserAbonoActive, abonoCoversUserPlan } from '../utils/clientWorkoutEntitlement';
+import { staffCancelClassBookingServer, staffMoveClassBookingServer } from '../utils/classBookingSupabase';
+import { reportError, trackEvent } from '../utils/observability';
 
 function hexToRgbaLocal(hex, alpha = 1) {
   const clean = String(hex || '').replace('#', '');
@@ -40,6 +47,27 @@ function shiftYmd(ymd, deltaDays) {
   const dt = new Date(parts[0], parts[1] - 1, parts[2]);
   dt.setDate(dt.getDate() + deltaDays);
   return formatYmdLocal(dt);
+}
+
+/** 1=lunes … 7=domingo (igual que plan_week_slots / Calendario). */
+function getIsoWeekdayFromYmd(ymd) {
+  const [y, m, d] = String(ymd || '').split('-').map(Number);
+  if ([y, m, d].some(Number.isNaN)) return 1;
+  return new Date(y, m - 1, d).getDay() || 7;
+}
+
+function weekSlotMatchesYmd(ymd, planKey, slotLabel, weekSlots) {
+  const wd = getIsoWeekdayFromYmd(ymd);
+  const pk = normalizePlanKey(planKey);
+  const sl = normalizeSlotLabel(slotLabel);
+  if (!pk || !sl) return false;
+  for (const ws of weekSlots || []) {
+    if (Number(ws.weekday) !== wd) continue;
+    if (normalizePlanKey(ws.plan_code) !== pk) continue;
+    if (normalizeSlotLabel(ws.slot_label) !== sl) continue;
+    return true;
+  }
+  return false;
 }
 
 function matchKey(planKey, slotLabel) {
@@ -71,6 +99,7 @@ function statusNorm(s) {
 export default function AdminResumenScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const { organization, profile } = useAuth() || {};
@@ -83,16 +112,23 @@ export default function AdminResumenScreen() {
   const [blocks, setBlocks] = useState([]);
   const [grantsScheduled, setGrantsScheduled] = useState([]);
   const [grantsOther, setGrantsOther] = useState([]);
+  const [classScheduled, setClassScheduled] = useState([]);
+  const [classOther, setClassOther] = useState([]);
   const [planByCode, setPlanByCode] = useState({});
+  const [planCapacityByCode, setPlanCapacityByCode] = useState({});
   const [coachById, setCoachById] = useState({});
   const [profilesById, setProfilesById] = useState({});
   const [abonoByUser, setAbonoByUser] = useState({});
   const [pendingPayments, setPendingPayments] = useState([]);
   const [expandedSlots, setExpandedSlots] = useState({});
-  /** Tarjeta colapsada = solo franja + pastilla (como el mock). */
+  const [staffActionBusyId, setStaffActionBusyId] = useState('');
+  /** Tarjeta colapsada = cabecera (horario) + pastilla de cupo, sin lista. */
   const [slotListOpen, setSlotListOpen] = useState({});
+  /** Franjas habituales del plan para el día de la semana de `ymd` (sin exigir bloque publicado). */
+  const [weekSlots, setWeekSlots] = useState([]);
 
   const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
+  const isDesktopWeb = Platform.OS === 'web' && width >= 1200;
 
   useEffect(() => {
     setExpandedSlots({});
@@ -114,41 +150,54 @@ export default function AdminResumenScreen() {
     }
   }, [ymd, dateLocale]);
 
-  const isSlotListOpen = useCallback(
-    (slotKey, trialsLen) => {
-      if (slotListOpen[slotKey] !== undefined) return slotListOpen[slotKey];
-      return trialsLen === 0;
-    },
-    [slotListOpen],
-  );
+  const isSlotListOpen = useCallback((slotKey) => {
+    if (slotListOpen[slotKey] !== undefined) return slotListOpen[slotKey];
+    return true;
+  }, [slotListOpen]);
 
-  const toggleSlotList = useCallback((slotKey, trialsLen) => {
+  const toggleSlotList = useCallback((slotKey) => {
     setSlotListOpen((prev) => {
-      const cur = prev[slotKey] !== undefined ? prev[slotKey] : trialsLen === 0;
+      const cur = prev[slotKey] !== undefined ? prev[slotKey] : true;
       return { ...prev, [slotKey]: !cur };
     });
   }, []);
+
+  const formatOccupancyPill = useCallback(
+    (n, cap = DEFAULT_CUPO_DEMO) => {
+      const a = Math.max(0, n);
+      const b = Math.max(1, Number(cap || DEFAULT_CUPO_DEMO));
+      let s = tStr('admin_resumen_pill_occupancy').replace('{{a}}', String(a)).replace('{{b}}', String(b));
+      if (a >= b) s += ' ' + tStr('admin_resumen_pill_full');
+      return s;
+    },
+    [tStr],
+  );
 
   const load = useCallback(async () => {
     if (!orgId) {
       setBlocks([]);
       setGrantsScheduled([]);
       setGrantsOther([]);
+      setClassScheduled([]);
+      setClassOther([]);
       setPlanByCode({});
+      setPlanCapacityByCode({});
       setCoachById({});
       setProfilesById({});
       setAbonoByUser({});
       setPendingPayments([]);
+      setWeekSlots([]);
       setError(null);
       setLoading(false);
       return;
     }
     setError(null);
     try {
-      const [blocksRes, grantsRes, plansRes, payRes] = await Promise.all([
+      const wd = getIsoWeekdayFromYmd(ymd);
+      const [blocksRes, grantsRes, classRes, plansRes, payRes, weekSlotsRes] = await Promise.all([
         supabase
           .from('training_daily_blocks')
-          .select('id,plan_key,slot_label,titulo,coach_id,fecha,updated_at')
+          .select('id,plan_key,slot_label,titulo,coach_id,fecha,updated_at,capacity')
           .eq('organization_id', orgId)
           .eq('fecha', ymd)
           .order('slot_label', { ascending: true })
@@ -160,23 +209,39 @@ export default function AdminResumenScreen() {
           .eq('session_date', ymd)
           .order('slot_label', { ascending: true })
           .order('plan_key', { ascending: true }),
-        supabase.from('plans').select('code,title').eq('organization_id', orgId).eq('active', true),
+        supabase
+          .from('class_bookings')
+          .select('id,user_id,plan_key,session_date,slot_label,status')
+          .eq('organization_id', orgId)
+          .eq('session_date', ymd)
+          .order('slot_label', { ascending: true })
+          .order('plan_key', { ascending: true }),
+        supabase.from('plans').select('code,title,default_capacity').eq('organization_id', orgId).eq('active', true),
         supabase
           .from('billing_payments')
           .select('id,member_user_id,client_id,status,monto,moneda')
           .eq('organization_id', orgId)
           .limit(800),
+        supabase
+          .from('plan_week_slots')
+          .select('weekday,plan_code,slot_label')
+          .eq('organization_id', orgId)
+          .eq('weekday', wd),
       ]);
 
       if (blocksRes.error) throw blocksRes.error;
       if (grantsRes.error) throw grantsRes.error;
+      if (classRes.error) throw classRes.error;
       if (plansRes.error) throw plansRes.error;
       if (payRes.error) throw payRes.error;
+      if (weekSlotsRes.error) throw weekSlotsRes.error;
 
       const blockList = Array.isArray(blocksRes.data) ? blocksRes.data : [];
       const grantList = Array.isArray(grantsRes.data) ? grantsRes.data : [];
+      const classList = Array.isArray(classRes.data) ? classRes.data : [];
 
       setBlocks(blockList);
+      setWeekSlots(Array.isArray(weekSlotsRes.data) ? weekSlotsRes.data : []);
 
       const sched = [];
       const other = [];
@@ -187,7 +252,17 @@ export default function AdminResumenScreen() {
       setGrantsScheduled(sched);
       setGrantsOther(other);
 
+      const classSched = [];
+      const classEtc = [];
+      for (const g of classList) {
+        if (statusNorm(g.status) === 'scheduled') classSched.push(g);
+        else classEtc.push(g);
+      }
+      setClassScheduled(classSched);
+      setClassOther(classEtc.map((x) => ({ ...x, source: 'class' })));
+
       const planMap = {};
+      const planCapMap = {};
       for (const pl of plansRes.data || []) {
         const code = String(pl.code || '').trim();
         if (!code) continue;
@@ -195,18 +270,26 @@ export default function AdminResumenScreen() {
         planMap[code] = title;
         const nk = normalizePlanKey(code);
         if (nk) planMap[nk] = title;
+        const cap = pl.default_capacity != null ? Number(pl.default_capacity) : null;
+        if (cap && cap > 0) {
+          planCapMap[code] = cap;
+          if (nk) planCapMap[nk] = cap;
+        }
       }
       setPlanByCode(planMap);
+      setPlanCapacityByCode(planCapMap);
 
       const coachIds = [...new Set(blockList.map((b) => b.coach_id).filter(Boolean))];
       const trialUids = [...new Set(sched.map((r) => r.user_id).filter(Boolean))];
       const otherUids = [...new Set(other.map((r) => r.user_id).filter(Boolean))];
+      const classUids = [...new Set(classSched.map((r) => r.user_id).filter(Boolean))];
+      const classOtherUids = [...new Set(classEtc.map((r) => r.user_id).filter(Boolean))];
 
       const pend = !payRes.error && Array.isArray(payRes.data) ? payRes.data.filter((r) => !isPaidStatus(r.status)) : [];
       setPendingPayments(pend);
       const debtUids = [...new Set(pend.map((p) => p.member_user_id).filter(Boolean))];
 
-      const needProf = [...new Set([...trialUids, ...otherUids, ...debtUids, ...coachIds])];
+      const needProf = [...new Set([...trialUids, ...otherUids, ...classUids, ...classOtherUids, ...debtUids, ...coachIds])];
       const profMap = {};
       if (needProf.length) {
         const { data: profs, error: pErr } = await supabase
@@ -240,15 +323,23 @@ export default function AdminResumenScreen() {
       }
       setAbonoByUser(abonoMap);
     } catch (e) {
+      reportError('admin_resumen_load_failed', e, {
+        organizationId: orgId || null,
+        ymd,
+      });
       setError(e?.message || String(e));
       setBlocks([]);
       setGrantsScheduled([]);
       setGrantsOther([]);
+      setClassScheduled([]);
+      setClassOther([]);
       setPlanByCode({});
+      setPlanCapacityByCode({});
       setCoachById({});
       setProfilesById({});
       setAbonoByUser({});
       setPendingPayments([]);
+      setWeekSlots([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -285,11 +376,16 @@ export default function AdminResumenScreen() {
   }, [pendingPayments]);
 
   const scheduleRows = useMemo(() => {
-    const grantMap = new Map();
+    const participantMap = new Map();
     for (const g of grantsScheduled) {
       const k = matchKey(g.plan_key, g.slot_label);
-      if (!grantMap.has(k)) grantMap.set(k, []);
-      grantMap.get(k).push(g);
+      if (!participantMap.has(k)) participantMap.set(k, []);
+      participantMap.get(k).push({ ...g, source: 'trial' });
+    }
+    for (const c of classScheduled) {
+      const k = matchKey(c.plan_key, c.slot_label);
+      if (!participantMap.has(k)) participantMap.set(k, []);
+      participantMap.get(k).push({ ...c, source: 'class' });
     }
 
     const byKey = new Map();
@@ -301,14 +397,14 @@ export default function AdminResumenScreen() {
           planKey: b.plan_key,
           slotLabel: b.slot_label,
           blocks: [],
-          trials: grantMap.get(k) || [],
+          trials: participantMap.get(k) || [],
         });
-        grantMap.delete(k);
+        participantMap.delete(k);
       }
       byKey.get(k).blocks.push(b);
     }
 
-    const rows = [...byKey.values()].map((row) => {
+    const fromBlocks = [...byKey.values()].map((row) => {
       const b0 = row.blocks[0];
       const coachId = b0?.coach_id;
       const coachName = coachById[coachId] || profMapFallback(coachId);
@@ -318,9 +414,39 @@ export default function AdminResumenScreen() {
         titulo: row.blocks.map((x) => String(x.titulo || '').trim()).filter(Boolean).join(' · ') || '—',
         coachName: coachName ? `${coachName}${extra}` : extra || '—',
         planTitle: planDisplay(b0?.plan_key),
+        capacity:
+          row.blocks.find((x) => Number.isFinite(Number(x.capacity)) && Number(x.capacity) > 0)?.capacity
+          || planCapacityByCode[normalizePlanKey(row.planKey)]
+          || planCapacityByCode[row.planKey]
+          || DEFAULT_CUPO_DEMO,
+        syntheticHabitual: false,
       };
     });
 
+    const habitualRows = [];
+    for (const [k, trials] of [...participantMap.entries()]) {
+      if (!trials?.length) continue;
+      const g0 = trials[0];
+      if (!weekSlotMatchesYmd(ymd, g0.plan_key, g0.slot_label, weekSlots)) continue;
+      habitualRows.push({
+        matchKey: k,
+        planKey: g0.plan_key,
+        slotLabel: g0.slot_label,
+        blocks: [],
+        trials,
+        titulo: tStr('admin_resumen_habitual_no_block_title'),
+        coachName: '—',
+        planTitle: planDisplay(g0.plan_key),
+        capacity:
+          planCapacityByCode[normalizePlanKey(g0.plan_key)]
+          || planCapacityByCode[g0.plan_key]
+          || DEFAULT_CUPO_DEMO,
+        syntheticHabitual: true,
+      });
+      participantMap.delete(k);
+    }
+
+    const rows = [...fromBlocks, ...habitualRows];
     rows.sort((a, b) => {
       const sa = normalizeSlotLabel(a.slotLabel);
       const sb = normalizeSlotLabel(b.slotLabel);
@@ -329,7 +455,7 @@ export default function AdminResumenScreen() {
     });
 
     const orphans = [];
-    for (const [k, trials] of grantMap) {
+    for (const [k, trials] of participantMap) {
       if (!trials.length) continue;
       const g0 = trials[0];
       orphans.push({
@@ -341,6 +467,10 @@ export default function AdminResumenScreen() {
         coachName: '—',
         blocks: [],
         trials,
+        capacity:
+          planCapacityByCode[normalizePlanKey(g0.plan_key)]
+          || planCapacityByCode[g0.plan_key]
+          || DEFAULT_CUPO_DEMO,
       });
     }
     orphans.sort((a, b) => {
@@ -351,37 +481,25 @@ export default function AdminResumenScreen() {
     });
 
     return { rows, orphans };
-  }, [blocks, grantsScheduled, coachById, planDisplay, profilesById]);
+  }, [
+    blocks,
+    grantsScheduled,
+    classScheduled,
+    coachById,
+    planDisplay,
+    profilesById,
+    planCapacityByCode,
+    weekSlots,
+    ymd,
+    tStr,
+  ]);
 
   function profMapFallback(id) {
     return profilesById[id] || id || '—';
   }
 
-  const stats = useMemo(() => {
-    let nAbono = 0;
-    let nTrial = 0;
-    let nDebt = 0;
-    for (const g of grantsScheduled) {
-      const uid = g.user_id;
-      const ab = abonoByUser[uid];
-      const planK = g.plan_key;
-      const hasAbono = isUserAbonoActive(ab) && abonoCoversUserPlan(ab, planK);
-      const debt = !!pendingByUserId[uid];
-      if (hasAbono) nAbono += 1;
-      else if (debt) nDebt += 1;
-      else nTrial += 1;
-    }
-    return {
-      nAbono,
-      nTrial,
-      nDebt,
-      nTrials: grantsScheduled.length,
-      nBlocks: blocks.length,
-      nOther: grantsOther.length,
-    };
-  }, [grantsScheduled, abonoByUser, pendingByUserId, blocks.length, grantsOther.length]);
-
   const badgeForGrant = (g) => {
+    if (g?.source === 'class') return 'abono';
     const uid = g.user_id;
     const ab = abonoByUser[uid];
     const planK = g.plan_key;
@@ -404,6 +522,23 @@ export default function AdminResumenScreen() {
     () =>
       StyleSheet.create({
         root: { flex: 1 },
+        contentMax: {
+          width: '100%',
+          alignSelf: 'center',
+          maxWidth: Platform.OS === 'web' ? Math.min(Math.max(width - 24, 360), 1380) : undefined,
+        },
+        mainLayout: {
+          flexDirection: isDesktopWeb ? 'row' : 'column',
+          columnGap: 14,
+        },
+        mainColPrimary: {
+          flex: isDesktopWeb ? 1.55 : 1,
+          minWidth: 0,
+        },
+        mainColSecondary: {
+          flex: isDesktopWeb ? 1 : 1,
+          minWidth: 0,
+        },
         topBar: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -446,16 +581,10 @@ export default function AdminResumenScreen() {
           backgroundColor: t.overlayBorder,
           marginBottom: 10,
         },
-        heroMeta: {
+        heroHint: {
           color: t.placeholder,
-          fontSize: 12,
-          lineHeight: 18,
-        },
-        heroFoot: {
-          color: t.placeholder,
-          fontSize: 11,
-          lineHeight: 16,
-          marginTop: 6,
+          fontSize: 13,
+          lineHeight: 19,
         },
         screenTitle: {
           color: t.text,
@@ -464,78 +593,142 @@ export default function AdminResumenScreen() {
           paddingHorizontal: 20,
           marginBottom: 8,
         },
+        mainSheet: {
+          marginHorizontal: 12,
+          marginBottom: 8,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.inputBg,
+          paddingVertical: isDesktopWeb ? 12 : 10,
+          paddingHorizontal: isDesktopWeb ? 12 : 8,
+        },
+        sectionCard: {
+          marginHorizontal: 12,
+          marginBottom: 10,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.inputBg,
+          paddingVertical: isDesktopWeb ? 12 : 10,
+          paddingHorizontal: isDesktopWeb ? 12 : 8,
+        },
         sectionTitle: {
           color: t.text,
           fontSize: 16,
           fontWeight: '800',
-          marginHorizontal: 20,
+          marginHorizontal: isDesktopWeb ? 14 : 20,
           marginBottom: 10,
           marginTop: 18,
         },
         sectionHint: {
           color: t.placeholder,
           fontSize: 12,
-          marginHorizontal: 20,
+          marginHorizontal: isDesktopWeb ? 14 : 20,
           marginTop: -6,
           marginBottom: 10,
           lineHeight: 17,
         },
+        agendaGrid: {
+          flexDirection: isDesktopWeb ? 'row' : 'column',
+          flexWrap: isDesktopWeb ? 'wrap' : 'nowrap',
+          justifyContent: 'space-between',
+          rowGap: 12,
+          columnGap: 12,
+          paddingHorizontal: 4,
+        },
         slotCard: {
-          marginHorizontal: 20,
-          marginBottom: 14,
-          borderRadius: 18,
+          marginHorizontal: 0,
+          marginBottom: 0,
+          borderRadius: 16,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          backgroundColor: t.boxBg,
+          backgroundColor: t.overlayBg || hexToRgbaLocal(t.subText || '#94a3b8', 0.08),
           overflow: 'hidden',
-          shadowColor: '#000',
-          shadowOpacity: 0.12,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 3,
+          width: isDesktopWeb ? '49.2%' : '100%',
         },
         slotHead: {
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          backgroundColor: t.boxBg,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          backgroundColor: 'transparent',
         },
-        slotTopLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-        slotTitleMain: { color: t.text, fontSize: 17, fontWeight: '800', flex: 1 },
+        slotTopLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+        slotTitleMain: { color: t.text, fontSize: 16, fontWeight: '800', flex: 1, paddingRight: 4 },
         countPill: {
-          minWidth: 40,
+          flexShrink: 0,
+          alignSelf: 'center',
           alignItems: 'center',
+          justifyContent: 'center',
           paddingHorizontal: 10,
           paddingVertical: 5,
-          borderRadius: 999,
+          minHeight: 30,
+          borderRadius: 10,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
         countPillZero: { backgroundColor: hexToRgbaLocal(t.subText || '#94a3b8', 0.12) },
-        countPillHas: { backgroundColor: hexToRgbaLocal(t.brand || '#22d3ee', 0.2) },
-        countPillText: { color: t.text, fontSize: 13, fontWeight: '800' },
+        countPillHas: { backgroundColor: hexToRgbaLocal('#16a34a', 0.16) },
+        countPillFull: {
+          backgroundColor: hexToRgbaLocal('#b45309', 0.18),
+          borderColor: hexToRgbaLocal('#b45309', 0.35),
+        },
+        countPillText: { fontSize: 12, fontWeight: '800', lineHeight: 16 },
+        countPillTextZero: { color: t.subText },
+        countPillTextOk: { color: '#14532d' },
+        countPillTextFull: { color: '#92400e' },
+        slotListDivider: {
+          height: StyleSheet.hairlineWidth,
+          backgroundColor: t.overlayBorder,
+          marginHorizontal: 14,
+        },
+        slotListInner: {
+          backgroundColor: hexToRgbaLocal(t.text, 0.03),
+          paddingBottom: 4,
+        },
         slotHeadLine2: { color: t.subText, fontSize: 13, marginTop: 8, lineHeight: 18 },
         slotHeadLine3: { color: t.placeholder, fontSize: 12, marginTop: 4 },
         personRow: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          minHeight: 44,
           paddingHorizontal: 14,
-          paddingVertical: 10,
+          paddingVertical: 8,
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: t.overlayBorder,
         },
-        personName: { color: t.text, fontSize: 15, flex: 1, marginRight: 10 },
+        personName: {
+          color: t.text,
+          fontSize: 15,
+          lineHeight: 20,
+          flex: 1,
+          marginRight: 10,
+        },
         badge: {
           paddingHorizontal: 10,
-          paddingVertical: 4,
+          paddingVertical: 5,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: 'transparent',
+        },
+        badgeAbono: { backgroundColor: hexToRgbaLocal('#15803d', 0.2) },
+        badgeTrial: { backgroundColor: hexToRgbaLocal('#a8a29e', 0.22) },
+        badgeDebt: { backgroundColor: hexToRgbaLocal('#b45309', 0.2) },
+        badgeTextAbono: { fontSize: 11, fontWeight: '800', color: '#166534' },
+        badgeTextTrial: { fontSize: 11, fontWeight: '800', color: '#57534e' },
+        badgeTextDebt: { fontSize: 11, fontWeight: '800', color: '#92400e' },
+        personRight: { alignItems: 'flex-end' },
+        staffActionsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 8 },
+        staffActionBtn: {
+          paddingHorizontal: 8,
+          paddingVertical: 2,
           borderRadius: 999,
           borderWidth: 1,
           borderColor: t.overlayBorder,
+          backgroundColor: t.boxBg,
         },
-        badgeAbono: { backgroundColor: hexToRgbaLocal(t.brand || '#22d3ee', 0.18) },
-        badgeTrial: { backgroundColor: t.overlayBg || hexToRgbaLocal(t.subText || '#94a3b8', 0.15) },
-        badgeDebt: { backgroundColor: hexToRgbaLocal(t.danger || '#ef4444', 0.2) },
-        badgeText: { fontSize: 11, fontWeight: '800', color: t.text },
+        staffActionTxt: { color: t.brand, fontSize: 11, fontWeight: '700' },
+        staffActionTxtMuted: { color: t.subText, fontSize: 11, fontWeight: '700' },
         mutedRow: {
           paddingHorizontal: 14,
           paddingVertical: 10,
@@ -582,12 +775,80 @@ export default function AdminResumenScreen() {
         },
         cancelLine: { color: t.subText, fontSize: 13 },
       }),
-    [t, insets.top],
+    [t, insets.top, width, isDesktopWeb],
   );
 
   const displayName = (uid) => profilesById[uid] || uid || '—';
 
-  const renderTrialRows = (trials, slotKey) => {
+  const suggestTargetSlot = useCallback(
+    (planKey, currentSlot, currentMatchKey) => {
+      const pk = normalizePlanKey(planKey);
+      const curr = normalizeSlotLabel(currentSlot);
+      const candidates = scheduleRows.rows
+        .filter((r) => normalizePlanKey(r.planKey) === pk && r.matchKey !== currentMatchKey)
+        .map((r) => ({
+          slot: normalizeSlotLabel(r.slotLabel),
+          free: Math.max(0, Number(r.capacity || DEFAULT_CUPO_DEMO) - Number(r.trials?.length || 0)),
+        }))
+        .filter((r) => !!r.slot && r.free > 0)
+        .sort((a, b) => a.slot.localeCompare(b.slot, 'es'));
+      const forward = candidates.find((c) => c.slot > curr);
+      return (forward || candidates[0] || null)?.slot || null;
+    },
+    [scheduleRows.rows],
+  );
+
+  const handleStaffCancelClass = useCallback(
+    async (bookingId) => {
+      if (!bookingId) return;
+      setStaffActionBusyId(bookingId);
+      const out = await staffCancelClassBookingServer({ bookingId });
+      setStaffActionBusyId('');
+      if (!out.ok) {
+        reportError('admin_resumen_staff_cancel_failed', new Error(String(out.reason || 'cancel_failed')), {
+          bookingId,
+        });
+        Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_resumen_staff_cancel_fail'));
+        return;
+      }
+      trackEvent('admin_resumen_staff_cancel_success', { bookingId });
+      await onRefresh();
+    },
+    [onRefresh, tStr],
+  );
+
+  const handleStaffMoveClass = useCallback(
+    async (booking, currentMatchKey) => {
+      const bookingId = booking?.id;
+      if (!bookingId) return;
+      const newSlot = suggestTargetSlot(booking.plan_key, booking.slot_label, currentMatchKey);
+      if (!newSlot) {
+        Alert.alert(tStr('admin_resumen_staff_move_no_slot_title'), tStr('admin_resumen_staff_move_no_slot_body'));
+        return;
+      }
+      setStaffActionBusyId(bookingId);
+      const out = await staffMoveClassBookingServer({ bookingId, newSlotLabel: newSlot });
+      setStaffActionBusyId('');
+      if (!out.ok) {
+        reportError('admin_resumen_staff_move_failed', new Error(String(out.reason || 'move_failed')), {
+          bookingId,
+          targetSlot: newSlot,
+        });
+        const reason = out.reason || '';
+        if (reason === 'full') {
+          Alert.alert(tStr('admin_resumen_staff_move_full_title'), tStr('admin_resumen_staff_move_full_body'));
+        } else {
+          Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_resumen_staff_move_fail'));
+        }
+        return;
+      }
+      trackEvent('admin_resumen_staff_move_success', { bookingId, targetSlot: newSlot });
+      await onRefresh();
+    },
+    [onRefresh, suggestTargetSlot, tStr],
+  );
+
+  const renderTrialRows = (trials, slotKey, matchKey) => {
     if (!trials.length) {
       return (
         <View style={styles.mutedRow}>
@@ -605,13 +866,41 @@ export default function AdminResumenScreen() {
       const kind = badgeForGrant(g);
       const badgeStyle =
         kind === 'abono' ? styles.badgeAbono : kind === 'debt' ? styles.badgeDebt : styles.badgeTrial;
+      const badgeLabelStyle =
+        kind === 'abono' ? styles.badgeTextAbono : kind === 'debt' ? styles.badgeTextDebt : styles.badgeTextTrial;
       return (
         <View key={g.id} style={styles.personRow}>
           <Text style={styles.personName} numberOfLines={2}>
             {displayName(g.user_id)}
           </Text>
-          <View style={[styles.badge, badgeStyle]}>
-            <Text style={styles.badgeText}>{badgeLabel(kind)}</Text>
+          <View style={styles.personRight}>
+            <View style={[styles.badge, badgeStyle]}>
+              <Text style={badgeLabelStyle}>{badgeLabel(kind)}</Text>
+            </View>
+            {g.source === 'class' ? (
+              <View style={styles.staffActionsRow}>
+                <TouchableOpacity
+                  style={styles.staffActionBtn}
+                  onPress={() => handleStaffMoveClass(g, matchKey)}
+                  disabled={staffActionBusyId === g.id}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.staffActionTxt}>{tStr('admin_resumen_staff_move')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.staffActionBtn}
+                  onPress={() => handleStaffCancelClass(g.id)}
+                  disabled={staffActionBusyId === g.id}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.staffActionTxtMuted}>
+                    {staffActionBusyId === g.id
+                      ? tStr('calendario_booking_pending')
+                      : tStr('admin_resumen_staff_cancel')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         </View>
       );
@@ -656,17 +945,26 @@ export default function AdminResumenScreen() {
 
   const { rows: agendaRows, orphans } = scheduleRows;
 
-  const statsLine = tStr('admin_resumen_stats')
-    .replace('{{blocks}}', String(stats.nBlocks))
-    .replace('{{trials}}', String(stats.nTrials))
-    .replace('{{abono}}', String(stats.nAbono))
-    .replace('{{trial}}', String(stats.nTrial))
-    .replace('{{debt}}', String(stats.nDebt))
-    .replace('{{other}}', String(stats.nOther));
+  const countPillStylesForN = (n, cap = DEFAULT_CUPO_DEMO) => {
+    const n0 = n || 0;
+    const c0 = Math.max(1, Number(cap || DEFAULT_CUPO_DEMO));
+    if (n0 === 0) return [styles.countPill, styles.countPillZero];
+    if (n0 >= c0) return [styles.countPill, styles.countPillFull];
+    return [styles.countPill, styles.countPillHas];
+  };
+
+  const countPillTextStyleForN = (n, cap = DEFAULT_CUPO_DEMO) => {
+    const n0 = n || 0;
+    const c0 = Math.max(1, Number(cap || DEFAULT_CUPO_DEMO));
+    if (n0 === 0) return [styles.countPillText, styles.countPillTextZero];
+    if (n0 >= c0) return [styles.countPillText, styles.countPillTextFull];
+    return [styles.countPillText, styles.countPillTextOk];
+  };
 
   return (
     <BackgroundWrapper screen="admin">
       <View style={styles.root}>
+        <View style={styles.contentMax}>
         <View style={styles.topBar}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={26} color={t.text} />
@@ -695,8 +993,7 @@ export default function AdminResumenScreen() {
           </View>
           <Text style={styles.heroTitle}>{tStr('admin_resumen_title')}</Text>
           <View style={styles.heroDivider} />
-          <Text style={styles.heroMeta}>{statsLine}</Text>
-          <Text style={styles.heroFoot}>{tStr('admin_resumen_footnote')}</Text>
+          <Text style={styles.heroHint}>{tStr('admin_resumen_hero_hint')}</Text>
         </View>
 
         {loading ? (
@@ -711,148 +1008,189 @@ export default function AdminResumenScreen() {
             showsVerticalScrollIndicator={false}
           >
             {error ? <Text style={styles.err}>{error}</Text> : null}
-
-            {agendaRows.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>{tStr('admin_resumen_empty_schedule')}</Text>
-              </View>
-            ) : (
-              agendaRows.map((row) => {
-                const slotOpen = isSlotListOpen(row.matchKey, row.trials.length);
-                return (
-                  <View key={row.matchKey} style={styles.slotCard}>
-                    <TouchableOpacity
-                      activeOpacity={0.9}
-                      onPress={() => toggleSlotList(row.matchKey, row.trials.length)}
-                    >
+            <View style={styles.mainLayout}>
+              <View style={styles.mainColPrimary}>
+                <View style={styles.mainSheet}>
+                  {agendaRows.length === 0 ? (
+                    <View style={styles.slotCard}>
                       <View style={styles.slotHead}>
-                        <View style={styles.slotTopLine}>
-                          <Text style={styles.slotTitleMain}>
-                            {tStr('admin_resumen_slot_header')
-                              .replace('{{slot}}', String(row.slotLabel || '—'))
-                              .replace('{{plan}}', row.planTitle)}
-                          </Text>
-                          <View
-                            style={[
-                              styles.countPill,
-                              row.trials.length ? styles.countPillHas : styles.countPillZero,
-                            ]}
-                          >
-                            <Text style={styles.countPillText}>{String(row.trials.length)}</Text>
-                          </View>
-                          <Ionicons
-                            name={slotOpen ? 'chevron-up' : 'chevron-down'}
-                            size={22}
-                            color={t.subText}
-                          />
-                        </View>
-                        {slotOpen ? (
-                          <>
-                            {row.titulo && row.titulo !== '—' ? (
-                              <Text style={styles.slotHeadLine2} numberOfLines={2}>
-                                {row.titulo}
-                              </Text>
-                            ) : null}
-                            <Text style={styles.slotHeadLine3}>
-                              {tStr('admin_resumen_coach_line').replace('{{coach}}', row.coachName)}
-                            </Text>
-                          </>
-                        ) : null}
+                        <Text style={styles.slotTitleMain}>{tStr('admin_resumen_title')}</Text>
                       </View>
-                    </TouchableOpacity>
-                    {slotOpen ? renderTrialRows(row.trials, row.matchKey) : null}
-                  </View>
-                );
-              })
-            )}
-
-            {orphans.length ? (
-              <>
-                <Text style={styles.sectionTitle}>{tStr('admin_resumen_section_orphan')}</Text>
-                <Text style={styles.sectionHint}>{tStr('admin_resumen_orphan_hint')}</Text>
-                {orphans.map((row) => {
-                  const oKey = `orphan-${row.matchKey}`;
-                  const slotOpen = isSlotListOpen(oKey, row.trials.length);
-                  return (
-                    <View key={oKey} style={styles.slotCard}>
-                      <TouchableOpacity
-                        activeOpacity={0.9}
-                        onPress={() => toggleSlotList(oKey, row.trials.length)}
-                      >
-                        <View style={styles.slotHead}>
-                          <View style={styles.slotTopLine}>
-                            <Text style={styles.slotTitleMain}>
-                              {tStr('admin_resumen_slot_header')
-                                .replace('{{slot}}', String(row.slotLabel || '—'))
-                                .replace('{{plan}}', row.planTitle)}
-                            </Text>
-                            <View
-                              style={[
-                                styles.countPill,
-                                row.trials.length ? styles.countPillHas : styles.countPillZero,
-                              ]}
-                            >
-                              <Text style={styles.countPillText}>{String(row.trials.length)}</Text>
-                            </View>
-                            <Ionicons
-                              name={slotOpen ? 'chevron-up' : 'chevron-down'}
-                              size={22}
-                              color={t.subText}
-                            />
-                          </View>
+                      <View style={styles.slotListDivider} />
+                      <View style={styles.slotListInner}>
+                        <View style={styles.mutedRow}>
+                          <Text style={styles.mutedText}>{tStr('admin_resumen_empty_schedule_in_card')}</Text>
                         </View>
-                      </TouchableOpacity>
-                      {slotOpen ? renderTrialRows(row.trials, oKey) : null}
+                      </View>
                     </View>
-                  );
-                })}
-              </>
-            ) : null}
+                  ) : (
+                    <View style={styles.agendaGrid}>
+                      {agendaRows.map((row) => {
+                      const nTri = row.trials.length;
+                      const cap = Number(row.capacity || DEFAULT_CUPO_DEMO);
+                      const slotOpen = isSlotListOpen(row.matchKey);
+                      return (
+                        <View key={row.matchKey} style={styles.slotCard}>
+                          <TouchableOpacity
+                            activeOpacity={0.9}
+                            onPress={() => toggleSlotList(row.matchKey)}
+                          >
+                            <View style={styles.slotHead}>
+                              <View style={styles.slotTopLine}>
+                                <Text style={styles.slotTitleMain} numberOfLines={2}>
+                                  {tStr('admin_resumen_slot_header')
+                                    .replace('{{slot}}', String(row.slotLabel || '—'))
+                                    .replace('{{plan}}', row.planTitle)}
+                                </Text>
+                                <View style={countPillStylesForN(nTri, cap)}>
+                                  <Text style={countPillTextStyleForN(nTri, cap)} numberOfLines={1}>
+                                    {formatOccupancyPill(nTri, cap)}
+                                  </Text>
+                                </View>
+                                <Ionicons
+                                  name={slotOpen ? 'chevron-up' : 'chevron-down'}
+                                  size={22}
+                                  color={t.subText}
+                                />
+                              </View>
+                              {slotOpen ? (
+                                <>
+                                  {row.titulo && row.titulo !== '—' ? (
+                                    <Text style={styles.slotHeadLine2} numberOfLines={2}>
+                                      {row.titulo}
+                                    </Text>
+                                  ) : null}
+                                  <Text style={styles.slotHeadLine3}>
+                                    {tStr('admin_resumen_coach_line').replace('{{coach}}', row.coachName)}
+                                  </Text>
+                                </>
+                              ) : null}
+                            </View>
+                          </TouchableOpacity>
+                          {slotOpen ? (
+                            <>
+                              <View style={styles.slotListDivider} />
+                              <View style={styles.slotListInner}>
+                                {renderTrialRows(row.trials, row.matchKey, row.matchKey)}
+                              </View>
+                            </>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                    </View>
+                  )}
+                </View>
 
-            {grantsOther.length ? (
-              <>
-                <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{tStr('admin_resumen_section_other')}</Text>
-                {grantsOther.map((g) => (
-                  <View key={g.id} style={styles.cancelRow}>
-                    <Text style={styles.cancelLine}>
-                      {displayName(g.user_id)}
-                      {' · '}
-                      {planDisplay(g.plan_key)}
-                      {' · '}
-                      {String(g.slot_label || '')}
-                      {' · '}
-                      {String(g.status || '')}
-                    </Text>
-                  </View>
-                ))}
-              </>
-            ) : null}
-
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{tStr('admin_resumen_section_billing')}</Text>
-            {pendingPayments.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>{tStr('admin_resumen_empty_billing')}</Text>
+                {orphans.length ? (
+                  <>
+                    <Text style={styles.sectionTitle}>{tStr('admin_resumen_section_orphan')}</Text>
+                    <Text style={styles.sectionHint}>{tStr('admin_resumen_orphan_hint')}</Text>
+                    <View style={styles.mainSheet}>
+                      <View style={styles.agendaGrid}>
+                        {orphans.map((row) => {
+                        const oKey = `orphan-${row.matchKey}`;
+                        const oN = row.trials.length;
+                        const cap = Number(row.capacity || DEFAULT_CUPO_DEMO);
+                        const slotOpen = isSlotListOpen(oKey);
+                        return (
+                          <View key={oKey} style={styles.slotCard}>
+                            <TouchableOpacity
+                              activeOpacity={0.9}
+                              onPress={() => toggleSlotList(oKey)}
+                            >
+                              <View style={styles.slotHead}>
+                                <View style={styles.slotTopLine}>
+                                  <Text style={styles.slotTitleMain} numberOfLines={2}>
+                                    {tStr('admin_resumen_slot_header')
+                                      .replace('{{slot}}', String(row.slotLabel || '—'))
+                                      .replace('{{plan}}', row.planTitle)}
+                                  </Text>
+                                  <View style={countPillStylesForN(oN, cap)}>
+                                    <Text style={countPillTextStyleForN(oN, cap)} numberOfLines={1}>
+                                      {formatOccupancyPill(oN, cap)}
+                                    </Text>
+                                  </View>
+                                  <Ionicons
+                                    name={slotOpen ? 'chevron-up' : 'chevron-down'}
+                                    size={22}
+                                    color={t.subText}
+                                  />
+                                </View>
+                              </View>
+                            </TouchableOpacity>
+                            {slotOpen ? (
+                              <>
+                                <View style={styles.slotListDivider} />
+                                <View style={styles.slotListInner}>
+                                  {renderTrialRows(row.trials, oKey, row.matchKey)}
+                                </View>
+                              </>
+                            ) : null}
+                          </View>
+                        );
+                      })}
+                      </View>
+                    </View>
+                  </>
+                ) : null}
               </View>
-            ) : (
-              pendingPayments.slice(0, 40).map((p) => {
-                const uid = p.member_user_id;
-                const label = uid ? displayName(uid) : String(p.client_id || '—');
-                const amount = p.monto != null ? Number(p.monto) : 0;
-                const mon = p.moneda || 'ARS';
-                return (
-                  <View key={p.id || `${p.client_id}-${p.status}`} style={styles.payRow}>
-                    <Text style={styles.payLine}>{label}</Text>
-                    <Text style={styles.paySub}>
-                      {mon} {amount.toLocaleString(dateLocale)}
-                      {' · '}
-                      {String(p.status || '')}
+
+              <View style={styles.mainColSecondary}>
+                {(grantsOther.length || classOther.length) ? (
+                  <View style={styles.sectionCard}>
+                    <Text style={[styles.sectionTitle, { marginHorizontal: 12, marginTop: 4 }]}>
+                      {tStr('admin_resumen_section_other')}
                     </Text>
+                    {[...grantsOther, ...classOther].map((g) => (
+                      <View key={g.id} style={[styles.cancelRow, { marginHorizontal: 8 }]}>
+                        <Text style={styles.cancelLine}>
+                          {displayName(g.user_id)}
+                          {' · '}
+                          {planDisplay(g.plan_key)}
+                          {' · '}
+                          {String(g.slot_label || '')}
+                          {' · '}
+                          {String(g.status || '')}
+                          {g.source === 'class' ? ' · abono' : ''}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                );
-              })
-            )}
+                ) : null}
+
+                <View style={styles.sectionCard}>
+                  <Text style={[styles.sectionTitle, { marginHorizontal: 12, marginTop: 4 }]}>
+                    {tStr('admin_resumen_section_billing')}
+                  </Text>
+                  {pendingPayments.length === 0 ? (
+                    <View style={[styles.empty, { paddingVertical: 14 }]}>
+                      <Text style={styles.emptyText}>{tStr('admin_resumen_empty_billing')}</Text>
+                    </View>
+                  ) : (
+                    pendingPayments.slice(0, 40).map((p) => {
+                      const uid = p.member_user_id;
+                      const label = uid ? displayName(uid) : String(p.client_id || '—');
+                      const amount = p.monto != null ? Number(p.monto) : 0;
+                      const mon = p.moneda || 'ARS';
+                      return (
+                        <View key={p.id || `${p.client_id}-${p.status}`} style={[styles.payRow, { marginHorizontal: 8 }]}>
+                          <Text style={styles.payLine}>{label}</Text>
+                          <Text style={styles.paySub}>
+                            {mon} {amount.toLocaleString(dateLocale)}
+                            {' · '}
+                            {String(p.status || '')}
+                          </Text>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+              </View>
+            </View>
           </ScrollView>
         )}
+        </View>
       </View>
     </BackgroundWrapper>
   );

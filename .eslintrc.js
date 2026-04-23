@@ -1,4 +1,14 @@
 module.exports = {
+  env: {
+    es2022: true,
+    browser: true,
+    node: true,
+  },
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    ecmaFeatures: { jsx: true },
+  },
   plugins: ['react', 'react-native'],
   extends: [
     'eslint:recommended',

@@ -53,7 +53,14 @@
     "plugins": [
       "expo-asset",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "FitEngine usa el micrófono para dictar el pedido al asistente de IA.",
+          "speechRecognitionPermission": "FitEngine transcribe tu voz a texto para el asistente de IA."
+        }
+      ]
     ],
     "extra": {
       "waitomoOrganizationId": "",

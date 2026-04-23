@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
+import { resolveStaffDestination } from '../utils/authRoutingGuard';
 
 /**
  * Navegación post-welcome: destino según rol, membresías y modo (cliente/staff).
@@ -25,31 +26,16 @@ export function useWelcomeRouting() {
   } = useAuth() || {};
 
   const navigateForStaffDual = useCallback(() => {
-    // FitEngine: solo AdminLite si ya tiene org con owner_id = ella. Staff en Waitomo ≠ espacio propio.
-    if (role === 'coach' || role === 'admin') {
-      if (needsFitEngineSpaceSetup) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'ConfiguraTuEspacio', params: { email: session?.user?.email } }],
-        });
-        return;
-      }
-      navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
-      return;
-    }
-    if (ownedOrganizations?.length > 0) {
-      navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
-      return;
-    }
-    if (!profile) {
-      navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
-      return;
-    }
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'ConfiguraTuEspacio', params: { email: session?.user?.email } }],
+    const destination = resolveStaffDestination({
+      role,
+      needsFitEngineSpaceSetup,
+      hasProfile: !!profile,
+      ownedOrganizationsCount: ownedOrganizations?.length || 0,
     });
-  }, [navigation, profile, role, needsFitEngineSpaceSetup, session?.user?.email]);
+    const params =
+      destination === 'ConfiguraTuEspacio' ? { email: session?.user?.email } : undefined;
+    navigation.reset({ index: 0, routes: [{ name: destination, params }] });
+  }, [navigation, ownedOrganizations?.length, profile, role, needsFitEngineSpaceSetup, session?.user?.email]);
 
   const membershipsLoaded = Array.isArray(organizationMemberships);
   const isDualByMemberships = hasClientMembership && hasStaffMembership;

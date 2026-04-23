@@ -40,6 +40,12 @@ const hexToRgba = (hex, alpha = 1) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
+const addDaysIso = (days) => {
+  const d = new Date();
+  d.setDate(d.getDate() + Number(days || 0));
+  return d.toISOString();
+};
+
 export default function RegistroCompletoScreen({ route, navigation }) {
   const { plan, userData } = route?.params || {};
   const { t } = useThemeContext();
@@ -206,7 +212,13 @@ const payload = {
   plan_actual: planActual,
 
   ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
-  ...(aptoMedico ? { apto_medico_url: 'apto-subido' } : {}),
+  ...(aptoMedico
+    ? {
+        apto_medico_url: 'apto-subido',
+        apto_medico_uploaded_at: new Date().toISOString(),
+        apto_medico_expires_at: addDaysIso(365),
+      }
+    : {}),
 };
 
 // ✅ Completar phone si todavía no existe

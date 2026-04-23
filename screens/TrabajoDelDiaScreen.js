@@ -16,8 +16,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Linking,
-  Image,
   Modal,
   TextInput,
   TouchableWithoutFeedback,
@@ -27,6 +25,7 @@ import {
   Platform,
   RefreshControl,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTrainingData } from '../contexts/TrainingDataContext';
@@ -38,6 +37,7 @@ import {
   rowToFeedPayload,
 } from '../utils/trabajoDiaFeedSupabase';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import VideoLinksThumbs from '../components/VideoLinksThumbs';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useAuth } from '../contexts/AuthContext';
@@ -61,6 +61,9 @@ const hexToRgba = (hex, alpha = 1) => {
 
 // ---------- screen ----------
 export default function TrabajoDelDiaScreen({ route, navigation }) {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 1100;
+  const panelMaxWidth = isWebDesktop ? 1180 : 860;
   // ================== PARAMS ==================
   const { plan, planKey, planValue, fecha, horario: paramHorario, hora: paramHora } = route.params || {};
   const horario = paramHorario ?? paramHora;
@@ -109,15 +112,22 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
     () =>
       StyleSheet.create({
         container: { backgroundColor: 'transparent', flex: 1 },
-        scroll: { flexGrow: 1, justifyContent: 'center', paddingVertical: 60 },
+        scroll: {
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingVertical: 60,
+          width: '100%',
+          alignSelf: 'center',
+          maxWidth: panelMaxWidth,
+        },
 
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderRadius: 20,
           borderWidth: 1.5,
-          marginHorizontal: 20,
-          padding: 24,
+          marginHorizontal: isWebDesktop ? 14 : 20,
+          padding: isWebDesktop ? 28 : 24,
           shadowColor: t.brand,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.35,
@@ -240,7 +250,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         blockLine: {
           color: t.text,
           fontSize: 14,
-          marginBottom: 4,
+          lineHeight: 22,
         },
         blockLineHighlighted: {
           color: t.brand,
@@ -525,7 +535,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         lockBack: { alignItems: 'center', marginTop: 20, paddingVertical: 8 },
         lockBackText: { color: t.subText, fontSize: 14 },
       }),
-    [t],
+    [t, isWebDesktop, panelMaxWidth],
   );
 
   // ================== NORMALIZACIÓN FECHA / HORA ==================
@@ -892,45 +902,37 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
   const renderSetLine = (line, idx) => {
     const segments = splitTextWithRmTokens(String(line || ''));
     return (
-      <View key={`line_${idx}`} style={{ marginBottom: 8 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
-          {segments.map((seg, j) => {
-            if (seg.type === 'text') {
-              return (
-                <Text key={`${idx}_t_${j}`} style={styles.blockLine}>
-                  {seg.value}
-                </Text>
-              );
-            }
-            const pctNum = seg.pctNumber;
-            const rmStored = getRM(seg.exercise);
-            const hasNumericPct = !Number.isNaN(pctNum);
-            const weight =
-              hasNumericPct && rmStored != null
-                ? calculateWeight(pctNum, rmStored, seg.reps)
-                : null;
-            const displayWeight =
-              weight != null && !Number.isNaN(weight) ? `${weight.toFixed(1)} kg` : null;
-            const pctLabel = hasNumericPct ? `${pctNum}%` : `${seg.pctRaw}%`;
-            const tokenShown = displayWeight || seg.full;
+      <Text key={`line_${idx}`} style={[styles.blockLine, { marginBottom: 8 }]}>
+        {segments.map((seg, j) => {
+          if (seg.type === 'text') {
+            return <Text key={`${idx}_t_${j}`}>{seg.value}</Text>;
+          }
+          const pctNum = seg.pctNumber;
+          const rmStored = getRM(seg.exercise);
+          const hasNumericPct = !Number.isNaN(pctNum);
+          const weight =
+            hasNumericPct && rmStored != null
+              ? calculateWeight(pctNum, rmStored, seg.reps)
+              : null;
+          const displayWeight =
+            weight != null && !Number.isNaN(weight) ? `${weight.toFixed(1)} kg` : null;
+          const pctLabel = hasNumericPct ? `${pctNum}%` : `${seg.pctRaw}%`;
+          const tokenShown = displayWeight || seg.full;
 
-            return (
-              <TouchableOpacity
-                key={`${idx}_rm_${j}`}
-                activeOpacity={0.75}
-                onPress={() => openRMModal(seg.exercise, pctLabel)}
-              >
-                <Text style={styles.blockLineRmToken}>
-                  {tokenShown}
-                  {!displayWeight && rmStored == null ? (
-                    <Text style={styles.blockLineRmHint}> {tStr('trabajo_rm_tap_completar')}</Text>
-                  ) : null}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+          return (
+            <Text
+              key={`${idx}_rm_${j}`}
+              style={styles.blockLineRmToken}
+              onPress={() => openRMModal(seg.exercise, pctLabel)}
+            >
+              {tokenShown}
+              {!displayWeight && rmStored == null ? (
+                <Text style={styles.blockLineRmHint}> {tStr('trabajo_rm_tap_completar')}</Text>
+              ) : null}
+            </Text>
+          );
+        })}
+      </Text>
     );
   };
 
@@ -1103,24 +1105,13 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                             )}
 
                             {/* Video links */}
-                            {videoLinks.length > 0 && (
-                              <View style={styles.videoThumbRow}>
-                                {videoLinks.map((link, idx) => (
-                                  <TouchableOpacity
-                                    key={`${bloque.id}_video_${idx}`}
-                                    style={styles.videoThumb}
-                                    onPress={() => Linking.openURL(link.url)}
-                                  >
-                                    <Image
-                                      source={{ uri: link.thumbnail }}
-                                      style={styles.videoImage}
-                                      resizeMode="cover"
-                                    />
-                                    <Text style={styles.videoLabel}>{link.label || tStr('trabajo_video')}</Text>
-                                  </TouchableOpacity>
-                                ))}
-                              </View>
-                            )}
+                            {videoLinks.length > 0 ? (
+                              <VideoLinksThumbs
+                                links={videoLinks}
+                                themeStyles={styles}
+                                placeholderColor={t.placeholder}
+                              />
+                            ) : null}
                           </View>
                         )}
                       </View>

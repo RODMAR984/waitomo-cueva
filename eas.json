@@ -15,15 +15,22 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "NODE_OPTIONS": "--max-old-space-size=8192"
+        "NODE_OPTIONS": "--max-old-space-size=8192",
+        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
       },
       "android": { "buildType": "apk" }
     },
     "production": {
       "autoIncrement": true
+    },
+    "testflight": {
+      "extends": "production"
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "testflight": {
+      "extends": "production"
+    }
   }
 }

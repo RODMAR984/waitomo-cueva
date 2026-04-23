@@ -21,6 +21,9 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
+# Lighthouse CI (local / CI artifacts)
+.lighthouseci/
+
 # debug
 npm-debug.*
 yarn-debug.*
@@ -45,3 +48,7 @@ yarn-error.*
 
 # caché local del CLI de Supabase (no versionar)
 supabase/.temp/
+
+# Playwright (reportes locales; CI sube artefactos si hace falta)
+playwright-report/
+test-results/

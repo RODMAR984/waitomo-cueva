@@ -3,7 +3,7 @@
 // ✅ Tema desde ThemeContext (theme + t para navegación y opciones)
 
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Text, StyleSheet, Image } from 'react-native';
+import { Text, StyleSheet, Image, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -61,17 +61,20 @@ import NovedadesScreen from './screens/NovedadesScreen';
 import ChatCanalesScreen from './screens/ChatCanalesScreen';
 import ChatScreen from './screens/ChatScreen';
 
-// Admin
-import AdminScreen from './screens/AdminScreen';
-import AdminLiteScreen from './screens/AdminLiteScreen';
-import AdminFinanzasScreen from './screens/AdminFinanzasScreen';
-import AdminResumenScreen from './screens/AdminResumenScreen';
-import AdminNovedadesScreen from './screens/AdminNovedadesScreen';
-import GymConfigScreen from './screens/GymConfigScreen';
-import AdminPlanesScreen from './screens/AdminPlanesScreen';
-import AdminAbonosScreen from './screens/AdminAbonosScreen';
-import AsignarCoachesScreen from './screens/AsignarCoachesScreen';
-import OrgMembersScreen from './screens/OrgMembersScreen';
+// Admin (web escritorio: rail compartido vía navigation/staffScreenShell)
+import {
+  getAdminScreenWithShell,
+  getAdminResumenScreenWithShell,
+  getAdminNovedadesScreenWithShell,
+  getAdminPlanesScreenWithShell,
+  AdminLiteScreenWithShell,
+  AdminFinanzasScreenWithShell,
+  GymConfigScreenWithShell,
+  AdminAbonosScreenWithShell,
+  AsignarCoachesScreenWithShell,
+  OrgMembersScreenWithShell,
+  AdminObservabilityScreenWithShell,
+} from './navigation/staffScreenShell';
 
 // Splash (marca FitEngine + by WAITOMO)
 import SplashScreen from './screens/SplashScreen';
@@ -88,8 +91,12 @@ import ClientInviteLinkHandler from './components/ClientInviteLinkHandler';
 // Imágenes generales (fondos dinámicos)
 import { registerGeneralImages } from './utils/getRandomGeneralImage';
 import { IMAGENES_POR_PLAN, IMAGEN_WELCOME } from './utils/imagenesFijas';
+import { reportError, setObservabilityContext, trackEvent } from './utils/observability';
+import { initSentryWebFromEnv, syncSentryUserContext } from './utils/sentryWebClient';
 
 import { navigationRef } from './navigationRef';
+
+initSentryWebFromEnv();
 
 // =====================================
 //   PRECARGA DE IMÁGENES (top-level OK)
@@ -182,7 +189,36 @@ function AuthGate({ children }) {
 }
 
 function AppContent() {
+  const { user, role, organization } = useAuth() || {};
   const { theme, t } = useThemeContext();
+  const routeNameRef = useRef(null);
+  const ROUTING_DEBUG = __DEV__;
+
+  useEffect(() => {
+    const ctx = {
+      userId: user?.id || null,
+      role: role || null,
+      organizationId: organization?.id || null,
+    };
+    setObservabilityContext(ctx);
+    syncSentryUserContext(ctx);
+  }, [user?.id, role, organization?.id]);
+
+  useEffect(() => {
+    trackEvent('app_content_mounted', { platform: Platform.OS });
+  }, []);
+
+  useEffect(() => {
+    if (!global.ErrorUtils || typeof global.ErrorUtils.getGlobalHandler !== 'function') return undefined;
+    const prev = global.ErrorUtils.getGlobalHandler();
+    global.ErrorUtils.setGlobalHandler((error, isFatal) => {
+      reportError('global_js_error', error, { isFatal: !!isFatal });
+      if (typeof prev === 'function') prev(error, isFatal);
+    });
+    return () => {
+      if (typeof prev === 'function') global.ErrorUtils.setGlobalHandler(prev);
+    };
+  }, []);
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -209,23 +245,37 @@ function AppContent() {
             ref={navigationRef}
             theme={theme}
             onReady={() => {
-              try {
-                const r = navigationRef.getCurrentRoute?.();
-                // eslint-disable-next-line no-console
-                console.log('ROUTING_DEBUG NavigationContainer onReady', {
-                  route: r?.name,
-                  params: r?.params,
-                });
-              } catch (_) {}
+              const r = navigationRef.getCurrentRoute?.();
+              routeNameRef.current = r?.name || null;
+              trackEvent('navigation_ready', { route: r?.name || null });
+              if (ROUTING_DEBUG) {
+                try {
+                  // eslint-disable-next-line no-console
+                  console.log('ROUTING_DEBUG NavigationContainer onReady', {
+                    route: r?.name,
+                    params: r?.params,
+                  });
+                } catch (_) {}
+              }
             }}
             onStateChange={() => {
-              try {
-                const r = navigationRef.getCurrentRoute?.();
-                // eslint-disable-next-line no-console
-                console.log('ROUTING_DEBUG stateChange', {
-                  route: r?.name,
-                  params: r?.params,
+              const r = navigationRef.getCurrentRoute?.();
+              const nextName = r?.name || null;
+              if (nextName && nextName !== routeNameRef.current) {
+                trackEvent('navigation_route_change', {
+                  from: routeNameRef.current || null,
+                  to: nextName,
                 });
+                routeNameRef.current = nextName;
+              }
+              try {
+                if (ROUTING_DEBUG) {
+                  // eslint-disable-next-line no-console
+                  console.log('ROUTING_DEBUG stateChange', {
+                    route: r?.name,
+                    params: r?.params,
+                  });
+                }
               } catch (_) {}
             }}
           >
@@ -235,229 +285,237 @@ function AppContent() {
                   initialRouteName="Splash"
                   screenOptions={defaultScreenOptions}
                 >
-                  {/* Entrada pública */}
-                  <Stack.Screen name="Splash" component={SplashScreen} />
-                  <Stack.Screen name="WelcomeGlobal" component={WelcomeGlobalScreen} />
-                  <Stack.Screen
-                    name="WelcomeOrganization"
-                    component={WelcomeOrganizationScreen}
-                  />
-                  <Stack.Screen
-                    name="WelcomeOrganizationScreen"
-                    component={WelcomeOrganizationScreen}
-                  />
-                  <Stack.Screen name="WelcomeDualChoice" component={WelcomeDualChoiceScreen} />
-                  <Stack.Screen name="Welcome" component={WelcomeScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
+                  <Stack.Group>
+                    {/* Entrada pública */}
+                    <Stack.Screen name="Splash" component={SplashScreen} />
+                    <Stack.Screen name="WelcomeGlobal" component={WelcomeGlobalScreen} />
+                    <Stack.Screen
+                      name="WelcomeOrganization"
+                      component={WelcomeOrganizationScreen}
+                    />
+                    <Stack.Screen
+                      name="WelcomeOrganizationScreen"
+                      component={WelcomeOrganizationScreen}
+                    />
+                    <Stack.Screen name="WelcomeDualChoice" component={WelcomeDualChoiceScreen} />
+                    <Stack.Screen name="Welcome" component={WelcomeScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
 
-                  <Stack.Screen name="Home" component={HomeScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen name="HomeScreen" component={HomeScreen} />
+                    <Stack.Screen name="Home" component={HomeScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen name="HomeScreen" component={HomeScreen} />
 
-                  <Stack.Screen name="Login" component={LoginScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen name="LoginScreen" component={LoginScreen} />
+                    <Stack.Screen name="Login" component={LoginScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen name="LoginScreen" component={LoginScreen} />
 
-                  <Stack.Screen name="JoinWithInvite" component={JoinWithInviteCodeScreen} />
+                    <Stack.Screen name="JoinWithInvite" component={JoinWithInviteCodeScreen} />
 
-                  <Stack.Screen name="CreaCuentaStaff" component={CreaCuentaStaffScreen} />
-                  <Stack.Screen name="CreaCuentaStaffScreen" component={CreaCuentaStaffScreen} />
+                    <Stack.Screen name="CreaCuentaStaff" component={CreaCuentaStaffScreen} />
+                    <Stack.Screen name="CreaCuentaStaffScreen" component={CreaCuentaStaffScreen} />
 
-                  <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
-                  <Stack.Screen name="AdminLoginScreen" component={AdminLoginScreen} />
-                  <Stack.Screen
-                    name="RegistroOwner"
-                    component={RegistroOwnerScreen}
-                    options={{ contentStyle: { backgroundColor: t.bg, flex: 1, overflow: 'hidden' } }}
-                  />
-                  <Stack.Screen name="ConfiguraTuEspacio" component={ConfiguraTuEspacioScreen} />
+                    <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+                    <Stack.Screen name="AdminLoginScreen" component={AdminLoginScreen} />
+                    <Stack.Screen
+                      name="RegistroOwner"
+                      component={RegistroOwnerScreen}
+                      options={{ contentStyle: { backgroundColor: t.bg, flex: 1, overflow: 'hidden' } }}
+                    />
+                    <Stack.Screen name="ConfiguraTuEspacio" component={ConfiguraTuEspacioScreen} />
+                  </Stack.Group>
 
-                  {/* Cliente */}
-                  <Stack.Screen name="Client" component={ClientScreen} />
-                  {/* ✅ Alias para que NO falle si algún archivo navega a "ClientScreen" */}
-                  <Stack.Screen name="ClientScreen" component={ClientScreen} />
+                  <Stack.Group>
+                    {/* Cliente */}
+                    <Stack.Screen name="Client" component={ClientScreen} />
+                    {/* ✅ Alias para que NO falle si algún archivo navega a "ClientScreen" */}
+                    <Stack.Screen name="ClientScreen" component={ClientScreen} />
 
-                  <Stack.Screen name="ClientTabs" component={ClientTabs} />
-                  {/* Alias legacy */}
-                  <Stack.Screen name="ClientTabsScreen" component={ClientTabs} />
+                    <Stack.Screen name="ClientTabs" component={ClientTabs} />
+                    {/* Alias legacy */}
+                    <Stack.Screen name="ClientTabsScreen" component={ClientTabs} />
 
-                  <Stack.Screen name="PerfilUsuario" component={PerfilUsuarioScreen} />
-                  {/* ✅ Alias clave: tu UI a veces navega a "Perfil" */}
-                  <Stack.Screen name="Perfil" component={PerfilUsuarioScreen} />
-                  {/* Alias por nombre de archivo */}
-                  <Stack.Screen
-                    name="PerfilUsuarioScreen"
-                    component={PerfilUsuarioScreen}
-                  />
+                    <Stack.Screen name="PerfilUsuario" component={PerfilUsuarioScreen} />
+                    {/* ✅ Alias clave: tu UI a veces navega a "Perfil" */}
+                    <Stack.Screen name="Perfil" component={PerfilUsuarioScreen} />
+                    {/* Alias por nombre de archivo */}
+                    <Stack.Screen
+                      name="PerfilUsuarioScreen"
+                      component={PerfilUsuarioScreen}
+                    />
 
-                  <Stack.Screen name="Config" component={ConfigScreen} />
-                  <Stack.Screen name="ConfigScreen" component={ConfigScreen} />
-                  <Stack.Screen name="AboutFitEngine" component={AboutFitEngineScreen} />
-                  <Stack.Screen name="PrivacyPolicy" component={PrivacyScreen} />
-                  <Stack.Screen name="PrivacyPolicyScreen" component={PrivacyScreen} />
-                  <Stack.Screen name="TermsOfUse" component={TermsScreen} />
-                  <Stack.Screen name="TermsOfUseScreen" component={TermsScreen} />
+                    <Stack.Screen name="Config" component={ConfigScreen} />
+                    <Stack.Screen name="ConfigScreen" component={ConfigScreen} />
+                    <Stack.Screen name="AboutFitEngine" component={AboutFitEngineScreen} />
+                    <Stack.Screen name="PrivacyPolicy" component={PrivacyScreen} />
+                    <Stack.Screen name="PrivacyPolicyScreen" component={PrivacyScreen} />
+                    <Stack.Screen name="TermsOfUse" component={TermsScreen} />
+                    <Stack.Screen name="TermsOfUseScreen" component={TermsScreen} />
 
-                  <Stack.Screen name="Seguridad" component={SeguridadScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen name="SeguridadScreen" component={SeguridadScreen} />
+                    <Stack.Screen name="Seguridad" component={SeguridadScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen name="SeguridadScreen" component={SeguridadScreen} />
 
-                  {/* Planes */}
-                  <Stack.Screen name="PlanSelector" component={PlanSelectorScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="PlanSelectorScreen"
-                    component={PlanSelectorScreen}
-                  />
+                    {/* Planes */}
+                    <Stack.Screen name="PlanSelector" component={PlanSelectorScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="PlanSelectorScreen"
+                      component={PlanSelectorScreen}
+                    />
 
-                  <Stack.Screen name="PlanDetail" component={PlanDetailScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="PlanDetailScreen"
-                    component={PlanDetailScreen}
-                  />
+                    <Stack.Screen name="PlanDetail" component={PlanDetailScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="PlanDetailScreen"
+                      component={PlanDetailScreen}
+                    />
 
-                  {/* Registro / Pago */}
-                  <Stack.Screen name="CreateAccount" component={CreaCuentaScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen name="CreaAccount" component={CreaCuentaScreen} />
-                  <Stack.Screen
-                    name="CreaCuentaScreen"
-                    component={CreaCuentaScreen}
-                  />
+                    {/* Registro / Pago */}
+                    <Stack.Screen name="CreateAccount" component={CreaCuentaScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen name="CreaAccount" component={CreaCuentaScreen} />
+                    <Stack.Screen
+                      name="CreaCuentaScreen"
+                      component={CreaCuentaScreen}
+                    />
 
-                  <Stack.Screen name="RegistroInicial" component={RegistroInicialScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="RegistroInicialScreen"
-                    component={RegistroInicialScreen}
-                  />
+                    <Stack.Screen name="RegistroInicial" component={RegistroInicialScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="RegistroInicialScreen"
+                      component={RegistroInicialScreen}
+                    />
 
-                  <Stack.Screen
-                    name="RegistroCompleto"
-                    component={RegistroCompletoScreen}
-                  />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="RegistroCompletoScreen"
-                    component={RegistroCompletoScreen}
-                  />
+                    <Stack.Screen
+                      name="RegistroCompleto"
+                      component={RegistroCompletoScreen}
+                    />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="RegistroCompletoScreen"
+                      component={RegistroCompletoScreen}
+                    />
 
-                  <Stack.Screen name="RegistroDesdeCiclo" component={RegistroDesdeCiclo} />
-                  <Stack.Screen
-                    name="RegistroEvolucion"
-                    component={RegistroEvolucionScreen}
-                  />
+                    <Stack.Screen name="RegistroDesdeCiclo" component={RegistroDesdeCiclo} />
+                    <Stack.Screen
+                      name="RegistroEvolucion"
+                      component={RegistroEvolucionScreen}
+                    />
 
-                  <Stack.Screen name="AbonosPases" component={AbonosPasesScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="AbonosPasesScreen"
-                    component={AbonosPasesScreen}
-                  />
+                    <Stack.Screen name="AbonosPases" component={AbonosPasesScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="AbonosPasesScreen"
+                      component={AbonosPasesScreen}
+                    />
 
-                  <Stack.Screen name="Pago" component={PagoScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen name="PagoScreen" component={PagoScreen} />
+                    <Stack.Screen name="Pago" component={PagoScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen name="PagoScreen" component={PagoScreen} />
 
-                  {/* Detalle del abono activo del usuario */}
-                  <Stack.Screen name="DetalleAbono" component={DetalleAbonoScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="DetalleAbonoScreen"
-                    component={DetalleAbonoScreen}
-                  />
+                    {/* Detalle del abono activo del usuario */}
+                    <Stack.Screen name="DetalleAbono" component={DetalleAbonoScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="DetalleAbonoScreen"
+                      component={DetalleAbonoScreen}
+                    />
 
-                  {/* Novedades + Chat */}
-                  <Stack.Screen name="Novedades" component={NovedadesScreen} />
-                  <Stack.Screen name="NovedadesScreen" component={NovedadesScreen} />
-                  <Stack.Screen
-                    name="ChatCanales"
-                    component={ChatCanalesScreen}
-                    options={{ animation: 'slide_from_right', animationDuration: 220 }}
-                  />
-                  <Stack.Screen name="ChatCanalesScreen" component={ChatCanalesScreen} />
-                  <Stack.Screen
-                    name="Chat"
-                    component={ChatScreen}
-                    options={{ animation: 'slide_from_right', animationDuration: 220 }}
-                  />
-                  <Stack.Screen name="ChatScreen" component={ChatScreen} />
+                    {/* Novedades + Chat */}
+                    <Stack.Screen name="Novedades" component={NovedadesScreen} />
+                    <Stack.Screen name="NovedadesScreen" component={NovedadesScreen} />
+                    <Stack.Screen
+                      name="ChatCanales"
+                      component={ChatCanalesScreen}
+                      options={{ animation: 'slide_from_right', animationDuration: 220 }}
+                    />
+                    <Stack.Screen name="ChatCanalesScreen" component={ChatCanalesScreen} />
+                    <Stack.Screen
+                      name="Chat"
+                      component={ChatScreen}
+                      options={{ animation: 'slide_from_right', animationDuration: 220 }}
+                    />
+                    <Stack.Screen name="ChatScreen" component={ChatScreen} />
 
-                  {/* Agenda / Rutinas */}
-                  <Stack.Screen name="Calendario" component={CalendarioScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="CalendarioScreen"
-                    component={CalendarioScreen}
-                  />
+                    {/* Agenda / Rutinas */}
+                    <Stack.Screen name="Calendario" component={CalendarioScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="CalendarioScreen"
+                      component={CalendarioScreen}
+                    />
 
-                  <Stack.Screen name="TrabajoDelDia" component={TrabajoDelDiaScreen} />
-                  {/* Alias legacy */}
-                  <Stack.Screen
-                    name="TrabajoDelDiaScreen"
-                    component={TrabajoDelDiaScreen}
-                  />
+                    <Stack.Screen name="TrabajoDelDia" component={TrabajoDelDiaScreen} />
+                    {/* Alias legacy */}
+                    <Stack.Screen
+                      name="TrabajoDelDiaScreen"
+                      component={TrabajoDelDiaScreen}
+                    />
 
-                  <Stack.Screen name="Historial" component={HistorialScreen} />
-                  <Stack.Screen name="HistorialScreen" component={HistorialScreen} />
+                    <Stack.Screen name="Historial" component={HistorialScreen} />
+                    <Stack.Screen name="HistorialScreen" component={HistorialScreen} />
 
-                  <Stack.Screen name="Progreso" component={ProgresoScreen} />
-                  <Stack.Screen name="ProgresoScreen" component={ProgresoScreen} />
+                    <Stack.Screen name="Progreso" component={ProgresoScreen} />
+                    <Stack.Screen name="ProgresoScreen" component={ProgresoScreen} />
 
-                  <Stack.Screen
-                    name="FreeClassRequest"
-                    component={FreeClassRequestScreen}
-                  />
-                  <Stack.Screen
-                    name="FreeClassRequestScreen"
-                    component={FreeClassRequestScreen}
-                  />
+                    <Stack.Screen
+                      name="FreeClassRequest"
+                      component={FreeClassRequestScreen}
+                    />
+                    <Stack.Screen
+                      name="FreeClassRequestScreen"
+                      component={FreeClassRequestScreen}
+                    />
 
-                  {/* Reservas */}
-                  <Stack.Screen name="Reserva" component={ReservaScreen} />
-                  <Stack.Screen name="ReservaScreen" component={ReservaScreen} />
+                    {/* Reservas */}
+                    <Stack.Screen name="Reserva" component={ReservaScreen} />
+                    <Stack.Screen name="ReservaScreen" component={ReservaScreen} />
 
-                  <Stack.Screen name="ReservaClase" component={ReservaClaseScreen} />
-                  <Stack.Screen
-                    name="ReservaClaseScreen"
-                    component={ReservaClaseScreen}
-                  />
+                    <Stack.Screen name="ReservaClase" component={ReservaClaseScreen} />
+                    <Stack.Screen
+                      name="ReservaClaseScreen"
+                      component={ReservaClaseScreen}
+                    />
+                  </Stack.Group>
 
-                  {/* Admin */}
-                  <Stack.Screen name="Admin" component={AdminScreen} />
-                  <Stack.Screen name="AdminScreen" component={AdminScreen} />
+                  <Stack.Group>
+                    {/* Admin */}
+                    <Stack.Screen name="Admin" getComponent={getAdminScreenWithShell} />
+                    <Stack.Screen name="AdminScreen" getComponent={getAdminScreenWithShell} />
 
-                  <Stack.Screen name="AdminLite" component={AdminLiteScreen} />
-                  <Stack.Screen name="AdminLiteScreen" component={AdminLiteScreen} />
+                    <Stack.Screen name="AdminLite" component={AdminLiteScreenWithShell} />
+                    <Stack.Screen name="AdminLiteScreen" component={AdminLiteScreenWithShell} />
 
-                  <Stack.Screen name="AdminFinanzas" component={AdminFinanzasScreen} />
-                  <Stack.Screen
-                    name="AdminFinanzasScreen"
-                    component={AdminFinanzasScreen}
-                  />
-                  <Stack.Screen name="AdminResumen" component={AdminResumenScreen} />
-                  <Stack.Screen name="AdminResumenScreen" component={AdminResumenScreen} />
-                  <Stack.Screen name="AdminNovedades" component={AdminNovedadesScreen} />
-                  <Stack.Screen name="AdminNovedadesScreen" component={AdminNovedadesScreen} />
-                  <Stack.Screen name="GymConfig" component={GymConfigScreen} />
-                  <Stack.Screen name="GymConfigScreen" component={GymConfigScreen} />
-                  <Stack.Screen name="AdminPlanes" component={AdminPlanesScreen} />
-                  <Stack.Screen name="AdminPlanesScreen" component={AdminPlanesScreen} />
-                  <Stack.Screen name="AdminAbonos" component={AdminAbonosScreen} />
-                  <Stack.Screen name="AdminAbonosScreen" component={AdminAbonosScreen} />
+                    <Stack.Screen name="AdminFinanzas" component={AdminFinanzasScreenWithShell} />
+                    <Stack.Screen
+                      name="AdminFinanzasScreen"
+                      component={AdminFinanzasScreenWithShell}
+                    />
+                    <Stack.Screen name="AdminResumen" getComponent={getAdminResumenScreenWithShell} />
+                    <Stack.Screen name="AdminResumenScreen" getComponent={getAdminResumenScreenWithShell} />
+                    <Stack.Screen name="AdminNovedades" getComponent={getAdminNovedadesScreenWithShell} />
+                    <Stack.Screen name="AdminNovedadesScreen" getComponent={getAdminNovedadesScreenWithShell} />
+                    <Stack.Screen name="GymConfig" component={GymConfigScreenWithShell} />
+                    <Stack.Screen name="GymConfigScreen" component={GymConfigScreenWithShell} />
+                    <Stack.Screen name="AdminPlanes" getComponent={getAdminPlanesScreenWithShell} />
+                    <Stack.Screen name="AdminPlanesScreen" getComponent={getAdminPlanesScreenWithShell} />
+                    <Stack.Screen name="AdminAbonos" component={AdminAbonosScreenWithShell} />
+                    <Stack.Screen name="AdminAbonosScreen" component={AdminAbonosScreenWithShell} />
 
-                  <Stack.Screen
-                    name="AsignarCoaches"
-                    component={AsignarCoachesScreen}
-                  />
-                  <Stack.Screen
-                    name="AsignarCoachesScreen"
-                    component={AsignarCoachesScreen}
-                  />
-                  <Stack.Screen name="OrgMembers" component={OrgMembersScreen} />
-                  <Stack.Screen name="OrgMembersScreen" component={OrgMembersScreen} />
+                    <Stack.Screen
+                      name="AsignarCoaches"
+                      component={AsignarCoachesScreenWithShell}
+                    />
+                    <Stack.Screen
+                      name="AsignarCoachesScreen"
+                      component={AsignarCoachesScreenWithShell}
+                    />
+                    <Stack.Screen name="OrgMembers" component={OrgMembersScreenWithShell} />
+                    <Stack.Screen name="OrgMembersScreen" component={OrgMembersScreenWithShell} />
+                    <Stack.Screen name="AdminObservability" component={AdminObservabilityScreenWithShell} />
+                    <Stack.Screen name="AdminObservabilityScreen" component={AdminObservabilityScreenWithShell} />
+                  </Stack.Group>
                 </Stack.Navigator>
               </AuthGate>
             </NavigationContainer>

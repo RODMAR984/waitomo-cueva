@@ -25,7 +25,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { supabase } from '../supabaseClient';
-import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
+import { resolvePostAuthDestination } from '../utils/authRoutingGuard';
+import { reportError, trackEvent } from '../utils/observability';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -216,41 +217,21 @@ export default function LoginScreen() {
   const navigateByRole = useCallback(
     (effectiveRole, profileOverride) => {
       const p = profileOverride !== undefined ? profileOverride : profile;
-      const finalRole = effectiveRole || p?.role || contextRole || 'cliente';
-      const orgId = p?.organization_id || null;
+      const destination = resolvePostAuthDestination({
+        role: effectiveRole || contextRole,
+        profile: p,
+        forStaff,
+        needsFitEngineSpaceSetup,
+        authNavigationReady,
+      });
+      if (!destination) return;
 
-      if (finalRole === 'superadmin') {
-        navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
-        return;
-      }
+      const params =
+        destination === 'ConfiguraTuEspacio'
+          ? { email }
+          : undefined;
 
-      if (finalRole === 'coach' || finalRole === 'admin') {
-        if (!authNavigationReady) {
-          return;
-        }
-        if (needsFitEngineSpaceSetup) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'ConfiguraTuEspacio', params: { email } }],
-          });
-          return;
-        }
-        navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
-        return;
-      }
-
-      // Entró por flujo staff/org pero aún no terminó de crear/configurar su organización
-      if (forStaff && (!p || !orgId)) {
-        navigation.reset({ index: 0, routes: [{ name: 'ConfiguraTuEspacio', params: { email } }] });
-        return;
-      }
-
-      if (!p) {
-        navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
-        return;
-      }
-
-      navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(p) }] });
+      navigation.reset({ index: 0, routes: [{ name: destination, params }] });
     },
     [
       navigation,
@@ -336,6 +317,11 @@ export default function LoginScreen() {
         email,
         password,
       });
+      trackEvent('auth_login_success', {
+        forStaff: !!forStaff,
+        role: loggedProfile?.role || null,
+        userId: loggedUser?.id || null,
+      });
 
       // Intención cliente vs staff (misma cuenta; se persiste por user id de Supabase, no por nombre de org)
       if (persistActiveAppMode && loggedUser?.id) {
@@ -351,6 +337,9 @@ export default function LoginScreen() {
       }
       navigateByRole(effectiveRole, loggedProfile);
     } catch (error) {
+      reportError('auth_login_failed', error, {
+        forStaff: !!forStaff,
+      });
       console.log('Error login Supabase:', error);
       const msg = String(error?.message || '');
       const invalidCreds =
@@ -433,6 +422,10 @@ export default function LoginScreen() {
     }, 12000);
     try {
       await signInWithProvider(provider);
+      trackEvent('auth_oauth_success', {
+        provider,
+        forStaff: !!forStaff,
+      });
       const { data: sessData } = await supabase.auth.getSession();
       const uid = sessData?.session?.user?.id;
       if (persistActiveAppMode && uid) {
@@ -442,6 +435,10 @@ export default function LoginScreen() {
       }
       if (forStaff) setAllowStaffAutoNav(true);
     } catch (e) {
+      reportError('auth_oauth_failed', e, {
+        provider,
+        forStaff: !!forStaff,
+      });
       if (forStaff) AsyncStorage.removeItem(OAUTH_SIGNUP_STAFF_KEY);
       console.log(`❌ [LoginScreen] ${provider} OAuth error =>`, e?.message || e);
       const pName = tStr(provider === 'google' ? 'login_provider_google' : 'login_provider_apple');

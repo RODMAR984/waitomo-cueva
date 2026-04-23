@@ -14,6 +14,8 @@ import {
   Image,
   ActivityIndicator,
   Animated,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -29,6 +31,7 @@ import { supabase } from '../supabaseClient';
 import { navigationRef } from '../navigationRef';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { formatYmdLocal } from '../utils/formatYmdLocal';
+import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
 import {
   evaluateTrabajoHoyButton,
   evaluateCalendarioAccess,
@@ -39,6 +42,7 @@ import {
 import { clearFreeClassGrant } from '../utils/freeClassGrantStorage';
 import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../utils/freeClassPolicy';
 import { cancelTrialClassGrantServer, resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
+import { reportError, trackEvent } from '../utils/observability';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -116,6 +120,14 @@ const calcDaysLeft = (endAt) => {
   return Math.ceil((end.getTime() - now.getTime()) / 86400000);
 };
 
+const calcDaysUntil = (iso) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  return Math.ceil((d.getTime() - now.getTime()) / 86400000);
+};
+
 const getAbonoStatusKey = (s) => {
   const v = String(s || '').toLowerCase();
   if (v === 'active') return 'client_status_active';
@@ -130,6 +142,10 @@ const CHAT_LAST_OPEN = 'waitomo_chat_last_open';
 
 // ---------- SCREEN ----------
 export default function ClientScreen() {
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isWebWide = isWeb && width >= 1100;
+  const contentMaxWidth = isWebWide ? 1140 : isWeb ? 980 : 760;
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const navigation = useNavigation();
@@ -277,6 +293,7 @@ export default function ClientScreen() {
     let alive = true;
 
     const load = async () => {
+      const startedAt = Date.now();
       try {
         if (!user?.id) {
           if (alive) {
@@ -332,9 +349,18 @@ export default function ClientScreen() {
           setUserAbonosActive(list);
           setAbonoLoading(false);
         }
+        trackEvent('client_abonos_load_success', {
+          durationMs: Date.now() - startedAt,
+          userId: user?.id || null,
+          activeCount: list.length,
+        });
       } catch (e) {
         // eslint-disable-next-line no-console
         console.log('❌ ClientScreen: catch en carga de abono:', e?.message || e);
+        reportError('client_abonos_load_failed', e, {
+          durationMs: Date.now() - startedAt,
+          userId: user?.id || null,
+        });
         if (alive) {
           setUserAbonosActive([]);
           setAbonoLoading(false);
@@ -455,6 +481,7 @@ export default function ClientScreen() {
   const novedadesTickerPausedRef = useRef(false);
   const novedadesMarqueeAnim = useRef(new Animated.Value(0)).current;
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [myReservations, setMyReservations] = useState([]);
 
   const communityAccess = useMemo(
     () =>
@@ -558,37 +585,56 @@ export default function ClientScreen() {
     [contractedKeys, effectivePlanKey, switchActivity]
   );
 
-  const goCalendario = () => {
-    if (!planObj) {
+  const goCalendario = (reservation = null) => {
+    const targetPlanKey = normalizePlanKey(reservation?.planKey) || canonId;
+    const targetPlanLabel = PLAN_LABELS[targetPlanKey] || String(targetPlanKey || '').toUpperCase();
+    const targetPlanObj = targetPlanKey
+      ? { id: targetPlanKey, title: targetPlanLabel, active: true }
+      : planObj;
+    if (!targetPlanObj) {
       Alert.alert(tStr('client_no_plan'), tStr('client_no_plan_message'));
       return;
     }
-    const cal = evaluateCalendarioAccess({
-      planCanonKey: effectivePlanKey,
-      organizationId: orgForEntitlement,
-      abonoRow,
-      abonoLoading,
-      freeClassGrant,
-    });
-    if (!cal.ok) {
-      if (cal.reason === 'loading') return;
-      Alert.alert(tStr('client_calendario_locked_title'), tStr('client_calendario_locked_body'), [
-        { text: tStr('common_ok'), style: 'cancel' },
-        {
-          text: tStr('client_entitlement_go_pay'),
-          onPress: () => safeNavigate(['AbonosPases', 'AbonosPasesScreen']),
-        },
-      ]);
-      return;
+    if (!reservation) {
+      const cal = evaluateCalendarioAccess({
+        planCanonKey: effectivePlanKey,
+        organizationId: orgForEntitlement,
+        abonoRow,
+        abonoLoading,
+        freeClassGrant,
+      });
+      if (!cal.ok) {
+        if (cal.reason === 'loading') return;
+        trackEvent('client_calendario_blocked', {
+          reason: cal.reason || 'unknown',
+          planKey: effectivePlanKey || null,
+        });
+        Alert.alert(tStr('client_calendario_locked_title'), tStr('client_calendario_locked_body'), [
+          { text: tStr('common_ok'), style: 'cancel' },
+          {
+            text: tStr('client_entitlement_go_pay'),
+            onPress: () => safeNavigate(['AbonosPases', 'AbonosPasesScreen']),
+          },
+        ]);
+        return;
+      }
     }
     const ok = safeNavigate(['Calendario', 'CalendarioScreen'], {
-      plan: planObj,
-      planKey: canonId,
+      plan: targetPlanObj,
+      planKey: targetPlanKey,
+      prefillDate: reservation?.date || null,
+      prefillSlot: reservation?.slot || null,
       userData: {
         hasMedicalCertificate: aptoMedico,
         createdAt: profile?.created_at || null,
       },
     });
+    if (ok) {
+      trackEvent('client_open_calendario', {
+        fromReservation: !!reservation,
+        planKey: targetPlanKey || null,
+      });
+    }
     if (!ok) Alert.alert(tStr('client_route_not_found'), tStr('client_calendario_missing'));
   };
 
@@ -701,6 +747,10 @@ export default function ClientScreen() {
           onPress: () => safeNavigate(['AbonosPases', 'AbonosPasesScreen']),
         },
       ]);
+      trackEvent('client_trabajo_hoy_blocked', {
+        reason: th.reason || 'not_allowed',
+        planKey: effectivePlanKey || null,
+      });
       return;
     }
     const planValue = effectivePlanKey
@@ -722,6 +772,12 @@ export default function ClientScreen() {
       navParams.horario = th.horario;
     }
     const ok = safeNavigate(['TrabajoDelDia', 'TrabajoDelDiaScreen'], navParams);
+    if (ok) {
+      trackEvent('client_open_trabajo_hoy', {
+        planKey: effectivePlanKey || null,
+        fecha: navParams.fecha || null,
+      });
+    }
     if (!ok) Alert.alert(tStr('client_route_not_found'), tStr('client_trabajo_missing'));
   };
 
@@ -735,6 +791,9 @@ export default function ClientScreen() {
   const goChat = useCallback(() => {
     if (communityAccess.reason === 'loading') return;
     if (!communityAccess.ok) {
+      trackEvent('client_chat_blocked', {
+        reason: communityAccess.reason || 'not_allowed',
+      });
       Alert.alert(tStr('client_community_locked_title'), tStr('client_community_locked_body'), [
         { text: tStr('common_ok'), style: 'cancel' },
         {
@@ -779,6 +838,7 @@ export default function ClientScreen() {
           if (ok) return;
         }
       } catch {
+        reportError('client_open_chat_failed', new Error('open_chat_failed'));
         /* ir a lista */
       }
       safeNavigate(['ChatCanales', 'ChatCanalesScreen']);
@@ -799,10 +859,11 @@ export default function ClientScreen() {
 
   useEffect(() => {
     let alive = true;
-    const t = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (alive && novedadesLoading) setNovedadesLoading(false);
     }, 5000);
     (async () => {
+      const startedAt = Date.now();
       try {
         if (abonoLoading) return;
         if (!communityAccess.ok) {
@@ -827,8 +888,18 @@ export default function ClientScreen() {
           .limit(5);
         if (!alive) return;
         if (error) throw error;
-        setNovedades(Array.isArray(data) ? data : []);
-      } catch {
+        const nextNews = Array.isArray(data) ? data : [];
+        setNovedades(nextNews);
+        trackEvent('client_news_load_success', {
+          durationMs: Date.now() - startedAt,
+          organizationId: orgN || null,
+          count: nextNews.length,
+        });
+      } catch (e) {
+        reportError('client_news_load_failed', e, {
+          durationMs: Date.now() - startedAt,
+          organizationId: organization?.id || profile?.organization_id || null,
+        });
         if (alive) setNovedades([]);
       } finally {
         if (alive) setNovedadesLoading(false);
@@ -836,11 +907,53 @@ export default function ClientScreen() {
     })();
     return () => {
       alive = false;
-      clearTimeout(t);
+      clearTimeout(timeoutId);
     };
   }, [organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok]);
 
+  const aptoTickerItem = useMemo(() => {
+    if (!aptoMedico) {
+      return { id: 'apto:pending', kind: 'apto', title: tStr('client_apto_ticker_pending') };
+    }
+    const days = calcDaysUntil(profile?.apto_medico_expires_at);
+    if (days == null) {
+      return { id: 'apto:ok', kind: 'apto', title: tStr('client_apto_ticker_ok_no_expiry') };
+    }
+    if (days < 0) {
+      return {
+        id: 'apto:expired',
+        kind: 'apto',
+        title: tStr('client_apto_ticker_expired').replace('{{n}}', String(Math.abs(days))),
+      };
+    }
+    if (days <= 15) {
+      return {
+        id: 'apto:expiring',
+        kind: 'apto',
+        title: tStr('client_apto_ticker_expiring').replace('{{n}}', String(days)),
+      };
+    }
+    return {
+      id: 'apto:ok_days',
+      kind: 'apto',
+      title: tStr('client_apto_ticker_ok_days').replace('{{n}}', String(days)),
+    };
+  }, [aptoMedico, profile?.apto_medico_expires_at, tStr]);
+  const tickerItems = useMemo(
+    () => [aptoTickerItem, ...(Array.isArray(novedades) ? novedades : [])],
+    [aptoTickerItem, novedades],
+  );
+  const currentNovedadTitle = tickerItems[novedadesTickerIndex]?.title || '';
+
   const goNovedades = useCallback(() => {
+    const current = tickerItems[novedadesTickerIndex];
+    if (current?.kind === 'apto') {
+      safeNavigate(['PerfilUsuario', 'PerfilUsuarioScreen', 'Perfil'], {
+        plan: planObj || undefined,
+        planKey: canonId,
+      });
+      return;
+    }
     if (communityAccess.reason === 'loading') return;
     if (!communityAccess.ok) {
       Alert.alert(tStr('client_community_locked_title'), tStr('client_community_locked_body'), [
@@ -856,22 +969,24 @@ export default function ClientScreen() {
       ]);
       return;
     }
-    const current = novedades[novedadesTickerIndex];
     const params = current?.id ? { focusId: current.id } : undefined;
     safeNavigate(['Novedades', 'NovedadesScreen'], params);
-  }, [communityAccess.ok, communityAccess.reason, novedades, novedadesTickerIndex, safeNavigate, tStr]);
+  }, [communityAccess.ok, communityAccess.reason, tickerItems, novedadesTickerIndex, safeNavigate, tStr, planObj, canonId]);
 
   useEffect(() => {
-    if (novedades.length <= 1) return;
+    if (tickerItems.length <= 1) return;
     const id = setInterval(() => {
       if (novedadesTickerPausedRef.current) return;
-      setNovedadesTickerIndex((i) => (i + 1) % novedades.length);
+      setNovedadesTickerIndex((i) => (i + 1) % tickerItems.length);
     }, 3500);
     return () => clearInterval(id);
-  }, [novedades.length]);
+  }, [tickerItems.length]);
 
-  // Marquee: scroll automático del título de la novedad actual
-  const currentNovedadTitle = novedades[novedadesTickerIndex]?.title || '';
+  useEffect(() => {
+    setNovedadesTickerIndex((prev) => (prev >= tickerItems.length ? 0 : prev));
+  }, [tickerItems.length]);
+
+  // Marquee: scroll automático del ticker actual
   useEffect(() => {
     if (!currentNovedadTitle || novedadesTickerPausedRef.current) return;
     novedadesMarqueeAnim.setValue(0);
@@ -938,6 +1053,80 @@ export default function ClientScreen() {
     })();
     return () => { alive = false; };
   }, [user?.id, effectivePlanKey, organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        if (!user?.id) {
+          if (alive) setMyReservations([]);
+          return;
+        }
+        const orgId = organization?.id || profile?.organization_id || null;
+        if (!orgId) {
+          if (alive) setMyReservations([]);
+          return;
+        }
+        const today = formatYmdLocal(new Date());
+        try {
+          const [classRes, trialRes] = await Promise.all([
+            supabase
+              .from('class_bookings')
+              .select('id, plan_key, session_date, slot_label, status')
+              .eq('organization_id', orgId)
+              .eq('user_id', user.id)
+              .eq('status', 'scheduled')
+              .gte('session_date', today)
+              .order('session_date', { ascending: true })
+              .order('slot_label', { ascending: true })
+              .limit(10),
+            supabase
+              .from('trial_class_grants')
+              .select('id, plan_canon_id, fecha_clase, slot_label, status')
+              .eq('organization_id', orgId)
+              .eq('user_id', user.id)
+              .eq('status', 'scheduled')
+              .gte('fecha_clase', today)
+              .order('fecha_clase', { ascending: true })
+              .order('slot_label', { ascending: true })
+              .limit(10),
+          ]);
+          if (!alive) return;
+          const paidRows = Array.isArray(classRes?.data)
+            ? classRes.data.map((r) => ({
+                id: `class:${r.id}`,
+                planKey: normalizePlanKey(r.plan_key),
+                date: String(r.session_date || ''),
+                slot: normalizeSlotLabel(r.slot_label) || '',
+                source: 'class',
+              }))
+            : [];
+          const trialRows = Array.isArray(trialRes?.data)
+            ? trialRes.data.map((r) => ({
+                id: `trial:${r.id}`,
+                planKey: normalizePlanKey(r.plan_canon_id),
+                date: String(r.fecha_clase || ''),
+                slot: normalizeSlotLabel(r.slot_label) || '',
+                source: 'trial',
+              }))
+            : [];
+          const merged = [...paidRows, ...trialRows]
+            .filter((r) => r.date && r.slot)
+            .sort((a, b) => {
+              if (a.date !== b.date) return a.date.localeCompare(b.date);
+              return a.slot.localeCompare(b.slot);
+            })
+            .slice(0, 12);
+          setMyReservations(merged);
+        } catch {
+          if (alive) setMyReservations([]);
+        }
+      })();
+      return () => {
+        alive = false;
+      };
+    }, [user?.id, organization?.id, profile?.organization_id]),
+  );
 
   // Si hay user pero no perfil (cuenta borrada o sin completar), ir a completar registro.
   useEffect(() => {
@@ -1101,9 +1290,11 @@ export default function ClientScreen() {
           console.log('▶️ ClientScreen.handleLogout: onPress -> logout() (fire-and-forget)');
           try {
             logout?.();
+            trackEvent('auth_logout_requested', { source: 'client_screen' });
           } catch (e) {
             // eslint-disable-next-line no-console
             console.log('⚠️ ClientScreen.handleLogout: error al lanzar logout()', e?.message || e);
+            reportError('auth_logout_request_failed', e, { source: 'client_screen' });
           }
           // eslint-disable-next-line no-console
           console.log('✅ ClientScreen.handleLogout: llamando resetToWelcome() inmediatamente');
@@ -1119,9 +1310,25 @@ export default function ClientScreen() {
         root: { flex: 1 },
         scroll: {
           flexGrow: 1,
+          width: '100%',
+          alignSelf: 'center',
+          maxWidth: contentMaxWidth,
           paddingHorizontal: 20,
           paddingTop: 80,
           paddingBottom: 40,
+        },
+        mainGrid: {
+          width: '100%',
+          flexDirection: isWebWide ? 'row' : 'column',
+          alignItems: 'stretch',
+          justifyContent: 'space-between',
+          gap: 16,
+        },
+        mainColPrimary: {
+          flex: isWebWide ? 1.45 : 0,
+        },
+        mainColSecondary: {
+          flex: isWebWide ? 1 : 0,
         },
         panel: {
           backgroundColor: t.boxBg,
@@ -1151,7 +1358,7 @@ export default function ClientScreen() {
         headerName: { fontSize: 22, fontWeight: '800', color: t.text },
         headerSub: { marginTop: 8, fontSize: 13, color: t.metallicGrey ?? t.subText },
 
-        metricsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
+        metricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 18 },
         metricBox: {
           flex: 1,
           paddingVertical: 10,
@@ -1161,7 +1368,6 @@ export default function ClientScreen() {
           borderColor: t.overlayBorder,
           borderWidth: 1,
           marginRight: 10,
-          minHeight: 86,
         },
         metricBoxLast: { marginRight: 0 },
         metricLabel: { color: t.metallicGrey ?? t.subText, fontSize: 11 },
@@ -1304,14 +1510,32 @@ export default function ClientScreen() {
           minWidth: 18,
           height: 18,
           borderRadius: 9,
-          backgroundColor: '#ff5a5a',
+          backgroundColor: hexToRgba(t.brand, 0.9),
+          borderWidth: 1,
+          borderColor: t.boxBg,
           alignItems: 'center',
           justifyContent: 'center',
           paddingHorizontal: 5,
         },
-        chatBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+        chatBadgeText: { color: t.buttonPrimaryText?.color || '#fff', fontSize: 11, fontWeight: '800' },
+        reservationList: { marginTop: 8, alignSelf: 'stretch', width: '100%' },
+        reservationRowTouchable: {
+          alignSelf: 'stretch',
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: hexToRgba(t.brand, 0.08),
+          borderRadius: 12,
+          paddingVertical: 8,
+          paddingHorizontal: 10,
+          marginBottom: 6,
+        },
+        reservationChipText: { color: t.text, fontSize: 11, fontWeight: '700' },
 
-        quickRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+        quickRow: {
+          flexDirection: isWeb && !isWebWide ? 'column' : 'row',
+          justifyContent: 'space-between',
+          marginTop: 10,
+        },
         quickBtn: {
           flex: 1,
           borderRadius: 18,
@@ -1324,6 +1548,8 @@ export default function ClientScreen() {
           alignItems: 'center',
         },
         quickBtnLast: { marginRight: 0 },
+        quickBtnStacked: { marginRight: 0, marginBottom: 10 },
+        quickBtnLastStacked: { marginBottom: 0 },
         quickIconWrap: {
           width: 36,
           height: 36,
@@ -1378,7 +1604,7 @@ export default function ClientScreen() {
 
         footerInfo: { marginTop: 4, fontSize: 11, color: t.placeholder, textAlign: 'center' },
       }),
-    [t]
+    [t, contentMaxWidth, isWebWide]
   );
 
   const freeClassPanel = useMemo(() => {
@@ -1410,6 +1636,30 @@ export default function ClientScreen() {
         : tStr('client_plan_choose_desc');
 
   const hasMultipleActivities = contractedKeys.length > 1;
+  const reservationLabel = useCallback(
+    (item) => {
+      const d = new Date(`${item.date}T12:00:00`);
+      const day = Number.isNaN(d.getTime())
+        ? item.date
+        : d.toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+          });
+      const p = PLAN_LABELS[item.planKey] || String(item.planKey || '').toUpperCase();
+      return `${p} · ${day} · ${item.slot}`;
+    },
+    [locale],
+  );
+
+  const reservationItemsWithLabel = useMemo(
+    () =>
+      (Array.isArray(myReservations) ? myReservations : []).map((item) => ({
+        ...item,
+        label: reservationLabel(item),
+      })),
+    [myReservations, reservationLabel],
+  );
 
   return (
     <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
@@ -1460,194 +1710,237 @@ export default function ClientScreen() {
             </TouchableOpacity>
 
             <View style={[styles.metricBox, styles.metricBoxLast]}>
-              <Text style={styles.metricLabel}>{tStr('client_apto_medico')}</Text>
-              <Text style={styles.metricValue}>{aptoMedico ? tStr('client_apto_ok') : tStr('client_apto_pendiente')}</Text>
-              <Text style={styles.metricHint}>{aptoMedico ? tStr('client_apto_ready') : tStr('client_apto_upload')}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>{tStr('client_plan_activo')}</Text>
-
-          <View style={styles.planBox}>
-            {hasMultipleActivities ? (
-              <View style={{ alignSelf: 'stretch' }}>
-                <View style={styles.activityNavOuter}>
-                  <TouchableOpacity
-                    style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
-                    onPress={() => cycleActivity(-1)}
-                    disabled={planSwitching}
-                    accessibilityRole="button"
-                    accessibilityLabel={tStr('client_activity_prev')}
-                  >
-                    <Ionicons name="chevron-back" size={26} color={t.brand} />
-                  </TouchableOpacity>
-                  <View style={styles.activityNavCenter}>
-                    <Text style={styles.activityNavTitle} numberOfLines={2}>
-                      {planLabel}
-                    </Text>
-                    <Text style={styles.activityNavHint}>{tStr('client_activity_switch_hint')}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
-                    onPress={() => cycleActivity(1)}
-                    disabled={planSwitching}
-                    accessibilityRole="button"
-                    accessibilityLabel={tStr('client_activity_next')}
-                  >
-                    <Ionicons name="chevron-forward" size={26} color={t.brand} />
-                  </TouchableOpacity>
-                </View>
-                {planSwitching ? (
-                  <ActivityIndicator style={{ marginTop: 6 }} color={t.brand} size="small" />
-                ) : null}
-                <TouchableOpacity style={styles.activityAddLink} onPress={goPlanSelector} activeOpacity={0.85}>
-                  <Text style={styles.activityAddLinkText}>{tStr('client_otra_actividad')}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.planTitle}>{planLabel}</Text>
-            )}
-            <Text style={styles.planSubtitle}>{planActivoDescripcion}</Text>
-
-            {!!(startFmt || endFmt) && (
-              <Text style={styles.planDates}>
-                {startFmt ? `${tStr('client_abono_start')}: ${startFmt}` : ''}
-                {startFmt && endFmt ? ' • ' : ''}
-                {endFmt ? `${tStr('client_abono_end')}: ${endFmt}` : ''}
-                {typeof daysLeft === 'number' ? ` • ${daysLeft} ${tStr('client_days')}` : ''}
+              <Text style={styles.metricLabel}>{tStr('client_my_reservations')}</Text>
+              <Text style={styles.metricValue}>
+                {myReservations.length > 0
+                  ? tStr('client_my_reservations_count').replace('{{n}}', String(myReservations.length))
+                  : tStr('client_my_reservations_empty_short')}
               </Text>
-            )}
-
-            <View style={styles.pillRow}>
-              <TouchableOpacity style={styles.planPillBtn} activeOpacity={0.9} onPress={goCalendario}>
-                <Text style={styles.planPillText}>{tStr('client_calendario')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.planPillBtn} activeOpacity={0.9} onPress={goTrabajoHoy}>
-                <Text style={styles.planPillText}>{tStr('client_trabajo_hoy')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {freeClassPanel ? (
-              <View style={styles.freeClassCard}>
-                <Text style={styles.freeClassTitle}>{tStr('client_freeclass_card_title')}</Text>
-                <Text style={styles.freeClassMeta}>
-                  {tStr('client_freeclass_card_body')
-                    .replace('{{date}}', freeClassPanel.dateStr)
-                    .replace('{{time}}', freeClassPanel.timeStr || '')}
-                </Text>
-                <Text style={[styles.freeClassMeta, { marginTop: 8 }]}>
-                  {tStr('client_freeclass_card_policy').replace(
-                    '{{hours}}',
-                    String(FREE_CLASS_CANCEL_NOTICE_HOURS),
-                  )}
-                </Text>
-                <View style={styles.freeClassActions}>
-                  <TouchableOpacity style={styles.freeClassAction} onPress={handleCancelFreeClass} activeOpacity={0.9}>
-                    <Text style={styles.freeClassActionText}>{tStr('client_freeclass_card_cancel')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.freeClassAction, styles.freeClassActionPrimary]}
-                    onPress={goManageFreeClass}
-                    activeOpacity={0.9}
-                  >
-                    <Text style={styles.freeClassActionTextPrimary}>{tStr('client_freeclass_card_change')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : null}
-          </View>
-
-          <Text style={styles.footerInfo}>{tStr('client_reservas_hint')}</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.novedadesCaja}
-          onPress={goNovedades}
-          onPressIn={() => { novedadesTickerPausedRef.current = true; }}
-          onPressOut={() => { novedadesTickerPausedRef.current = false; }}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.novedadesTitle}>{tStr('client_novedades')}</Text>
-          {novedadesLoading ? (
-            <View style={styles.novedadesTickerWrap}>
-              <ActivityIndicator size="small" color={t.brand} />
-            </View>
-          ) : novedades.length === 0 ? (
-            <Text style={styles.novedadesTickerText}>{tStr('client_sin_novedades')}</Text>
-          ) : (
-            <>
-              <View style={styles.novedadesTickerWrap}>
-                <Animated.View
-                  style={{
-                    flexDirection: 'row',
-                    transform: [
-                      {
-                        translateX: novedadesMarqueeAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0, -180],
-                        }),
-                      },
-                    ],
-                  }}
-                >
-                  <Text style={styles.novedadesTickerText} numberOfLines={1}>
-                    {currentNovedadTitle}
-                    {'  ·  '}
-                  </Text>
-                  <Text style={styles.novedadesTickerText} numberOfLines={1}>
-                    {currentNovedadTitle}
-                  </Text>
-                </Animated.View>
-              </View>
-              {novedades.length > 1 && (
-                <View style={styles.novedadesDots}>
-                  {novedades.map((_, i) => (
-                    <View
-                      key={i}
-                      style={[styles.novedadesDot, i === novedadesTickerIndex && styles.novedadesDotActive]}
-                    />
+              {myReservations.length > 0 ? (
+                <View style={styles.reservationList}>
+                  {reservationItemsWithLabel.map((r) => (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={styles.reservationRowTouchable}
+                      activeOpacity={0.85}
+                      onPress={() => goCalendario(r)}
+                    >
+                      <Text style={styles.reservationChipText} numberOfLines={2}>
+                        {r.label}
+                      </Text>
+                    </TouchableOpacity>
                   ))}
                 </View>
+              ) : (
+                <Text style={styles.metricHint}>{tStr('client_my_reservations_empty_hint')}</Text>
               )}
-            </>
-          )}
-          <Text style={styles.novedadesVerTodas}>{tStr('client_ver_todas')} ›</Text>
-        </TouchableOpacity>
+            </View>
+          </View>
+        </View>
 
-        <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>{tStr('client_quick_access')}</Text>
+        <View style={styles.mainGrid}>
+          <View style={styles.mainColPrimary}>
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>{tStr('client_plan_activo')}</Text>
 
-          <View style={styles.quickRow}>
-            <TouchableOpacity style={styles.quickBtn} onPress={goPerfil} activeOpacity={0.9}>
-              <View style={styles.quickIconWrap}>
-                <Ionicons name="person-circle-outline" size={22} color={t.brand} />
-              </View>
-              <Text style={styles.quickLabel}>{tStr('client_my_profile')}</Text>
-              <Text style={styles.quickHint}>{tStr('client_my_profile_hint')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.quickBtn, styles.quickBtnLast]} onPress={goChat} activeOpacity={0.9}>
-              <View style={styles.quickIconWrap}>
-                <Ionicons name="chatbubbles-outline" size={20} color={t.brand} />
-                {unreadChatCount > 0 && (
-                  <View style={styles.chatBadge}>
-                    <Text style={styles.chatBadgeText}>
-                      {unreadChatCount > 99 ? '99+' : unreadChatCount}
-                    </Text>
+              <View style={styles.planBox}>
+                {hasMultipleActivities ? (
+                  <View style={{ alignSelf: 'stretch' }}>
+                    <View style={styles.activityNavOuter}>
+                      <TouchableOpacity
+                        style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
+                        onPress={() => cycleActivity(-1)}
+                        disabled={planSwitching}
+                        accessibilityRole="button"
+                        accessibilityLabel={tStr('client_activity_prev')}
+                      >
+                        <Ionicons name="chevron-back" size={26} color={t.brand} />
+                      </TouchableOpacity>
+                      <View style={styles.activityNavCenter}>
+                        <Text style={styles.activityNavTitle} numberOfLines={2}>
+                          {planLabel}
+                        </Text>
+                        <Text style={styles.activityNavHint}>{tStr('client_activity_switch_hint')}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
+                        onPress={() => cycleActivity(1)}
+                        disabled={planSwitching}
+                        accessibilityRole="button"
+                        accessibilityLabel={tStr('client_activity_next')}
+                      >
+                        <Ionicons name="chevron-forward" size={26} color={t.brand} />
+                      </TouchableOpacity>
+                    </View>
+                    {planSwitching ? (
+                      <ActivityIndicator style={{ marginTop: 6 }} color={t.brand} size="small" />
+                    ) : null}
+                    <TouchableOpacity style={styles.activityAddLink} onPress={goPlanSelector} activeOpacity={0.85}>
+                      <Text style={styles.activityAddLinkText}>{tStr('client_otra_actividad')}</Text>
+                    </TouchableOpacity>
                   </View>
+                ) : (
+                  <Text style={styles.planTitle}>{planLabel}</Text>
                 )}
+                <Text style={styles.planSubtitle}>{planActivoDescripcion}</Text>
+
+                {!!(startFmt || endFmt) && (
+                  <Text style={styles.planDates}>
+                    {startFmt ? `${tStr('client_abono_start')}: ${startFmt}` : ''}
+                    {startFmt && endFmt ? ' • ' : ''}
+                    {endFmt ? `${tStr('client_abono_end')}: ${endFmt}` : ''}
+                    {typeof daysLeft === 'number' ? ` • ${daysLeft} ${tStr('client_days')}` : ''}
+                  </Text>
+                )}
+
+                <View style={styles.pillRow}>
+                  <TouchableOpacity style={styles.planPillBtn} activeOpacity={0.9} onPress={goCalendario}>
+                    <Text style={styles.planPillText}>{tStr('client_calendario')}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.planPillBtn} activeOpacity={0.9} onPress={goTrabajoHoy}>
+                    <Text style={styles.planPillText}>{tStr('client_trabajo_hoy')}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {freeClassPanel ? (
+                  <View style={styles.freeClassCard}>
+                    <Text style={styles.freeClassTitle}>{tStr('client_freeclass_card_title')}</Text>
+                    <Text style={styles.freeClassMeta}>
+                      {tStr('client_freeclass_card_body')
+                        .replace('{{date}}', freeClassPanel.dateStr)
+                        .replace('{{time}}', freeClassPanel.timeStr || '')}
+                    </Text>
+                    <Text style={[styles.freeClassMeta, { marginTop: 8 }]}>
+                      {tStr('client_freeclass_card_policy').replace(
+                        '{{hours}}',
+                        String(FREE_CLASS_CANCEL_NOTICE_HOURS),
+                      )}
+                    </Text>
+                    <View style={styles.freeClassActions}>
+                      <TouchableOpacity style={styles.freeClassAction} onPress={handleCancelFreeClass} activeOpacity={0.9}>
+                        <Text style={styles.freeClassActionText}>{tStr('client_freeclass_card_cancel')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.freeClassAction, styles.freeClassActionPrimary]}
+                        onPress={goManageFreeClass}
+                        activeOpacity={0.9}
+                      >
+                        <Text style={styles.freeClassActionTextPrimary}>{tStr('client_freeclass_card_change')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
               </View>
-              <Text style={styles.quickLabel}>{tStr('config_notif_messages')}</Text>
-              <Text style={styles.quickHint}>{tStr('client_chat_hint')}</Text>
+
+              <Text style={styles.footerInfo}>{tStr('client_reservas_hint')}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.novedadesCaja}
+              onPress={goNovedades}
+              onPressIn={() => { novedadesTickerPausedRef.current = true; }}
+              onPressOut={() => { novedadesTickerPausedRef.current = false; }}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.novedadesTitle}>{tStr('client_novedades')}</Text>
+              {novedadesLoading && tickerItems.length <= 1 ? (
+                <View style={styles.novedadesTickerWrap}>
+                  <ActivityIndicator size="small" color={t.brand} />
+                </View>
+              ) : tickerItems.length === 0 ? (
+                <Text style={styles.novedadesTickerText}>{tStr('client_sin_novedades')}</Text>
+              ) : (
+                <>
+                  <View style={styles.novedadesTickerWrap}>
+                    <Animated.View
+                      style={{
+                        flexDirection: 'row',
+                        transform: [
+                          {
+                            translateX: novedadesMarqueeAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, -180],
+                            }),
+                          },
+                        ],
+                      }}
+                    >
+                      <Text style={styles.novedadesTickerText} numberOfLines={1}>
+                        {currentNovedadTitle}
+                        {'  ·  '}
+                      </Text>
+                      <Text style={styles.novedadesTickerText} numberOfLines={1}>
+                        {currentNovedadTitle}
+                      </Text>
+                    </Animated.View>
+                  </View>
+                  {tickerItems.length > 1 && (
+                    <View style={styles.novedadesDots}>
+                      {tickerItems.map((_, i) => (
+                        <View
+                          key={i}
+                          style={[styles.novedadesDot, i === novedadesTickerIndex && styles.novedadesDotActive]}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+              <Text style={styles.novedadesVerTodas}>{tStr('client_ver_todas')} ›</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={[styles.secondaryBtn, { marginTop: 18 }]} onPress={handleLogout}>
-            <Text style={styles.secondaryBtnText}>{tStr('client_logout')}</Text>
-          </TouchableOpacity>
+          <View style={styles.mainColSecondary}>
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>{tStr('client_quick_access')}</Text>
+
+              <View style={styles.quickRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.quickBtn,
+                    isWeb && !isWebWide && styles.quickBtnStacked,
+                  ]}
+                  onPress={goPerfil}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.quickIconWrap}>
+                    <Ionicons name="person-circle-outline" size={22} color={t.brand} />
+                  </View>
+                  <Text style={styles.quickLabel}>{tStr('client_my_profile')}</Text>
+                  <Text style={styles.quickHint}>{tStr('client_my_profile_hint')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.quickBtn,
+                    styles.quickBtnLast,
+                    isWeb && !isWebWide && styles.quickBtnStacked,
+                    isWeb && !isWebWide && styles.quickBtnLastStacked,
+                  ]}
+                  onPress={goChat}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.quickIconWrap}>
+                    <Ionicons name="chatbubbles-outline" size={20} color={t.brand} />
+                    {unreadChatCount > 0 && (
+                      <View style={styles.chatBadge}>
+                        <Text style={styles.chatBadgeText}>
+                          {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.quickLabel}>{tStr('config_notif_messages')}</Text>
+                  <Text style={styles.quickHint}>{tStr('client_chat_hint')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={[styles.secondaryBtn, { marginTop: 18 }]} onPress={handleLogout}>
+                <Text style={styles.secondaryBtnText}>{tStr('client_logout')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </BackgroundWrapper>

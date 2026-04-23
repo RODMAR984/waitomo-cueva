@@ -102,6 +102,22 @@ const PerfilUsuarioScreen = () => {
   }, [sexo, tStr]);
 
   const aptoOk = !!profile?.apto_medico_url;
+  const aptoExpiresAt = profile?.apto_medico_expires_at ? new Date(profile.apto_medico_expires_at) : null;
+  const aptoDaysLeft =
+    aptoExpiresAt && !Number.isNaN(aptoExpiresAt.getTime())
+      ? Math.ceil((aptoExpiresAt.getTime() - Date.now()) / 86400000)
+      : null;
+  const aptoStatusTxt = (() => {
+    if (!aptoOk) return tStr('perfil_apto_upload_hint');
+    if (aptoDaysLeft == null) return tStr('perfil_apto_ok');
+    if (aptoDaysLeft < 0) {
+      return tStr('perfil_apto_status_expired').replace('{{n}}', String(Math.abs(aptoDaysLeft)));
+    }
+    if (aptoDaysLeft <= 15) {
+      return tStr('perfil_apto_status_expiring').replace('{{n}}', String(aptoDaysLeft));
+    }
+    return tStr('perfil_apto_status_ok_days').replace('{{n}}', String(aptoDaysLeft));
+  })();
 
   // ---------------------------------------------
   // Avatar: elegir foto y guardar avatar_url
@@ -168,6 +184,8 @@ const PerfilUsuarioScreen = () => {
       // Flag simple (mismo criterio actual)
       const updated = await updateProfile({
         apto_medico_url: 'apto-subido',
+        apto_medico_uploaded_at: new Date().toISOString(),
+        apto_medico_expires_at: new Date(Date.now() + (365 * 24 * 60 * 60 * 1000)).toISOString(),
       });
 
       if (!updated) {
@@ -495,11 +513,17 @@ const PerfilUsuarioScreen = () => {
 
               <View style={styles.aptoRow}>
                 <View style={styles.aptoBadge}>
-                  <Text style={styles.aptoBadgeText}>{aptoOk ? tStr('client_apto_ok') : tStr('client_apto_pendiente')}</Text>
+                  <Text style={styles.aptoBadgeText}>
+                    {aptoOk
+                      ? aptoDaysLeft != null && aptoDaysLeft < 0
+                        ? tStr('perfil_apto_badge_expired')
+                        : tStr('client_apto_ok')
+                      : tStr('client_apto_pendiente')}
+                  </Text>
                 </View>
 
                 <Text style={styles.aptoHint}>
-                  {aptoOk ? tStr('perfil_apto_ok') : tStr('perfil_apto_upload_hint')}
+                  {aptoStatusTxt}
                 </Text>
               </View>
 

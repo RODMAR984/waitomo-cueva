@@ -42,7 +42,7 @@ const STORAGE_KEYS = {
 
 // Columnas profiles (incluye preferencias: theme_mode, notif_*; Fase 2: organization_id)
 const PROFILE_COLS =
-  'id,created_at,role,username,full_name,phone,plan_actual,edad,peso,objetivos,lesiones,avatar_url,apto_medico_url,observaciones,sexo,theme_mode,notif_messages,notif_trabajo_dia,notif_novedades,notif_plan_pago,organization_id';
+  'id,created_at,role,username,full_name,phone,plan_actual,edad,peso,objetivos,lesiones,avatar_url,apto_medico_url,apto_medico_uploaded_at,apto_medico_expires_at,observaciones,sexo,theme_mode,notif_messages,notif_trabajo_dia,notif_novedades,notif_plan_pago,organization_id';
 
 /**
  * Cuentas creadas antes del signUp con role: coach + signup_intent: quedaron con profiles.role = cliente.

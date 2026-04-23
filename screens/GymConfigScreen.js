@@ -1,7 +1,7 @@
 // GymConfigScreen — Configuración de la organización (nombre, logo, color de acento)
 // Solo owner/superadmin de la org. Fase 4.
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
   BackHandler,
   Share,
   Switch,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,6 +72,9 @@ const getEffectiveMode = (mode) => {
 };
 
 export default function GymConfigScreen() {
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isWebWide = isWeb && width >= 1200;
   const navigation = useNavigation();
   const { t, mode } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -119,8 +123,22 @@ export default function GymConfigScreen() {
   );
   const [dniCopy, setDniCopy] = useState(typeof cpInit?.dni_copy === 'string' ? cpInit.dni_copy : '');
   const [modoCopy, setModoCopy] = useState(typeof cpInit?.modo_copy === 'string' ? cpInit.modo_copy : '');
+  const mcInit = organization?.features?.medical_clearance_policy;
+  const [medicalPolicyMode, setMedicalPolicyMode] = useState(
+    mcInit?.mode === 'grace' || mcInit?.mode === 'flexible' ? mcInit.mode : 'strict',
+  );
+  const [medicalGraceDays, setMedicalGraceDays] = useState(
+    Number.isFinite(Number(mcInit?.grace_days)) ? String(Math.max(0, Number(mcInit.grace_days))) : '0',
+  );
   /** Paleta completa plegada por defecto (menos invasiva). */
   const [paletteOpenKey, setPaletteOpenKey] = useState(null);
+  /** Una pestaña = un tema; solo se monta el panel activo (toda la config sigue en el mismo save). */
+  const [gymConfigTab, setGymConfigTab] = useState('general');
+  const gymConfigScrollRef = useRef(null);
+
+  useEffect(() => {
+    gymConfigScrollRef.current?.scrollTo?.({ y: 0, animated: false });
+  }, [gymConfigTab]);
 
   useEffect(() => {
     if (organization) {
@@ -158,6 +176,11 @@ export default function GymConfigScreen() {
         setDniCopy('');
         setModoCopy('');
       }
+      const mc = organization.features?.medical_clearance_policy;
+      setMedicalPolicyMode(mc?.mode === 'grace' || mc?.mode === 'flexible' ? mc.mode : 'strict');
+      setMedicalGraceDays(
+        Number.isFinite(Number(mc?.grace_days)) ? String(Math.max(0, Number(mc.grace_days))) : '0',
+      );
     }
   }, [
     organization?.id,
@@ -371,6 +394,13 @@ export default function GymConfigScreen() {
         dni_copy: (dniCopy || '').trim(),
         modo_copy: (modoCopy || '').trim(),
       };
+      prevFeatures.medical_clearance_policy = {
+        mode: medicalPolicyMode === 'grace' || medicalPolicyMode === 'flexible' ? medicalPolicyMode : 'strict',
+        grace_days:
+          medicalPolicyMode === 'grace'
+            ? Math.min(90, Math.max(0, parseInt(String(medicalGraceDays || '0').trim(), 10) || 0))
+            : 0,
+      };
 
       const { error } = await supabase
         .from('organizations')
@@ -443,6 +473,8 @@ export default function GymConfigScreen() {
     organization?.features,
     clientWelcomeMessage,
     lockClientTheme,
+    medicalPolicyMode,
+    medicalGraceDays,
     refreshOrganization,
     tStr,
   ]);
@@ -530,11 +562,36 @@ export default function GymConfigScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        screen: { flex: 1, padding: 20, paddingTop: 56 },
+        screen: {
+          flex: 1,
+          padding: 20,
+          paddingTop: 56,
+          width: '100%',
+          alignSelf: 'center',
+          maxWidth: isWeb ? (isWebWide ? 1180 : 980) : undefined,
+        },
         header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
         backBtn: { padding: 8, marginLeft: -8 },
         title: { color: t.text, fontSize: 22, fontWeight: '800', marginLeft: 8 },
         scroll: { paddingBottom: 40 },
+        tabBarWrap: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          marginBottom: 14,
+          gap: 8,
+        },
+        tabChip: {
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.inputBg,
+        },
+        tabChipActive: { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.14) },
+        tabChipText: { color: t.subText, fontSize: 13, fontWeight: '700' },
+        tabChipTextActive: { color: t.brand },
         sectionHeading: { color: t.text, fontSize: 18, fontWeight: '800', marginBottom: 8 },
         sectionIntro: { color: t.subText, fontSize: 13, lineHeight: 19, marginBottom: 18 },
         subHeading: { color: t.text, fontSize: 15, fontWeight: '800', marginBottom: 10 },
@@ -652,7 +709,7 @@ export default function GymConfigScreen() {
           borderColor: t.overlayBorder,
         },
       }),
-    [t]
+    [t, isWeb, isWebWide]
   );
 
   const renderFullColorGrid = useCallback(
@@ -741,6 +798,7 @@ export default function GymConfigScreen() {
   return (
     <BackgroundWrapper screen="gymconfig">
       <ScrollView
+        ref={gymConfigScrollRef}
         style={styles.screen}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -754,6 +812,31 @@ export default function GymConfigScreen() {
           <Text style={styles.title}>{tStr('gym_config_screen_title')}</Text>
         </View>
 
+        <View style={styles.tabBarWrap}>
+          {[
+            ['general', 'gym_config_tab_general'],
+            ['payments', 'gym_config_tab_payments'],
+            ['medical', 'gym_config_tab_medical'],
+            ['invites', 'gym_config_tab_invites'],
+            ['appearance', 'gym_config_tab_appearance'],
+            ['branding', 'gym_config_tab_branding'],
+          ].map(([id, labelKey]) => {
+            const on = gymConfigTab === id;
+            return (
+              <TouchableOpacity
+                key={id}
+                onPress={() => setGymConfigTab(id)}
+                style={[styles.tabChip, on && styles.tabChipActive]}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.tabChipText, on && styles.tabChipTextActive]}>{tStr(labelKey)}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {gymConfigTab === 'general' ? (
+          <>
         <View style={styles.block}>
           <Text style={styles.label}>{tStr('gym_config_org_name')}</Text>
           <TextInput
@@ -781,7 +864,10 @@ export default function GymConfigScreen() {
             multiline
           />
         </View>
+          </>
+        ) : null}
 
+        {gymConfigTab === 'payments' ? (
         <View style={styles.block}>
           <Text style={styles.label}>{tStr('gym_config_payment_section_title')}</Text>
           <Text style={styles.hint}>{tStr('gym_config_payment_section_hint')}</Text>
@@ -862,7 +948,67 @@ export default function GymConfigScreen() {
             </>
           ) : null}
         </View>
+        ) : null}
 
+        {gymConfigTab === 'medical' ? (
+        <View style={styles.block}>
+          <Text style={styles.label}>{tStr('gym_config_medical_policy_title')}</Text>
+          <Text style={styles.hint}>{tStr('gym_config_medical_policy_hint')}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+            {[
+              { id: 'strict', label: tStr('gym_config_medical_policy_strict') },
+              { id: 'grace', label: tStr('gym_config_medical_policy_grace') },
+              { id: 'flexible', label: tStr('gym_config_medical_policy_flexible') },
+            ].map((opt) => {
+              const on = medicalPolicyMode === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  onPress={() => canEdit && setMedicalPolicyMode(opt.id)}
+                  disabled={!canEdit}
+                  style={[
+                    {
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: t.overlayBorder,
+                      backgroundColor: t.inputBg,
+                    },
+                    on ? { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.12) } : null,
+                  ]}
+                >
+                  <Text style={{ color: on ? t.brand : t.subText, fontSize: 12, fontWeight: '700' }}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {medicalPolicyMode === 'grace' ? (
+            <>
+              <Text style={[styles.label, { marginTop: 12 }]}>{tStr('gym_config_medical_grace_days_label')}</Text>
+              <TextInput
+                style={styles.input}
+                value={medicalGraceDays}
+                onChangeText={setMedicalGraceDays}
+                placeholder={tStr('gym_config_medical_grace_days_ph')}
+                placeholderTextColor={t.placeholder}
+                editable={canEdit}
+                keyboardType="number-pad"
+              />
+              <Text style={styles.hint}>
+                {tStr('gym_config_medical_grace_days_hint').replace(
+                  '{{n}}',
+                  String(Math.min(90, Math.max(0, parseInt(String(medicalGraceDays || '0').trim(), 10) || 0))),
+                )}
+              </Text>
+            </>
+          ) : null}
+        </View>
+        ) : null}
+
+        {gymConfigTab === 'invites' ? (
         <View style={styles.block}>
           <Text style={styles.label}>{tStr('gym_config_invites_new')}</Text>
           <Text style={styles.hint}>
@@ -916,7 +1062,10 @@ export default function GymConfigScreen() {
             </View>
           ) : null}
         </View>
+        ) : null}
 
+        {gymConfigTab === 'appearance' ? (
+          <>
         <View style={{ marginBottom: 6 }}>
           <Text style={styles.sectionHeading}>{tStr('gym_config_section_ui')}</Text>
           <Text style={styles.sectionIntro}>
@@ -1287,6 +1436,30 @@ export default function GymConfigScreen() {
             <Text style={[styles.paletteLabel, { color: t.subText }]}>{tStr('gym_config_clear_overlay')}</Text>
           </TouchableOpacity>
         </View>
+          </>
+        ) : null}
+
+        {gymConfigTab === 'branding' ? (
+          <>
+        <View style={styles.block}>
+          <Text style={styles.label}>{tStr('gym_config_logo_section')}</Text>
+          <View style={styles.logoWrap}>
+            {logoUri ? (
+              <Image source={{ uri: logoUri }} style={styles.logoImg} resizeMode="cover" />
+            ) : (
+              <Ionicons name="business" size={40} color={t.placeholder} />
+            )}
+          </View>
+          {canEdit && (
+            <TouchableOpacity style={styles.logoBtn} onPress={pickAndUploadLogo} disabled={uploadingLogo}>
+              {uploadingLogo ? (
+                <ActivityIndicator size="small" color={t.brand} />
+              ) : (
+                <Text style={styles.logoBtnText}>{tStr('gym_config_change_logo')}</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
 
         <View style={styles.block}>
           <Text style={styles.label}>{tStr('gym_config_bg_type_label')}</Text>
@@ -1340,26 +1513,8 @@ export default function GymConfigScreen() {
             </>
           )}
         </View>
-
-        <View style={styles.block}>
-          <Text style={styles.label}>{tStr('gym_config_logo_section')}</Text>
-          <View style={styles.logoWrap}>
-            {logoUri ? (
-              <Image source={{ uri: logoUri }} style={styles.logoImg} resizeMode="cover" />
-            ) : (
-              <Ionicons name="business" size={40} color={t.placeholder} />
-            )}
-          </View>
-          {canEdit && (
-            <TouchableOpacity style={styles.logoBtn} onPress={pickAndUploadLogo} disabled={uploadingLogo}>
-              {uploadingLogo ? (
-                <ActivityIndicator size="small" color={t.brand} />
-              ) : (
-                <Text style={styles.logoBtnText}>{tStr('gym_config_change_logo')}</Text>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
+          </>
+        ) : null}
 
         <TouchableOpacity style={[styles.saveBtn, !canEdit && { opacity: 0.55 }]} onPress={save} disabled={saving || !canEdit} activeOpacity={0.9}>
           {saving ? (

@@ -1,8 +1,12 @@
 import { StyleSheet } from 'react-native';
 
 /** Estética compartida: WelcomeGlobal + WelcomeDualChoice (logo, CTAs, locale). */
-export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0) {
+export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}) {
   const safeTop = typeof topInset === 'number' ? topInset : 0;
+  const isWide = !!layout?.isWide;
+  const contentMaxWidth = isWide ? 980 : 420;
+  const ctaMaxWidth = isWide ? 360 : 280;
+  const subtitleMaxWidth = isWide ? 620 : 320;
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -49,6 +53,9 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0) {
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 24,
+      width: '100%',
+      alignSelf: 'center',
+      maxWidth: contentMaxWidth,
     },
     logoWrap: {
       alignItems: 'center',
@@ -59,13 +66,13 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0) {
       fontSize: 14,
       textAlign: 'center',
       marginBottom: 16,
-      maxWidth: 320,
+      maxWidth: subtitleMaxWidth,
     },
     ctaWrap: {
       alignItems: 'center',
       gap: 8,
       width: '100%',
-      maxWidth: 280,
+      maxWidth: ctaMaxWidth,
     },
     ctaPrimary: {
       backgroundColor: fe.buttonBg,

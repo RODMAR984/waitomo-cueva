@@ -3,9 +3,11 @@
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocale } from '../contexts/LocaleContext';
@@ -17,12 +19,17 @@ import { useWelcomeRouting } from '../hooks/useWelcomeRouting';
 
 export default function WelcomeDualChoiceScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { t: tStr, locale, setLocale } = useLocale();
   const { session, authNavigationReady, logout } = useAuth() || {};
 
   const { onDualClient, onDualStaff } = useWelcomeRouting();
 
-  const styles = useMemo(() => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top), [insets.top]);
+  const isWideWeb = Platform.OS === 'web' && width >= 1024;
+  const styles = useMemo(
+    () => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top, { isWide: isWideWeb }),
+    [insets.top, isWideWeb],
+  );
 
   const onLogout = async () => {
     try {
