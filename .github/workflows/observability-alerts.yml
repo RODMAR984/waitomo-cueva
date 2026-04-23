@@ -1,0 +1,31 @@
+name: Observability Alerts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-alert-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate required secrets
+        env:
+          SUPABASE_PROJECT_URL: ${{ secrets.SUPABASE_PROJECT_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_PROJECT_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Faltan secrets en GitHub Actions: SUPABASE_PROJECT_URL y/o SUPABASE_SERVICE_ROLE_KEY."
+            echo "Configuración: docs/RELEASE_RUNBOOK.md (bloque GitHub CLI)."
+            exit 1
+          fi
+
+      - name: Invoke observability alerts function
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "${{ secrets.SUPABASE_PROJECT_URL }}/functions/v1/observability-alerts" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            --data '{}'

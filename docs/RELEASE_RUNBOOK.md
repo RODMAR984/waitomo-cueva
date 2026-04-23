@@ -79,6 +79,13 @@ En **GitHub → Settings → Secrets and variables → Actions** (workflow `obse
 - `SUPABASE_PROJECT_URL` — por ejemplo `https://<ref>.supabase.co`
 - `SUPABASE_SERVICE_ROLE_KEY` — service role del mismo proyecto
 
+**Desde tu máquina (GitHub CLI, sin pegar secretos en el chat):** con `gh auth login` y el repo ya linkeado:
+
+```bash
+gh secret set SUPABASE_PROJECT_URL --body "https://TU_REF.supabase.co"
+gh secret set SUPABASE_SERVICE_ROLE_KEY --body "PEGAR_AQUI_SERVICE_ROLE_JWT"
+```
+
 ### Rollback Supabase (solo si aplica)
 
 - **Preferido**: migración nueva que revierta el cambio (forward-only).
