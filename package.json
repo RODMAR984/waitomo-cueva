@@ -16,7 +16,8 @@
     "smoke:flows": "node scripts/smoke-flows.cjs",
     "smoke:observability": "node scripts/smoke-observability.cjs",
     "qa:release": "npm run smoke:routing && npm run smoke:flows && npm run smoke:observability && npm run i18n:check && npm run preflight",
-    "perf:web:export": "expo export --platform web && node scripts/inject-web-branding.cjs",
+    "perf:web:export": "expo export --platform web && node scripts/copy-web-sw-optional.cjs && node scripts/inject-web-branding.cjs",
+    "perf:web:export:pwa": "node scripts/export-web-pwa.cjs",
     "perf:web:bundle-check": "node scripts/check-web-bundle.cjs",
     "perf:lhci": "lhci autorun --config=./lighthouserc.js",
     "qa:web:release": "npm run qa:release && npm run perf:web:export && npm run perf:web:bundle-check",
@@ -43,6 +44,7 @@
     "expo-asset": "~12.0.12",
     "expo-auth-session": "~7.0.10",
     "expo-clipboard": "~8.0.8",
+    "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.21",
@@ -61,7 +63,8 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-web": "^0.21.0"
+    "react-native-web": "^0.21.0",
+    "web-vitals": "^4.2.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -74,7 +77,7 @@
     "install": "^0.13.0",
     "react-native-svg-transformer": "^1.5.3",
     "serve": "^14.2.6",
-    "supabase": "^2.93.0",
+    "supabase": "^2.95.0",
     "typescript": "~5.9.2"
   },
   "private": true

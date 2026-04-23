@@ -74,6 +74,12 @@ import {
   AsignarCoachesScreenWithShell,
   OrgMembersScreenWithShell,
   AdminObservabilityScreenWithShell,
+  AdminMembershipFreezeScreenWithShell,
+  AdminReportesScreenWithShell,
+  AdminRetentionScreenWithShell,
+  AdminCommissionsScreenWithShell,
+  AdminStripeSettingsScreenWithShell,
+  AdminBadgesScreenWithShell,
 } from './navigation/staffScreenShell';
 
 // Splash (marca FitEngine + by WAITOMO)
@@ -93,10 +99,13 @@ import { registerGeneralImages } from './utils/getRandomGeneralImage';
 import { IMAGENES_POR_PLAN, IMAGEN_WELCOME } from './utils/imagenesFijas';
 import { reportError, setObservabilityContext, trackEvent } from './utils/observability';
 import { initSentryWebFromEnv, syncSentryUserContext } from './utils/sentryWebClient';
+import { initWebVitalsReporting } from './utils/webVitals';
+import { flushObservabilityEventsIfNeeded } from './utils/observabilityFlush';
 
 import { navigationRef } from './navigationRef';
 
 initSentryWebFromEnv();
+initWebVitalsReporting();
 
 // =====================================
 //   PRECARGA DE IMÁGENES (top-level OK)
@@ -207,6 +216,17 @@ function AppContent() {
   useEffect(() => {
     trackEvent('app_content_mounted', { platform: Platform.OS });
   }, []);
+
+  /** RUM: sube eventos locales (vitals + navegación) al backend con sesión activa. */
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    const run = () => {
+      flushObservabilityEventsIfNeeded({ force: false }).catch(() => undefined);
+    };
+    run();
+    const id = setInterval(run, 60000);
+    return () => clearInterval(id);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!global.ErrorUtils || typeof global.ErrorUtils.getGlobalHandler !== 'function') return undefined;
@@ -515,6 +535,18 @@ function AppContent() {
                     <Stack.Screen name="OrgMembersScreen" component={OrgMembersScreenWithShell} />
                     <Stack.Screen name="AdminObservability" component={AdminObservabilityScreenWithShell} />
                     <Stack.Screen name="AdminObservabilityScreen" component={AdminObservabilityScreenWithShell} />
+                    <Stack.Screen name="AdminMembershipFreeze" component={AdminMembershipFreezeScreenWithShell} />
+                    <Stack.Screen name="AdminMembershipFreezeScreen" component={AdminMembershipFreezeScreenWithShell} />
+                    <Stack.Screen name="AdminReportes" component={AdminReportesScreenWithShell} />
+                    <Stack.Screen name="AdminReportesScreen" component={AdminReportesScreenWithShell} />
+                    <Stack.Screen name="AdminRetention" component={AdminRetentionScreenWithShell} />
+                    <Stack.Screen name="AdminRetentionScreen" component={AdminRetentionScreenWithShell} />
+                    <Stack.Screen name="AdminCommissions" component={AdminCommissionsScreenWithShell} />
+                    <Stack.Screen name="AdminCommissionsScreen" component={AdminCommissionsScreenWithShell} />
+                    <Stack.Screen name="AdminStripeSettings" component={AdminStripeSettingsScreenWithShell} />
+                    <Stack.Screen name="AdminStripeSettingsScreen" component={AdminStripeSettingsScreenWithShell} />
+                    <Stack.Screen name="AdminBadges" component={AdminBadgesScreenWithShell} />
+                    <Stack.Screen name="AdminBadgesScreen" component={AdminBadgesScreenWithShell} />
                   </Stack.Group>
                 </Stack.Navigator>
               </AuthGate>

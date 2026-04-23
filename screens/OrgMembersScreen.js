@@ -8,7 +8,10 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
+  Alert,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -151,6 +154,7 @@ export default function OrgMembersScreen() {
         empty: { paddingVertical: 40, alignItems: 'center' },
         emptyText: { color: t.placeholder, fontSize: 15, textAlign: 'center' },
         err: { color: t.danger, fontSize: 14, marginBottom: 12 },
+        iconBtn: { padding: 8 },
       }),
     [t, insets.top]
   );
@@ -159,6 +163,35 @@ export default function OrgMembersScreen() {
     (roles || [])
       .map((r) => ROLE_LABEL[r] || r)
       .join(' · ');
+
+  const exportCsv = useCallback(async () => {
+    if (!rows?.length) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_miembros_empty'));
+      return;
+    }
+    const esc = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+    const header = 'user_id,display_name,roles,active';
+    const lines = rows.map((r) =>
+      [r.user_id, esc(r.displayName), esc(formatRoles(r.roles)), r.active ? 'true' : 'false'].join(','),
+    );
+    const csv = [header, ...lines].join('\n');
+    try {
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'miembros.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        await Clipboard.setStringAsync(csv);
+      }
+      Alert.alert(tStr('gym_config_copied_title'), tStr('org_members_export_ok'));
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
+    }
+  }, [rows, tStr]);
 
   return (
     <BackgroundWrapper screen="admin">
@@ -169,7 +202,10 @@ export default function OrgMembersScreen() {
         <Text style={styles.title} numberOfLines={1}>
           {tStr('admin_miembros')}
         </Text>
-        <TouchableOpacity onPress={load} style={{ padding: 8 }} accessibilityLabel="Refrescar">
+        <TouchableOpacity onPress={exportCsv} style={styles.iconBtn} accessibilityLabel="Export CSV">
+          <Ionicons name="download-outline" size={22} color={t.brand} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={load} style={styles.iconBtn} accessibilityLabel="Refrescar">
           <Ionicons name="refresh" size={22} color={t.brand} />
         </TouchableOpacity>
       </View>

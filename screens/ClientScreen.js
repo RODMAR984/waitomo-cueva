@@ -155,7 +155,6 @@ export default function ClientScreen() {
     user,
     logout,
     activePlanId,
-    ensureProfile,
     organization,
     activeAppMode,
     ownedOrganizations,
@@ -182,6 +181,41 @@ export default function ClientScreen() {
   // ✅ Avatar: solo mostramos URL pública (https) o path de Storage. file:// no existe tras borrar datos.
   const rawAvatar = profile?.avatar_url || null;
   const [avatarUri, setAvatarUri] = useState(null);
+  const [homeNudge, setHomeNudge] = useState(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          if (!user?.id || !profile?.organization_id) {
+            if (!cancelled) setHomeNudge(null);
+            return;
+          }
+          const { data, error } = await supabase
+            .from('in_app_nudges')
+            .select('id, body, created_at')
+            .eq('user_id', user.id)
+            .eq('organization_id', profile.organization_id)
+            .is('read_at', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (cancelled) return;
+          if (error) {
+            setHomeNudge(null);
+            return;
+          }
+          setHomeNudge(data || null);
+        } catch {
+          if (!cancelled) setHomeNudge(null);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.id, profile?.organization_id]),
+  );
 
   useEffect(() => {
     let alive = true;
@@ -1189,7 +1223,9 @@ export default function ClientScreen() {
           if (persistActiveAppMode && user?.id) {
             await persistActiveAppMode('staff', user.id);
           }
-        } catch (_) {}
+        } catch {
+          void 0;
+        }
         const staffRoute = needsFitEngineSpaceSetup
           ? { name: 'ConfiguraTuEspacio', params: { email: user?.email } }
           : { name: 'AdminLite' };
@@ -1357,6 +1393,8 @@ export default function ClientScreen() {
         headerGreeting: { fontSize: 13, color: t.metallicGrey ?? t.subText, marginBottom: 4 },
         headerName: { fontSize: 22, fontWeight: '800', color: t.text },
         headerSub: { marginTop: 8, fontSize: 13, color: t.metallicGrey ?? t.subText },
+        headerTextCol: { flex: 1 },
+        headerOrgName: { marginTop: 2, fontSize: 13, color: t.metallicGrey ?? t.subText, opacity: 0.9 },
 
         metricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 18 },
         metricBox: {
@@ -1385,6 +1423,7 @@ export default function ClientScreen() {
           fontWeight: '800',
           color: t.brand,
         },
+        metricLoadingWrap: { marginTop: 6 },
 
         sectionTitle: { color: t.subText, fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
 
@@ -1421,6 +1460,9 @@ export default function ClientScreen() {
           borderColor: t.overlayBorder,
           backgroundColor: hexToRgba(t.brand, 0.06),
         },
+        activityNavBtnDimmed: { opacity: 0.55 },
+        planActivityStretch: { alignSelf: 'stretch' },
+        planSwitchSpinner: { marginTop: 6 },
         activityNavCenter: {
           flex: 1,
           paddingHorizontal: 8,
@@ -1472,17 +1514,18 @@ export default function ClientScreen() {
           fontWeight: '800',
           marginBottom: 6,
           letterSpacing: 0.8,
-          textShadowColor: t.brandTextShadow ?? 'rgba(0,255,252,0.8)',
+          textShadowColor: t.brandTextShadow ?? hexToRgba(t.brand, 0.8),
           textShadowOffset: { width: 0, height: 0 },
           textShadowRadius: 6,
         },
         novedadesTickerWrap: { minHeight: 24, justifyContent: 'center', overflow: 'hidden' },
+        novedadesMarqueeRow: { flexDirection: 'row' },
         novedadesTickerText: {
           color: t.brandText ?? t.brand,
           fontSize: 15,
           fontWeight: '700',
           letterSpacing: 0.5,
-          textShadowColor: t.brandTextShadow ?? 'rgba(0,255,252,0.7)',
+          textShadowColor: t.brandTextShadow ?? hexToRgba(t.brand, 0.7),
           textShadowOffset: { width: 0, height: 0 },
           textShadowRadius: 4,
         },
@@ -1500,7 +1543,7 @@ export default function ClientScreen() {
           fontWeight: '700',
           marginTop: 8,
           textAlign: 'right',
-          textShadowColor: t.brandTextShadow ?? 'rgba(0,255,252,0.5)',
+          textShadowColor: t.brandTextShadow ?? hexToRgba(t.brand, 0.5),
           textShadowRadius: 2,
         },
         chatBadge: {
@@ -1517,7 +1560,7 @@ export default function ClientScreen() {
           justifyContent: 'center',
           paddingHorizontal: 5,
         },
-        chatBadgeText: { color: t.buttonPrimaryText?.color || '#fff', fontSize: 11, fontWeight: '800' },
+        chatBadgeText: { color: t.buttonPrimaryText?.color || colors.dark.textPrimary, fontSize: 11, fontWeight: '800' },
         reservationList: { marginTop: 8, alignSelf: 'stretch', width: '100%' },
         reservationRowTouchable: {
           alignSelf: 'stretch',
@@ -1573,6 +1616,7 @@ export default function ClientScreen() {
           ...t.buttonPrimary,
           ...(t.buttonGlow || {}),
         },
+        secondaryBtnLogout: { marginTop: 18 },
         secondaryBtnText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: 14 },
 
         freeClassCard: {
@@ -1585,6 +1629,7 @@ export default function ClientScreen() {
         },
         freeClassTitle: { color: t.text, fontSize: 15, fontWeight: '800' },
         freeClassMeta: { color: t.subText ?? t.placeholder, fontSize: 13, marginTop: 6, lineHeight: 18 },
+        freeClassPolicyLine: { color: t.subText ?? t.placeholder, fontSize: 13, marginTop: 8, lineHeight: 18 },
         freeClassActions: { flexDirection: 'row', marginTop: 12, gap: 10 },
         freeClassAction: {
           flex: 1,
@@ -1597,12 +1642,25 @@ export default function ClientScreen() {
         },
         freeClassActionPrimary: {
           ...t.buttonPrimary,
-          borderColor: 'transparent',
+          borderColor: colors.transparent,
         },
         freeClassActionText: { color: t.text, fontWeight: '700', fontSize: 13 },
         freeClassActionTextPrimary: { ...t.buttonPrimaryText, fontWeight: '800', fontSize: 13 },
 
         footerInfo: { marginTop: 4, fontSize: 11, color: t.placeholder, textAlign: 'center' },
+
+        nudgeWrap: {
+          marginBottom: 14,
+          padding: 12,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: t.brand,
+          backgroundColor: hexToRgba(t.brand, 0.12),
+        },
+        nudgeTitle: { color: t.text, fontSize: 13, fontWeight: '900' },
+        nudgeBody: { color: t.text, fontSize: 13, marginTop: 6, lineHeight: 18 },
+        nudgeDismiss: { marginTop: 10, alignSelf: 'flex-end', paddingVertical: 6, paddingHorizontal: 12 },
+        nudgeDismissText: { color: t.brand, fontWeight: '800', fontSize: 13 },
       }),
     [t, contentMaxWidth, isWebWide]
   );
@@ -1661,9 +1719,28 @@ export default function ClientScreen() {
     [myReservations, reservationLabel],
   );
 
+  const dismissHomeNudge = useCallback(async () => {
+    if (!homeNudge?.id) return;
+    try {
+      await supabase.rpc('mark_in_app_nudge_read', { p_nudge_id: homeNudge.id });
+    } catch {
+      void 0;
+    }
+    setHomeNudge(null);
+  }, [homeNudge?.id]);
+
   return (
     <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {homeNudge?.body ? (
+          <View style={styles.nudgeWrap}>
+            <Text style={styles.nudgeTitle}>{tStr('client_nudge_title')}</Text>
+            <Text style={styles.nudgeBody}>{homeNudge.body}</Text>
+            <TouchableOpacity style={styles.nudgeDismiss} onPress={dismissHomeNudge} activeOpacity={0.85}>
+              <Text style={styles.nudgeDismissText}>{tStr('client_nudge_dismiss')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         <View style={styles.panel}>
           {organization?.logo_url ? (
             <View style={styles.logoWrap}>
@@ -1679,12 +1756,12 @@ export default function ClientScreen() {
               )}
             </View>
 
-            <View style={{ flex: 1 }}>
+            <View style={styles.headerTextCol}>
               <Text style={styles.headerGreeting}>{saludo}</Text>
               <Text style={styles.headerName}>{nombre}</Text>
               <Text style={styles.headerSub}>{tStr('client_welcome_panel')}</Text>
               {organization?.name ? (
-                <Text style={[styles.headerSub, { marginTop: 2, opacity: 0.9 }]}>{organization.name}</Text>
+                <Text style={styles.headerOrgName}>{organization.name}</Text>
               ) : null}
             </View>
           </View>
@@ -1699,7 +1776,7 @@ export default function ClientScreen() {
             >
               <Text style={styles.metricLabel}>{tStr('client_plan')}</Text>
               {planLoading ? (
-                <View style={{ marginTop: 6 }}>
+                <View style={styles.metricLoadingWrap}>
                   <ActivityIndicator color={t.brand} />
                 </View>
               ) : (
@@ -1745,10 +1822,10 @@ export default function ClientScreen() {
 
               <View style={styles.planBox}>
                 {hasMultipleActivities ? (
-                  <View style={{ alignSelf: 'stretch' }}>
+                  <View style={styles.planActivityStretch}>
                     <View style={styles.activityNavOuter}>
                       <TouchableOpacity
-                        style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
+                        style={[styles.activityNavBtn, planSwitching && styles.activityNavBtnDimmed]}
                         onPress={() => cycleActivity(-1)}
                         disabled={planSwitching}
                         accessibilityRole="button"
@@ -1763,7 +1840,7 @@ export default function ClientScreen() {
                         <Text style={styles.activityNavHint}>{tStr('client_activity_switch_hint')}</Text>
                       </View>
                       <TouchableOpacity
-                        style={[styles.activityNavBtn, planSwitching && { opacity: 0.55 }]}
+                        style={[styles.activityNavBtn, planSwitching && styles.activityNavBtnDimmed]}
                         onPress={() => cycleActivity(1)}
                         disabled={planSwitching}
                         accessibilityRole="button"
@@ -1773,7 +1850,7 @@ export default function ClientScreen() {
                       </TouchableOpacity>
                     </View>
                     {planSwitching ? (
-                      <ActivityIndicator style={{ marginTop: 6 }} color={t.brand} size="small" />
+                      <ActivityIndicator style={styles.planSwitchSpinner} color={t.brand} size="small" />
                     ) : null}
                     <TouchableOpacity style={styles.activityAddLink} onPress={goPlanSelector} activeOpacity={0.85}>
                       <Text style={styles.activityAddLinkText}>{tStr('client_otra_actividad')}</Text>
@@ -1811,7 +1888,7 @@ export default function ClientScreen() {
                         .replace('{{date}}', freeClassPanel.dateStr)
                         .replace('{{time}}', freeClassPanel.timeStr || '')}
                     </Text>
-                    <Text style={[styles.freeClassMeta, { marginTop: 8 }]}>
+                    <Text style={styles.freeClassPolicyLine}>
                       {tStr('client_freeclass_card_policy').replace(
                         '{{hours}}',
                         String(FREE_CLASS_CANCEL_NOTICE_HOURS),
@@ -1854,17 +1931,19 @@ export default function ClientScreen() {
                 <>
                   <View style={styles.novedadesTickerWrap}>
                     <Animated.View
-                      style={{
-                        flexDirection: 'row',
-                        transform: [
-                          {
-                            translateX: novedadesMarqueeAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, -180],
-                            }),
-                          },
-                        ],
-                      }}
+                      style={[
+                        styles.novedadesMarqueeRow,
+                        {
+                          transform: [
+                            {
+                              translateX: novedadesMarqueeAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, -180],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
                     >
                       <Text style={styles.novedadesTickerText} numberOfLines={1}>
                         {currentNovedadTitle}
@@ -1936,7 +2015,7 @@ export default function ClientScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={[styles.secondaryBtn, { marginTop: 18 }]} onPress={handleLogout}>
+              <TouchableOpacity style={[styles.secondaryBtn, styles.secondaryBtnLogout]} onPress={handleLogout}>
                 <Text style={styles.secondaryBtnText}>{tStr('client_logout')}</Text>
               </TouchableOpacity>
             </View>

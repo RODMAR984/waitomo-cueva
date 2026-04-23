@@ -33,9 +33,15 @@ jobs:
 
       - name: QA release + export web + bundle check
         run: npm run qa:web:release
+        env:
+          # Opcional: mismo valor que RUM_ANON_INGEST_KEY en Supabase (repo → Settings → Secrets).
+          # Si falta, el export en CI sigue OK; solo no se enviará RUM desde ese build.
+          EXPO_PUBLIC_RUM_ANON_KEY: ${{ secrets.EXPO_PUBLIC_RUM_ANON_KEY }}
 
       - name: Lighthouse CI (umbrales; falla el job si no cumple)
         run: npm run perf:lhci
+        env:
+          LHCI_TARGET_URL: ${{ secrets.LHCI_TARGET_URL }}
 
       - name: Upload Lighthouse report
         if: failure()

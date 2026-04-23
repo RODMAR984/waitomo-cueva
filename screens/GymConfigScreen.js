@@ -130,6 +130,14 @@ export default function GymConfigScreen() {
   const [medicalGraceDays, setMedicalGraceDays] = useState(
     Number.isFinite(Number(mcInit?.grace_days)) ? String(Math.max(0, Number(mcInit.grace_days))) : '0',
   );
+  const [membershipFreezeEnabled, setMembershipFreezeEnabled] = useState(
+    !!organization?.membership_freeze_enabled,
+  );
+  const [membershipFreezeMaxDays, setMembershipFreezeMaxDays] = useState(
+    organization?.membership_freeze_max_days != null && Number.isFinite(Number(organization.membership_freeze_max_days))
+      ? String(Math.max(1, Number(organization.membership_freeze_max_days)))
+      : '',
+  );
   /** Paleta completa plegada por defecto (menos invasiva). */
   const [paletteOpenKey, setPaletteOpenKey] = useState(null);
   /** Una pestaña = un tema; solo se monta el panel activo (toda la config sigue en el mismo save). */
@@ -181,6 +189,13 @@ export default function GymConfigScreen() {
       setMedicalGraceDays(
         Number.isFinite(Number(mc?.grace_days)) ? String(Math.max(0, Number(mc.grace_days))) : '0',
       );
+      setMembershipFreezeEnabled(!!organization.membership_freeze_enabled);
+      setMembershipFreezeMaxDays(
+        organization.membership_freeze_max_days != null &&
+          Number.isFinite(Number(organization.membership_freeze_max_days))
+          ? String(Math.max(1, Number(organization.membership_freeze_max_days)))
+          : '',
+      );
     }
   }, [
     organization?.id,
@@ -192,6 +207,8 @@ export default function GymConfigScreen() {
     organization?.background_url,
     organization?.features,
     organization?.text_color,
+    organization?.membership_freeze_enabled,
+    organization?.membership_freeze_max_days,
   ]);
 
   // Android: atrás del sistema debe volver al panel, no cerrar la app si el stack quedó raro.
@@ -360,6 +377,16 @@ export default function GymConfigScreen() {
       Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
       return;
     }
+    let membershipFreezeMaxDaysOut = null;
+    const maxRaw = (membershipFreezeMaxDays || '').trim();
+    if (maxRaw !== '') {
+      const n = parseInt(maxRaw, 10);
+      if (!Number.isFinite(n) || n < 1) {
+        Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_membership_freeze_max_invalid'));
+        return;
+      }
+      membershipFreezeMaxDaysOut = Math.min(366, n);
+    }
     setSaving(true);
     try {
       const prevFeatures =
@@ -412,6 +439,8 @@ export default function GymConfigScreen() {
           background_type: backgroundType || 'solid',
           background_url: (backgroundUrl || '').trim() || null,
           features: prevFeatures,
+          membership_freeze_enabled: !!membershipFreezeEnabled,
+          membership_freeze_max_days: membershipFreezeMaxDaysOut,
         })
         .eq('id', orgId);
       if (error) throw error;
@@ -817,6 +846,7 @@ export default function GymConfigScreen() {
             ['general', 'gym_config_tab_general'],
             ['payments', 'gym_config_tab_payments'],
             ['medical', 'gym_config_tab_medical'],
+            ['membership', 'gym_config_tab_membership'],
             ['invites', 'gym_config_tab_invites'],
             ['appearance', 'gym_config_tab_appearance'],
             ['branding', 'gym_config_tab_branding'],
@@ -1005,6 +1035,36 @@ export default function GymConfigScreen() {
               </Text>
             </>
           ) : null}
+        </View>
+        ) : null}
+
+        {gymConfigTab === 'membership' ? (
+        <View style={styles.block}>
+          <Text style={styles.label}>{tStr('gym_config_membership_freeze_title')}</Text>
+          <Text style={styles.hint}>{tStr('gym_config_membership_freeze_hint')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
+            <Text style={{ color: t.text, fontSize: 14, fontWeight: '700', flex: 1, paddingRight: 12 }}>
+              {tStr('gym_config_membership_freeze_toggle')}
+            </Text>
+            <Switch
+              value={!!membershipFreezeEnabled}
+              onValueChange={setMembershipFreezeEnabled}
+              disabled={!canEdit}
+              trackColor={{ false: t.overlayBorder, true: t.brand }}
+              thumbColor="#f4ffff"
+            />
+          </View>
+          <Text style={[styles.label, { marginTop: 16 }]}>{tStr('gym_config_membership_freeze_max_label')}</Text>
+          <TextInput
+            style={styles.input}
+            value={membershipFreezeMaxDays}
+            onChangeText={setMembershipFreezeMaxDays}
+            placeholder={tStr('gym_config_membership_freeze_max_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+            keyboardType="number-pad"
+          />
+          <Text style={styles.hint}>{tStr('gym_config_membership_freeze_max_hint')}</Text>
         </View>
         ) : null}
 

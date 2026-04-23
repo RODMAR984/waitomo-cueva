@@ -1,20 +1,32 @@
 /**
- * Lighthouse CI — umbrales que fallan el build (`npm run perf:lhci`).
+ * Lighthouse CI — `npm run perf:lhci`
  *
- * Requiere `dist/` (ej. tras `npm run perf:web:export`).
- * Ajustá minScore / maxNumericValue según evolución del bundle (Expo web suele ser pesado en CI).
+ * - Sin `LHCI_TARGET_URL`: mide `dist/` estático (post export).
+ * - Con `LHCI_TARGET_URL` (ej. preview/prod): mide esa URL (red + API reales).
  */
-module.exports = {
-  ci: {
-    collect: {
+const target = (process.env.LHCI_TARGET_URL || '').trim();
+
+const collect = target
+  ? {
+      url: [target],
+      numberOfRuns: 2,
+      settings: {
+        preset: 'desktop',
+        skipAudits: ['uses-rel-preconnect'],
+      },
+    }
+  : {
       staticDistDir: './dist',
       numberOfRuns: 2,
       settings: {
         preset: 'desktop',
-        // SPA: no penalizar tanto enlaces internos no rastreados
         skipAudits: ['uses-rel-preconnect'],
       },
-    },
+    };
+
+module.exports = {
+  ci: {
+    collect,
     upload: {
       target: 'filesystem',
       outputDir: './.lighthouseci',

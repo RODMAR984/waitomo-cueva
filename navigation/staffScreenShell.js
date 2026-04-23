@@ -7,6 +7,12 @@ import AdminAbonosScreen from '../screens/AdminAbonosScreen';
 import AsignarCoachesScreen from '../screens/AsignarCoachesScreen';
 import OrgMembersScreen from '../screens/OrgMembersScreen';
 import AdminObservabilityScreen from '../screens/AdminObservabilityScreen';
+import AdminMembershipFreezeScreen from '../screens/AdminMembershipFreezeScreen';
+import AdminReportesScreen from '../screens/AdminReportesScreen';
+import AdminRetentionScreen from '../screens/AdminRetentionScreen';
+import AdminCommissionsScreen from '../screens/AdminCommissionsScreen';
+import AdminStripeSettingsScreen from '../screens/AdminStripeSettingsScreen';
+import AdminBadgesScreen from '../screens/AdminBadgesScreen';
 
 export function wrapStaffScreen(Component) {
   function StaffScreenWithShell(props) {
@@ -64,3 +70,9 @@ export const AdminAbonosScreenWithShell = wrapStaffScreen(AdminAbonosScreen);
 export const AsignarCoachesScreenWithShell = wrapStaffScreen(AsignarCoachesScreen);
 export const OrgMembersScreenWithShell = wrapStaffScreen(OrgMembersScreen);
 export const AdminObservabilityScreenWithShell = wrapStaffScreen(AdminObservabilityScreen);
+export const AdminMembershipFreezeScreenWithShell = wrapStaffScreen(AdminMembershipFreezeScreen);
+export const AdminReportesScreenWithShell = wrapStaffScreen(AdminReportesScreen);
+export const AdminRetentionScreenWithShell = wrapStaffScreen(AdminRetentionScreen);
+export const AdminCommissionsScreenWithShell = wrapStaffScreen(AdminCommissionsScreen);
+export const AdminStripeSettingsScreenWithShell = wrapStaffScreen(AdminStripeSettingsScreen);
+export const AdminBadgesScreenWithShell = wrapStaffScreen(AdminBadgesScreen);

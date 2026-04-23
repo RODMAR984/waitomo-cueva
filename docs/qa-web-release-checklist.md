@@ -81,6 +81,13 @@ Se considera release web lista cuando:
 - Ejecutar `npm run release:verify` (incluye `qa:web:release` + Playwright; antes: `npx playwright install chromium`).
 - Runbook de tag, EAS, web, Supabase y rollback: **`docs/RELEASE_RUNBOOK.md`**.
 
+## 5c) RUM anónimo (web)
+
+- **Local:** `.env` con `EXPO_PUBLIC_RUM_ANON_KEY` (plantilla: `.env.example`). No commitear `.env`.
+- **CI (GitHub Actions):** secret de repo opcional `EXPO_PUBLIC_RUM_ANON_KEY` (mismo valor que `RUM_ANON_INGEST_KEY` en Supabase). Sin él el export en CI igual pasa; solo no envía RUM desde ese artefacto.
+- **EAS (build en la nube):** definir la misma variable en **expo.dev** → Environment variables / Secrets del proyecto.
+- **Producción Supabase (opcional):** `RUM_ALLOWED_ORIGINS` con los HTTPS de la SPA (coma-separados). Detalle: **`docs/MAPA_ESTELAR_COMPLETO.md`**.
+
 ## 6) Alertas automáticas (sin observación manual)
 
 - Workflow programado:

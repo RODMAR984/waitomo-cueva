@@ -3,7 +3,7 @@
     "name": "FitEngine",
     "slug": "waitomo-cueva",
     "scheme": "waitomo",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -48,7 +48,9 @@
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#021b23",
+      "themeColor": "#021b23"
     },
     "plugins": [
       "expo-asset",

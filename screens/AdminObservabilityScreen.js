@@ -56,6 +56,10 @@ export default function AdminObservabilityScreen({ navigation }) {
       { name: 'calendario_slots_load_success', label: tStr('admin_observ_perf_cal_slots') },
       { name: 'client_abonos_load_success', label: tStr('admin_observ_perf_client_abonos') },
       { name: 'client_news_load_success', label: tStr('admin_observ_perf_client_news') },
+      { name: 'web_vital_lcp', label: tStr('admin_observ_perf_web_lcp') },
+      { name: 'web_vital_fcp', label: tStr('admin_observ_perf_web_fcp') },
+      { name: 'web_vital_ttfb', label: tStr('admin_observ_perf_web_ttfb') },
+      { name: 'web_vital_inp', label: tStr('admin_observ_perf_web_inp') },
     ],
     [tStr],
   );

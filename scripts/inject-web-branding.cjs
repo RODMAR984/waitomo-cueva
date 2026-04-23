@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 /**
  * Tras `expo export --platform web`: copia el icono de app y enriquece dist/index.html
- * (favicon / apple-touch / theme-color / manifest) sin forzar PWA instalable:
- * manifest con display "browser" = sigue siendo web en pestaña, con buen icono en marcadores.
+ * (favicon / apple-touch / theme-color / manifest).
+ *
+ * - Por defecto: manifest `display: "browser"` (web en pestaña, no “instalar app”).
+ * - `ENABLE_PWA=1`: manifest `standalone` + metas Apple + registro de SW (copiado con copy-web-sw).
+ * - `ENABLE_WEB_SW=1` sin PWA: solo SW + manifest sigue en `browser`.
  */
 'use strict';
 
@@ -15,6 +18,9 @@ const indexPath = path.join(dist, 'index.html');
 const iconSrc = path.join(root, 'assets', 'icon.png');
 const webIconName = 'web-app-icon.png';
 const manifestName = 'site.webmanifest';
+
+const isPwa = process.env.ENABLE_PWA === '1';
+const wantsServiceWorker = process.env.ENABLE_WEB_SW === '1' || isPwa;
 
 const THEME_COLOR = '#021b23';
 const BG_COLOR = '#021b23';
@@ -35,20 +41,52 @@ const manifest = {
   short_name: 'FitEngine',
   description: 'FitEngine — operación gimnasio',
   start_url: '/',
-  display: 'browser',
+  display: isPwa ? 'standalone' : 'browser',
   background_color: BG_COLOR,
   theme_color: THEME_COLOR,
+  ...(isPwa
+    ? {
+        scope: '/',
+        id: '/',
+        orientation: 'portrait',
+        categories: ['health', 'fitness', 'lifestyle'],
+      }
+    : {}),
   icons: [
+    {
+      src: `/${webIconName}`,
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'any',
+    },
     {
       src: `/${webIconName}`,
       sizes: '512x512',
       type: 'image/png',
       purpose: 'any',
     },
+    ...(isPwa
+      ? [
+          {
+            src: `/${webIconName}`,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ]
+      : []),
   ],
 };
 
 fs.writeFileSync(path.join(dist, manifestName), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+const pwaMeta = isPwa
+  ? `
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="FitEngine" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />`
+  : '';
 
 const injectBlock = `
     <!-- FitEngine web branding (scripts/inject-web-branding.cjs) -->
@@ -56,7 +94,7 @@ const injectBlock = `
     <meta name="theme-color" content="#0b3d4a" media="(prefers-color-scheme: light)" />
     <link rel="manifest" href="/${manifestName}" />
     <link rel="apple-touch-icon" href="/${webIconName}" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/${webIconName}" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/${webIconName}" />${pwaMeta}
 `;
 
 let html = fs.readFileSync(indexPath, 'utf8');
@@ -71,5 +109,25 @@ if (html.includes('</head>')) {
   fail('dist/index.html sin </head>');
 }
 
+if (wantsServiceWorker) {
+  const swDist = path.join(dist, 'sw.js');
+  if (!fs.existsSync(swDist)) {
+    fail(
+      'SW requerido pero falta dist/sw.js. Encadená: node scripts/copy-web-sw-optional.cjs antes de inject (ENABLE_WEB_SW o ENABLE_PWA).',
+    );
+  }
+  if (!html.includes('serviceWorker.register')) {
+    const swBlock = `    <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){})}</script>\n`;
+    if (html.includes('</body>')) {
+      html = html.replace('</body>', `${swBlock}</body>`);
+    } else {
+      fail('dist/index.html sin </body> (SW)');
+    }
+  }
+}
+
 fs.writeFileSync(indexPath, html, 'utf8');
-console.log(`[web-branding] OK: ${webIconName}, ${manifestName}, meta en index.html`);
+const flags = [isPwa && 'PWA', wantsServiceWorker && 'SW'].filter(Boolean).join(', ');
+console.log(
+  `[web-branding] OK: ${webIconName}, ${manifestName}, meta en index.html${flags ? ` (${flags})` : ''}`,
+);

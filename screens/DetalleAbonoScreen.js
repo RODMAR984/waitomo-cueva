@@ -80,7 +80,9 @@ export default function DetalleAbonoScreen({ navigation, route }) {
         // 1) Traer abonos recientes y elegir el que corresponde al plan actual (p. ej. Yoga), no solo el último creado
         const { data, error } = await supabase
           .from('user_abonos')
-          .select('id, user_id, abono_id, plan_id, status, start_date, end_date, sessions_total, sessions_used, created_at')
+          .select(
+            'id, user_id, abono_id, plan_id, status, start_date, end_date, sessions_total, sessions_used, created_at, freeze_start_date, freeze_end_date',
+          )
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(40);
@@ -96,6 +98,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
 
         const row =
           candidates.find((r) => isUserAbonoActive(r)) ||
+          candidates.find((r) => String(r?.status || '').toLowerCase() === 'frozen') ||
           candidates.find((r) => String(r?.status || '').toLowerCase() === 'pending') ||
           candidates[0] ||
           null;
@@ -146,15 +149,16 @@ export default function DetalleAbonoScreen({ navigation, route }) {
   const end = sub?.end_date ? fmtDate(sub.end_date) : null;
   const dl = sub?.end_date ? daysLeft(sub.end_date) : null;
 
-  const status = sub?.status || 'pending';
+  const status = String(sub?.status || 'pending').toLowerCase();
 
   const statusLabel = useMemo(() => {
     if (status === 'active') return tStr('detalle_abono_status_active');
+    if (status === 'frozen') return tStr('detalle_abono_status_frozen');
     if (status === 'pending') return tStr('detalle_abono_status_pending');
     if (status === 'expired') return tStr('detalle_abono_status_expired');
     if (status === 'cancelled') return tStr('detalle_abono_status_cancelled');
-    return status;
-  }, [status, tStr]);
+    return sub?.status || status;
+  }, [status, sub?.status, tStr]);
 
   const dash = tStr('detalle_abono_dash');
 
@@ -256,6 +260,14 @@ export default function DetalleAbonoScreen({ navigation, route }) {
               <Text style={styles.rowLabel}>{tStr('detalle_abono_label_status')}</Text>
               <Text style={styles.rowValue}>{statusLabel}</Text>
               {status === 'pending' && <Text style={styles.hint}>{tStr('detalle_abono_pending_hint')}</Text>}
+              {status === 'frozen' && (
+                <Text style={styles.hint}>
+                  {tStr('detalle_abono_freeze_hint')}
+                  {sub?.freeze_start_date && sub?.freeze_end_date
+                    ? `\n${fmtDate(sub.freeze_start_date)} → ${fmtDate(sub.freeze_end_date)}`
+                    : ''}
+                </Text>
+              )}
             </View>
 
             <View style={styles.row}>
