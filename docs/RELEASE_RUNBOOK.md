@@ -79,11 +79,20 @@ En **GitHub → Settings → Secrets and variables → Actions** (workflow `obse
 - `SUPABASE_PROJECT_URL` — por ejemplo `https://<ref>.supabase.co`
 - `SUPABASE_SERVICE_ROLE_KEY` — service role del mismo proyecto
 
+**E2E en CI** (workflow `ci.yml`, opcional — si faltan, Playwright salta esas suites):
+
+- `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` — staff con acceso al panel admin web.
+- `E2E_CLIENT_EMAIL` / `E2E_CLIENT_PASSWORD` — usuario cliente real (misma org que staging).
+
 **Desde tu máquina (GitHub CLI, sin pegar secretos en el chat):** con `gh auth login` y el repo ya linkeado:
 
 ```bash
 gh secret set SUPABASE_PROJECT_URL --body "https://TU_REF.supabase.co"
 gh secret set SUPABASE_SERVICE_ROLE_KEY --body "PEGAR_AQUI_SERVICE_ROLE_JWT"
+gh secret set E2E_ADMIN_EMAIL --body "admin@ejemplo.com"
+gh secret set E2E_ADMIN_PASSWORD --body "PEGAR_PASSWORD"
+gh secret set E2E_CLIENT_EMAIL --body "cliente@ejemplo.com"
+gh secret set E2E_CLIENT_PASSWORD --body "PEGAR_PASSWORD"
 ```
 
 ### Rollback Supabase (solo si aplica)

@@ -40,6 +40,19 @@ Checklist operativo para validar release web con foco en estabilidad, i18n, tema
 
 ## 4) E2E automatizado (Playwright)
 
+### Playwright en modo headed (ventana visible)
+
+- Con `npm run test:e2e:web:headed`, Playwright detecta `--headed` y:
+  - usa **un solo worker** y desactiva `fullyParallel` (menos ventanas concurrentes),
+  - arranca Chromium con **`--start-maximized`** y `viewport: null` para que el layout siga el tamaño real de la ventana.
+- Cada test sigue usando un **contexto nuevo** (comportamiento normal de Playwright): vas a ver ventanas que se abren y cierran en secuencia. Para el día a día, el gate estable es **`npm run test:e2e:web`** (headless).
+
+### Google OAuth (login con Google)
+
+- **No hay E2E automatizado** de Google: anti-bot de Google + popups lo hacen poco fiable en Playwright.
+- El mensaje **“This browser or app may not be secure”** en automatización **no implica** que usuarios con Chrome/Edge/Safari normales no puedan usar “Continuar con Google”.
+- Validación: **smoke manual** en la sección 3 (Welcome → Login → Continuar con Google en navegador real).
+
 - Ejecutar:
   - `npm run test:e2e:web`
 - Incluye:
@@ -47,7 +60,11 @@ Checklist operativo para validar release web con foco en estabilidad, i18n, tema
   - smoke admin autenticado **si** están definidas credenciales:
     - `E2E_ADMIN_EMAIL`
     - `E2E_ADMIN_PASSWORD`
+- smoke cliente autenticado **si** están definidas credenciales:
+    - `E2E_CLIENT_EMAIL`
+    - `E2E_CLIENT_PASSWORD`
 - Sin credenciales admin, la suite admin se salta automáticamente.
+- Sin credenciales cliente, la suite cliente se salta automáticamente.
 
 ## 5) Criterio de salida
 
