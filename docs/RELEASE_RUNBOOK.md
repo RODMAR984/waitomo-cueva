@@ -72,7 +72,7 @@ Secrets de la función (opcional, en el dashboard de Supabase o `npx supabase se
 
 - `OBS_ALERT_WEBHOOK_URL` — URL que recibe JSON cuando cambia el estado de una alerta.
 - `OBS_ALERT_WEBHOOK_BEARER` — Bearer opcional para el webhook.
-- Umbrales opcionales: `OBS_ALERT_WINDOW_MINUTES`, `OBS_ALERT_SILENCE_MINUTES`, `OBS_ALERT_MIN_EVENTS`, `OBS_ALERT_ERROR_RATE_THRESHOLD`, `OBS_ALERT_P95_MS_THRESHOLD`.
+- Umbrales opcionales: `OBS_ALERT_WINDOW_MINUTES`, `OBS_ALERT_SILENCE_MINUTES`, `OBS_ALERT_SILENCE_BASELINE_HOURS` (por defecto 168: solo alerta silencio si hubo ingest en ese lookback), `OBS_ALERT_MIN_EVENTS`, `OBS_ALERT_ERROR_RATE_THRESHOLD`, `OBS_ALERT_P95_MS_THRESHOLD`.
 
 En **GitHub → Settings → Secrets and variables → Actions** (workflow `observability-alerts.yml`):
 
