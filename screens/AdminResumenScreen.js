@@ -14,11 +14,15 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Linking,
+  TextInput,
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { supabase } from '../supabaseClient';
@@ -31,6 +35,7 @@ import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
 import { isUserAbonoActive, abonoCoversUserPlan } from '../utils/clientWorkoutEntitlement';
 import { staffCancelClassBookingServer, staffMoveClassBookingServer } from '../utils/classBookingSupabase';
 import { reportError, trackEvent } from '../utils/observability';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 
 function hexToRgbaLocal(hex, alpha = 1) {
   const clean = String(hex || '').replace('#', '');
@@ -47,6 +52,39 @@ function shiftYmd(ymd, deltaDays) {
   const dt = new Date(parts[0], parts[1] - 1, parts[2]);
   dt.setDate(dt.getDate() + deltaDays);
   return formatYmdLocal(dt);
+}
+
+function ymdInTimeZone(timeZone) {
+  const tz = String(timeZone || '').trim() || 'UTC';
+  try {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = fmt.formatToParts(new Date());
+    const y = parts.find((p) => p.type === 'year')?.value;
+    const m = parts.find((p) => p.type === 'month')?.value;
+    const d = parts.find((p) => p.type === 'day')?.value;
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  return formatYmdLocal();
+}
+
+function monthBoundsFromYmd(ymd) {
+  const [y, m] = String(ymd || '').split('-').map(Number);
+  if ([y, m].some(Number.isNaN)) {
+    const now = new Date();
+    const yy = now.getFullYear();
+    const mm = now.getMonth() + 1;
+    const first = `${yy}-${String(mm).padStart(2, '0')}-01`;
+    return { monthStart: first, monthEnd: shiftYmd(first, 31) };
+  }
+  const first = `${y}-${String(m).padStart(2, '0')}-01`;
+  const nextMonth = m === 12 ? new Date(y + 1, 0, 1) : new Date(y, m, 1);
+  const last = formatYmdLocal(new Date(nextMonth.getTime() - 24 * 60 * 60 * 1000));
+  return { monthStart: first, monthEnd: last };
 }
 
 /** 1=lunes … 7=domingo (igual que plan_week_slots / Calendario). */
@@ -98,6 +136,7 @@ function statusNorm(s) {
 
 export default function AdminResumenScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t } = useThemeContext();
@@ -105,9 +144,10 @@ export default function AdminResumenScreen() {
   const { organization, profile } = useAuth() || {};
   const orgId = organization?.id ?? profile?.organization_id ?? null;
 
-  const [ymd, setYmd] = useState(() => formatYmdLocal());
+  const [ymd, setYmd] = useState(() => ymdInTimeZone(organization?.timezone));
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [error, setError] = useState(null);
   const [blocks, setBlocks] = useState([]);
   const [grantsScheduled, setGrantsScheduled] = useState([]);
@@ -120,6 +160,11 @@ export default function AdminResumenScreen() {
   const [profilesById, setProfilesById] = useState({});
   const [abonoByUser, setAbonoByUser] = useState({});
   const [pendingPayments, setPendingPayments] = useState([]);
+  const [aiAlerts, setAiAlerts] = useState([]);
+  const [newMembersMonthCount, setNewMembersMonthCount] = useState(0);
+  const [abonosDue7dCount, setAbonosDue7dCount] = useState(0);
+  const [templateRecipient, setTemplateRecipient] = useState('');
+  const [assistantHistory, setAssistantHistory] = useState([]);
   const [expandedSlots, setExpandedSlots] = useState({});
   const [staffActionBusyId, setStaffActionBusyId] = useState('');
   /** Tarjeta colapsada = cabecera (horario) + pastilla de cupo, sin lista. */
@@ -129,11 +174,36 @@ export default function AdminResumenScreen() {
 
   const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
   const isDesktopWeb = Platform.OS === 'web' && width >= 1200;
+  const historyKey = orgId ? `admin_resumen_ai_history:${orgId}` : null;
+
+  useEffect(() => {
+    let mounted = true;
+    if (!historyKey) {
+      setAssistantHistory([]);
+      return;
+    }
+    AsyncStorage.getItem(historyKey)
+      .then((raw) => {
+        if (!mounted) return;
+        const arr = JSON.parse(String(raw || '[]'));
+        setAssistantHistory(Array.isArray(arr) ? arr.slice(0, 8) : []);
+      })
+      .catch(() => {
+        if (mounted) setAssistantHistory([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [historyKey]);
 
   useEffect(() => {
     setExpandedSlots({});
     setSlotListOpen({});
   }, [ymd]);
+
+  useEffect(() => {
+    setYmd(ymdInTimeZone(organization?.timezone));
+  }, [orgId, organization?.timezone]);
 
   const longDateLabel = useMemo(() => {
     try {
@@ -186,6 +256,9 @@ export default function AdminResumenScreen() {
       setProfilesById({});
       setAbonoByUser({});
       setPendingPayments([]);
+      setAiAlerts([]);
+      setNewMembersMonthCount(0);
+      setAbonosDue7dCount(0);
       setWeekSlots([]);
       setError(null);
       setLoading(false);
@@ -194,7 +267,9 @@ export default function AdminResumenScreen() {
     setError(null);
     try {
       const wd = getIsoWeekdayFromYmd(ymd);
-      const [blocksRes, grantsRes, classRes, plansRes, payRes, weekSlotsRes] = await Promise.all([
+      const { monthStart, monthEnd } = monthBoundsFromYmd(ymd);
+      const plus7 = shiftYmd(ymd, 7);
+      const [blocksRes, grantsRes, classRes, plansRes, payRes, weekSlotsRes, alertsRes, membersRes, dueRes] = await Promise.all([
         supabase
           .from('training_daily_blocks')
           .select('id,plan_key,slot_label,titulo,coach_id,fecha,updated_at,capacity')
@@ -227,6 +302,29 @@ export default function AdminResumenScreen() {
           .select('weekday,plan_code,slot_label')
           .eq('organization_id', orgId)
           .eq('weekday', wd),
+        supabase
+          .from('admin_ai_alerts')
+          .select('id, alert_type, severity, title, body, cta_label, cta_route, observed_at')
+          .eq('organization_id', orgId)
+          .eq('status', 'open')
+          .order('observed_at', { ascending: false })
+          .limit(6),
+        supabase
+          .from('organization_memberships')
+          .select('id, role, active, created_at')
+          .eq('organization_id', orgId)
+          .eq('active', true)
+          .gte('created_at', `${monthStart}T00:00:00.000Z`)
+          .lte('created_at', `${monthEnd}T23:59:59.999Z`)
+          .limit(1500),
+        supabase
+          .from('user_abonos')
+          .select('id, end_date, status')
+          .eq('organization_id', orgId)
+          .gte('end_date', ymd)
+          .lte('end_date', plus7)
+          .in('status', ['active', 'vigente'])
+          .limit(1500),
       ]);
 
       if (blocksRes.error) throw blocksRes.error;
@@ -235,6 +333,14 @@ export default function AdminResumenScreen() {
       if (plansRes.error) throw plansRes.error;
       if (payRes.error) throw payRes.error;
       if (weekSlotsRes.error) throw weekSlotsRes.error;
+      // Si la tabla admin_ai_alerts aún no fue migrada, no romper toda la pantalla.
+      const alertsMissingTable =
+        !!alertsRes.error &&
+        (alertsRes.error.code === '42P01' ||
+          String(alertsRes.error.message || '').toLowerCase().includes('admin_ai_alerts'));
+      if (alertsRes.error && !alertsMissingTable) throw alertsRes.error;
+      if (membersRes.error) throw membersRes.error;
+      if (dueRes.error) throw dueRes.error;
 
       const blockList = Array.isArray(blocksRes.data) ? blocksRes.data : [];
       const grantList = Array.isArray(grantsRes.data) ? grantsRes.data : [];
@@ -287,6 +393,15 @@ export default function AdminResumenScreen() {
 
       const pend = !payRes.error && Array.isArray(payRes.data) ? payRes.data.filter((r) => !isPaidStatus(r.status)) : [];
       setPendingPayments(pend);
+      setAiAlerts(Array.isArray(alertsRes.data) ? alertsRes.data : []);
+      const membersList = Array.isArray(membersRes.data) ? membersRes.data : [];
+      const newClients = membersList.filter((m) => {
+        const role = String(m?.role || '').toLowerCase();
+        return !['coach', 'admin', 'owner', 'superadmin'].includes(role);
+      }).length;
+      setNewMembersMonthCount(newClients);
+      const dueList = Array.isArray(dueRes.data) ? dueRes.data : [];
+      setAbonosDue7dCount(dueList.length);
       const debtUids = [...new Set(pend.map((p) => p.member_user_id).filter(Boolean))];
 
       const needProf = [...new Set([...trialUids, ...otherUids, ...classUids, ...classOtherUids, ...debtUids, ...coachIds])];
@@ -339,6 +454,9 @@ export default function AdminResumenScreen() {
       setProfilesById({});
       setAbonoByUser({});
       setPendingPayments([]);
+      setAiAlerts([]);
+      setNewMembersMonthCount(0);
+      setAbonosDue7dCount(0);
       setWeekSlots([]);
     } finally {
       setLoading(false);
@@ -355,6 +473,35 @@ export default function AdminResumenScreen() {
     setRefreshing(true);
     load();
   }, [load]);
+
+  const runAiInsights = useCallback(async () => {
+    if (!orgId || aiAnalyzing) return;
+    setAiAnalyzing(true);
+    try {
+      const { data, error: invokeErr } = await supabase.functions.invoke('admin-ai-insights', {
+        body: { organization_id: orgId },
+      });
+      if (invokeErr) throw invokeErr;
+      if (!data?.ok) throw new Error(data?.error || tStr('admin_resumen_ai_run_fail'));
+      trackEvent('admin_resumen_ai_alerts_run_ok', { organization_id: orgId });
+      const entry = {
+        id: `${Date.now()}-insights`,
+        label: tStr('admin_resumen_history_insights_run'),
+        ts: new Date().toISOString(),
+      };
+      setAssistantHistory((prev) => {
+        const next = [entry, ...(Array.isArray(prev) ? prev : [])].slice(0, 8);
+        if (historyKey) AsyncStorage.setItem(historyKey, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+      await load();
+    } catch (e) {
+      reportError('admin_resumen_ai_alerts_run_failed', e, { organizationId: orgId || null });
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_resumen_ai_run_fail'));
+    } finally {
+      setAiAnalyzing(false);
+    }
+  }, [aiAnalyzing, load, orgId, tStr, historyKey]);
 
   const planDisplay = useCallback(
     (planKey) => {
@@ -774,6 +921,51 @@ export default function AdminResumenScreen() {
           borderColor: t.overlayBorder,
         },
         cancelLine: { color: t.subText, fontSize: 13 },
+        alertCard: {
+          marginHorizontal: 8,
+          marginBottom: 8,
+          padding: 12,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.boxBg,
+        },
+        alertTitle: { color: t.text, fontSize: 14, fontWeight: '800' },
+        alertBody: { color: t.subText, fontSize: 13, marginTop: 4, lineHeight: 18 },
+        alertMeta: { color: t.placeholder, fontSize: 11, marginTop: 6 },
+        alertCtaBtn: {
+          alignSelf: 'flex-start',
+          marginTop: 8,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          borderRadius: 999,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          backgroundColor: t.inputBg,
+        },
+        alertCtaTxt: { color: t.brand, fontSize: 12, fontWeight: '700' },
+        tplBtnRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginTop: 8,
+        },
+        tplInput: {
+          marginTop: 8,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          borderRadius: 10,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+          color: t.text,
+          backgroundColor: t.inputBg,
+        },
+        historyLine: {
+          color: t.placeholder,
+          fontSize: 12,
+          marginTop: 4,
+          lineHeight: 16,
+        },
       }),
     [t, insets.top, width, isDesktopWeb],
   );
@@ -929,9 +1121,11 @@ export default function AdminResumenScreen() {
       <BackgroundWrapper screen="admin">
         <View style={styles.root}>
           <View style={styles.topBar}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            {!hideInlineBack ? (
+              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                <Ionicons name="arrow-back" size={26} color={t.text} />
+              </TouchableOpacity>
+            ) : null}
             <View style={{ flex: 1 }} />
           </View>
           <Text style={styles.screenTitle}>{tStr('admin_resumen_title')}</Text>
@@ -944,6 +1138,22 @@ export default function AdminResumenScreen() {
   }
 
   const { rows: agendaRows, orphans } = scheduleRows;
+  const occupancyInsightRows = (() => {
+    const bySlot = new Map();
+    for (const row of agendaRows || []) {
+      if (row?.syntheticHabitual) continue;
+      const slot = String(row?.slotLabel || '').trim();
+      if (!slot) continue;
+      const occ = Array.isArray(row?.trials) ? row.trials.length : 0;
+      const cap = Math.max(1, Number(row?.capacity || DEFAULT_CUPO_DEMO));
+      const prev = bySlot.get(slot) || { occ: 0, cap: 0 };
+      bySlot.set(slot, { occ: prev.occ + occ, cap: prev.cap + cap });
+    }
+    return [...bySlot.entries()]
+      .map(([slot, x]) => ({ slot, occ: x.occ, cap: x.cap, rate: x.cap > 0 ? x.occ / x.cap : 0 }))
+      .sort((a, b) => a.rate - b.rate)
+      .slice(0, 3);
+  })();
 
   const countPillStylesForN = (n, cap = DEFAULT_CUPO_DEMO) => {
     const n0 = n || 0;
@@ -961,14 +1171,88 @@ export default function AdminResumenScreen() {
     return [styles.countPillText, styles.countPillTextOk];
   };
 
+  const buildQuickTemplateText = useCallback(
+    (kind) => {
+      const gymName = String(organization?.name || 'el gym').trim();
+      const lowSlot = occupancyInsightRows[0]?.slot || '';
+      const recipient = String(templateRecipient || '').trim() || tStr('admin_resumen_tpl_recipient_default');
+      let text = '';
+      if (kind === 'payment') {
+        text = tStr('admin_resumen_tpl_payment_text')
+          .replace('{{name}}', recipient)
+          .replace('{{gym}}', gymName)
+          .replace('{{due_count}}', String(abonosDue7dCount));
+      } else if (kind === 'schedule') {
+        text = tStr('admin_resumen_tpl_schedule_text')
+          .replace('{{name}}', recipient)
+          .replace('{{gym}}', gymName)
+          .replace('{{slot}}', lowSlot || tStr('admin_resumen_tpl_slot_generic'));
+      } else if (kind === 'winback') {
+        text = tStr('admin_resumen_tpl_winback_text')
+          .replace('{{name}}', recipient)
+          .replace('{{gym}}', gymName)
+          .replace('{{new_count}}', String(newMembersMonthCount));
+      }
+      return String(text || '').trim();
+    },
+    [organization?.name, occupancyInsightRows, abonosDue7dCount, newMembersMonthCount, templateRecipient, tStr],
+  );
+
+  const copyQuickTemplate = useCallback(
+    async (kind) => {
+      const text = buildQuickTemplateText(kind);
+      if (!text) return;
+      await Clipboard.setStringAsync(text);
+      Alert.alert(tStr('gym_config_copied_title'), tStr('admin_resumen_tpl_copied'));
+      const entry = {
+        id: `${Date.now()}-${kind}`,
+        label: `${tStr('admin_resumen_history_template_prefix')} ${tStr(`admin_resumen_tpl_${kind === 'winback' ? 'winback' : kind}`)}`,
+        ts: new Date().toISOString(),
+      };
+      setAssistantHistory((prev) => {
+        const next = [entry, ...(Array.isArray(prev) ? prev : [])].slice(0, 8);
+        if (historyKey) AsyncStorage.setItem(historyKey, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+    },
+    [buildQuickTemplateText, tStr, historyKey],
+  );
+
+  const copyAndOpenWhatsAppWebTemplate = useCallback(
+    async (kind) => {
+      const text = buildQuickTemplateText(kind);
+      if (!text) return;
+      await Clipboard.setStringAsync(text);
+      const waUrl = `https://web.whatsapp.com/?text=${encodeURIComponent(text)}`;
+      const can = await Linking.canOpenURL(waUrl);
+      if (can) {
+        await Linking.openURL(waUrl);
+      }
+      Alert.alert(tStr('gym_config_copied_title'), tStr('admin_resumen_tpl_copied_open_wa'));
+      const entry = {
+        id: `${Date.now()}-${kind}-wa`,
+        label: `${tStr('admin_resumen_history_wa_prefix')} ${tStr(`admin_resumen_tpl_${kind === 'winback' ? 'winback' : kind}`)}`,
+        ts: new Date().toISOString(),
+      };
+      setAssistantHistory((prev) => {
+        const next = [entry, ...(Array.isArray(prev) ? prev : [])].slice(0, 8);
+        if (historyKey) AsyncStorage.setItem(historyKey, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+    },
+    [buildQuickTemplateText, tStr, historyKey],
+  );
+
   return (
     <BackgroundWrapper screen="admin">
       <View style={styles.root}>
         <View style={styles.contentMax}>
         <View style={styles.topBar}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={26} color={t.text} />
-          </TouchableOpacity>
+          {!hideInlineBack ? (
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+              <Ionicons name="arrow-back" size={26} color={t.text} />
+            </TouchableOpacity>
+          ) : null}
           <View style={{ flex: 1 }} />
           <TouchableOpacity
             onPress={onRefresh}
@@ -976,6 +1260,18 @@ export default function AdminResumenScreen() {
             accessibilityLabel={tStr('common_refresh')}
           >
             <Ionicons name="refresh" size={22} color={t.brand} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={runAiInsights}
+            style={styles.iconBtn}
+            accessibilityLabel={tStr('admin_resumen_ai_run_now')}
+            disabled={aiAnalyzing}
+          >
+            {aiAnalyzing ? (
+              <ActivityIndicator size="small" color={t.brand} />
+            ) : (
+              <Ionicons name="sparkles-outline" size={22} color={t.brand} />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -1158,6 +1454,120 @@ export default function AdminResumenScreen() {
                     ))}
                   </View>
                 ) : null}
+
+                <View style={styles.sectionCard}>
+                  <Text style={[styles.sectionTitle, { marginHorizontal: 12, marginTop: 4 }]}>
+                    {tStr('admin_resumen_section_data_assistant')}
+                  </Text>
+                  <View style={[styles.alertCard, { marginBottom: 8 }]}>
+                    <Text style={styles.alertTitle}>{tStr('admin_resumen_data_new_members_title')}</Text>
+                    <Text style={styles.alertBody}>
+                      {tStr('admin_resumen_data_new_members_body').replace('{{count}}', String(newMembersMonthCount))}
+                    </Text>
+                  </View>
+                  <View style={[styles.alertCard, { marginBottom: 8 }]}>
+                    <Text style={styles.alertTitle}>{tStr('admin_resumen_data_due_abonos_title')}</Text>
+                    <Text style={styles.alertBody}>
+                      {tStr('admin_resumen_data_due_abonos_body').replace('{{count}}', String(abonosDue7dCount))}
+                    </Text>
+                  </View>
+                  <View style={styles.alertCard}>
+                    <Text style={styles.alertTitle}>{tStr('admin_resumen_data_occupancy_title')}</Text>
+                    {occupancyInsightRows.length === 0 ? (
+                      <Text style={styles.alertBody}>{tStr('admin_resumen_data_occupancy_empty')}</Text>
+                    ) : (
+                      occupancyInsightRows.map((r) => (
+                        <Text key={r.slot} style={styles.alertBody}>
+                          {'• '}
+                          {tStr('admin_resumen_data_occupancy_line')
+                            .replace('{{slot}}', String(r.slot))
+                            .replace('{{a}}', String(r.occ))
+                            .replace('{{b}}', String(r.cap))}
+                        </Text>
+                      ))
+                    )}
+                  </View>
+                  <View style={[styles.alertCard, { marginTop: 2 }]}>
+                    <Text style={styles.alertTitle}>{tStr('admin_resumen_tpl_title')}</Text>
+                    <Text style={styles.alertBody}>{tStr('admin_resumen_tpl_hint')}</Text>
+                    <TextInput
+                      style={styles.tplInput}
+                      value={templateRecipient}
+                      onChangeText={setTemplateRecipient}
+                      placeholder={tStr('admin_resumen_tpl_recipient_ph')}
+                      placeholderTextColor={t.placeholder}
+                    />
+                    <View style={styles.tplBtnRow}>
+                      <TouchableOpacity style={styles.alertCtaBtn} onPress={() => copyQuickTemplate('payment')} activeOpacity={0.85}>
+                        <Text style={styles.alertCtaTxt}>{tStr('admin_resumen_tpl_payment')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.alertCtaBtn} onPress={() => copyQuickTemplate('schedule')} activeOpacity={0.85}>
+                        <Text style={styles.alertCtaTxt}>{tStr('admin_resumen_tpl_schedule')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.alertCtaBtn} onPress={() => copyQuickTemplate('winback')} activeOpacity={0.85}>
+                        <Text style={styles.alertCtaTxt}>{tStr('admin_resumen_tpl_winback')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {Platform.OS === 'web' ? (
+                      <View style={styles.tplBtnRow}>
+                        <TouchableOpacity style={styles.alertCtaBtn} onPress={() => copyAndOpenWhatsAppWebTemplate('payment')} activeOpacity={0.85}>
+                          <Text style={styles.alertCtaTxt}>{tStr('admin_resumen_tpl_payment_wa')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.alertCtaBtn} onPress={() => copyAndOpenWhatsAppWebTemplate('schedule')} activeOpacity={0.85}>
+                          <Text style={styles.alertCtaTxt}>{tStr('admin_resumen_tpl_schedule_wa')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.alertCtaBtn} onPress={() => copyAndOpenWhatsAppWebTemplate('winback')} activeOpacity={0.85}>
+                          <Text style={styles.alertCtaTxt}>{tStr('admin_resumen_tpl_winback_wa')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
+                    <Text style={[styles.alertBody, { marginTop: 10 }]}>{tStr('admin_resumen_history_title')}</Text>
+                    {assistantHistory.length === 0 ? (
+                      <Text style={styles.historyLine}>{tStr('admin_resumen_history_empty')}</Text>
+                    ) : (
+                      assistantHistory.map((h) => (
+                        <Text key={h.id} style={styles.historyLine}>
+                          {`• ${h.label} · ${String(h.ts || '').slice(0, 16).replace('T', ' ')}`}
+                        </Text>
+                      ))
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.sectionCard}>
+                  <Text style={[styles.sectionTitle, { marginHorizontal: 12, marginTop: 4 }]}>
+                    {tStr('admin_resumen_section_ai_alerts')}
+                  </Text>
+                  {aiAlerts.length === 0 ? (
+                    <View style={[styles.empty, { paddingVertical: 14 }]}>
+                      <Text style={styles.emptyText}>{tStr('admin_resumen_empty_ai_alerts')}</Text>
+                    </View>
+                  ) : (
+                    aiAlerts.map((a) => {
+                      const sev = String(a.severity || '').toLowerCase();
+                      const color = sev === 'critical' ? '#dc2626' : sev === 'warning' ? '#b45309' : '#2563eb';
+                      const obs = String(a.observed_at || '').slice(0, 16).replace('T', ' ');
+                      return (
+                        <View key={a.id || `${a.alert_type}-${obs}`} style={styles.alertCard}>
+                          <Text style={[styles.alertTitle, { color }]}>{a.title || tStr('admin_resumen_ai_alert_generic')}</Text>
+                          <Text style={styles.alertBody}>{a.body || ''}</Text>
+                          <Text style={styles.alertMeta}>{obs}</Text>
+                          {a.cta_route ? (
+                            <TouchableOpacity
+                              style={styles.alertCtaBtn}
+                              onPress={() => navigation.navigate(String(a.cta_route), { from: 'ai_alert' })}
+                              activeOpacity={0.85}
+                            >
+                              <Text style={styles.alertCtaTxt}>
+                                {a.cta_label || tStr('admin_resumen_ai_alert_view')}
+                              </Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
 
                 <View style={styles.sectionCard}>
                   <Text style={[styles.sectionTitle, { marginHorizontal: 12, marginTop: 4 }]}>

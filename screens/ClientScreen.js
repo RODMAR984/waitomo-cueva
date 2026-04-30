@@ -1397,6 +1397,56 @@ export default function ClientScreen() {
         headerOrgName: { marginTop: 2, fontSize: 13, color: t.metallicGrey ?? t.subText, opacity: 0.9 },
 
         metricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 18 },
+        metricsRowCaption: {
+          fontSize: 11,
+          color: t.placeholder,
+          lineHeight: 16,
+          marginTop: 10,
+          textAlign: 'center',
+        },
+        crossSectionTitle: {
+          color: t.text,
+          fontSize: 17,
+          fontWeight: '800',
+          marginTop: 4,
+          marginBottom: 6,
+          alignSelf: 'stretch',
+        },
+        crossSectionSub: {
+          color: t.placeholder,
+          fontSize: 12,
+          lineHeight: 17,
+          marginBottom: 12,
+          alignSelf: 'stretch',
+        },
+        crossSectionWrap: { width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: 12 },
+        reservationsMicro: {
+          fontSize: 10,
+          color: t.placeholder,
+          marginTop: 8,
+          textAlign: 'center',
+          lineHeight: 14,
+        },
+        planPillsHint: {
+          fontSize: 10,
+          color: t.placeholder,
+          marginTop: 8,
+          textAlign: 'center',
+          lineHeight: 14,
+        },
+        novedadesFooterHint: {
+          fontSize: 10,
+          color: t.placeholder,
+          marginTop: 10,
+          lineHeight: 14,
+        },
+        quickSectionFooter: {
+          fontSize: 10,
+          color: t.placeholder,
+          marginTop: 12,
+          lineHeight: 15,
+          textAlign: 'center',
+        },
         metricBox: {
           flex: 1,
           paddingVertical: 10,
@@ -1811,8 +1861,15 @@ export default function ClientScreen() {
               ) : (
                 <Text style={styles.metricHint}>{tStr('client_my_reservations_empty_hint')}</Text>
               )}
+              <Text style={styles.reservationsMicro}>{tStr('client_metric_reservations_caption')}</Text>
             </View>
           </View>
+          <Text style={styles.metricsRowCaption}>{tStr('client_metrics_row_caption')}</Text>
+        </View>
+
+        <View style={styles.crossSectionWrap}>
+          <Text style={styles.crossSectionTitle}>{tStr('client_home_main_section_title')}</Text>
+          <Text style={styles.crossSectionSub}>{tStr('client_home_main_section_sub')}</Text>
         </View>
 
         <View style={styles.mainGrid}>
@@ -1879,6 +1936,7 @@ export default function ClientScreen() {
                     <Text style={styles.planPillText}>{tStr('client_trabajo_hoy')}</Text>
                   </TouchableOpacity>
                 </View>
+                <Text style={styles.planPillsHint}>{tStr('client_plan_pills_hint')}</Text>
 
                 {freeClassPanel ? (
                   <View style={styles.freeClassCard}>
@@ -1967,6 +2025,7 @@ export default function ClientScreen() {
                 </>
               )}
               <Text style={styles.novedadesVerTodas}>{tStr('client_ver_todas')} ›</Text>
+              <Text style={styles.novedadesFooterHint}>{tStr('client_novedades_footer_hint')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -2014,6 +2073,7 @@ export default function ClientScreen() {
                   <Text style={styles.quickHint}>{tStr('client_chat_hint')}</Text>
                 </TouchableOpacity>
               </View>
+              <Text style={styles.quickSectionFooter}>{tStr('client_quick_access_section_footer')}</Text>
 
               <TouchableOpacity style={[styles.secondaryBtn, styles.secondaryBtnLogout]} onPress={handleLogout}>
                 <Text style={styles.secondaryBtnText}>{tStr('client_logout')}</Text>

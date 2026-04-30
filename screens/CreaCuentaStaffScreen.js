@@ -224,7 +224,7 @@ export default function CreaCuentaStaffScreen() {
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View>
-              <View style={{ alignItems: 'center', marginBottom: 14 }}>
+              <View style={{ width: '100%', alignItems: 'center', marginBottom: 14 }}>
                 <LogoCompleto height={52} />
                 <Text style={{ color: fe.subText, fontSize: 12, marginTop: 6 }}>{tStr('login_brand_powered')}</Text>
               </View>
@@ -301,7 +301,7 @@ export default function CreaCuentaStaffScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={{ alignItems: 'center', marginTop: 22 }}>
+              <View style={{ width: '100%', alignItems: 'center', marginTop: 22 }}>
                 <LogoCompleto height={28} style={{ marginBottom: 6, opacity: 0.85 }} />
                 <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.75 }}>{tStr('gym_config_footer')}</Text>
               </View>

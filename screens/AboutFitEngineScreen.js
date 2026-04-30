@@ -56,7 +56,7 @@ export default function AboutFitEngineScreen() {
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        logoWrap: { alignItems: 'center', marginBottom: 16 },
+        logoWrap: { width: '100%', alignItems: 'center', marginBottom: 16 },
         title: { fontSize: 22, fontWeight: '700', color: t.text, marginBottom: 6, textAlign: 'center' },
         tagline: { fontSize: 14, color: t.subText, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
         versionRow: {

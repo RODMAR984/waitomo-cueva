@@ -24,6 +24,7 @@ export const translations = {
     config_language: 'Idioma',
     config_spanish: 'Español',
     config_english: 'English',
+    config_portuguese: 'Português',
     config_section_app: 'App',
     config_about_link: 'Acerca de FitEngine',
 
@@ -55,6 +56,10 @@ export const translations = {
     common_send: 'Enviar',
     common_exit: 'Salir',
     common_user: 'Usuario',
+    nav_unsaved_discard_title: '¿Salir sin guardar?',
+    nav_unsaved_discard_body: 'Tenés cambios sin guardar. Si salís, se perderán.',
+    nav_unsaved_stay: 'Seguir editando',
+    nav_unsaved_discard: 'Salir sin guardar',
 
     // Welcome
     welcome_subtitle: 'Activa tu energía',
@@ -230,6 +235,10 @@ export const translations = {
     pago_mp_checkout_unavailable_msg:
       'Falta desplegar la función en el servidor o credenciales MP. Podés usar transferencia u otro medio, o probá más tarde.',
     pago_mp_checkout_err: 'No se pudo abrir el pago con Mercado Pago. Intentá de nuevo.',
+    pago_btn_stripe: '💳 Pagar con Stripe',
+    pago_stripe_checkout_hint:
+      'Stripe: pago internacional con tarjeta en moneda de tu gym.',
+    pago_stripe_checkout_err: 'No se pudo abrir el checkout de Stripe. Intentá de nuevo.',
     pago_international_note:
       'Cobro en pesos (Argentina) con Mercado Pago. Si tu tarjeta o país no permite pagar acá, escribinos a soporte@waitomo.com o coordiná transferencia / datos con tu gym. Vamos ampliando medios según la demanda.',
     pago_no_methods_configured:
@@ -341,6 +350,7 @@ export const translations = {
     gym_config_loading: 'Cargando...',
     gym_config_screen_title: 'Configuración del gym',
     gym_config_tab_general: 'General',
+    gym_config_tab_brand_ai: 'Branding IA',
     gym_config_tab_payments: 'Pagos',
     gym_config_tab_invites: 'Invitaciones',
     gym_config_tab_medical: 'Apto médico',
@@ -357,10 +367,32 @@ export const translations = {
     gym_config_tab_branding: 'Logo y fondo',
     gym_config_org_name: 'Nombre de la organización',
     gym_config_org_name_ph: 'Ej. Waitomo Training',
+    gym_config_currency_label: 'Moneda principal (ISO)',
+    gym_config_currency_ph: 'Ej: ARS, USD, EUR',
+    gym_config_currency_invalid: 'La moneda debe tener 3 letras (ISO), por ejemplo ARS o USD.',
+    gym_config_timezone_label: 'Zona horaria (IANA)',
+    gym_config_timezone_ph: 'Ej: America/Argentina/Buenos_Aires',
+    gym_config_timezone_hint: 'Impacta en “hoy”, vencimientos y automatizaciones de esta sede.',
+    gym_config_timezone_invalid: 'La zona horaria no puede quedar vacía.',
     gym_config_welcome_label: 'Mensaje de bienvenida (clientes)',
     gym_config_welcome_hint:
       'Opcional. Aparece en el selector de programas, debajo de «Bienvenido a [tu gym]», antes de elegir plan.',
     gym_config_welcome_ph: 'Ej. Elegí el programa que te hayan indicado o el que más te guste.',
+    gym_branding_title: 'Asistente IA de branding',
+    gym_branding_hint:
+      'Te sugiere preset, combinación de colores y mensaje de bienvenida. Lo aplica automático para que después solo revises y guardes.',
+    gym_branding_brief_label: '¿Qué estilo querés transmitir? (opcional)',
+    gym_branding_brief_ph: 'Ej: premium, femenino, minimalista, urbano, familiar, etc.',
+    gym_branding_outputs_hint:
+      'Incluye: preset, acento, texto primario/secundario, superficie, borde, overlay, tono de voz, CTA, tagline y bienvenida.',
+    gym_branding_generate: 'Generar propuesta de branding',
+    gym_branding_result: 'Propuesta sugerida',
+    gym_branding_save_now: 'Guardar ahora',
+    gym_branding_go_appearance: 'Revisar apariencia',
+    gym_branding_ai_fail: 'No se pudo generar la propuesta de branding.',
+    gym_branding_fallback_title: 'Propuesta generada (modo respaldo)',
+    gym_branding_fallback_body:
+      'La IA no respondió ahora (error temporal), pero te dejé una propuesta base para avanzar.',
     gym_config_payment_section_title: 'Formas de pago (socios)',
     gym_config_payment_section_hint:
       'Activá solo lo que ofrecés. Mercado Pago abre la página de checkout (tarjetas, saldo MP, cuotas). Transferencia / DNI / MODO copian el texto que cargues abajo.',
@@ -530,6 +562,21 @@ export const translations = {
     admin_news_empty: 'No hay novedades. Creá una con "Nueva".',
     admin_news_need_org: 'Tu cuenta no tiene un gimnasio (organización) asignado. Asigná organization_id en el perfil o abrí desde el espacio del gym.',
 
+    org_member_list_hint: 'Tocá un miembro para abrir su ficha y el resumen con IA.',
+    org_member_detail_title: 'Ficha del miembro',
+    org_member_summary_hint:
+      'La app junta datos reales de esta sede (perfil, reservas de clases, abonos vinculados al gym) y la IA escribe un párrafo corto para el coach. No se guarda en la base: es solo para leer o copiar (por ejemplo a WhatsApp).',
+    org_member_summary_btn: 'Generar resumen con IA',
+    org_member_summary_copy: 'Copiar resumen',
+    org_member_summary_copied: 'Listo, copiado al portapapeles.',
+    org_member_summary_empty: 'Todavía no hay resumen. Tocá el botón de arriba.',
+    org_member_facts_loading: 'Cargando datos del miembro…',
+    org_member_summary_fail: 'No se pudo generar el resumen.',
+    org_member_no_org: 'No hay organización seleccionada.',
+    org_member_no_data_for_ai: 'Todavía no hay datos cargados para armar el resumen. Reintentá o revisá tu conexión.',
+    org_member_retry: 'Reintentar carga',
+    org_member_missing: 'Falta el miembro. Volvé a la lista e intentá de nuevo.',
+
     admin_menu_finanzas_sub: 'Cobros y resúmenes',
     admin_menu_miembros_sub: 'Equipo y accesos',
     admin_menu_novedades_ver_sub: 'Comunicados del centro',
@@ -630,6 +677,7 @@ export const translations = {
       'Guardá el id de cuenta Connect. Los webhooks y el checkout server-side van en Edge Functions con claves en el servidor (no en la app).',
     admin_stripe_account_id: 'Stripe Connect account id',
     admin_stripe_checkout_toggle: 'Habilitar checkout (cuando esté cableado)',
+    admin_stripe_connect_auto: 'Conectar Stripe automáticamente',
     admin_stripe_webhook_note:
       'Webhook recomendado: /functions/v1/stripe-webhook con STRIPE_WEBHOOK_SECRET. Ver docs/INTEGRACIONES_ANALYTICS_EXPORT.md.',
     admin_badges_title: 'Badges',
@@ -684,6 +732,8 @@ export const translations = {
     admin_observ_perf_no_data: 'Sin datos todavía',
     admin_observ_perf_duration: 'Duración: {{n}} ms',
     admin_observ_slowest_title: 'Top lentos (durationMs)',
+    admin_nav_panel_bloques: 'Bloques (panel)',
+    admin_menu_panel_bloques_sub: 'Rutinas del día, notas, links e IA',
     admin_resumen_title: 'Reservas del día',
     admin_resumen_sub: 'Agenda publicada, inscriptos por horario (app) y cobros pendientes',
     admin_resumen_no_org: 'No hay organización cargada.',
@@ -701,6 +751,44 @@ export const translations = {
     admin_resumen_section_other: 'Otras reservas del día (canceladas, consumidas, etc.)',
     admin_resumen_section_billing: 'Cobros pendientes (caja)',
     admin_resumen_empty_billing: 'Sin cobros pendientes registrados en caja.',
+    admin_resumen_section_ai_alerts: 'Alertas IA (anomalías y sugerencias)',
+    admin_resumen_section_data_assistant: 'Asistente con datos (operativo)',
+    admin_resumen_data_new_members_title: 'Altas este mes',
+    admin_resumen_data_new_members_body: '{{count}} alta(s) activas en la sede este mes.',
+    admin_resumen_data_due_abonos_title: 'Abonos por vencer (7 días)',
+    admin_resumen_data_due_abonos_body: '{{count}} abono(s) activos vencen en los próximos 7 días.',
+    admin_resumen_data_occupancy_title: 'Ocupación por franja (hoy)',
+    admin_resumen_data_occupancy_empty: 'Sin datos de clases publicadas para calcular ocupación por franja.',
+    admin_resumen_data_occupancy_line: '{{slot}}: {{a}} / {{b}}',
+    admin_resumen_tpl_title: 'Plantillas rápidas (copiar y pegar)',
+    admin_resumen_tpl_hint: 'Textos listos para WhatsApp: pago pendiente, cambio de horario y win-back.',
+    admin_resumen_tpl_recipient_ph: 'Nombre del destinatario (opcional)',
+    admin_resumen_tpl_recipient_default: 'Hola',
+    admin_resumen_tpl_payment: 'Recordatorio pago',
+    admin_resumen_tpl_schedule: 'Cambio horario',
+    admin_resumen_tpl_winback: 'Win-back',
+    admin_resumen_tpl_copied: 'Plantilla copiada al portapapeles.',
+    admin_resumen_tpl_copied_open_wa: 'Plantilla copiada y WhatsApp Web abierto.',
+    admin_resumen_tpl_payment_wa: 'Pago + abrir WhatsApp Web',
+    admin_resumen_tpl_schedule_wa: 'Horario + abrir WhatsApp Web',
+    admin_resumen_tpl_winback_wa: 'Win-back + abrir WhatsApp Web',
+    admin_resumen_history_title: 'Historial corto del asistente',
+    admin_resumen_history_empty: 'Todavía sin acciones en esta sede.',
+    admin_resumen_history_template_prefix: 'Plantilla copiada:',
+    admin_resumen_history_wa_prefix: 'Plantilla + WhatsApp:',
+    admin_resumen_history_insights_run: 'Análisis de alertas IA ejecutado',
+    admin_resumen_tpl_slot_generic: 'el horario indicado',
+    admin_resumen_tpl_payment_text:
+      '{{name}} 👋 Te escribimos desde {{gym}}. Vimos que tenés un pago pendiente (hay {{due_count}} vencimientos/próximos en estos días). Si querés, te pasamos ahora mismo el medio de pago para regularizarlo.',
+    admin_resumen_tpl_schedule_text:
+      '{{name}} 👋 Te avisamos desde {{gym}} que tuvimos un ajuste de horario. Estamos reforzando la franja {{slot}}. Si querés, te ayudamos a reacomodar tu reserva para que no pierdas continuidad.',
+    admin_resumen_tpl_winback_text:
+      '{{name}} 💪 Te extrañamos en {{gym}}. Este mes se sumaron {{new_count}} personas nuevas y queremos ayudarte a retomar con un plan simple. Si te sirve, te proponemos horario y objetivo para volver esta semana.',
+    admin_resumen_empty_ai_alerts: 'Sin alertas abiertas en este momento.',
+    admin_resumen_ai_alert_generic: 'Alerta IA',
+    admin_resumen_ai_alert_view: 'Ver detalle',
+    admin_resumen_ai_run_now: 'Analizar IA ahora',
+    admin_resumen_ai_run_fail: 'No se pudo ejecutar el análisis IA.',
     admin_resumen_slot_line: '{{plan}} · {{slot}}',
     admin_resumen_slot_header: '{{slot}} — {{plan}}',
     admin_resumen_coach_line: 'Coach: {{coach}}',
@@ -1336,6 +1424,29 @@ export const translations = {
     client_my_profile: 'Mi perfil',
     client_my_profile_hint: 'Datos personales, objetivos y apto.',
     client_chat_hint: 'Consultas con el coach y avisos del plan.',
+    client_home_main_section_title: 'Tu programa y herramientas',
+    client_home_main_section_sub:
+      'Acá gestionás el plan del día, reservás clases, ves la rutina y los avisos del gym. Cada bloque tiene una ayuda breve abajo.',
+    client_metrics_row_caption:
+      'Resumen rápido: a la izquierda tu plan y abonos; a la derecha las reservas confirmadas. Tocá una reserva para ir al calendario en esa fecha.',
+    client_metric_reservations_caption:
+      'Lista de turnos ya confirmados. Si está vacío, reservá desde Calendario.',
+    client_plan_pills_hint:
+      'Calendario: elegís horario y reservás. Trabajo de hoy: la rutina que el staff publicó para la fecha activa.',
+    client_novedades_footer_hint:
+      'Avisos del gimnasio (horarios, eventos, cambios). Tocá la caja para leer todas.',
+    client_quick_access_section_footer:
+      'Perfil: datos, apto y foto. Mensajes: canal con coaches o staff. Cerrar sesión desvincula este dispositivo de tu cuenta.',
+    web_doc_title_app: 'FitEngine',
+    web_doc_title_client: 'Inicio',
+    web_doc_title_calendario: 'Calendario',
+    web_doc_title_profile: 'Perfil',
+    web_doc_title_chat: 'Mensajes',
+    web_doc_title_trabajo: 'Trabajo del día',
+    web_doc_title_admin: 'Administración',
+    web_doc_title_welcome: 'Bienvenida',
+    web_doc_title_login: 'Ingresar',
+    web_doc_title_novedades: 'Novedades',
     chat_title: 'Chat',
     chat_no_channels: 'No tenés canales disponibles.',
     chat_no_channels_hint: 'Asignate un plan para ver el chat de tu grupo.',
@@ -1352,8 +1463,18 @@ export const translations = {
     chat_member: 'Miembro',
     chat_empty_thread: 'Nadie escribió aún. ¡Escribí el primer mensaje!',
     chat_placeholder: 'Escribí un mensaje...',
+    chat_placeholder_staff: 'Escribí un mensaje... (tocá ✨ para sugerencia IA)',
     chat_send_error_title: 'Error al enviar',
     chat_send_error_body: 'No se pudo enviar el mensaje.',
+    chat_ai_title: 'Sugerencia IA',
+    chat_ai_replace: 'Reemplazar',
+    chat_ai_append: 'Agregar abajo',
+    chat_ai_error: 'No se pudo generar sugerencia.',
+    chat_ai_need_org: 'No se detectó organización para este canal.',
+    chat_ai_template_none: 'Plantilla: libre',
+    chat_ai_template_payment: 'Pago pendiente',
+    chat_ai_template_schedule: 'Cambio horario',
+    chat_ai_template_winback: 'Win-back',
 
     // Perfil
     perfil_title: 'Mi perfil',
@@ -1514,6 +1635,15 @@ export const translations = {
     admin_rail_menu_caption: 'Accesos',
     admin_salir: 'Salir',
     admin_title: 'ADMIN — Crear / editar bloques',
+    admin_lists_section_title: 'Bloques ya publicados',
+    admin_lists_section_sub:
+      'Últimos 7 días e histórico del plan seleccionado. Si tocás otra pantalla y volvés con «Bloques», la vista salta acá.',
+    admin_jump_to_publish_form: '↓ Ir al formulario para publicar o editar',
+    admin_editor_section_title: 'Crear o editar un bloque',
+    admin_editor_section_sub:
+      'Elegí plan, fecha y horario(s); completá título, rutina, notas internas y videos. Publicá para que los socios lo vean en Calendario y Trabajo de hoy.',
+    admin_nav_tiles_footer:
+      'Las tarjetas son atajos a otras pantallas. En «Bloques» (esta misma): si ya estás acá, el menú te lleva arriba a la lista de lo publicado.',
     admin_mi_perfil: 'Mi perfil (foto, configuración, seguridad)',
     admin_finanzas: 'Finanzas',
     admin_miembros: 'Miembros y equipo',
@@ -1639,6 +1769,7 @@ export const translations = {
     config_language: 'Language',
     config_spanish: 'Español',
     config_english: 'English',
+    config_portuguese: 'Português',
     config_section_app: 'App',
     config_about_link: 'About FitEngine',
 
@@ -1669,6 +1800,10 @@ export const translations = {
     common_send: 'Send',
     common_exit: 'Exit',
     common_user: 'User',
+    nav_unsaved_discard_title: 'Leave without saving?',
+    nav_unsaved_discard_body: 'You have unsaved changes. If you leave, they will be lost.',
+    nav_unsaved_stay: 'Keep editing',
+    nav_unsaved_discard: 'Leave without saving',
 
     welcome_subtitle: 'Activate your energy',
     welcome_client: 'Client',
@@ -1837,6 +1972,10 @@ export const translations = {
     pago_mp_checkout_unavailable_msg:
       'The server function or MP credentials may be missing. Use bank transfer or try again later.',
     pago_mp_checkout_err: 'Could not open Mercado Pago checkout. Please try again.',
+    pago_btn_stripe: '💳 Pay with Stripe',
+    pago_stripe_checkout_hint:
+      'Stripe: international card checkout in your gym currency.',
+    pago_stripe_checkout_err: 'Could not open Stripe checkout. Please try again.',
     pago_international_note:
       'Checkout is in Argentine pesos (ARS) via Mercado Pago. If your card or country isn’t supported, email soporte@waitomo.com or arrange bank transfer / details with your gym. We’ll add more payment options as demand grows.',
     pago_no_methods_configured:
@@ -1944,6 +2083,7 @@ export const translations = {
     gym_config_loading: 'Loading...',
     gym_config_screen_title: 'Gym settings',
     gym_config_tab_general: 'General',
+    gym_config_tab_brand_ai: 'AI branding',
     gym_config_tab_payments: 'Payments',
     gym_config_tab_invites: 'Invites',
     gym_config_tab_medical: 'Medical',
@@ -1960,10 +2100,32 @@ export const translations = {
     gym_config_tab_branding: 'Logo & background',
     gym_config_org_name: 'Organization name',
     gym_config_org_name_ph: 'e.g. Waitomo Training',
+    gym_config_currency_label: 'Primary currency (ISO)',
+    gym_config_currency_ph: 'e.g. ARS, USD, EUR',
+    gym_config_currency_invalid: 'Currency must be a 3-letter ISO code, e.g. ARS or USD.',
+    gym_config_timezone_label: 'Timezone (IANA)',
+    gym_config_timezone_ph: 'e.g. America/Argentina/Buenos_Aires',
+    gym_config_timezone_hint: 'Affects “today”, due dates, and automations for this gym.',
+    gym_config_timezone_invalid: 'Timezone cannot be empty.',
     gym_config_welcome_label: 'Welcome message (clients)',
     gym_config_welcome_hint:
       'Optional. Shown on the program picker, under “Welcome to [your gym]”, before choosing a plan.',
     gym_config_welcome_ph: 'e.g. Choose the program your coach suggested or the one you like most.',
+    gym_branding_title: 'AI branding assistant',
+    gym_branding_hint:
+      'Suggests preset, color combo, and welcome copy. It auto-applies suggestions so you can review and save.',
+    gym_branding_brief_label: 'What vibe do you want to project? (optional)',
+    gym_branding_brief_ph: 'e.g. premium, minimalist, urban, family-friendly, etc.',
+    gym_branding_outputs_hint:
+      'Includes: preset, accent, primary/secondary text, surface, border, overlay, tone of voice, CTA, tagline, and welcome copy.',
+    gym_branding_generate: 'Generate branding proposal',
+    gym_branding_result: 'Suggested proposal',
+    gym_branding_save_now: 'Save now',
+    gym_branding_go_appearance: 'Review appearance',
+    gym_branding_ai_fail: 'Could not generate branding proposal.',
+    gym_branding_fallback_title: 'Proposal generated (fallback mode)',
+    gym_branding_fallback_body:
+      'AI did not respond right now (temporary error), but a baseline proposal was generated so you can continue.',
     gym_config_payment_section_title: 'Payment methods (members)',
     gym_config_payment_section_hint:
       'Enable only what you offer. Mercado Pago opens the web checkout (cards, MP balance, installments). Transfer / DNI / wallets copy the text you set below.',
@@ -2134,6 +2296,21 @@ export const translations = {
     admin_news_need_org:
       'Your account has no gym (organization) assigned. Set organization_id on the profile or open this screen from the gym workspace.',
 
+    org_member_list_hint: 'Tap a member to open their profile and AI summary.',
+    org_member_detail_title: 'Member profile',
+    org_member_summary_hint:
+      'The app pulls real data for this gym (profile, class bookings, passes linked to the gym) and the AI writes a short paragraph for staff. Nothing is saved to the database — read or copy it (e.g. to WhatsApp).',
+    org_member_summary_btn: 'Generate AI summary',
+    org_member_summary_copy: 'Copy summary',
+    org_member_summary_copied: 'Copied to clipboard.',
+    org_member_summary_empty: 'No summary yet. Use the button above.',
+    org_member_facts_loading: 'Loading member data…',
+    org_member_summary_fail: 'Could not generate the summary.',
+    org_member_no_org: 'No organization selected.',
+    org_member_no_data_for_ai: 'Data is not ready yet. Try again or check your connection.',
+    org_member_retry: 'Retry loading',
+    org_member_missing: 'Member not specified. Go back to the list and try again.',
+
     admin_menu_finanzas_sub: 'Payments and summaries',
     admin_menu_miembros_sub: 'Team and access',
     admin_menu_novedades_ver_sub: 'Gym announcements',
@@ -2234,6 +2411,7 @@ export const translations = {
       'Save your Connect account id. Webhooks and server-side checkout belong in Edge Functions with server secrets (not in the app).',
     admin_stripe_account_id: 'Stripe Connect account id',
     admin_stripe_checkout_toggle: 'Enable checkout (when wired)',
+    admin_stripe_connect_auto: 'Connect Stripe automatically',
     admin_stripe_webhook_note:
       'Recommended webhook: /functions/v1/stripe-webhook with STRIPE_WEBHOOK_SECRET. See docs/INTEGRACIONES_ANALYTICS_EXPORT.md.',
     admin_badges_title: 'Badges',
@@ -2288,6 +2466,8 @@ export const translations = {
     admin_observ_perf_no_data: 'No data yet',
     admin_observ_perf_duration: 'Duration: {{n}} ms',
     admin_observ_slowest_title: 'Top slowest (durationMs)',
+    admin_nav_panel_bloques: 'Workout blocks',
+    admin_menu_panel_bloques_sub: 'Daily routines, notes, links & AI',
     admin_resumen_title: "Today's reservations",
     admin_resumen_sub: 'Published classes, per-class app sign-ups, and pending collections',
     admin_resumen_no_org: 'No organization loaded.',
@@ -2306,6 +2486,44 @@ export const translations = {
     admin_resumen_section_other: 'Other bookings today (cancelled, completed, etc.)',
     admin_resumen_section_billing: 'Pending collections (cash desk)',
     admin_resumen_empty_billing: 'No pending cash-desk charges.',
+    admin_resumen_section_ai_alerts: 'AI alerts (anomalies and suggestions)',
+    admin_resumen_section_data_assistant: 'Data assistant (operations)',
+    admin_resumen_data_new_members_title: 'New members this month',
+    admin_resumen_data_new_members_body: '{{count}} active new member(s) in this gym this month.',
+    admin_resumen_data_due_abonos_title: 'Memberships due soon (7 days)',
+    admin_resumen_data_due_abonos_body: '{{count}} active membership(s) expire in the next 7 days.',
+    admin_resumen_data_occupancy_title: 'Occupancy by time slot (today)',
+    admin_resumen_data_occupancy_empty: 'No published classes to compute slot occupancy.',
+    admin_resumen_data_occupancy_line: '{{slot}}: {{a}} / {{b}}',
+    admin_resumen_tpl_title: 'Quick templates (copy & paste)',
+    admin_resumen_tpl_hint: 'Ready-to-send messages for WhatsApp: payment reminder, schedule change, and win-back.',
+    admin_resumen_tpl_recipient_ph: 'Recipient name (optional)',
+    admin_resumen_tpl_recipient_default: 'Hi',
+    admin_resumen_tpl_payment: 'Payment reminder',
+    admin_resumen_tpl_schedule: 'Schedule change',
+    admin_resumen_tpl_winback: 'Win-back',
+    admin_resumen_tpl_copied: 'Template copied to clipboard.',
+    admin_resumen_tpl_copied_open_wa: 'Template copied and WhatsApp Web opened.',
+    admin_resumen_tpl_payment_wa: 'Payment + open WhatsApp Web',
+    admin_resumen_tpl_schedule_wa: 'Schedule + open WhatsApp Web',
+    admin_resumen_tpl_winback_wa: 'Win-back + open WhatsApp Web',
+    admin_resumen_history_title: 'Assistant short history',
+    admin_resumen_history_empty: 'No actions yet for this gym.',
+    admin_resumen_history_template_prefix: 'Template copied:',
+    admin_resumen_history_wa_prefix: 'Template + WhatsApp:',
+    admin_resumen_history_insights_run: 'AI alerts analysis executed',
+    admin_resumen_tpl_slot_generic: 'the suggested time slot',
+    admin_resumen_tpl_payment_text:
+      '{{name}} 👋 This is {{gym}}. We noticed you have a pending payment (there are {{due_count}} upcoming/due renewals these days). If you want, we can send the payment method now so you can regularize it.',
+    admin_resumen_tpl_schedule_text:
+      '{{name}} 👋 Quick update from {{gym}}: we adjusted schedules and we are reinforcing {{slot}}. If you want, we can help reschedule your booking so you keep your routine.',
+    admin_resumen_tpl_winback_text:
+      '{{name}} 💪 We miss you at {{gym}}. This month we welcomed {{new_count}} new members and we would love to help you get back on track. If useful, we can suggest a simple goal + slot for this week.',
+    admin_resumen_empty_ai_alerts: 'No open alerts right now.',
+    admin_resumen_ai_alert_generic: 'AI alert',
+    admin_resumen_ai_alert_view: 'View details',
+    admin_resumen_ai_run_now: 'Run AI analysis now',
+    admin_resumen_ai_run_fail: 'Could not run AI analysis.',
     admin_resumen_slot_line: '{{plan}} · {{slot}}',
     admin_resumen_slot_header: '{{slot}} — {{plan}}',
     admin_resumen_coach_line: 'Coach: {{coach}}',
@@ -2934,6 +3152,29 @@ export const translations = {
     client_my_profile: 'My profile',
     client_my_profile_hint: 'Personal details, goals and medical clearance.',
     client_chat_hint: 'Chat with your coach and plan updates.',
+    client_home_main_section_title: 'Your program & tools',
+    client_home_main_section_sub:
+      'Manage today’s plan, book classes, see the workout, and read gym announcements. Each block has a short hint below.',
+    client_metrics_row_caption:
+      'Quick summary: plan & passes on the left; confirmed bookings on the right. Tap a booking to open the calendar on that date.',
+    client_metric_reservations_caption:
+      'Confirmed time slots. If empty, book from Calendar.',
+    client_plan_pills_hint:
+      'Calendar: pick a slot and book. Today’s workout: the routine staff published for the active date.',
+    client_novedades_footer_hint:
+      'Gym announcements (hours, events, changes). Tap the card to read everything.',
+    client_quick_access_section_footer:
+      'Profile: details, medical clearance, photo. Messages: coaches or staff. Sign out unlinks this device from your account.',
+    web_doc_title_app: 'FitEngine',
+    web_doc_title_client: 'Home',
+    web_doc_title_calendario: 'Calendar',
+    web_doc_title_profile: 'Profile',
+    web_doc_title_chat: 'Messages',
+    web_doc_title_trabajo: "Today's workout",
+    web_doc_title_admin: 'Admin',
+    web_doc_title_welcome: 'Welcome',
+    web_doc_title_login: 'Sign in',
+    web_doc_title_novedades: 'News',
     chat_title: 'Chat',
     chat_no_channels: 'No channels available.',
     chat_no_channels_hint: 'Get a plan assigned to see your group chat.',
@@ -2951,8 +3192,18 @@ export const translations = {
     chat_member: 'Member',
     chat_empty_thread: 'No messages yet. Send the first one!',
     chat_placeholder: 'Type a message...',
+    chat_placeholder_staff: 'Type a message... (tap ✨ for AI suggestion)',
     chat_send_error_title: 'Could not send',
     chat_send_error_body: 'Your message could not be sent.',
+    chat_ai_title: 'AI suggestion',
+    chat_ai_replace: 'Replace',
+    chat_ai_append: 'Append below',
+    chat_ai_error: 'Could not generate suggestion.',
+    chat_ai_need_org: 'No organization detected for this channel.',
+    chat_ai_template_none: 'Template: free',
+    chat_ai_template_payment: 'Payment reminder',
+    chat_ai_template_schedule: 'Schedule change',
+    chat_ai_template_winback: 'Win-back',
 
     perfil_title: 'My profile',
     perfil_subtitle: 'Review and update your personal details.',
@@ -3107,6 +3358,15 @@ export const translations = {
     admin_rail_menu_caption: 'Shortcuts',
     admin_salir: 'Sign out',
     admin_title: 'ADMIN — Create / edit blocks',
+    admin_lists_section_title: 'Published blocks',
+    admin_lists_section_sub:
+      'Last 7 days and history for the selected plan. If you leave and tap «Blocks» again, the view jumps here.',
+    admin_jump_to_publish_form: '↓ Go to publish / edit form',
+    admin_editor_section_title: 'Create or edit a block',
+    admin_editor_section_sub:
+      'Pick plan, date, and time slot(s); add title, workout, coach notes, and videos. Publish so members see it in Calendar and Today’s workout.',
+    admin_nav_tiles_footer:
+      'Cards jump to other screens. On «Blocks» (this screen): if you are already here, the menu scrolls you to the published list at the top.',
     admin_mi_perfil: 'My profile (photo, settings, security)',
     admin_finanzas: 'Finance',
     admin_miembros: 'Members & team',
@@ -3212,4 +3472,22 @@ export const translations = {
 
 export const LOCALE_ES = 'es';
 export const LOCALE_EN = 'en';
-export const SUPPORTED_LOCALES = [LOCALE_ES, LOCALE_EN];
+export const LOCALE_PT = 'pt';
+translations[LOCALE_PT] = {
+  ...translations[LOCALE_ES],
+  config_language: 'Idioma',
+  config_spanish: 'Espanhol',
+  config_english: 'Inglês',
+  config_portuguese: 'Português',
+  common_loading: 'Carregando...',
+  common_save: 'Salvar',
+  welcome_action_login: 'Entrar',
+  welcome_action_create_account: 'Criar conta',
+  welcome_action_continue: 'Continuar',
+  welcome_login_staff_short: 'Entrar como gym / coach',
+  welcome_create_gym_coach_short: 'Criar conta gym / coach',
+  welcome_dual_as_client: 'Como cliente',
+  welcome_dual_as_staff: 'Como coach / staff',
+  welcome_logout_use_other: 'Sair e usar outra conta',
+};
+export const SUPPORTED_LOCALES = [LOCALE_ES, LOCALE_EN, LOCALE_PT];

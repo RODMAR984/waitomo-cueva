@@ -21,7 +21,7 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { LOCALE_ES, LOCALE_EN } from '../contexts/LocaleContext';
+import { LOCALE_ES, LOCALE_EN, LOCALE_PT } from '../contexts/LocaleContext';
 
 const MODES = [
   { key: 'dark', labelKey: 'config_dark', icon: 'moon' },
@@ -48,7 +48,7 @@ const ConfigScreen = () => {
   // Sincronizar idioma desde Supabase al abrir (si existe profile.locale)
   React.useEffect(() => {
     const fromProfile = profile?.locale;
-    if (fromProfile === LOCALE_ES || fromProfile === LOCALE_EN) setLocale(fromProfile);
+    if (fromProfile === LOCALE_ES || fromProfile === LOCALE_EN || fromProfile === LOCALE_PT) setLocale(fromProfile);
   }, [profile?.locale]);
 
   const handleModePress = useCallback(
@@ -216,6 +216,20 @@ const ConfigScreen = () => {
               >
                 <Text style={[styles.modeBtnText, { color: locale === LOCALE_EN ? (t.primaryText ?? '#f4ffff') : (t.segmentInactiveText ?? t.text) }]}>
                   {tStr('config_english')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modeBtn,
+                  locale === LOCALE_PT
+                    ? { ...t.buttonPrimary, borderWidth: 2, borderColor: t.borderStrong ?? t.brand }
+                    : { backgroundColor: t.segmentInactiveBg ?? t.faintStrong, borderColor: t.overlayBorder, borderWidth: 1 },
+                ]}
+                onPress={() => handleLocalePress(LOCALE_PT)}
+                activeOpacity={0.9}
+              >
+                <Text style={[styles.modeBtnText, { color: locale === LOCALE_PT ? (t.primaryText ?? '#f4ffff') : (t.segmentInactiveText ?? t.text) }]}>
+                  {tStr('config_portuguese')}
                 </Text>
               </TouchableOpacity>
             </View>

@@ -2,7 +2,7 @@
 // - Paneles e inputs con tokens de tema (t.boxBg, t.inputBg) para coach/superadmin
 // - Crear, copiar, pegar, mover y EDITAR bloques; selector de fecha con calendario
 
-import React, { useState, useMemo, memo, useEffect } from 'react';
+import React, { useState, useMemo, memo, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -19,10 +19,11 @@ import {
   useWindowDimensions,
   TouchableWithoutFeedback,
   Pressable,
+  DeviceEventEmitter,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, usePreventRemove } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
@@ -44,6 +45,11 @@ import {
 } from '../utils/aiAssistant';
 import AdminAiPromptWithVoice from '../components/AdminAiPromptWithVoice';
 import useStaffAdminNavTiles from '../hooks/useStaffAdminNavTiles';
+import {
+  ADMIN_SCROLL_LISTS,
+  ADMIN_SCROLL_EDITOR,
+  emitAdminScrollToEditor,
+} from '../utils/adminScrollBus';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -433,6 +439,67 @@ export default function AdminScreen() {
   const [aiWarnings, setAiWarnings] = useState([]);
   const [aiUsageLine, setAiUsageLine] = useState('');
 
+  const composerDirty = useMemo(() => {
+    if (editingBlockId) {
+      const b = (Array.isArray(bloques) ? bloques : []).find((x) => x.id === editingBlockId);
+      if (!b) return false;
+      const fkCur = fechaKeyFrom(fecha);
+      const fkOrig = b.fechaKey || fechaKeyFrom(new Date(b.fecha));
+      const horaCur = (horariosSeleccionados && horariosSeleccionados[0]) || '';
+      const horaOrig = String(b.hora || '');
+      const vidCur = videoLinks
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join('\n');
+      const vidOrig = (Array.isArray(b.videoLinks) ? b.videoLinks : []).join('\n');
+      const capCur = (capacityInput || '').trim();
+      const capOrig = b.capacity != null ? String(b.capacity) : '';
+      return (
+        (titulo || '').trim() !== (b.titulo || '').trim() ||
+        (contenido || '').trim() !== (b.contenido || '').trim() ||
+        (coachNotes || '').trim() !== (b.notas || '').trim() ||
+        vidCur !== vidOrig ||
+        capCur !== capOrig ||
+        String(planSeleccionado || '') !== String(b.plan || '') ||
+        fkCur !== fkOrig ||
+        horaCur !== horaOrig
+      );
+    }
+    return !!(
+      (titulo || '').trim() ||
+      (contenido || '').trim() ||
+      (coachNotes || '').trim() ||
+      (videoLinks || '').trim() ||
+      (capacityInput || '').trim()
+    );
+  }, [
+    editingBlockId,
+    bloques,
+    titulo,
+    contenido,
+    coachNotes,
+    videoLinks,
+    capacityInput,
+    planSeleccionado,
+    fecha,
+    horariosSeleccionados,
+  ]);
+
+  usePreventRemove(
+    composerDirty,
+    ({ data }) => {
+      Alert.alert(tStr('nav_unsaved_discard_title'), tStr('nav_unsaved_discard_body'), [
+        { text: tStr('nav_unsaved_stay'), style: 'cancel' },
+        {
+          text: tStr('nav_unsaved_discard'),
+          style: 'destructive',
+          onPress: () => navigation.dispatch(data.action),
+        },
+      ]);
+    },
+  );
+
   const policy = useMemo(
     () => plansDisponibles.find((p) => p.value === planSeleccionado)?.policy || 'SHARED',
     [plansDisponibles, planSeleccionado],
@@ -476,6 +543,48 @@ export default function AdminScreen() {
     planSeleccionado;
 
   const adminNavTiles = useStaffAdminNavTiles(navigation, tStr);
+  const scrollViewRef = useRef(null);
+  const listsSectionY = useRef(0);
+  const editorSectionY = useRef(0);
+  const pendingScrollRef = useRef(null);
+
+  const runPendingScroll = useCallback(() => {
+    const p = pendingScrollRef.current;
+    if (!p || !scrollViewRef.current) return;
+    const y = p === 'lists' ? listsSectionY.current : editorSectionY.current;
+    if (y <= 0) return;
+    scrollViewRef.current.scrollTo({ y: Math.max(0, y - 8), animated: true });
+    pendingScrollRef.current = null;
+  }, []);
+
+  const scheduleScrollToLists = useCallback(() => {
+    pendingScrollRef.current = 'lists';
+    requestAnimationFrame(() => runPendingScroll());
+  }, [runPendingScroll]);
+
+  const scheduleScrollToEditor = useCallback(() => {
+    pendingScrollRef.current = 'editor';
+    requestAnimationFrame(() => runPendingScroll());
+  }, [runPendingScroll]);
+
+  useEffect(() => {
+    const subL = DeviceEventEmitter.addListener(ADMIN_SCROLL_LISTS, scheduleScrollToLists);
+    const subE = DeviceEventEmitter.addListener(ADMIN_SCROLL_EDITOR, scheduleScrollToEditor);
+    return () => {
+      subL.remove();
+      subE.remove();
+    };
+  }, [scheduleScrollToLists, scheduleScrollToEditor]);
+
+  useLayoutEffect(() => {
+    const f = route.params?.adminFocus;
+    if (f === 'lists') scheduleScrollToLists();
+    else if (f === 'editor') scheduleScrollToEditor();
+    if (f) {
+      navigation.setParams({ adminFocus: undefined });
+    }
+  }, [route.params?.adminFocus, navigation, scheduleScrollToLists, scheduleScrollToEditor]);
+
   const irAlChatDelPlan = async () => {
     try {
       const orgChat = organization?.id || profile?.organization_id || null;
@@ -690,6 +799,56 @@ export default function AdminScreen() {
           textAlign: 'center',
         },
 
+        adminNavTilesFooter: {
+          color: t.placeholder,
+          fontSize: 11,
+          lineHeight: 16,
+          textAlign: 'center',
+          marginBottom: 12,
+          marginTop: 4,
+          paddingHorizontal: 8,
+        },
+        blockListsSectionTitle: {
+          color: t.text,
+          fontSize: 16,
+          fontWeight: '800',
+          marginTop: 12,
+          marginBottom: 6,
+          textAlign: 'center',
+        },
+        blockListsSectionSub: {
+          color: t.placeholder,
+          fontSize: 12,
+          lineHeight: 18,
+          marginBottom: 12,
+          textAlign: 'center',
+          paddingHorizontal: 8,
+        },
+        jumpToEditorBtn: {
+          alignSelf: 'center',
+          marginTop: 2,
+          marginBottom: 8,
+          paddingVertical: 8,
+          paddingHorizontal: 14,
+        },
+        jumpToEditorText: { color: t.brand, fontSize: 13, fontWeight: '800' },
+        blockEditorSectionTitle: {
+          color: t.text,
+          fontSize: 16,
+          fontWeight: '800',
+          marginTop: 16,
+          marginBottom: 6,
+          textAlign: 'center',
+        },
+        blockEditorSectionSub: {
+          color: t.placeholder,
+          fontSize: 12,
+          lineHeight: 18,
+          marginBottom: 14,
+          textAlign: 'center',
+          paddingHorizontal: 8,
+        },
+
         fs12: { fontSize: 12 },
         mb8: { marginBottom: 8 },
         mt6: { marginTop: 6 },
@@ -733,10 +892,12 @@ export default function AdminScreen() {
           marginBottom: 8,
         },
         composerColMain: {
-          flex: isDesktopWeb ? 1.2 : 0,
+          flex: isDesktopWeb ? 1 : 0,
+          minWidth: 0,
         },
         composerColSide: {
           flex: isDesktopWeb ? 1 : 0,
+          minWidth: 0,
         },
         textarea: {
           backgroundColor: t.inputBg,
@@ -1555,6 +1716,7 @@ export default function AdminScreen() {
         style={styles.screen}
       >
         <ScrollView
+              ref={scrollViewRef}
               contentContainerStyle={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -1588,6 +1750,80 @@ export default function AdminScreen() {
                     ))}
                   </View>
                 ) : null}
+
+                {!isStaffWebDesktop ? (
+                  <Text style={styles.adminNavTilesFooter}>{tStr('admin_nav_tiles_footer')}</Text>
+                ) : null}
+
+                <View
+                  onLayout={(e) => {
+                    listsSectionY.current = e.nativeEvent.layout.y;
+                    if (pendingScrollRef.current === 'lists') runPendingScroll();
+                  }}
+                >
+                  <Text style={styles.blockListsSectionTitle}>{tStr('admin_lists_section_title')}</Text>
+                  <Text style={styles.blockListsSectionSub}>{tStr('admin_lists_section_sub')}</Text>
+
+                  <View style={styles.managementGrid}>
+                    <View style={styles.managementCol}>
+                      <View style={styles.sectionCard}>
+                        <Text style={styles.sectionCardTitle}>{tStr('admin_ultimos_dias')}</Text>
+                        {lastWeekBlocks.length === 0 ? (
+                          <Text style={styles.sectionEmptyText}>{tStr('admin_sin_bloques')}</Text>
+                        ) : (
+                          <ScrollView
+                            style={styles.sectionListScroll}
+                            contentContainerStyle={styles.sectionListContent}
+                            nestedScrollEnabled
+                            showsVerticalScrollIndicator={isDesktopWeb}
+                          >
+                            {lastWeekBlocks.map((b) => (
+                              <BloqueCard key={b.id} b={b} />
+                            ))}
+                          </ScrollView>
+                        )}
+                      </View>
+                    </View>
+
+                    <View style={styles.managementCol}>
+                      <View style={styles.sectionCard}>
+                        <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
+                        {historicBlocks.length === 0 ? (
+                          <Text style={styles.sectionEmptyText}>{tStr('admin_sin_historico')}</Text>
+                        ) : (
+                          <ScrollView
+                            style={styles.sectionListScroll}
+                            contentContainerStyle={styles.sectionListContent}
+                            nestedScrollEnabled
+                            showsVerticalScrollIndicator={isDesktopWeb}
+                          >
+                            {historicBlocks.map((b) => (
+                              <BloqueCard key={b.id} b={b} />
+                            ))}
+                          </ScrollView>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => emitAdminScrollToEditor()}
+                    style={styles.jumpToEditorBtn}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.jumpToEditorText}>{tStr('admin_jump_to_publish_form')}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View
+                  onLayout={(e) => {
+                    editorSectionY.current = e.nativeEvent.layout.y;
+                    if (pendingScrollRef.current === 'editor') runPendingScroll();
+                  }}
+                >
+                  <Text style={styles.blockEditorSectionTitle}>{tStr('admin_editor_section_title')}</Text>
+                  <Text style={styles.blockEditorSectionSub}>{tStr('admin_editor_section_sub')}</Text>
+                </View>
 
             {isCoach && !coachPlanActual ? (
               <View style={styles.block}>
@@ -1762,46 +1998,6 @@ export default function AdminScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-            </View>
-
-            <View style={styles.managementGrid}>
-              <View style={styles.managementCol}>
-                <View style={styles.sectionCard}>
-                  <Text style={styles.sectionCardTitle}>{tStr('admin_ultimos_dias')}</Text>
-                  {lastWeekBlocks.length === 0 ? (
-                    <Text style={styles.sectionEmptyText}>
-                      {tStr('admin_sin_bloques')}
-                    </Text>
-                  ) : (
-                    <ScrollView
-                      style={styles.sectionListScroll}
-                      contentContainerStyle={styles.sectionListContent}
-                      nestedScrollEnabled
-                      showsVerticalScrollIndicator={isDesktopWeb}
-                    >
-                      {lastWeekBlocks.map((b) => <BloqueCard key={b.id} b={b} />)}
-                    </ScrollView>
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.managementCol}>
-                <View style={styles.sectionCard}>
-                  <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
-                  {historicBlocks.length === 0 ? (
-                    <Text style={styles.sectionEmptyText}>{tStr('admin_sin_historico')}</Text>
-                  ) : (
-                    <ScrollView
-                      style={styles.sectionListScroll}
-                      contentContainerStyle={styles.sectionListContent}
-                      nestedScrollEnabled
-                      showsVerticalScrollIndicator={isDesktopWeb}
-                    >
-                      {historicBlocks.map((b) => <BloqueCard key={b.id} b={b} />)}
-                    </ScrollView>
-                  )}
-                </View>
-              </View>
             </View>
 
             <View style={[styles.sectionCard, styles.mt24]}>

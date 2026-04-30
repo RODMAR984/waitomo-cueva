@@ -22,9 +22,11 @@ import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 
 export default function AdminStripeSettingsScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -38,6 +40,7 @@ export default function AdminStripeSettingsScreen() {
   const [acct, setAcct] = useState('');
   const [checkoutOn, setCheckoutOn] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     setAcct(String(organization?.stripe_connect_account_id || '').trim());
@@ -68,6 +71,27 @@ export default function AdminStripeSettingsScreen() {
     }
   }, [acct, canEdit, checkoutOn, orgId, refreshOrganization, tStr]);
 
+  const connectStripeAuto = useCallback(async () => {
+    if (!orgId || !canEdit) {
+      Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
+      return;
+    }
+    setConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-connect-start', {
+        body: { organization_id: orgId },
+      });
+      if (error) throw error;
+      const oauthUrl = String(data?.oauth_url || '');
+      if (!oauthUrl) throw new Error('missing_oauth_url');
+      await Linking.openURL(oauthUrl);
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
+    } finally {
+      setConnecting(false);
+    }
+  }, [canEdit, orgId, tStr]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -95,8 +119,19 @@ export default function AdminStripeSettingsScreen() {
         row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
         rowLabel: { color: t.text, fontWeight: '700', flex: 1 },
         btn: { marginTop: 20, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, ...t.buttonPrimary },
+        btnSecondary: {
+          marginTop: 10,
+          alignSelf: 'flex-start',
+          paddingVertical: 12,
+          paddingHorizontal: 18,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          backgroundColor: t.faintStrong,
+        },
         btnBusy: { opacity: 0.7 },
         btnText: { ...t.buttonPrimaryText, fontWeight: '800' },
+        btnSecondaryText: { color: t.text, fontWeight: '800' },
         link: { color: t.brand, textDecorationLine: 'underline', marginTop: 10 },
         noEditHint: { marginTop: 16 },
       }),
@@ -106,9 +141,11 @@ export default function AdminStripeSettingsScreen() {
   return (
     <BackgroundWrapper screen="Admin">
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-          <Ionicons name="arrow-back" size={24} color={t.text} />
-        </TouchableOpacity>
+        {!hideInlineBack ? (
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+            <Ionicons name="arrow-back" size={24} color={t.text} />
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.title}>{tStr('admin_stripe_title')}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.body}>
@@ -131,6 +168,17 @@ export default function AdminStripeSettingsScreen() {
         <TouchableOpacity onPress={() => Linking.openURL('https://dashboard.stripe.com/connect/accounts/overview')}>
           <Text style={styles.link}>Stripe Dashboard → Connect</Text>
         </TouchableOpacity>
+        {canEdit ? (
+          <TouchableOpacity
+            style={[styles.btnSecondary, connecting && styles.btnBusy]}
+            onPress={connectStripeAuto}
+            disabled={connecting}
+          >
+            <Text style={styles.btnSecondaryText}>
+              {connecting ? tStr('common_loading') : tStr('admin_stripe_connect_auto')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         {canEdit ? (
           <TouchableOpacity style={[styles.btn, saving && styles.btnBusy]} onPress={save} disabled={saving}>
             <Text style={styles.btnText}>{tStr('gym_config_saved_title')}</Text>

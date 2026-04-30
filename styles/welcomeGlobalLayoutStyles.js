@@ -1,12 +1,14 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 /** Estética compartida: WelcomeGlobal + WelcomeDualChoice (logo, CTAs, locale). */
 export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}) {
   const safeTop = typeof topInset === 'number' ? topInset : 0;
   const isWide = !!layout?.isWide;
-  const contentMaxWidth = isWide ? 980 : 420;
-  const ctaMaxWidth = isWide ? 360 : 280;
-  const subtitleMaxWidth = isWide ? 620 : 320;
+  /** Web: tarjeta centrada (no banda horizontal); nativo ancho amplio solo si !web. */
+  const isWeb = Platform.OS === 'web';
+  const contentMaxWidth = isWeb ? 440 : isWide ? 720 : 420;
+  const ctaMaxWidth = isWeb ? 400 : isWide ? 360 : 280;
+  const subtitleMaxWidth = isWeb ? 400 : isWide ? 620 : 320;
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -58,6 +60,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       maxWidth: contentMaxWidth,
     },
     logoWrap: {
+      width: '100%',
       alignItems: 'center',
       marginBottom: 34,
     },
@@ -133,6 +136,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       gap: 8,
     },
     loadingBox: {
+      width: '100%',
       alignItems: 'center',
       gap: 12,
     },

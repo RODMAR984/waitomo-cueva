@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { supabase } from '../supabaseClient';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -52,6 +53,7 @@ function pesosInputToCents(raw) {
 
 export default function AdminAbonosScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const saveLockRef = useRef(false);
   const { t } = useThemeContext();
@@ -295,9 +297,11 @@ export default function AdminAbonosScreen() {
           keyboardDismissMode="on-drag"
         >
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            {!hideInlineBack ? (
+              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                <Ionicons name="arrow-back" size={26} color={t.text} />
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.title}>{tStr('admin_abonos_screen_title')}</Text>
             {isOwner && (
               <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>

@@ -21,6 +21,7 @@ import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 
 const ROLE_LABEL = {
   owner: 'Dueño',
@@ -51,6 +52,7 @@ function mergeMemberships(rows) {
 
 export default function OrgMembersScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -196,9 +198,11 @@ export default function OrgMembersScreen() {
   return (
     <BackgroundWrapper screen="admin">
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={26} color={t.text} />
-        </TouchableOpacity>
+        {!hideInlineBack ? (
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+            <Ionicons name="arrow-back" size={26} color={t.text} />
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.title} numberOfLines={1}>
           {tStr('admin_miembros')}
         </Text>
@@ -226,13 +230,29 @@ export default function OrgMembersScreen() {
           style={styles.list}
           data={rows}
           keyExtractor={(item) => item.user_id}
+          ListHeaderComponent={
+            rows.length ? (
+              <Text style={{ color: t.subText, fontSize: 13, lineHeight: 18, marginBottom: 12 }}>
+                {tStr('org_member_list_hint')}
+              </Text>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyText}>{tStr('admin_miembros_empty')}</Text>
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.82}
+              onPress={() =>
+                navigation.navigate('OrgMemberDetail', {
+                  userId: item.user_id,
+                  displayName: item.displayName,
+                })
+              }
+            >
               <Text style={styles.name}>{item.displayName}</Text>
               <Text style={styles.meta} selectable>
                 {item.user_id}
@@ -245,7 +265,7 @@ export default function OrgMembersScreen() {
                 ))}
               </View>
               {!item.active ? <Text style={styles.inactive}>Inactivo</Text> : null}
-            </View>
+            </TouchableOpacity>
           )}
         />
       )}

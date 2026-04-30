@@ -76,6 +76,14 @@ export default function WelcomeDualChoiceScreen() {
           >
             <Text style={[styles.localeText, locale === 'en' && styles.localeTextActive]}>EN</Text>
           </TouchableOpacity>
+          <View style={styles.localeDivider} />
+          <TouchableOpacity
+            style={[styles.localeBtn, locale === 'pt' && styles.localeBtnActive]}
+            onPress={() => setLocale('pt')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.localeText, locale === 'pt' && styles.localeTextActive]}>PT</Text>
+          </TouchableOpacity>
         </View>
       </View>
 

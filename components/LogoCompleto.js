@@ -1,46 +1,11 @@
-// Logo completo en PNG (principal) con fallback a composición triangulo + texto.
-import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+// Logo completo en PNG. Ancho ~2,45× alto: el tamaño se calcula con el ancho REAL del contenedor
+// (onLayout). Los padres con alignItems:'center' deben dar width:'100%' al bloque del logo.
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Image, StyleSheet, useWindowDimensions } from 'react-native';
 
-const RATIO_LEGACY = 1403.09 / 354.16; // triangulo.svg (viewBox 1403.09 x 354.16)
-const RATIO_CURRENT = 841.9 / 595.3; // triangulonofound.svg (viewBox 841.9 x 595.3)
+const logoCompletoSrc = require('../assets/logo-completo-ab.png');
 
-// PNG principal del logo completo
-let LogoCompletoPng = null;
-try {
-  LogoCompletoPng = require('../assets/LOGO COMPLETO AB .png');
-} catch {}
-
-// TRIÁNGULO (fallback)
-let TrianguloPng = null;
-let TrianguloSvgLegacy = null;
-let TrianguloSvgCurrent = null;
-try {
-  TrianguloPng = require('../assets/triangulo AB.png');
-} catch {}
-try {
-  TrianguloPng = TrianguloPng || require('../assets/triangulo.png');
-} catch {}
-try {
-  TrianguloSvgLegacy = require('../assets/triangulo.svg').default;
-} catch {}
-try {
-  TrianguloSvgCurrent = require('../assets/triangulonofound.svg').default;
-} catch {}
-
-// TEXTO (fallback)
-let TextoPng = null;
-let TextoSvgLegacy = null;
-let TextoSvgCurrent = null;
-try {
-  TextoPng = require('../assets/texto AB.png');
-} catch {}
-try {
-  TextoPng = TextoPng || require('../assets/texto.png');
-} catch {}
-
-const getRatio = (asset, fallback = 2.4) => {
-  if (!asset) return fallback;
+const getRatio = (asset, fallback) => {
   try {
     const meta = Image.resolveAssetSource(asset);
     if (meta?.width && meta?.height) return meta.width / meta.height;
@@ -48,71 +13,36 @@ const getRatio = (asset, fallback = 2.4) => {
   return fallback;
 };
 
-// Calculado una sola vez (mejor rendimiento en render)
-const FULL_RATIO = getRatio(LogoCompletoPng, 2.4);
-const TRI_RATIO = getRatio(TrianguloPng, TrianguloSvgCurrent ? RATIO_CURRENT : RATIO_LEGACY);
-const TEXT_RATIO = getRatio(TextoPng, TrianguloSvgCurrent ? RATIO_CURRENT : RATIO_LEGACY);
-try {
-  TextoSvgLegacy = require('../assets/texto.svg').default;
-} catch {}
-try {
-  TextoSvgCurrent = require('../assets/textonofound.svg').default;
-} catch {}
+const FULL_RATIO = getRatio(logoCompletoSrc, 1604 / 656);
 
-export default function LogoCompleto({ height = 80, style }) {
-  if (LogoCompletoPng) {
-    return (
-      <View style={[styles.row, style, { height }]}>
-        <Image
-          source={LogoCompletoPng}
-          style={[styles.full, { height, width: height * FULL_RATIO }]}
-          resizeMode="contain"
-        />
-      </View>
-    );
-  }
+export default function LogoCompleto({ height = 80, style, horizontalGutter = 12 }) {
+  const { width: winW } = useWindowDimensions();
+  const [boxW, setBoxW] = useState(0);
 
-  const TriNode = TrianguloPng ? (
-    <Image source={TrianguloPng} style={[styles.triangulo, { height, width: height * TRI_RATIO }]} resizeMode="contain" />
-  ) : TrianguloSvgCurrent ? (
-    <TrianguloSvgCurrent width={height * RATIO_CURRENT} height={height} />
-  ) : TrianguloSvgLegacy ? (
-    <TrianguloSvgLegacy width={height * RATIO_LEGACY} height={height} />
-  ) : null;
+  const onLayout = useCallback((e) => {
+    const w = Math.round(e.nativeEvent.layout.width);
+    if (w > 8) setBoxW(prev => (prev === w ? prev : w));
+  }, []);
 
-  const TextNode = TextoPng ? (
-    <Image source={TextoPng} style={[styles.texto, { height, width: height * TEXT_RATIO }]} resizeMode="contain" />
-  ) : TextoSvgCurrent ? (
-    <TextoSvgCurrent width={height * RATIO_CURRENT} height={height} />
-  ) : TextoSvgLegacy ? (
-    <TextoSvgLegacy width={height * RATIO_LEGACY} height={height} />
-  ) : null;
-
-  if (!TriNode || !TextNode) return null;
+  const { width: imgW, height: imgH } = useMemo(() => {
+    const avail = Math.max(80, (boxW > 8 ? boxW : winW) - horizontalGutter);
+    const idealW = height * FULL_RATIO;
+    if (idealW <= avail) return { width: idealW, height };
+    return { width: avail, height: avail / FULL_RATIO };
+  }, [height, boxW, winW, horizontalGutter]);
 
   return (
-    <View style={[styles.row, style, { height }]}>
-      {TriNode}
-      {TextNode}
+    <View onLayout={onLayout} style={[styles.outer, style, { minHeight: imgH }]}>
+      <Image source={logoCompletoSrc} style={{ width: imgW, height: imgH }} resizeMode="contain" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
+  outer: {
+    width: '100%',
+    minWidth: 0,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  triangulo: {
-    width: undefined,
-    marginRight: 0,
-  },
-  full: {
-    width: undefined,
-  },
-  texto: {
-    width: undefined,
-    marginLeft: 0,
+    justifyContent: 'center',
   },
 });

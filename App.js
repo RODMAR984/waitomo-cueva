@@ -11,7 +11,7 @@ import { supabaseHealthCheck } from './supabaseClient';
 
 // Contextos
 import { ThemeProvider, useThemeContext } from './contexts/ThemeContext';
-import { LocaleProvider } from './contexts/LocaleContext';
+import { LocaleProvider, useLocale } from './contexts/LocaleContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TrainingDataProvider } from './contexts/TrainingDataContext';
 import { PlanProvider } from './contexts/PlanContext';
@@ -73,6 +73,7 @@ import {
   AdminAbonosScreenWithShell,
   AsignarCoachesScreenWithShell,
   OrgMembersScreenWithShell,
+  OrgMemberDetailScreenWithShell,
   AdminObservabilityScreenWithShell,
   AdminMembershipFreezeScreenWithShell,
   AdminReportesScreenWithShell,
@@ -98,6 +99,7 @@ import ClientInviteLinkHandler from './components/ClientInviteLinkHandler';
 import { registerGeneralImages } from './utils/getRandomGeneralImage';
 import { IMAGENES_POR_PLAN, IMAGEN_WELCOME } from './utils/imagenesFijas';
 import { reportError, setObservabilityContext, trackEvent } from './utils/observability';
+import { applyWebDocumentTitle } from './utils/webDocumentTitle';
 import { initSentryWebFromEnv, syncSentryUserContext } from './utils/sentryWebClient';
 import { initWebVitalsReporting } from './utils/webVitals';
 import { flushObservabilityEventsIfNeeded } from './utils/observabilityFlush';
@@ -200,6 +202,7 @@ function AuthGate({ children }) {
 function AppContent() {
   const { user, role, organization } = useAuth() || {};
   const { theme, t } = useThemeContext();
+  const { t: tStr } = useLocale();
   const routeNameRef = useRef(null);
   const ROUTING_DEBUG = __DEV__;
 
@@ -267,6 +270,9 @@ function AppContent() {
             onReady={() => {
               const r = navigationRef.getCurrentRoute?.();
               routeNameRef.current = r?.name || null;
+              try {
+                applyWebDocumentTitle(navigationRef.getRootState?.(), tStr);
+              } catch (_) {}
               trackEvent('navigation_ready', { route: r?.name || null });
               if (ROUTING_DEBUG) {
                 try {
@@ -278,7 +284,7 @@ function AppContent() {
                 } catch (_) {}
               }
             }}
-            onStateChange={() => {
+            onStateChange={(state) => {
               const r = navigationRef.getCurrentRoute?.();
               const nextName = r?.name || null;
               if (nextName && nextName !== routeNameRef.current) {
@@ -288,6 +294,9 @@ function AppContent() {
                 });
                 routeNameRef.current = nextName;
               }
+              try {
+                applyWebDocumentTitle(state, tStr);
+              } catch (_) {}
               try {
                 if (ROUTING_DEBUG) {
                   // eslint-disable-next-line no-console
@@ -533,6 +542,8 @@ function AppContent() {
                     />
                     <Stack.Screen name="OrgMembers" component={OrgMembersScreenWithShell} />
                     <Stack.Screen name="OrgMembersScreen" component={OrgMembersScreenWithShell} />
+                    <Stack.Screen name="OrgMemberDetail" component={OrgMemberDetailScreenWithShell} />
+                    <Stack.Screen name="OrgMemberDetailScreen" component={OrgMemberDetailScreenWithShell} />
                     <Stack.Screen name="AdminObservability" component={AdminObservabilityScreenWithShell} />
                     <Stack.Screen name="AdminObservabilityScreen" component={AdminObservabilityScreenWithShell} />
                     <Stack.Screen name="AdminMembershipFreeze" component={AdminMembershipFreezeScreenWithShell} />

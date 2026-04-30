@@ -27,6 +27,8 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { evaluateCalendarioAccess } from '../utils/clientWorkoutEntitlement';
+import { draftChatReplyWithAi } from '../utils/aiAssistant';
+import { trackEvent } from '../utils/observability';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -67,9 +69,12 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiTemplate, setAiTemplate] = useState('');
   const listRef = useRef(null);
   const [accessLoading, setAccessLoading] = useState(true);
   const [accessOk, setAccessOk] = useState(false);
+  const [channelOrgId, setChannelOrgId] = useState(null);
 
   const staffRoles = useMemo(() => new Set(['owner', 'coach', 'admin', 'superadmin']), []);
 
@@ -132,10 +137,12 @@ export default function ChatScreen() {
           .maybeSingle();
         if (!alive) return;
         if (chErr || !ch?.organization_id) {
+          setChannelOrgId(null);
           setAccessOk(false);
           return;
         }
         const orgId = ch.organization_id;
+        setChannelOrgId(orgId);
         if (isStaffForOrg(orgId)) {
           setAccessOk(true);
           return;
@@ -155,7 +162,10 @@ export default function ChatScreen() {
         });
         setAccessOk(!!ent.ok);
       } catch {
-        if (alive) setAccessOk(false);
+        if (alive) {
+          setChannelOrgId(null);
+          setAccessOk(false);
+        }
       } finally {
         if (alive) setAccessLoading(false);
       }
@@ -271,6 +281,62 @@ export default function ChatScreen() {
     }
   };
 
+  const buildConversationContext = useCallback(() => {
+    const recent = (messages || []).slice(-12);
+    const lines = recent.map((m) => {
+      const name = displayNameFor(m.user_id, tStr('chat_member'));
+      return `${name}: ${String(m.body || '').trim()}`;
+    });
+    return lines.join('\n');
+  }, [messages, tStr]);
+
+  const suggestReply = async () => {
+    if (!channelOrgId) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('chat_ai_need_org'));
+      return;
+    }
+    const context = buildConversationContext();
+    if (!context.trim()) {
+      Alert.alert(tStr('chat_ai_title'), tStr('chat_empty_thread'));
+      return;
+    }
+    setAiBusy(true);
+    try {
+      const out = await draftChatReplyWithAi({
+        organizationId: channelOrgId,
+        channelName,
+        conversationText: context,
+        draftIntent: body,
+        templateType: aiTemplate,
+        locale,
+      });
+      const text = String(out?.result?.result_text || '').trim();
+      if (!text) throw new Error(tStr('chat_ai_error'));
+      trackEvent('chat_ai_reply_suggested', { organization_id: channelOrgId, channel_id: channelId });
+      Alert.alert(tStr('chat_ai_title'), text.length > 900 ? `${text.slice(0, 900)}…` : text, [
+        { text: tStr('common_cancel'), style: 'cancel' },
+        { text: tStr('chat_ai_replace'), onPress: () => setBody(text) },
+        {
+          text: tStr('chat_ai_append'),
+          onPress: () =>
+            setBody((prev) => {
+              const p = String(prev || '').trim();
+              return p ? `${p}\n\n${text}` : text;
+            }),
+        },
+      ]);
+    } catch (e) {
+      const msg = String(e?.message || '');
+      if (msg.toLowerCase().includes('quota')) {
+        Alert.alert(tStr('admin_ai_quota_title'), tStr('admin_ai_quota_body'));
+      } else {
+        Alert.alert(tStr('chat_send_error_title'), msg || tStr('chat_ai_error'));
+      }
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   const { t } = useThemeContext();
 
   const styles = useMemo(
@@ -357,6 +423,39 @@ export default function ChatScreen() {
           justifyContent: 'center',
           marginLeft: 10,
         },
+        aiBtn: {
+          minWidth: 44,
+          height: 44,
+          borderRadius: 22,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 8,
+          backgroundColor: t.boxBg,
+        },
+        templatesRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+          paddingHorizontal: 16,
+          paddingTop: 8,
+          paddingBottom: 2,
+        },
+        templateChip: {
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          borderRadius: 999,
+          paddingVertical: 6,
+          paddingHorizontal: 10,
+          backgroundColor: t.boxBg,
+        },
+        templateChipOn: {
+          borderColor: t.brand,
+          backgroundColor: hexToRgba(t.brand, 0.14),
+        },
+        templateChipText: { color: t.subText, fontSize: 12, fontWeight: '700' },
+        templateChipTextOn: { color: t.brand },
         empty: { paddingVertical: 40, alignItems: 'center' },
         emptyText: { color: t.placeholder, fontSize: 15 },
       }),
@@ -385,6 +484,17 @@ export default function ChatScreen() {
       </View>
     );
   };
+
+  const isStaffHere = !!channelOrgId && isStaffForOrg(channelOrgId);
+  const templateOptions = useMemo(
+    () => [
+      { id: '', label: tStr('chat_ai_template_none') },
+      { id: 'payment_reminder', label: tStr('chat_ai_template_payment') },
+      { id: 'schedule_change', label: tStr('chat_ai_template_schedule') },
+      { id: 'win_back', label: tStr('chat_ai_template_winback') },
+    ],
+    [tStr],
+  );
 
   return (
     <BackgroundWrapper screen="ClientScreen">
@@ -435,10 +545,42 @@ export default function ChatScreen() {
           )}
         </View>
 
+        {isStaffHere ? (
+          <View style={styles.templatesRow}>
+            {templateOptions.map((opt) => {
+              const on = aiTemplate === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id || 'none'}
+                  style={[styles.templateChip, on && styles.templateChipOn]}
+                  onPress={() => setAiTemplate(opt.id)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.templateChipText, on && styles.templateChipTextOn]}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
+
         <View style={styles.inputRow}>
+          {isStaffHere ? (
+            <TouchableOpacity
+              style={[styles.aiBtn, (aiBusy || sending || !accessOk) && { opacity: 0.5 }]}
+              onPress={suggestReply}
+              disabled={aiBusy || sending || !accessOk}
+              activeOpacity={0.85}
+            >
+              {aiBusy ? (
+                <ActivityIndicator size="small" color={t.brand} />
+              ) : (
+                <Ionicons name="sparkles-outline" size={20} color={t.brand} />
+              )}
+            </TouchableOpacity>
+          ) : null}
           <TextInput
             style={styles.input}
-            placeholder={tStr('chat_placeholder')}
+            placeholder={isStaffHere ? tStr('chat_placeholder_staff') : tStr('chat_placeholder')}
             placeholderTextColor={t.placeholder}
             value={body}
             onChangeText={setBody}

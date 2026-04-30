@@ -15,7 +15,12 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const dist = path.join(root, 'dist');
 const indexPath = path.join(dist, 'index.html');
-const iconSrc = path.join(root, 'assets', 'icon.png');
+const iconCandidates = [
+  path.join(root, 'assets', 'app-icon-composite.png'),
+  path.join(root, 'assets', 'favicon.png'),
+  path.join(root, 'assets', 'icon.png'),
+];
+const iconSrc = iconCandidates.find((p) => fs.existsSync(p));
 const webIconName = 'web-app-icon.png';
 const manifestName = 'site.webmanifest';
 
@@ -32,9 +37,13 @@ function fail(msg) {
 
 if (!fs.existsSync(dist)) fail('No existe dist/. Ejecutá antes: npx expo export --platform web');
 if (!fs.existsSync(indexPath)) fail('No existe dist/index.html');
-if (!fs.existsSync(iconSrc)) fail(`No existe ${path.relative(root, iconSrc)}`);
+if (!iconSrc) fail(`No existe assets/app-icon-composite.png (ej. npm run icons:build) ni favicon/icon`);
 
 fs.copyFileSync(iconSrc, path.join(dist, webIconName));
+// Expo export escribe /favicon.ico (plantilla ≈ “cubo”) y el HTML lo enlaza ANTES que nuestros <link> PNG; Chrome usa ese primero.
+// Misma imagen que app móvil; muchos navegadores aceptan PNG en esta ruta.
+const faviconDest = path.join(dist, 'favicon.ico');
+fs.copyFileSync(iconSrc, faviconDest);
 
 const manifest = {
   name: 'FitEngine',
@@ -94,12 +103,15 @@ const injectBlock = `
     <meta name="theme-color" content="#0b3d4a" media="(prefers-color-scheme: light)" />
     <link rel="manifest" href="/${manifestName}" />
     <link rel="apple-touch-icon" href="/${webIconName}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/${webIconName}" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/${webIconName}" />
     <link rel="icon" type="image/png" sizes="512x512" href="/${webIconName}" />${pwaMeta}
 `;
 
 let html = fs.readFileSync(indexPath, 'utf8');
 if (html.includes('web-branding')) {
-  console.log('[web-branding] Ya inyectado, omitiendo.');
+  fs.copyFileSync(iconSrc, faviconDest);
+  console.log('[web-branding] Ya inyectado; favicon.ico actualizado.');
   process.exit(0);
 }
 

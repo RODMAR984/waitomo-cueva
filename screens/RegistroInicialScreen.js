@@ -315,7 +315,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
             keyboardShouldPersistTaps="handled"
           >
             {!hasPlanContext ? (
-              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ width: '100%', alignItems: 'center', marginBottom: 16 }}>
                 <LogoCompleto height={48} />
                 <Text style={{ color: fe.subText, fontSize: 11, marginTop: 4 }}>{tStr('login_brand_powered')}</Text>
               </View>

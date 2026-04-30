@@ -120,6 +120,16 @@ export default function WelcomeGlobalScreen() {
               EN
             </Text>
           </TouchableOpacity>
+          <View style={layoutStyles.localeDivider} />
+          <TouchableOpacity
+            style={[layoutStyles.localeBtn, locale === 'pt' && layoutStyles.localeBtnActive]}
+            onPress={() => setLocale('pt')}
+            activeOpacity={0.85}
+          >
+            <Text style={[layoutStyles.localeText, locale === 'pt' && layoutStyles.localeTextActive]}>
+              PT
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 

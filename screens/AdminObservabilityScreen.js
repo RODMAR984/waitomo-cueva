@@ -18,6 +18,7 @@ import * as Clipboard from 'expo-clipboard';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { supabase } from '../supabaseClient';
 import {
   clearObservabilityEvents,
@@ -29,6 +30,7 @@ import {
 export default function AdminObservabilityScreen({ navigation }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const { width } = useWindowDimensions();
   const [busy, setBusy] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -315,9 +317,11 @@ export default function AdminObservabilityScreen({ navigation }) {
       <View style={styles.root}>
         <View style={styles.contentMax}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={26} color={t.text} />
-          </TouchableOpacity>
+          {!hideInlineBack ? (
+            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+              <Ionicons name="arrow-back" size={26} color={t.text} />
+            </TouchableOpacity>
+          ) : null}
           <Text style={styles.title}>{tStr('admin_observ_title')}</Text>
           <View style={{ width: 20 }} />
         </View>

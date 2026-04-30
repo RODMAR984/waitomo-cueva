@@ -5,7 +5,12 @@
     "scheme": "waitomo",
     "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/logo-completo-ab.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050a0d"
+    },
+    "icon": "./assets/app-icon-composite.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
@@ -19,8 +24,8 @@
     "android": {
       "package": "com.waitomofitengine.cueva",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/app-icon-composite.png",
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
       "intentFilters": [
@@ -48,11 +53,13 @@
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/favicon.png",
+      "name": "FitEngine",
+      "favicon": "./assets/app-icon-composite.png",
       "backgroundColor": "#021b23",
       "themeColor": "#021b23"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-asset",
       "expo-font",
       "expo-web-browser",

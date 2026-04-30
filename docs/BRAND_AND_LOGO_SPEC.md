@@ -9,7 +9,7 @@
 | **Splash** | Logo FitEngine + "by WAITOMO" (plataforma neutra) | `screens/SplashScreen.js` |
 | **Welcome global** | Logo FitEngine + subtítulo "Elegí cómo entrás" | `screens/WelcomeScreen.js` |
 | **Login** | Logo FitEngine + "powered by WAITOMO" | `screens/LoginScreen.js` |
-| **App icon** | Icono de la app = logo FitEngine (PNG exportado) | `app.json` → `./assets/icon.png`, `./assets/adaptive-icon.png` |
+| **App icon** | Arte transparente en `favicon.png` → build **`app-icon-composite.png`** (1024×1024, fondo negro, logo centrado). `npm run icons:build` tras cambiar el favicon. | `app.json` → `./assets/app-icon-composite.png` (icono, adaptive y `web.favicon`) |
 | **Web (navbar)** | Logo en cabecera | `web/public/logo-fitengine.svg`, referenciado en `web/src/Navbar.jsx` |
 | **Footer atribución** | Solo texto: "FitEngine by WAITOMO © 2026" (sin logo) | `screens/GymConfigScreen.js`, `screens/LoginScreen.js` |
 

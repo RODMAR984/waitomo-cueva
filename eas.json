@@ -15,8 +15,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "NODE_OPTIONS": "--max-old-space-size=8192",
-        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
+        "NODE_OPTIONS": "--max-old-space-size=8192"
       },
       "android": { "buildType": "apk" }
     },

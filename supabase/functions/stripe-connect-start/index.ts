@@ -1,0 +1,111 @@
+// @ts-nocheck
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey",
+};
+
+function b64url(input: string) {
+  return btoa(input).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function hmacSHA256(secret: string, message: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  const bytes = new Uint8Array(sig);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 1) bin += String.fromCharCode(bytes[i]);
+  return b64url(bin);
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const stripeClientId = Deno.env.get("STRIPE_CONNECT_CLIENT_ID") ?? "";
+  const stateSecret = Deno.env.get("STRIPE_CONNECT_STATE_SECRET") ?? "";
+  if (!supabaseUrl || !anonKey || !serviceKey || !stripeClientId || !stateSecret) {
+    return new Response(JSON.stringify({ error: "missing_env" }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const supabaseAnon = createClient(supabaseUrl, anonKey);
+  const { data: userData, error: userErr } = await supabaseAnon.auth.getUser(token);
+  if (userErr || !userData?.user?.id) {
+    return new Response(JSON.stringify({ error: "invalid_token" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+  const actorId = userData.user.id;
+
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "invalid_json" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+  const organizationId = String(body.organization_id || "").trim();
+  if (!organizationId) {
+    return new Response(JSON.stringify({ error: "invalid_args" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+
+  const supabase = createClient(supabaseUrl, serviceKey);
+  const { data: org, error: orgErr } = await supabase
+    .from("organizations")
+    .select("id, owner_id")
+    .eq("id", organizationId)
+    .maybeSingle();
+  if (orgErr || !org) {
+    return new Response(JSON.stringify({ error: "org_not_found" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role, active")
+    .eq("organization_id", organizationId)
+    .eq("user_id", actorId)
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+  const role = String(membership?.role || "").trim().toLowerCase();
+  const canEdit = org.owner_id === actorId || role === "owner" || role === "admin" || role === "superadmin";
+  if (!canEdit) {
+    return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+
+  const callbackUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/stripe-connect-callback`;
+  const payload = {
+    org_id: organizationId,
+    actor_id: actorId,
+    iat: Date.now(),
+  };
+  const encoded = b64url(JSON.stringify(payload));
+  const sig = await hmacSHA256(stateSecret, encoded);
+  const state = `${encoded}.${sig}`;
+
+  const oauthUrl =
+    `https://connect.stripe.com/oauth/authorize` +
+    `?response_type=code` +
+    `&client_id=${encodeURIComponent(stripeClientId)}` +
+    `&scope=read_write` +
+    `&state=${encodeURIComponent(state)}` +
+    `&redirect_uri=${encodeURIComponent(callbackUrl)}`;
+
+  return new Response(JSON.stringify({ ok: true, oauth_url: oauthUrl }), {
+    status: 200,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
+});

@@ -13,7 +13,7 @@ Checklist operativo para validar release web con foco en estabilidad, i18n, tema
 - Ejecutar:
   - `npm run perf:web:export`
   - `npm run perf:web:bundle-check`
-- Tras el export, `scripts/inject-web-branding.cjs` copia el **mismo icono que la app** (`assets/icon.png`) a `dist/`, añade **favicon / apple-touch-icon / theme-color** y un **`site.webmanifest` con `display: "browser"`** (icono y color en pestaña / atajos, **sin** empujar instalación tipo app de escritorio).
+- Tras el export, `scripts/inject-web-branding.cjs` copia el icono de app (`assets/app-icon-composite.png`, fallback `favicon.png` / `icon.png`) a `dist/`, añade **favicon / apple-touch-icon / theme-color** y un **`site.webmanifest` con `display: "browser"`**. Si falta el composite: `npm run icons:build`.
 - Objetivo:
   - Mantener el bundle principal web bajo presupuesto.
   - Valores por defecto:

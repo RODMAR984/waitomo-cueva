@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -34,6 +35,7 @@ const normalizeEmail = (s) => String(s || '').trim().toLowerCase();
 
 export default function LoginScreen() {
   const { t: tStr } = useLocale();
+  const { width: winW } = useWindowDimensions();
   const navigation = useNavigation();
   const route = useRoute();
   const { fromRegistro, forStaff, prefillEmail } = route?.params || {};
@@ -133,6 +135,12 @@ export default function LoginScreen() {
           padding: 20,
           paddingTop: 60,
           paddingBottom: 8,
+          alignItems: 'center',
+        },
+        pageColumn: {
+          width: '100%',
+          maxWidth: Platform.OS === 'web' ? Math.min(440, winW - 32) : 520,
+          alignSelf: 'center',
         },
         panel: {
           backgroundColor: fe.panelBg,
@@ -140,6 +148,7 @@ export default function LoginScreen() {
           borderRadius: 16,
           borderWidth: 1,
           padding: 20,
+          width: '100%',
         },
         title: {
           color: fe.subText,
@@ -207,7 +216,7 @@ export default function LoginScreen() {
           textAlign: 'center',
         },
       }),
-    [],
+    [winW],
   );
 
   /**
@@ -480,9 +489,8 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View>
-            {/* Marca plataforma: logo completo (triangulo + texto) */}
-            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+          <View style={styles.pageColumn}>
+            <View style={{ width: '100%', alignItems: 'center', marginBottom: 12 }}>
               <LogoCompleto height={50} />
               <Text style={{ color: fe.subText, fontSize: 12, marginTop: 4 }}>{tStr('login_brand_powered')}</Text>
             </View>
@@ -622,8 +630,7 @@ export default function LoginScreen() {
                 </>
               )}
             </View>
-            {/* Misma atribución que GymConfig: logo + © */}
-            <View style={{ alignItems: 'center', marginTop: 24, paddingBottom: 16 }}>
+            <View style={{ width: '100%', alignItems: 'center', marginTop: 24, paddingBottom: 16 }}>
               <LogoCompleto height={30} style={{ marginBottom: 6 }} />
               <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.8 }}>{tStr('gym_config_footer')}</Text>
             </View>

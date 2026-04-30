@@ -23,6 +23,7 @@ import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 
 const fmtIsoDate = (d) => {
   if (!d) return '';
@@ -39,6 +40,7 @@ const displayDate = (iso) => {
 
 export default function AdminMembershipFreezeScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -334,9 +336,11 @@ export default function AdminMembershipFreezeScreen() {
   return (
     <BackgroundWrapper screen="Admin">
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-          <Ionicons name="arrow-back" size={24} color={t.text} />
-        </TouchableOpacity>
+        {!hideInlineBack ? (
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+            <Ionicons name="arrow-back" size={24} color={t.text} />
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.title}>{tStr('admin_freeze_screen_title')}</Text>
       </View>
 

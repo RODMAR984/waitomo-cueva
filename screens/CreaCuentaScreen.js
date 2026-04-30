@@ -182,7 +182,7 @@ export default function CreaCuentaScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.outer}>
-            <View style={{ alignItems: 'center', marginBottom: 14 }}>
+            <View style={{ width: '100%', alignItems: 'center', marginBottom: 14 }}>
               <LogoCompleto height={52} />
               <Text style={{ color: fe.subText, fontSize: 11, marginTop: 4 }}>powered by WAITOMO</Text>
             </View>

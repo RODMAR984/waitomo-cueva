@@ -39,6 +39,7 @@ const storageKeyCoaches = (orgId) =>
 
 export default function AsignarCoachesScreen({ route }) {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -220,9 +221,11 @@ export default function AsignarCoachesScreen({ route }) {
 
   const headerEl = (
     <View style={styles.header}>
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-        <Ionicons name="arrow-back" size={26} color={t.text} />
-      </TouchableOpacity>
+      {!hideInlineBack ? (
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={26} color={t.text} />
+        </TouchableOpacity>
+      ) : null}
       <Text style={styles.title} numberOfLines={2}>
         {tStr('admin_nav_assign_coaches')}
       </Text>

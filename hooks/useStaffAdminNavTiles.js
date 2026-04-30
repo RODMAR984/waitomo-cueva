@@ -1,5 +1,13 @@
 import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { emitAdminScrollToLists } from '../utils/adminScrollBus';
+
+function getFocusedRouteName(state) {
+  if (!state || typeof state.index !== 'number' || !Array.isArray(state.routes)) return null;
+  const r = state.routes[state.index];
+  if (r?.state) return getFocusedRouteName(r.state);
+  return r?.name ?? null;
+}
 
 /**
  * Misma navegación lateral que el panel Admin (bloques / menú).
@@ -23,6 +31,26 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
   return useMemo(
     () =>
       [
+        {
+          key: 'bloques',
+          ion: 'barbell-outline',
+          title: tStr('admin_nav_panel_bloques'),
+          sub: tStr('admin_menu_panel_bloques_sub'),
+          onPress: () => {
+            const focused = typeof navigation.getState === 'function' ? getFocusedRouteName(navigation.getState()) : null;
+            const onBloquesScreen =
+              focused === 'AdminLite' ||
+              focused === 'AdminLiteScreen' ||
+              focused === 'Admin' ||
+              focused === 'AdminScreen';
+            if (onBloquesScreen) {
+              emitAdminScrollToLists();
+              return;
+            }
+            navigation.navigate('AdminLite', { adminFocus: 'lists' });
+          },
+          show: true,
+        },
         {
           key: 'resumen',
           ion: 'today-outline',

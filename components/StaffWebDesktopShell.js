@@ -27,6 +27,10 @@ const hexToRgba = (hex, alpha = 1) => {
 
 /** Pantalla React Navigation → tile.key activo en el rail (si aplica). */
 const ROUTE_NAME_TO_TILE_KEY = {
+  AdminLite: 'bloques',
+  AdminLiteScreen: 'bloques',
+  Admin: 'bloques',
+  AdminScreen: 'bloques',
   AdminResumen: 'resumen',
   AdminResumenScreen: 'resumen',
   GymConfig: 'marca',
@@ -35,6 +39,8 @@ const ROUTE_NAME_TO_TILE_KEY = {
   AdminFinanzasScreen: 'fin',
   OrgMembers: 'mem',
   OrgMembersScreen: 'mem',
+  OrgMemberDetail: 'mem',
+  OrgMemberDetailScreen: 'mem',
   AdminNovedades: 'novadm',
   AdminNovedadesScreen: 'novadm',
   AdminPlanes: 'planes',

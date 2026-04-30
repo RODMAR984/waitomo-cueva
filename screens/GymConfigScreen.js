@@ -18,7 +18,7 @@ import {
   Switch,
   useWindowDimensions,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -26,6 +26,7 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { supabase } from '../supabaseClient';
 import { getThemeTokens } from '../theme/colors';
 import { imageUriToArrayBuffer } from '../utils/imageUriToArrayBuffer';
@@ -35,6 +36,7 @@ import { generateClientInviteCode } from '../utils/clientInviteCode';
 import { buildClientInvitePublicLink } from '../utils/fitengineUrls';
 import { FULL_HEX_CHOICE_GYM } from '../utils/gymColorPalette';
 import { DEFAULT_CLIENT_PAYMENT_COPY } from '../utils/clientPaymentMethods';
+import { draftMessageWithAi } from '../utils/aiAssistant';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -71,17 +73,148 @@ const getEffectiveMode = (mode) => {
   return h >= 6 && h < 22 ? 'light' : 'dark';
 };
 
+function gymConfigBaselineString(org) {
+  if (!org?.id) return '';
+  const f = org.features && typeof org.features === 'object' && !Array.isArray(org.features) ? org.features : {};
+  const cpObj =
+    f.client_payment_methods && typeof f.client_payment_methods === 'object' && !Array.isArray(f.client_payment_methods)
+      ? f.client_payment_methods
+      : {};
+  const mc = f.medical_clearance_policy;
+  const medMode = mc?.mode === 'grace' || mc?.mode === 'flexible' ? mc.mode : 'strict';
+  const medGrace =
+    medMode === 'grace'
+      ? Math.min(90, Math.max(0, parseInt(String(mc?.grace_days != null ? mc.grace_days : '0'), 10) || 0))
+      : 0;
+  let freezeDays = null;
+  if (org.membership_freeze_max_days != null && Number.isFinite(Number(org.membership_freeze_max_days))) {
+    freezeDays = Math.min(366, Math.max(1, Number(org.membership_freeze_max_days)));
+  }
+  return JSON.stringify({
+    name: (org.name || '').trim(),
+    billingCurrency: String(org.billing_currency || 'ARS').trim().toUpperCase(),
+    timezone: String(org.timezone || 'America/Argentina/Buenos_Aires').trim(),
+    accent: (org.accent_color || '').trim() || '#00dddd',
+    logo: org.logo_url || null,
+    theme: org.theme_preset || 'dark_vivid',
+    bgType: org.background_type || 'solid',
+    bgUrl: (org.background_url || '').trim() || '',
+    textColor: f.text_color || org.text_color || '',
+    textSecondary: f.text_secondary_color || '',
+    surface: f.ui_surface_color || '',
+    border: f.ui_border_color || '',
+    overlay: f.ui_overlay_color || '',
+    welcome: (f.client_welcome_message || '').trim(),
+    lock: !!f.lock_client_theme,
+    pm: {
+      mercadopago: cpObj.mercadopago !== false,
+      transferencia: cpObj.transferencia !== false,
+      cuenta_dni: cpObj.cuenta_dni !== false,
+      modo: cpObj.modo !== false,
+      efectivo: cpObj.efectivo !== false,
+      transfer_copy: (cpObj.transfer_copy || '').trim(),
+      dni_copy: (cpObj.dni_copy || '').trim(),
+      modo_copy: (cpObj.modo_copy || '').trim(),
+    },
+    medical: { mode: medMode, grace_days: medGrace },
+    freezeEn: !!org.membership_freeze_enabled,
+    freezeDays,
+  });
+}
+
+function gymConfigStateStringFromLocals(p) {
+  const {
+    name,
+    billingCurrency,
+    timezone,
+    accentColor,
+    logoUri,
+    themePreset,
+    backgroundType,
+    backgroundUrl,
+    clientWelcomeMessage,
+    lockClientTheme,
+    pmMercadopago,
+    pmTransferencia,
+    pmCuentaDni,
+    pmModo,
+    pmEfectivo,
+    transferCopy,
+    dniCopy,
+    modoCopy,
+    medicalPolicyMode,
+    medicalGraceDays,
+    membershipFreezeEnabled,
+    membershipFreezeMaxDays,
+    validTextColor,
+    validTextSecondary,
+    validSurfaceColor,
+    validBorderColor,
+    validOverlayColor,
+  } = p;
+
+  const maxRaw = (membershipFreezeMaxDays || '').trim();
+  let freezeDays = null;
+  if (maxRaw !== '') {
+    const n = parseInt(maxRaw, 10);
+    if (Number.isFinite(n) && n >= 1) freezeDays = Math.min(366, n);
+  }
+  const medMode = medicalPolicyMode === 'grace' || medicalPolicyMode === 'flexible' ? medicalPolicyMode : 'strict';
+  const medGrace =
+    medMode === 'grace'
+      ? Math.min(90, Math.max(0, parseInt(String(medicalGraceDays || '0').trim(), 10) || 0))
+      : 0;
+
+  return JSON.stringify({
+    name: (name || '').trim(),
+    billingCurrency: String(billingCurrency || 'ARS').trim().toUpperCase(),
+    timezone: String(timezone || 'America/Argentina/Buenos_Aires').trim(),
+    accent: (accentColor || '').trim() || '#00dddd',
+    logo: logoUri || null,
+    theme: themePreset || 'dark_vivid',
+    bgType: backgroundType || 'solid',
+    bgUrl: (backgroundUrl || '').trim() || '',
+    textColor: validTextColor || '',
+    textSecondary: validTextSecondary || '',
+    surface: validSurfaceColor || '',
+    border: validBorderColor || '',
+    overlay: validOverlayColor || '',
+    welcome: (clientWelcomeMessage || '').trim(),
+    lock: !!lockClientTheme,
+    pm: {
+      mercadopago: pmMercadopago,
+      transferencia: pmTransferencia,
+      cuenta_dni: pmCuentaDni,
+      modo: pmModo,
+      efectivo: pmEfectivo,
+      transfer_copy: (transferCopy || '').trim(),
+      dni_copy: (dniCopy || '').trim(),
+      modo_copy: (modoCopy || '').trim(),
+    },
+    medical: { mode: medMode, grace_days: medGrace },
+    freezeEn: !!membershipFreezeEnabled,
+    freezeDays,
+  });
+}
+
 export default function GymConfigScreen() {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const isWebWide = isWeb && width >= 1200;
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const { t, mode } = useThemeContext();
   const { t: tStr } = useLocale();
   const { user, profile, organization, refreshOrganization } = useAuth() || {};
   const orgId = organization?.id || profile?.organization_id;
 
   const [name, setName] = useState(organization?.name || '');
+  const [billingCurrency, setBillingCurrency] = useState(
+    String(organization?.billing_currency || 'ARS').trim().toUpperCase(),
+  );
+  const [orgTimezone, setOrgTimezone] = useState(
+    String(organization?.timezone || 'America/Argentina/Buenos_Aires').trim(),
+  );
   const [accentColor, setAccentColor] = useState(organization?.accent_color || '#00dddd');
   const [logoUri, setLogoUri] = useState(organization?.logo_url || null);
   const [themePreset, setThemePreset] = useState(organization?.theme_preset || 'dark_vivid');
@@ -143,6 +276,30 @@ export default function GymConfigScreen() {
   /** Una pestaña = un tema; solo se monta el panel activo (toda la config sigue en el mismo save). */
   const [gymConfigTab, setGymConfigTab] = useState('general');
   const gymConfigScrollRef = useRef(null);
+  const [brandBrief, setBrandBrief] = useState('');
+  const [brandBusy, setBrandBusy] = useState(false);
+  const [brandDraft, setBrandDraft] = useState('');
+
+  const buildBrandingFallback = useCallback(
+    () =>
+      [
+        `Sugerencia de branding para ${(name || organization?.name || 'tu gym').trim()}:`,
+        '',
+        'PRESET=dark_vivid',
+        'ACCENT=#00DDDD',
+        'TEXT_PRIMARY=#E2E8F0',
+        'TEXT_SECONDARY=#94A3B8',
+        'SURFACE=#0F172A',
+        'BORDER=#334155',
+        'OVERLAY=#0B1220CC',
+        'VOICE=motivador, cercano y profesional',
+        'CTA=Empezar hoy',
+        'TAGLINE=Entrená con foco. Progresá en serio.',
+        'WELCOME=Bienvenido/a. Elegí tu plan y empezá hoy con una rutina clara.',
+        'WHY=Contraste alto, legibilidad móvil y tono consistente para conversión.',
+      ].join('\n'),
+    [name, organization?.name],
+  );
 
   useEffect(() => {
     gymConfigScrollRef.current?.scrollTo?.({ y: 0, animated: false });
@@ -151,6 +308,8 @@ export default function GymConfigScreen() {
   useEffect(() => {
     if (organization) {
       setName(organization.name || '');
+      setBillingCurrency(String(organization.billing_currency || 'ARS').trim().toUpperCase());
+      setOrgTimezone(String(organization.timezone || 'America/Argentina/Buenos_Aires').trim());
       setAccentColor(organization.accent_color || '#00dddd');
       setLogoUri(organization.logo_url || null);
       setThemePreset(organization.theme_preset || 'dark_vivid');
@@ -273,6 +432,88 @@ export default function GymConfigScreen() {
   const previewTokensDark = useMemo(() => getThemeTokens('dark', previewOrg), [previewOrg]);
   const previewTokensLight = useMemo(() => getThemeTokens('light', previewOrg), [previewOrg]);
 
+  const gymConfigDirty = useMemo(() => {
+    if (!organization?.id || !canEdit) return false;
+    if (backgroundLocalUri) return true;
+    return (
+      gymConfigBaselineString(organization) !==
+      gymConfigStateStringFromLocals({
+        name,
+        billingCurrency,
+        timezone: orgTimezone,
+        accentColor,
+        logoUri,
+        themePreset,
+        backgroundType,
+        backgroundUrl,
+        clientWelcomeMessage,
+        lockClientTheme,
+        pmMercadopago,
+        pmTransferencia,
+        pmCuentaDni,
+        pmModo,
+        pmEfectivo,
+        transferCopy,
+        dniCopy,
+        modoCopy,
+        medicalPolicyMode,
+        medicalGraceDays,
+        membershipFreezeEnabled,
+        membershipFreezeMaxDays,
+        validTextColor,
+        validTextSecondary,
+        validSurfaceColor,
+        validBorderColor,
+        validOverlayColor,
+      })
+    );
+  }, [
+    organization,
+    canEdit,
+    backgroundLocalUri,
+    name,
+    billingCurrency,
+    orgTimezone,
+    accentColor,
+    logoUri,
+    themePreset,
+    backgroundType,
+    backgroundUrl,
+    clientWelcomeMessage,
+    lockClientTheme,
+    pmMercadopago,
+    pmTransferencia,
+    pmCuentaDni,
+    pmModo,
+    pmEfectivo,
+    transferCopy,
+    dniCopy,
+    modoCopy,
+    medicalPolicyMode,
+    medicalGraceDays,
+    membershipFreezeEnabled,
+    membershipFreezeMaxDays,
+    validTextColor,
+    validTextSecondary,
+    validSurfaceColor,
+    validBorderColor,
+    validOverlayColor,
+  ]);
+
+  usePreventRemove(
+    gymConfigDirty,
+    ({ data }) => {
+      Alert.alert(tStr('nav_unsaved_discard_title'), tStr('nav_unsaved_discard_body'), [
+        { text: tStr('nav_unsaved_stay'), style: 'cancel' },
+        {
+          text: tStr('nav_unsaved_discard'),
+          style: 'destructive',
+          onPress: () => navigation.dispatch(data.action),
+        },
+      ]);
+    },
+  );
+
   const pickAndUploadLogo = async () => {
     if (!orgId) {
       Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_err_no_org'));
@@ -387,6 +628,16 @@ export default function GymConfigScreen() {
       }
       membershipFreezeMaxDaysOut = Math.min(366, n);
     }
+    const curr = String(billingCurrency || '').trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(curr)) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_currency_invalid'));
+      return;
+    }
+    const tz = String(orgTimezone || '').trim();
+    if (!tz) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_timezone_invalid'));
+      return;
+    }
     setSaving(true);
     try {
       const prevFeatures =
@@ -433,6 +684,8 @@ export default function GymConfigScreen() {
         .from('organizations')
         .update({
           name: trimmedName,
+          billing_currency: String(billingCurrency || 'ARS').trim().toUpperCase() || 'ARS',
+          timezone: String(orgTimezone || 'America/Argentina/Buenos_Aires').trim() || 'America/Argentina/Buenos_Aires',
           accent_color: (accentColor || '').trim() || '#00dddd',
           logo_url: logoUri || null,
           theme_preset: themePreset || 'dark_vivid',
@@ -446,7 +699,10 @@ export default function GymConfigScreen() {
       if (error) throw error;
       if (typeof refreshOrganization === 'function') await refreshOrganization();
       Alert.alert(tStr('gym_config_saved_title'), tStr('gym_config_saved_body'));
-      navigation.goBack();
+      // Deferir: el efecto que alinea el estado con `organization` corre tras el commit; si no, usePreventRemove ve aún dirty.
+      setTimeout(() => {
+        if (navigation.canGoBack()) navigation.goBack();
+      }, 0);
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_save_fail'));
     } finally {
@@ -588,6 +844,96 @@ export default function GymConfigScreen() {
     }
   }, [organization?.client_invite_code, name, organization?.name, tStr]);
 
+  const runBrandingAssistant = useCallback(async () => {
+    if (!orgId) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_err_no_org'));
+      return;
+    }
+    const brief = String(brandBrief || '').trim();
+    setBrandBusy(true);
+    try {
+      const base = [
+        `Gym: ${(name || organization?.name || 'Sin nombre').trim()}`,
+        `Estilo actual: ${themePreset || 'dark_vivid'}`,
+        `Acento actual: ${(accentColor || '').trim() || '#00dddd'}`,
+        `Mensaje actual: ${(clientWelcomeMessage || '').trim() || '(vacío)'}`,
+        `Preferencias del dueño: ${brief || '(sin preferencias)'}`,
+      ].join('\n');
+      const out = await draftMessageWithAi({
+        organizationId: orgId,
+        rawText: base,
+        titleHint: 'Asistente de branding de gym',
+        planKey: 'gym_branding',
+        slotLabel: '',
+        sessionDate: '',
+        extraNotes:
+          'Respondé en español en líneas EXACTAS (sin bullets), con este formato: PRESET=... ACCENT=#RRGGBB TEXT_PRIMARY=#RRGGBB TEXT_SECONDARY=#RRGGBB SURFACE=#RRGGBB BORDER=#RRGGBB OVERLAY=#RRGGBBAA VOICE=... CTA=... TAGLINE=... WELCOME=... WHY=... . Colores en HEX estricto (6 dígitos, y 8 solo para OVERLAY). No inventar planes/horarios/pagos.',
+      });
+      const text = String(out?.result?.result_text || '').trim();
+      if (!text) throw new Error(tStr('gym_branding_ai_fail'));
+      setBrandDraft(text);
+      const line = (k) => {
+        const m = text.match(new RegExp(`(?:^|\\n)\\s*${k}\\s*=\\s*(.+)`, 'i'));
+        return m ? String(m[1]).trim() : '';
+      };
+      const vPreset = line('PRESET');
+      const vAccent = line('ACCENT');
+      const vText = line('TEXT_PRIMARY');
+      const vSub = line('TEXT_SECONDARY');
+      const vSurface = line('SURFACE');
+      const vBorder = line('BORDER');
+      const vOverlay = line('OVERLAY');
+      const vWelcome = line('WELCOME');
+      const normalizeHex = (value, { allowAlpha = false } = {}) => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const re = allowAlpha ? /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/ : /^#[0-9a-fA-F]{6}$/;
+        if (!re.test(raw)) return '';
+        return `#${raw.slice(1).toUpperCase()}`;
+      };
+      if (vPreset) setThemePreset(vPreset);
+      const normAccent = normalizeHex(vAccent);
+      const normText = normalizeHex(vText);
+      const normSub = normalizeHex(vSub);
+      const normSurface = normalizeHex(vSurface);
+      const normBorder = normalizeHex(vBorder);
+      const normOverlay = normalizeHex(vOverlay, { allowAlpha: true });
+      if (normAccent) setAccentColor(normAccent);
+      if (normText) setTextColor(normText);
+      if (normSub) setTextSecondaryColor(normSub);
+      if (normSurface) setSurfaceColor(normSurface);
+      if (normBorder) setBorderColor(normBorder);
+      if (normOverlay) setOverlayColor(normOverlay);
+      if (vWelcome) setClientWelcomeMessage(vWelcome);
+    } catch (e) {
+      const msg = String(e?.message || '');
+      if (msg.toLowerCase().includes('quota')) {
+        Alert.alert(tStr('admin_ai_quota_title'), tStr('admin_ai_quota_body'));
+      } else if (
+        msg.includes('502') ||
+        msg.toLowerCase().includes('gemini') ||
+        msg.toLowerCase().includes('ai_generation_failed')
+      ) {
+        setBrandDraft(buildBrandingFallback());
+        Alert.alert(tStr('gym_branding_fallback_title'), tStr('gym_branding_fallback_body'));
+      } else {
+        Alert.alert(tStr('gym_config_alert_title_error'), msg || tStr('gym_branding_ai_fail'));
+      }
+    } finally {
+      setBrandBusy(false);
+    }
+  }, [
+    orgId,
+    brandBrief,
+    name,
+    organization?.name,
+    tStr,
+    buildBrandingFallback,
+    themePreset,
+    accentColor,
+    clientWelcomeMessage,
+  ]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -650,6 +996,18 @@ export default function GymConfigScreen() {
         logoBtn: { marginTop: 10, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: hexToRgba(t.brand, 0.2), borderRadius: 10, alignSelf: 'flex-start' },
         logoBtnSpaced: { marginTop: 12 },
         logoBtnText: { color: t.brand, fontSize: 14, fontWeight: '600' },
+        onboardingCard: {
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          borderRadius: 12,
+          backgroundColor: t.boxBg,
+          padding: 12,
+          marginTop: 8,
+        },
+        onboardingTitle: { color: t.text, fontSize: 15, fontWeight: '800', marginBottom: 6 },
+        onboardingHint: { color: t.subText, fontSize: 12, lineHeight: 17, marginBottom: 10 },
+        onboardingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+        onboardingBtnRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
         saveBtn: { ...t.buttonPrimary, borderRadius: 10, paddingVertical: 14, marginTop: 18, alignItems: 'center' },
         saveBtnText: { ...t.buttonPrimaryText, fontSize: 16 },
         hint: { color: t.placeholder, fontSize: 12, marginTop: 6 },
@@ -835,15 +1193,18 @@ export default function GymConfigScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={26} color={t.text} />
-          </TouchableOpacity>
+          {!hideInlineBack ? (
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+              <Ionicons name="arrow-back" size={26} color={t.text} />
+            </TouchableOpacity>
+          ) : null}
           <Text style={styles.title}>{tStr('gym_config_screen_title')}</Text>
         </View>
 
         <View style={styles.tabBarWrap}>
           {[
             ['general', 'gym_config_tab_general'],
+            ['brand_ai', 'gym_config_tab_brand_ai'],
             ['payments', 'gym_config_tab_payments'],
             ['medical', 'gym_config_tab_medical'],
             ['membership', 'gym_config_tab_membership'],
@@ -877,6 +1238,28 @@ export default function GymConfigScreen() {
             placeholderTextColor={t.placeholder}
             editable={canEdit}
           />
+          <Text style={[styles.label, { marginTop: 10 }]}>{tStr('gym_config_currency_label')}</Text>
+          <TextInput
+            style={styles.input}
+            value={billingCurrency}
+            onChangeText={(v) => setBillingCurrency(String(v || '').toUpperCase().slice(0, 3))}
+            placeholder={tStr('gym_config_currency_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+            autoCapitalize="characters"
+            maxLength={3}
+          />
+          <Text style={[styles.label, { marginTop: 10 }]}>{tStr('gym_config_timezone_label')}</Text>
+          <TextInput
+            style={styles.input}
+            value={orgTimezone}
+            onChangeText={setOrgTimezone}
+            placeholder={tStr('gym_config_timezone_ph')}
+            placeholderTextColor={t.placeholder}
+            editable={canEdit}
+            autoCapitalize="none"
+          />
+          <Text style={styles.hint}>{tStr('gym_config_timezone_hint')}</Text>
         </View>
 
         <View style={styles.block}>
@@ -894,7 +1277,54 @@ export default function GymConfigScreen() {
             multiline
           />
         </View>
+
           </>
+        ) : null}
+
+        {gymConfigTab === 'brand_ai' ? (
+          <View style={styles.block}>
+            <View style={styles.onboardingCard}>
+              <Text style={styles.onboardingTitle}>{tStr('gym_branding_title')}</Text>
+              <Text style={styles.onboardingHint}>{tStr('gym_branding_hint')}</Text>
+              <Text style={styles.label}>{tStr('gym_branding_brief_label')}</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 66, textAlignVertical: 'top' }]}
+                value={brandBrief}
+                onChangeText={setBrandBrief}
+                placeholder={tStr('gym_branding_brief_ph')}
+                placeholderTextColor={t.placeholder}
+                editable={canEdit && !brandBusy}
+                multiline
+              />
+              <Text style={styles.hint}>{tStr('gym_branding_outputs_hint')}</Text>
+              <TouchableOpacity
+                style={[styles.logoBtn, { marginTop: 12, opacity: brandBusy ? 0.6 : 1 }]}
+                onPress={runBrandingAssistant}
+                disabled={!canEdit || brandBusy}
+                activeOpacity={0.85}
+              >
+                {brandBusy ? (
+                  <ActivityIndicator size="small" color={t.brand} />
+                ) : (
+                  <Text style={styles.logoBtnText}>{tStr('gym_branding_generate')}</Text>
+                )}
+              </TouchableOpacity>
+              {brandDraft ? (
+                <>
+                  <Text style={[styles.label, { marginTop: 12 }]}>{tStr('gym_branding_result')}</Text>
+                  <Text style={[styles.input, { minHeight: 140 }]}>{brandDraft}</Text>
+                  <View style={styles.onboardingBtnRow}>
+                    <TouchableOpacity style={styles.logoBtn} onPress={save} activeOpacity={0.85}>
+                      <Text style={styles.logoBtnText}>{tStr('gym_branding_save_now')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.logoBtn} onPress={() => setGymConfigTab('appearance')} activeOpacity={0.85}>
+                      <Text style={styles.logoBtnText}>{tStr('gym_branding_go_appearance')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : null}
+            </View>
+          </View>
         ) : null}
 
         {gymConfigTab === 'payments' ? (
@@ -1589,7 +2019,7 @@ export default function GymConfigScreen() {
         )}
 
         {/* Footer atribución: logo completo (triangulo + texto) */}
-        <View style={{ alignItems: 'center', marginTop: 32, paddingVertical: 20 }}>
+        <View style={{ width: '100%', alignItems: 'center', marginTop: 32, paddingVertical: 20 }}>
           <LogoCompleto height={30} style={{ marginBottom: 6 }} />
           <Text style={[styles.hint, { fontSize: 11, opacity: 0.8 }]}>{tStr('gym_config_footer')}</Text>
         </View>

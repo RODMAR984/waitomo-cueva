@@ -11,9 +11,11 @@ import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 
 export default function AdminReportesScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -93,9 +95,11 @@ export default function AdminReportesScreen() {
   return (
     <BackgroundWrapper screen="Admin">
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-          <Ionicons name="arrow-back" size={24} color={t.text} />
-        </TouchableOpacity>
+        {!hideInlineBack ? (
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+            <Ionicons name="arrow-back" size={24} color={t.text} />
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.title}>{tStr('admin_reportes_title')}</Text>
       </View>
       <ScrollView

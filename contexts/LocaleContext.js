@@ -5,6 +5,7 @@ import { translations, SUPPORTED_LOCALES } from '../locales/translations';
 
 export const LOCALE_ES = 'es';
 export const LOCALE_EN = 'en';
+export const LOCALE_PT = 'pt';
 
 const STORAGE_KEY = 'app_locale';
 
@@ -22,7 +23,7 @@ export function LocaleProvider({ children }) {
     (async () => {
       try {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved === 'es' || saved === 'en') setLocaleState(saved);
+        if (saved === 'es' || saved === 'en' || saved === 'pt') setLocaleState(saved);
       } catch {
         // ignore
       }
@@ -30,7 +31,7 @@ export function LocaleProvider({ children }) {
   }, []);
 
   const setLocale = useCallback(async (newLocale) => {
-    if (newLocale !== 'es' && newLocale !== 'en') return;
+    if (newLocale !== 'es' && newLocale !== 'en' && newLocale !== 'pt') return;
     setLocaleState(newLocale);
     try {
       await AsyncStorage.setItem(STORAGE_KEY, newLocale);

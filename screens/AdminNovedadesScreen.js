@@ -22,6 +22,7 @@ import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -34,6 +35,7 @@ const hexToRgba = (hex, alpha) => {
 
 export default function AdminNovedadesScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const { user, profile, organization } = useAuth() || {};
@@ -248,9 +250,11 @@ export default function AdminNovedadesScreen() {
       >
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            {!hideInlineBack ? (
+              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                <Ionicons name="arrow-back" size={26} color={t.text} />
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.title}>{tStr('admin_news_screen_title')}</Text>
             <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>
               <Text style={styles.btnText}>{tStr('admin_news_new')}</Text>

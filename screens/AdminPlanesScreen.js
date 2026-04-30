@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { supabase } from '../supabaseClient';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
 
 const hexToRgba = (hex, alpha) => {
@@ -78,6 +79,7 @@ function findSlotConflicts(localSlots, excludePlanCode, allSlotRows, plansList) 
 
 export default function AdminPlanesScreen() {
   const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const { width } = useWindowDimensions();
   const isWebWide = Platform.OS === 'web' && width >= 1200;
   const { t } = useThemeContext();
@@ -483,9 +485,11 @@ export default function AdminPlanesScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            {!hideInlineBack ? (
+              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                <Ionicons name="arrow-back" size={26} color={t.text} />
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.title}>{tStr('admin_plans_screen_title')}</Text>
             {isOwner && (
               <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>

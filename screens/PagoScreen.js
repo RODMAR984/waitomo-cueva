@@ -30,6 +30,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { createCheckoutPreference } from '../utils/mercadoPagoCheckout';
+import { createStripeCheckoutSession } from '../utils/stripeCheckout';
 import { resolveClientPaymentMethods } from '../utils/clientPaymentMethods';
 
 // ---------- helpers ----------
@@ -113,6 +114,8 @@ export default function PagoScreen({ navigation, route }) {
     () => resolveClientPaymentMethods(organization?.features),
     [organization?.features],
   );
+  const stripeReady = !!organization?.stripe_checkout_enabled && !!organization?.stripe_connect_account_id;
+  const selectedCurrency = String(organization?.billing_currency || 'ARS').toUpperCase();
   const anyPaymentMethod =
     paymentMethods.mercadopago ||
     paymentMethods.transferencia ||
@@ -410,6 +413,36 @@ export default function PagoScreen({ navigation, route }) {
                 </TouchableOpacity>
 
                 <Text style={styles.intlNote}>{tStr('pago_international_note')}</Text>
+              </>
+            ) : null}
+
+            {stripeReady ? (
+              <>
+                <Text style={styles.mpHint}>{tStr('pago_stripe_checkout_hint')}</Text>
+                <TouchableOpacity
+                  style={styles.btnPrimary}
+                  onPress={async () => {
+                    try {
+                      const result = await createStripeCheckoutSession({
+                        organizationId: organization?.id,
+                        memberUserId: userId,
+                        planId: planCanon,
+                        periodo,
+                        amount: monto,
+                        currency: selectedCurrency,
+                        title: `FitEngine · ${planCanon}`,
+                      });
+                      if (result?.payment_id) setPaymentId(result.payment_id);
+                      if (result?.checkout_url) {
+                        await WebBrowser.openBrowserAsync(result.checkout_url);
+                      }
+                    } catch (e) {
+                      Alert.alert(tStr('security_error_title'), tStr('pago_stripe_checkout_err'));
+                    }
+                  }}
+                >
+                  <Text style={styles.btnTextOn}>{tStr('pago_btn_stripe')}</Text>
+                </TouchableOpacity>
               </>
             ) : null}
 
