@@ -83,10 +83,30 @@ Deno.serve(async (req: Request) => {
       redirect_uri: callbackUrl,
     }),
   });
+  const tokenBodyText = await tokenRes.text();
   if (!tokenRes.ok) {
-    return htmlRedirect(`${returnUrl}&status=error&reason=token_exchange_failed`, "No se pudo conectar Stripe");
+    let detail = "";
+    try {
+      const j = JSON.parse(tokenBodyText);
+      const desc = j?.error_description || j?.error;
+      if (desc) detail = String(desc);
+    } catch {
+      if (tokenBodyText) detail = tokenBodyText.slice(0, 240);
+    }
+    const reason = detail
+      ? `token_exchange_failed:${detail}`.slice(0, 500)
+      : "token_exchange_failed";
+    return htmlRedirect(
+      `${returnUrl}&status=error&reason=${encodeURIComponent(reason)}`,
+      "No se pudo conectar Stripe",
+    );
   }
-  const tokenJson: any = await tokenRes.json();
+  let tokenJson: any;
+  try {
+    tokenJson = JSON.parse(tokenBodyText);
+  } catch {
+    return htmlRedirect(`${returnUrl}&status=error&reason=token_exchange_invalid_json`, "Respuesta Stripe invalida");
+  }
   const stripeAccountId = String(tokenJson?.stripe_user_id || "").trim();
   if (!stripeAccountId) {
     return htmlRedirect(`${returnUrl}&status=error&reason=missing_account_id`, "Stripe no devolvio cuenta");
@@ -101,7 +121,15 @@ Deno.serve(async (req: Request) => {
     })
     .eq("id", organizationId);
   if (upErr) {
-    return htmlRedirect(`${returnUrl}&status=error&reason=db_update_failed`, "No se pudo guardar la cuenta");
+    const msg = String(upErr.message || "db_update_failed");
+    const details = String(upErr.details || "").trim();
+    const hint = String(upErr.hint || "").trim();
+    const reason = details ? `${msg}: ${details}` : msg;
+    const reasonWithHint = hint ? `${reason} (${hint})` : reason;
+    return htmlRedirect(
+      `${returnUrl}&status=error&reason=${encodeURIComponent(reasonWithHint)}`,
+      "No se pudo guardar la cuenta",
+    );
   }
 
   return htmlRedirect(`${returnUrl}&status=ok&account_id=${encodeURIComponent(stripeAccountId)}`, "Stripe conectado correctamente");
