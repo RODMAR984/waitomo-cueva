@@ -26,11 +26,9 @@ async function hmacSHA256(secret: string, message: string) {
   return b64url(bin);
 }
 
-function htmlRedirect(url: string, title: string) {
-  return new Response(
-    `<!doctype html><html><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${url}"/></head><body><h3>${title}</h3><a href="${url}">Continuar</a></body></html>`,
-    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } },
-  );
+/** HTTP redirect: WebView / Chrome in-app no siempre ejecutan meta refresh HTML. */
+function redirectToApp(targetUrl: string) {
+  return Response.redirect(targetUrl, 302);
 }
 
 Deno.serve(async (req: Request) => {
@@ -50,26 +48,26 @@ Deno.serve(async (req: Request) => {
   if (!supabaseUrl || !serviceKey || !stripeSecret || !stateSecret) {
     return new Response("missing_env", { status: 500 });
   }
-  if (error) return htmlRedirect(`${returnUrl}&status=error&reason=${encodeURIComponent(error)}`, "Error conectando Stripe");
+  if (error) return redirectToApp(`${returnUrl}&status=error&reason=${encodeURIComponent(error)}`);
   if (!code || !state || !state.includes(".")) {
-    return htmlRedirect(`${returnUrl}&status=error&reason=invalid_params`, "Parametros invalidos");
+    return redirectToApp(`${returnUrl}&status=error&reason=invalid_params`);
   }
 
   const [encoded, sig] = state.split(".");
   const expected = await hmacSHA256(stateSecret, encoded);
   if (sig !== expected) {
-    return htmlRedirect(`${returnUrl}&status=error&reason=invalid_state`, "Estado invalido");
+    return redirectToApp(`${returnUrl}&status=error&reason=invalid_state`);
   }
 
   let payload: any;
   try {
     payload = JSON.parse(b64urlToText(encoded));
   } catch {
-    return htmlRedirect(`${returnUrl}&status=error&reason=invalid_state_payload`, "Estado invalido");
+    return redirectToApp(`${returnUrl}&status=error&reason=invalid_state_payload`);
   }
   const organizationId = String(payload?.org_id || "").trim();
   if (!organizationId) {
-    return htmlRedirect(`${returnUrl}&status=error&reason=missing_org`, "Falta organizacion");
+    return redirectToApp(`${returnUrl}&status=error&reason=missing_org`);
   }
 
   const callbackUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/stripe-connect-callback`;
@@ -96,20 +94,17 @@ Deno.serve(async (req: Request) => {
     const reason = detail
       ? `token_exchange_failed:${detail}`.slice(0, 500)
       : "token_exchange_failed";
-    return htmlRedirect(
-      `${returnUrl}&status=error&reason=${encodeURIComponent(reason)}`,
-      "No se pudo conectar Stripe",
-    );
+    return redirectToApp(`${returnUrl}&status=error&reason=${encodeURIComponent(reason)}`);
   }
   let tokenJson: any;
   try {
     tokenJson = JSON.parse(tokenBodyText);
   } catch {
-    return htmlRedirect(`${returnUrl}&status=error&reason=token_exchange_invalid_json`, "Respuesta Stripe invalida");
+    return redirectToApp(`${returnUrl}&status=error&reason=token_exchange_invalid_json`);
   }
   const stripeAccountId = String(tokenJson?.stripe_user_id || "").trim();
   if (!stripeAccountId) {
-    return htmlRedirect(`${returnUrl}&status=error&reason=missing_account_id`, "Stripe no devolvio cuenta");
+    return redirectToApp(`${returnUrl}&status=error&reason=missing_account_id`);
   }
 
   const supabase = createClient(supabaseUrl, serviceKey);
@@ -126,11 +121,8 @@ Deno.serve(async (req: Request) => {
     const hint = String(upErr.hint || "").trim();
     const reason = details ? `${msg}: ${details}` : msg;
     const reasonWithHint = hint ? `${reason} (${hint})` : reason;
-    return htmlRedirect(
-      `${returnUrl}&status=error&reason=${encodeURIComponent(reasonWithHint)}`,
-      "No se pudo guardar la cuenta",
-    );
+    return redirectToApp(`${returnUrl}&status=error&reason=${encodeURIComponent(reasonWithHint)}`);
   }
 
-  return htmlRedirect(`${returnUrl}&status=ok&account_id=${encodeURIComponent(stripeAccountId)}`, "Stripe conectado correctamente");
+  return redirectToApp(`${returnUrl}&status=ok&account_id=${encodeURIComponent(stripeAccountId)}`);
 });
