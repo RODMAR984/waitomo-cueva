@@ -63,6 +63,30 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "invalid_args" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   }
 
+  const nativeReturnRaw = String(body.native_return_url || "").trim();
+  let nativeReturn = "";
+  if (nativeReturnRaw) {
+    if (nativeReturnRaw.length > 512) {
+      return new Response(JSON.stringify({ error: "native_return_url_too_long" }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    const low = nativeReturnRaw.toLowerCase();
+    const ok =
+      low.startsWith("waitomo://") ||
+      low.startsWith("exp://") ||
+      low.startsWith("exps://") ||
+      low.startsWith("exp+");
+    if (!ok) {
+      return new Response(JSON.stringify({ error: "native_return_url_not_allowed" }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    nativeReturn = nativeReturnRaw;
+  }
+
   const supabase = createClient(supabaseUrl, serviceKey);
   const { data: org, error: orgErr } = await supabase
     .from("organizations")
@@ -92,6 +116,7 @@ Deno.serve(async (req: Request) => {
     actor_id: actorId,
     iat: Date.now(),
   };
+  if (nativeReturn) payload.native_return = nativeReturn;
   const encoded = b64url(JSON.stringify(payload));
   const sig = await hmacSHA256(stateSecret, encoded);
   const state = `${encoded}.${sig}`;

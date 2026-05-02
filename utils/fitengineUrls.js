@@ -68,3 +68,8 @@ export function buildClientInviteNativeLink(code) {
 export function getOAuthRedirectUriForSupabase() {
   return AuthSession.makeRedirectUri({ scheme: 'waitomo' });
 }
+
+/** Mismo patrón que Supabase OAuth: Stripe Connect vuelve acá y `openAuthSessionAsync` cierra el in-app browser. */
+export function getStripeConnectRedirectUri() {
+  return AuthSession.makeRedirectUri({ scheme: 'waitomo', path: 'stripe-connect' });
+}

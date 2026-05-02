@@ -678,6 +678,10 @@ export const translations = {
     admin_stripe_account_id: 'Stripe Connect account id',
     admin_stripe_checkout_toggle: 'Habilitar checkout (cuando esté cableado)',
     admin_stripe_connect_auto: 'Conectar Stripe automáticamente',
+    admin_stripe_connect_title: 'Stripe Connect',
+    admin_stripe_connect_success: 'Cuenta conectada correctamente. Ya podés usar checkout con esta organización.',
+    admin_stripe_connect_cancelled: 'Conexión cancelada.',
+    admin_stripe_connect_unknown_result: 'No se recibió la confirmación de Stripe.',
     admin_stripe_webhook_note:
       'Webhook recomendado: /functions/v1/stripe-webhook con STRIPE_WEBHOOK_SECRET. Ver docs/INTEGRACIONES_ANALYTICS_EXPORT.md.',
     admin_badges_title: 'Badges',
@@ -2412,6 +2416,10 @@ export const translations = {
     admin_stripe_account_id: 'Stripe Connect account id',
     admin_stripe_checkout_toggle: 'Enable checkout (when wired)',
     admin_stripe_connect_auto: 'Connect Stripe automatically',
+    admin_stripe_connect_title: 'Stripe Connect',
+    admin_stripe_connect_success: 'Account connected. Checkout is ready for this organization.',
+    admin_stripe_connect_cancelled: 'Connection cancelled.',
+    admin_stripe_connect_unknown_result: 'Did not receive confirmation from Stripe.',
     admin_stripe_webhook_note:
       'Recommended webhook: /functions/v1/stripe-webhook with STRIPE_WEBHOOK_SECRET. See docs/INTEGRACIONES_ANALYTICS_EXPORT.md.',
     admin_badges_title: 'Badges',

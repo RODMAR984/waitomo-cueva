@@ -31,6 +31,37 @@ function redirectToApp(targetUrl: string) {
   return Response.redirect(targetUrl, 302);
 }
 
+function isAllowedNativeReturn(raw: string) {
+  const s = String(raw || "").trim();
+  if (!s || s.length > 512) return false;
+  const low = s.toLowerCase();
+  return (
+    low.startsWith("waitomo://") ||
+    low.startsWith("exp://") ||
+    low.startsWith("exps://") ||
+    low.startsWith("exp+")
+  );
+}
+
+/** Vuelta a app nativa (deep link) o a la web; `native_return` via state firmado (solo lo mandó el cliente). */
+function buildStripeConnectAppUrl(
+  nativePayload: { native_return?: string } | null,
+  parts: { status: string; account_id?: string; reason?: string },
+) {
+  const qs = new URLSearchParams();
+  qs.set("stripe_connect", "done");
+  qs.set("status", parts.status);
+  if (parts.account_id) qs.set("account_id", parts.account_id);
+  if (parts.reason) qs.set("reason", parts.reason);
+  const q = qs.toString();
+  const native = String(nativePayload?.native_return || "").trim();
+  if (native && isAllowedNativeReturn(native)) {
+    return native.includes("?") ? `${native}&${q}` : `${native}?${q}`;
+  }
+  const returnBase = (Deno.env.get("FITENGINE_WEB_APP_URL") || "https://app.fitengine.app").replace(/\/$/, "");
+  return `${returnBase}/?${q}`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "GET") return new Response("method_not_allowed", { status: 405 });
 
@@ -43,31 +74,31 @@ Deno.serve(async (req: Request) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
   const stateSecret = Deno.env.get("STRIPE_CONNECT_STATE_SECRET") ?? "";
-  const returnBase = (Deno.env.get("FITENGINE_WEB_APP_URL") || "https://app.fitengine.app").replace(/\/$/, "");
-  const returnUrl = `${returnBase}/?stripe_connect=done`;
   if (!supabaseUrl || !serviceKey || !stripeSecret || !stateSecret) {
     return new Response("missing_env", { status: 500 });
   }
-  if (error) return redirectToApp(`${returnUrl}&status=error&reason=${encodeURIComponent(error)}`);
+  if (error) {
+    return redirectToApp(buildStripeConnectAppUrl(null, { status: "error", reason: error }));
+  }
   if (!code || !state || !state.includes(".")) {
-    return redirectToApp(`${returnUrl}&status=error&reason=invalid_params`);
+    return redirectToApp(buildStripeConnectAppUrl(null, { status: "error", reason: "invalid_params" }));
   }
 
   const [encoded, sig] = state.split(".");
   const expected = await hmacSHA256(stateSecret, encoded);
   if (sig !== expected) {
-    return redirectToApp(`${returnUrl}&status=error&reason=invalid_state`);
+    return redirectToApp(buildStripeConnectAppUrl(null, { status: "error", reason: "invalid_state" }));
   }
 
   let payload: any;
   try {
     payload = JSON.parse(b64urlToText(encoded));
   } catch {
-    return redirectToApp(`${returnUrl}&status=error&reason=invalid_state_payload`);
+    return redirectToApp(buildStripeConnectAppUrl(null, { status: "error", reason: "invalid_state_payload" }));
   }
   const organizationId = String(payload?.org_id || "").trim();
   if (!organizationId) {
-    return redirectToApp(`${returnUrl}&status=error&reason=missing_org`);
+    return redirectToApp(buildStripeConnectAppUrl(payload, { status: "error", reason: "missing_org" }));
   }
 
   const callbackUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/stripe-connect-callback`;
@@ -94,17 +125,17 @@ Deno.serve(async (req: Request) => {
     const reason = detail
       ? `token_exchange_failed:${detail}`.slice(0, 500)
       : "token_exchange_failed";
-    return redirectToApp(`${returnUrl}&status=error&reason=${encodeURIComponent(reason)}`);
+    return redirectToApp(buildStripeConnectAppUrl(payload, { status: "error", reason }));
   }
   let tokenJson: any;
   try {
     tokenJson = JSON.parse(tokenBodyText);
   } catch {
-    return redirectToApp(`${returnUrl}&status=error&reason=token_exchange_invalid_json`);
+    return redirectToApp(buildStripeConnectAppUrl(payload, { status: "error", reason: "token_exchange_invalid_json" }));
   }
   const stripeAccountId = String(tokenJson?.stripe_user_id || "").trim();
   if (!stripeAccountId) {
-    return redirectToApp(`${returnUrl}&status=error&reason=missing_account_id`);
+    return redirectToApp(buildStripeConnectAppUrl(payload, { status: "error", reason: "missing_account_id" }));
   }
 
   const supabase = createClient(supabaseUrl, serviceKey);
@@ -121,8 +152,8 @@ Deno.serve(async (req: Request) => {
     const hint = String(upErr.hint || "").trim();
     const reason = details ? `${msg}: ${details}` : msg;
     const reasonWithHint = hint ? `${reason} (${hint})` : reason;
-    return redirectToApp(`${returnUrl}&status=error&reason=${encodeURIComponent(reasonWithHint)}`);
+    return redirectToApp(buildStripeConnectAppUrl(payload, { status: "error", reason: reasonWithHint }));
   }
 
-  return redirectToApp(`${returnUrl}&status=ok&account_id=${encodeURIComponent(stripeAccountId)}`);
+  return redirectToApp(buildStripeConnectAppUrl(payload, { status: "ok", account_id: stripeAccountId }));
 });

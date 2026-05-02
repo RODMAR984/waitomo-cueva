@@ -13,12 +13,14 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import { supabase } from '../supabaseClient';
+import { getStripeConnectRedirectUri } from '../utils/fitengineUrls';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
@@ -78,19 +80,44 @@ export default function AdminStripeSettingsScreen() {
     }
     setConnecting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('stripe-connect-start', {
-        body: { organization_id: orgId },
-      });
+      const nativeReturn = Platform.OS !== 'web' ? getStripeConnectRedirectUri() : '';
+      const body = { organization_id: orgId };
+      if (nativeReturn) body.native_return_url = nativeReturn;
+
+      const { data, error } = await supabase.functions.invoke('stripe-connect-start', { body });
       if (error) throw error;
       const oauthUrl = String(data?.oauth_url || '');
       if (!oauthUrl) throw new Error('missing_oauth_url');
-      await Linking.openURL(oauthUrl);
+
+      if (Platform.OS === 'web') {
+        await Linking.openURL(oauthUrl);
+        return;
+      }
+
+      WebBrowser.maybeCompleteAuthSession();
+      const result = await WebBrowser.openAuthSessionAsync(oauthUrl, nativeReturn, { showInRecents: true });
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        Alert.alert(tStr('admin_stripe_connect_title'), tStr('admin_stripe_connect_cancelled'));
+        return;
+      }
+      if (result.type !== 'success' || !result.url) {
+        throw new Error(tStr('admin_stripe_connect_unknown_result'));
+      }
+      const parsed = Linking.parse(result.url);
+      const status = String(parsed.queryParams?.status || '').trim();
+      const reason = String(parsed.queryParams?.reason || '').trim();
+      if (status === 'ok') {
+        if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
+        Alert.alert(tStr('admin_stripe_connect_title'), tStr('admin_stripe_connect_success'));
+      } else {
+        Alert.alert(tStr('admin_stripe_connect_title'), reason || tStr('gym_config_alert_title_error'));
+      }
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
     } finally {
       setConnecting(false);
     }
-  }, [canEdit, orgId, tStr]);
+  }, [canEdit, orgId, refreshOrganization, tStr]);
 
   const styles = useMemo(
     () =>
