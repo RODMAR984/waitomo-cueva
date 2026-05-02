@@ -49,6 +49,11 @@ export default function AdminStripeSettingsScreen() {
     setCheckoutOn(!!organization?.stripe_checkout_enabled);
   }, [organization?.stripe_connect_account_id, organization?.stripe_checkout_enabled]);
 
+  const stripeConnectedLive = useMemo(() => {
+    const id = String(organization?.stripe_connect_account_id || '').trim();
+    return id.startsWith('acct_') && !!organization?.stripe_checkout_enabled;
+  }, [organization?.stripe_connect_account_id, organization?.stripe_checkout_enabled]);
+
   const save = useCallback(async () => {
     if (!orgId || !canEdit) {
       Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
@@ -161,6 +166,19 @@ export default function AdminStripeSettingsScreen() {
         btnSecondaryText: { color: t.text, fontWeight: '800' },
         link: { color: t.brand, textDecorationLine: 'underline', marginTop: 10 },
         noEditHint: { marginTop: 16 },
+        connectedBanner: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          backgroundColor: t.boxBg,
+          borderRadius: 12,
+          padding: 14,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          marginBottom: 14,
+        },
+        connectedTitle: { color: t.text, fontWeight: '900', fontSize: 16 },
+        connectedBody: { color: t.subText, fontSize: 13, marginTop: 6, lineHeight: 19 },
+        fieldCaption: { color: t.subText, fontSize: 11, marginTop: 4, lineHeight: 16 },
       }),
     [insets.top, t],
   );
@@ -176,8 +194,18 @@ export default function AdminStripeSettingsScreen() {
         <Text style={styles.title}>{tStr('admin_stripe_title')}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.body}>
+        {stripeConnectedLive ? (
+          <View style={styles.connectedBanner} accessibilityRole="summary">
+            <Ionicons name="checkmark-circle" size={28} color={t.brand} style={{ marginRight: 10, marginTop: 2 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.connectedTitle}>{tStr('admin_stripe_banner_connected_title')}</Text>
+              <Text style={styles.connectedBody}>{tStr('admin_stripe_banner_connected_body')}</Text>
+            </View>
+          </View>
+        ) : null}
         <Text style={styles.hint}>{tStr('admin_stripe_hint')}</Text>
         <Text style={styles.label}>{tStr('admin_stripe_account_id')}</Text>
+        <Text style={styles.fieldCaption}>{tStr('admin_stripe_account_id_caption')}</Text>
         <TextInput
           style={styles.input}
           value={acct}

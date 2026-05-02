@@ -682,6 +682,10 @@ export const translations = {
     admin_stripe_connect_success: 'Cuenta conectada correctamente. Ya podés usar checkout con esta organización.',
     admin_stripe_connect_cancelled: 'Conexión cancelada.',
     admin_stripe_connect_unknown_result: 'No se recibió la confirmación de Stripe.',
+    admin_stripe_banner_connected_title: 'Stripe conectado',
+    admin_stripe_banner_connected_body:
+      'Los cobros con tarjeta pueden ir a la cuenta Connect de este gym. El id debajo es solo referencia técnica.',
+    admin_stripe_account_id_caption: 'Referencia técnica (Stripe Connect). No tenés que copiarlo para cobrar.',
     admin_stripe_webhook_note:
       'Webhook recomendado: /functions/v1/stripe-webhook con STRIPE_WEBHOOK_SECRET. Ver docs/INTEGRACIONES_ANALYTICS_EXPORT.md.',
     admin_badges_title: 'Badges',
@@ -2420,6 +2424,10 @@ export const translations = {
     admin_stripe_connect_success: 'Account connected. Checkout is ready for this organization.',
     admin_stripe_connect_cancelled: 'Connection cancelled.',
     admin_stripe_connect_unknown_result: 'Did not receive confirmation from Stripe.',
+    admin_stripe_banner_connected_title: 'Stripe connected',
+    admin_stripe_banner_connected_body:
+      'Card payments can go to this gym’s Connect account. The id below is technical reference only.',
+    admin_stripe_account_id_caption: 'Technical Stripe Connect id. You don’t need to copy it to get paid.',
     admin_stripe_webhook_note:
       'Recommended webhook: /functions/v1/stripe-webhook with STRIPE_WEBHOOK_SECRET. See docs/INTEGRACIONES_ANALYTICS_EXPORT.md.',
     admin_badges_title: 'Badges',
