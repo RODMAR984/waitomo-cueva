@@ -160,6 +160,7 @@ const isOAuthCallbackUrl = (url) => {
   if (!url || typeof url !== 'string') return false;
   const u = url.trim();
   if (!u.startsWith('waitomo://') && !u.startsWith('exp://')) return false;
+  if (/[?&]code=/.test(u)) return true;
   return u.includes('#') && (u.includes('access_token') || u.includes('code='));
 };
 
@@ -1688,34 +1689,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   // -------------------------
-  // OAUTH Google (tu versión)
+  // OAUTH Google / Apple
   // -------------------------
   const signInWithProvider = async (provider) => {
-    try {
-      setLoading(true);
-      const allowed = ['google', 'apple'];
-      if (!allowed.includes(provider)) throw new Error('Proveedor no habilitado.');
-
-      const redirectTo = getOAuthRedirectUriForSupabase();
-      console.log('🟡 OAUTH redirectTo =>', redirectTo);
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo, skipBrowserRedirect: true },
-      });
-      if (error) throw error;
-
-      WebBrowser.maybeCompleteAuthSession();
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, { showInRecents: true });
-      if (result.type !== 'success' || !result.url) throw new Error('OAuth cancelado o sin URL de retorno.');
-
-      const returnedUrl = result.url;
+    const finishOAuthWithReturnUrl = async (returnedUrl) => {
       const hasHash = returnedUrl.includes('#');
       const hasCode = /[?&]code=/.test(returnedUrl);
       console.log('🟡 OAuth [DEBUG] returnedUrl hasHash:', hasHash, 'hasCode:', hasCode);
 
-      // ✅ Si Android devuelve solo fragmento (#access_token=...), NO llamar exchangeCodeForSession
-      // porque se cuelga y nunca llegamos al bloque del fragmento (pantalla Login se queda en "Ingresando con Google...").
       if (!hasHash || hasCode) {
         console.log('🟡 OAuth [DEBUG] paso: intentando exchangeCodeForSession (timeout 3s)');
         try {
@@ -1738,15 +1719,12 @@ export const AuthProvider = ({ children }) => {
       const code = parsed?.queryParams?.code;
 
       if (code) {
-        const { data: exchanged, error: exError } = await supabase.auth.exchangeCodeForSession(code);
+        const { data: exchanged, error: exError } = await supabase.auth.exchangeCodeForSession(returnedUrl);
         if (exError) throw exError;
         await syncFromSession(exchanged?.session || null);
         return exchanged;
       }
 
-      // ✅ FALLBACK 1: Android devuelve tokens en el fragmento (#). setSession/getSession se cuelgan
-      // al volver del browser desde Login. Construimos la sesión desde el JWT y sincronizamos
-      // sin depender de Supabase.
       if (returnedUrl.includes('#')) {
         const fragment = returnedUrl.split('#')[1] || '';
         const params = new URLSearchParams(fragment);
@@ -1798,7 +1776,6 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // Último intento por si Supabase ya tiene sesión
       const justLoggedOutAt = justLoggedOutAtRef.current;
       if (justLoggedOutAt != null && Date.now() - justLoggedOutAt < LOGOUT_IGNORE_MS) {
         console.log('🧨 OAuth getSession: acabo de cerrar sesión → rechazo sesión fantasma');
@@ -1817,6 +1794,44 @@ export const AuthProvider = ({ children }) => {
       }
 
       throw new Error('OAuth volvió sin code ni tokens.');
+    };
+
+    try {
+      setLoading(true);
+      const allowed = ['google', 'apple'];
+      if (!allowed.includes(provider)) throw new Error('Proveedor no habilitado.');
+
+      const redirectTo = getOAuthRedirectUriForSupabase();
+      console.log('🟡 OAUTH redirectTo =>', redirectTo);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error('OAuth: proveedor no devolvió URL.');
+
+      WebBrowser.maybeCompleteAuthSession();
+
+      // Nativo: SIEMPRE `openAuthSessionAsync` (Custom Tabs / ASWebAuthenticationSession). Expo documenta
+      // que en Android esto ya usa Linking internamente; `openBrowserAsync` + listener manual no recibe
+      // el `waitomo://` y termina en timeout (el error que viste en LogBox).
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, { showInRecents: true });
+
+      if (result.type !== 'success' || !result.url) {
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          throw new Error('OAuth cancelado.');
+        }
+        throw new Error(
+          'OAuth: sin URL de retorno. Si te quedaste en la web de bienvenida, revisá en Supabase que Redirect URLs incluya exactamente: ' +
+            redirectTo,
+        );
+      }
+
+      const returnedUrl = result.url;
+
+      console.log('🟡 OAuth [DEBUG] processing return URL');
+      return await finishOAuthWithReturnUrl(returnedUrl);
     } finally {
       setLoading(false);
     }

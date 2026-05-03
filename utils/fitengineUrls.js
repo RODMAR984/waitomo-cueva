@@ -7,6 +7,7 @@
  */
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 function stripTrailingSlash(s) {
   return String(s || '').replace(/\/+$/, '');
@@ -64,12 +65,22 @@ export function buildClientInviteNativeLink(code) {
   return `waitomo://join?code=${encodeURIComponent(c)}`;
 }
 
-/** Redirect que Supabase OAuth debe permitir (Dashboard) + coincide con signInWithOAuth. */
+/**
+ * OAuth redirect HTTPS (web + nativo). Usa **linksBaseUrl** (`fitengine.app`), no el marketing
+ * `waitomofitengine.com`: ese dominio puede estar caído en Vercel (DEPLOYMENT_NOT_FOUND) y rompe todo el login.
+ *
+ * Whitelist en Supabase: `https://fitengine.app/auth/callback` (y `www` si lo usás).
+ * Stub estático: `deploy/legal-stub-public/auth-callback.html` + rewrite `/auth/callback`.
+ */
 export function getOAuthRedirectUriForSupabase() {
-  return AuthSession.makeRedirectUri({ scheme: 'waitomo' });
+  const { linksBaseUrl } = getFitEngineUrls();
+  return `${linksBaseUrl}/auth/callback`;
 }
 
-/** Mismo patrón que Supabase OAuth: Stripe Connect vuelve acá y `openAuthSessionAsync` cierra el in-app browser. */
+/** Mismo patrón que OAuth: Stripe Connect vuelve acá y `openAuthSessionAsync` cierra el in-app browser. */
 export function getStripeConnectRedirectUri() {
-  return AuthSession.makeRedirectUri({ scheme: 'waitomo', path: 'stripe-connect' });
+  if (Platform.OS === 'web') {
+    return AuthSession.makeRedirectUri({ path: 'stripe-connect' });
+  }
+  return 'waitomo://stripe-connect';
 }

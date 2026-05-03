@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FitEngine — acceso</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+        text-align: center;
+        color: #0a0a0a;
+        background: #fafafa;
+      }
+    </style>
+  </head>
+  <body>
+    <p><strong>Volviendo a la app…</strong></p>
+    <p style="font-size: 0.9rem; color: #444">Si no se abre FitEngine, cerrá esta pestaña y volvé a la app.</p>
+    <script>
+      (function () {
+        var q = window.location.search || '';
+        var h = window.location.hash || '';
+        var native = 'waitomo://auth/callback' + q + h;
+        try {
+          window.location.replace(native);
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

@@ -139,7 +139,18 @@ if (wantsServiceWorker) {
 }
 
 fs.writeFileSync(indexPath, html, 'utf8');
+
+// OAuth (Supabase): https://fitengine.app/auth/callback — debe existir en el deploy estático.
+const oauthStub = path.join(root, 'deploy', 'legal-stub-public', 'auth-callback.html');
+const oauthOutDir = path.join(dist, 'auth', 'callback');
+if (fs.existsSync(oauthStub)) {
+  fs.mkdirSync(oauthOutDir, { recursive: true });
+  fs.copyFileSync(oauthStub, path.join(oauthOutDir, 'index.html'));
+} else {
+  console.warn('[web-branding] warn: falta deploy/legal-stub-public/auth-callback.html (OAuth callback)');
+}
+
 const flags = [isPwa && 'PWA', wantsServiceWorker && 'SW'].filter(Boolean).join(', ');
 console.log(
-  `[web-branding] OK: ${webIconName}, ${manifestName}, meta en index.html${flags ? ` (${flags})` : ''}`,
+  `[web-branding] OK: ${webIconName}, ${manifestName}, meta en index.html, auth/callback${flags ? ` (${flags})` : ''}`,
 );
