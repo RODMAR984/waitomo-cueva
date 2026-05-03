@@ -1,0 +1,31 @@
+---
+description: Vercel (waitomo-cueva) — usar MCP y IDs del proyecto para deploys y dominios
+alwaysApply: true
+---
+
+# Vercel + FitEngine (este repo)
+
+El sitio estático exportado (`npm run perf:web:export` → `dist/`) se despliega en **Vercel** proyecto **`waitomo-cueva`**, equipo **`waitomofitengine`**.
+
+## IDs (API / MCP)
+
+- **teamId / orgId:** `team_x6cAgoUHD8fD5Am9LhKmDdDd` (slug: `waitomofitengine`)
+- **projectId:** `prj_JGFKxbMgCSMGgvR6Vlm8DEQ5KeA3` (nombre: `waitomo-cueva`)
+
+## Dominios de producción (según Vercel)
+
+- `fitengine.app`, `www.fitengine.app`
+- `app.fitengine.app`
+- `*.vercel.app` del proyecto
+
+**OAuth Supabase** en código usa `https://fitengine.app/auth/callback` (`utils/fitengineUrls.js`). Esa ruta debe existir en el **build** que sube Vercel (el script `scripts/inject-web-branding.cjs` copia `auth/callback` dentro de `dist/` tras el export).
+
+## Qué hacer el agente ante deploy / 404 / dominio
+
+1. **Leer el esquema** del tool MCP de Vercel (descriptor JSON del servidor) antes de `call_mcp_tool`.
+2. Usar **`list_teams`** si hace falta el `teamId`, luego **`list_projects`** / **`get_project`** / **`list_deployments`** / **`get_deployment`** según la tarea.
+3. No asumir “subir a mano”: el flujo habitual es **push a `master`** → deploy automático desde GitHub; el `dist/` no va a git (`.gitignore`).
+
+## Otro proyecto Vercel del equipo
+
+- **`html-starter`** — `prj_oGVgn4pdLsRnEvZVIGHMrWdpHvxl` (no mezclar con waitomo-cueva salvo que el usuario lo pida).
