@@ -1819,8 +1819,11 @@ export const AuthProvider = ({ children }) => {
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, { showInRecents: true });
 
       if (result.type !== 'success' || !result.url) {
+        console.log('🟠 OAuth openAuthSessionAsync result:', result.type, result.url ? '(con url)' : '(sin url)');
         if (result.type === 'cancel' || result.type === 'dismiss') {
-          throw new Error('OAuth cancelado.');
+          throw new Error(
+            'OAuth se cerró sin completar. Si la web te mandó a la app al toque, desactivá ese redirect: el login tiene que terminar en https://fitengine.app/auth/callback en la misma ventana.',
+          );
         }
         throw new Error(
           'OAuth: sin URL de retorno. Si te quedaste en la web de bienvenida, revisá en Supabase que Redirect URLs incluya exactamente: ' +

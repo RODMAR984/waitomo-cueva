@@ -12,19 +12,31 @@
         color: #0a0a0a;
         background: #fafafa;
       }
+      a {
+        color: #0369a1;
+      }
     </style>
   </head>
   <body>
-    <p><strong>Volviendo a la app…</strong></p>
-    <p style="font-size: 0.9rem; color: #444">Si no se abre FitEngine, cerrá esta pestaña y volvé a la app.</p>
+    <p><strong>Listo.</strong> Volvé a la app; esta ventana se cierra sola.</p>
+    <p style="font-size: 0.9rem; color: #444">
+      No uses “Abrir en la app” acá: el inicio de sesión ya terminó en esta dirección.
+    </p>
+    <p style="font-size: 0.85rem; margin-top: 2rem">
+      ¿Abrís esto en el navegador suelto? <a id="openApp" href="#">Abrir FitEngine</a>
+    </p>
     <script>
       (function () {
         var q = window.location.search || '';
         var h = window.location.hash || '';
         var native = 'waitomo://auth/callback' + q + h;
-        try {
-          window.location.replace(native);
-        } catch (e) {}
+        var a = document.getElementById('openApp');
+        if (a) {
+          a.href = native;
+        }
+        // IMPORTANTE: no hacer location.replace(waitomo) automático. Rompe
+        // WebBrowser.openAuthSessionAsync en Android: el Custom Tab tiene que
+        // quedarse en esta URL HTTPS para que Expo reciba ?code= / #tokens.
       })();
     </script>
   </body>
