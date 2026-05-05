@@ -66,15 +66,16 @@ export function buildClientInviteNativeLink(code) {
 }
 
 /**
- * OAuth redirect HTTPS (web + nativo). Usa **linksBaseUrl** (`fitengine.app`), no el marketing
- * `waitomofitengine.com`: ese dominio puede estar caído en Vercel (DEPLOYMENT_NOT_FOUND) y rompe todo el login.
- *
- * Whitelist en Supabase: `https://fitengine.app/auth/callback` (y `www` si lo usás).
- * Stub estático: `deploy/legal-stub-public/auth-callback.html` + rewrite `/auth/callback`.
+ * OAuth redirect por plataforma:
+ * - Nativo (Android/iOS): deep link `waitomo://auth/callback` para volver a la app.
+ * - Web: callback HTTPS en `fitengine.app`.
  */
 export function getOAuthRedirectUriForSupabase() {
-  const { linksBaseUrl } = getFitEngineUrls();
-  return `${linksBaseUrl}/auth/callback`;
+  if (Platform.OS === 'web') {
+    const { linksBaseUrl } = getFitEngineUrls();
+    return `${linksBaseUrl}/auth/callback`;
+  }
+  return 'waitomo://auth/callback';
 }
 
 /** Mismo patrón que OAuth: Stripe Connect vuelve acá y `openAuthSessionAsync` cierra el in-app browser. */
