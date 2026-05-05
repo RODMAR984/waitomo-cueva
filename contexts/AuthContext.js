@@ -16,6 +16,7 @@ import React, {
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../supabaseClient';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   readActiveAppMode,
@@ -1800,6 +1801,14 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const allowed = ['google', 'apple'];
       if (!allowed.includes(provider)) throw new Error('Proveedor no habilitado.');
+
+      // Expo Go no es un entorno confiable para OAuth nativo con deep links personalizados.
+      // En este repo, el flujo soportado "para siempre" es: development build / app instalada.
+      if (Constants.appOwnership === 'expo') {
+        throw new Error(
+          'Google/Apple login no está soportado en Expo Go. Usá un development build (npm run start:dev-client) o la app instalada.',
+        );
+      }
 
       const redirectTo = getOAuthRedirectUriForSupabase();
       console.log('🟡 OAUTH redirectTo =>', redirectTo);
