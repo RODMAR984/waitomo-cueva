@@ -75,7 +75,21 @@ export default function BackgroundWrapper({
   forceDarkOverlay = false,
 }) {
   const { t } = useThemeContext();
-  const { organization } = useAuth() || {};
+  const { organization, user } = useAuth() || {};
+  /**
+   * Mientras `organization` es null (fetch async o setOrganization(null) entre pasos),
+   * sin esto ClientTabs/ClientScreen caen en TRABAJO_DIA_BACKGROUNDS → flash estética Waitomo.
+   * Misma idea que lastOrgForThemeRef en ThemeContext.
+   */
+  const lastOrgForBackgroundRef = React.useRef(null);
+  if (!user?.id) {
+    lastOrgForBackgroundRef.current = null;
+  } else if (organization?.id) {
+    lastOrgForBackgroundRef.current = organization;
+  }
+  const orgForBackground =
+    user?.id && (organization?.id ? organization : lastOrgForBackgroundRef.current);
+
   const screenLower = String(screen).toLowerCase().trim();
   const isWelcome = screenLower.includes('welcome');
   const overlayColor = forceDarkOverlay ? 'rgba(0,0,0,0.24)' : t.screenOverlay;
@@ -87,11 +101,11 @@ export default function BackgroundWrapper({
     screenLower.includes('clienttabs');
 
   const useOrgBackground =
-    organization &&
-    !isWaitomoOrg(organization) &&
+    orgForBackground &&
+    !isWaitomoOrg(orgForBackground) &&
     !isFitEnginePlatformBackgroundScreen(screenLower);
-  const orgBgType = useOrgBackground ? (organization.background_type || 'solid') : null;
-  const orgBgUrl = useOrgBackground ? organization.background_url : null;
+  const orgBgType = useOrgBackground ? (orgForBackground.background_type || 'solid') : null;
+  const orgBgUrl = useOrgBackground ? orgForBackground.background_url : null;
 
   // Siempre antes de cualquier return: misma cantidad de hooks en todos los renders.
   const [randomIndex] = React.useState(() => {
@@ -138,9 +152,9 @@ export default function BackgroundWrapper({
     );
   }
   if (useOrgBackground && orgBgType === 'gradient') {
-    const accent = organization?.accent_color || '#818cf8';
+    const accent = orgForBackground?.accent_color || '#818cf8';
     const { width: gw, height: gh } = Dimensions.get('window');
-    const gradId = `orgGrad-${String(organization?.id || 'x').replace(/[^a-zA-Z0-9]/g, '')}`;
+    const gradId = `orgGrad-${String(orgForBackground?.id || 'x').replace(/[^a-zA-Z0-9]/g, '')}`;
     return (
       <View style={[styles.flex, style]}>
         <Svg width={gw} height={gh} style={StyleSheet.absoluteFill}>
@@ -167,8 +181,16 @@ export default function BackgroundWrapper({
     );
   }
 
-  // PRIMERO: TRABAJO DEL DIA Y ADMIN - ROTACIÓN ENTRE TODAS LAS IMÁGENES (Waitomo / sin org)
+  // PRIMERO: TRABAJO DEL DIA Y ADMIN — si hay sesión pero `organization` aún null (fetch / carrera), no mostrar
+  // la rotación stock Waitomo: fondo plano con tokens de tema (ThemeContext ya suaviza con última org).
   if (isTrabajoODiaOAdmin) {
+    if (user?.id && !organization?.id) {
+      return (
+        <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
+          {children}
+        </View>
+      );
+    }
     const source = TRABAJO_DIA_BACKGROUNDS[randomIndex];
 
     return (
