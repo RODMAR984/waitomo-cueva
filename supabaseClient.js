@@ -20,10 +20,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    // Web: procesar callback OAuth en URL + flujo PKCE estable.
+    // Web: procesar callback OAuth en URL.
     // Nativo: deep links / sesión manual, sin parseo de URL web.
     detectSessionInUrl: isWeb,
-    flowType: isWeb ? 'pkce' : undefined,
     ...(isWeb ? {} : { storage: AsyncStorage }),
   },
 });

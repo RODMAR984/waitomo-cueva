@@ -1364,7 +1364,8 @@ export const AuthProvider = ({ children }) => {
         if (Platform.OS === 'web') {
           const authCode = getWebOAuthCodeFromQuery();
           if (authCode) {
-            const { data: codeData, error: codeError } = await supabase.auth.exchangeCodeForSession(authCode);
+            const currentUrl = String(window.location?.href || '');
+            const { data: codeData, error: codeError } = await supabase.auth.exchangeCodeForSession(currentUrl);
             if (!codeError && codeData?.session?.user?.id) {
               try {
                 const cleanUrl = `${window.location.origin}${window.location.pathname}`;
@@ -1373,7 +1374,16 @@ export const AuthProvider = ({ children }) => {
               if (mounted) await syncFromSession(codeData.session);
               return;
             }
-            console.log('🟠 restore web code exchange error:', codeError?.message || codeError);
+            const errMsg = String(codeError?.message || codeError || 'unknown_code_exchange_error');
+            console.log('🟠 restore web code exchange error:', errMsg, {
+              authCodeLen: authCode.length,
+              url: currentUrl,
+            });
+            try {
+              if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                window.alert(`OAuth web exchange error: ${errMsg}`);
+              }
+            } catch (_) {}
           }
 
           const hashSession = getWebOAuthSessionFromHash();
