@@ -25,8 +25,7 @@ Deno.serve(async (req: Request) => {
     return new Response("invalid_signature", { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
+  const markCheckoutPaid = async (session: any) => {
     const paymentId = String(session.id || "");
     const paidAt = session.created ? new Date(session.created * 1000).toISOString() : new Date().toISOString();
     const amount = Number(session.amount_total || 0) / 100;
@@ -64,6 +63,19 @@ Deno.serve(async (req: Request) => {
         })
         .eq("client_id", paymentId);
     }
+  };
+
+  // Stripe puede emitir checkout.session.completed antes de que el pago sea definitivo
+  // (p. ej. métodos asíncronos). Solo marcamos pagado cuando payment_status es paid, y
+  // cubrimos async_payment_succeeded explícitamente (recomendación docs Stripe Checkout).
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    if (String(session.payment_status || "") !== "paid") {
+      return new Response("ok", { status: 200 });
+    }
+    await markCheckoutPaid(session);
+  } else if (event.type === "checkout.session.async_payment_succeeded") {
+    await markCheckoutPaid(event.data.object);
   }
 
   return new Response("ok", { status: 200 });

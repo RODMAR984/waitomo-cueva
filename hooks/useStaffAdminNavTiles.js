@@ -28,166 +28,69 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
     return (organizationsOwnedByUser || []).some((o) => o?.id === organization?.id);
   }, [isSA, profile?.id, organization?.id, organization?.owner_id, organizationsOwnedByUser]);
 
-  return useMemo(
-    () =>
-      [
-        {
-          key: 'bloques',
-          ion: 'barbell-outline',
-          title: tStr('admin_nav_panel_bloques'),
-          sub: tStr('admin_menu_panel_bloques_sub'),
-          onPress: () => {
-            const focused = typeof navigation.getState === 'function' ? getFocusedRouteName(navigation.getState()) : null;
-            const onBloquesScreen =
-              focused === 'AdminLite' ||
-              focused === 'AdminLiteScreen' ||
-              focused === 'Admin' ||
-              focused === 'AdminScreen';
-            if (onBloquesScreen) {
-              emitAdminScrollToLists();
-              return;
-            }
-            navigation.navigate('AdminLite', { adminFocus: 'lists' });
-          },
-          show: true,
-        },
-        {
-          key: 'resumen',
-          ion: 'today-outline',
-          title: tStr('admin_resumen_title'),
-          sub: tStr('admin_resumen_sub'),
-          onPress: () => navigation.navigate('AdminResumen'),
-          show: true,
-        },
-        {
-          key: 'perfil',
-          ion: 'person-outline',
-          title: tStr('admin_mi_perfil'),
-          sub: tStr('admin_menu_perfil_sub'),
-          onPress: () => navigation.navigate('Perfil'),
-          show: true,
-        },
-        {
-          key: 'marca',
-          ion: 'color-wand-outline',
-          title: tStr('admin_menu_marca_title'),
-          sub: tStr('admin_menu_marca_sub'),
-          onPress: () => navigation.navigate('GymConfig'),
-          show: !!canEditGymConfig,
-        },
-        {
-          key: 'fin',
-          ion: 'wallet-outline',
-          title: tStr('admin_finanzas'),
-          sub: tStr('admin_menu_finanzas_sub'),
-          onPress: () => navigation.navigate('AdminFinanzas', { tab: 'cobros' }),
-          show: !isLite,
-        },
-        {
-          key: 'mem',
-          ion: 'people-outline',
-          title: tStr('admin_miembros'),
-          sub: tStr('admin_menu_miembros_sub'),
-          onPress: () => navigation.navigate('OrgMembers'),
-          show: !isLite,
-        },
-        {
-          key: 'nov',
-          ion: 'megaphone-outline',
-          title: tStr('admin_ver_novedades'),
-          sub: tStr('admin_menu_novedades_ver_sub'),
-          onPress: () => navigation.navigate('Novedades'),
-          show: true,
-        },
-        {
-          key: 'novadm',
-          ion: 'create-outline',
-          title: tStr('admin_gestionar_novedades'),
-          sub: tStr('admin_menu_novedades_edit_sub'),
-          onPress: () => navigation.navigate('AdminNovedades'),
-          show: !isLite,
-        },
-        {
-          key: 'planes',
-          ion: 'list-outline',
-          title: tStr('admin_nav_plans'),
-          sub: tStr('admin_menu_planes_sub'),
-          onPress: () => navigation.navigate('AdminPlanes'),
-          show: !isLite,
-        },
-        {
-          key: 'abonos',
-          ion: 'ticket-outline',
-          title: tStr('admin_nav_abonos'),
-          sub: tStr('admin_menu_abonos_sub'),
-          onPress: () => navigation.navigate('AdminAbonos'),
-          show: !isLite,
-        },
-        {
-          key: 'freeze',
-          ion: 'snow-outline',
-          title: tStr('admin_nav_membership_freeze'),
-          sub: tStr('admin_menu_membership_freeze_sub'),
-          onPress: () => navigation.navigate('AdminMembershipFreeze'),
-          show: !isLite,
-        },
-        {
-          key: 'reportes',
-          ion: 'stats-chart-outline',
-          title: tStr('admin_nav_reportes'),
-          sub: tStr('admin_menu_reportes_sub'),
-          onPress: () => navigation.navigate('AdminReportes'),
-          show: !isLite,
-        },
-        {
-          key: 'retention',
-          ion: 'mail-unread-outline',
-          title: tStr('admin_nav_retention'),
-          sub: tStr('admin_menu_retention_sub'),
-          onPress: () => navigation.navigate('AdminRetention'),
-          show: !isLite,
-        },
-        {
-          key: 'commissions',
-          ion: 'pie-chart-outline',
-          title: tStr('admin_nav_commissions'),
-          sub: tStr('admin_menu_commissions_sub'),
-          onPress: () => navigation.navigate('AdminCommissions'),
-          show: !isLite,
-        },
-        {
-          key: 'stripe',
-          ion: 'card-outline',
-          title: tStr('admin_nav_stripe'),
-          sub: tStr('admin_menu_stripe_sub'),
-          onPress: () => navigation.navigate('AdminStripeSettings'),
-          show: !isLite && !!canEditGymConfig,
-        },
-        {
-          key: 'badges',
-          ion: 'ribbon-outline',
-          title: tStr('admin_nav_badges'),
-          sub: tStr('admin_menu_badges_sub'),
-          onPress: () => navigation.navigate('AdminBadges'),
-          show: !isLite,
-        },
-        {
-          key: 'coaches',
-          ion: 'school-outline',
-          title: tStr('admin_nav_assign_coaches'),
-          sub: tStr('admin_menu_coaches_sub'),
-          onPress: () => navigation.navigate('AsignarCoaches'),
-          show: !isLite && !!canEditGymConfig,
-        },
-        {
-          key: 'observ',
-          ion: 'pulse-outline',
-          title: tStr('admin_nav_observability'),
-          sub: tStr('admin_menu_observability_sub'),
-          onPress: () => navigation.navigate('AdminObservability'),
-          show: !isLite,
-        },
-      ].filter((x) => x.show),
-    [navigation, tStr, canEditGymConfig, isLite],
-  );
+  return useMemo(() => {
+    const mkBloquesOnPress = () => {
+      const focused = typeof navigation.getState === 'function' ? getFocusedRouteName(navigation.getState()) : null;
+      const onBloquesScreen =
+        focused === 'AdminLite' ||
+        focused === 'AdminLiteScreen' ||
+        focused === 'Admin' ||
+        focused === 'AdminScreen';
+      if (onBloquesScreen) {
+        emitAdminScrollToLists();
+        return;
+      }
+      navigation.navigate('AdminLite', { adminFocus: 'lists' });
+    };
+
+    const groups = [
+      {
+        key: 'operacion',
+        title: tStr('admin_group_operacion'),
+        tiles: [
+          { key: 'resumen', ion: 'today-outline', title: tStr('admin_resumen_title'), sub: tStr('admin_resumen_sub'), onPress: () => navigation.navigate('AdminResumen'), show: true },
+          { key: 'bloques', ion: 'list-outline', title: tStr('admin_nav_panel_bloques'), sub: tStr('admin_menu_panel_bloques_sub'), onPress: mkBloquesOnPress, show: true },
+          { key: 'mem', ion: 'people-outline', title: tStr('admin_miembros'), sub: tStr('admin_menu_miembros_sub'), onPress: () => navigation.navigate('OrgMembers'), show: !isLite },
+          { key: 'novedades', ion: 'newspaper-outline', title: tStr('admin_menu_novedades_title'), sub: tStr('admin_menu_novedades_sub'), onPress: () => navigation.navigate('AdminNovedades'), show: !isLite },
+        ],
+      },
+      {
+        key: 'oferta',
+        title: tStr('admin_group_oferta'),
+        tiles: [
+          { key: 'planes', ion: 'pricetags-outline', title: tStr('admin_nav_plans'), sub: tStr('admin_menu_planes_sub'), onPress: () => navigation.navigate('AdminPlanes'), show: !isLite },
+          { key: 'abonos', ion: 'card-outline', title: tStr('admin_nav_abonos'), sub: tStr('admin_menu_abonos_sub'), onPress: () => navigation.navigate('AdminAbonos'), show: !isLite },
+          { key: 'freeze', ion: 'snow-outline', title: tStr('admin_nav_membership_freeze'), sub: tStr('admin_menu_freeze_sub'), onPress: () => navigation.navigate('AdminMembershipFreeze'), show: !isLite },
+          { key: 'coaches', ion: 'person-add-outline', title: tStr('admin_nav_assign_coaches'), sub: tStr('admin_menu_coaches_sub'), onPress: () => navigation.navigate('AsignarCoaches'), show: !isLite && !!canEditGymConfig },
+          { key: 'badges', ion: 'trophy-outline', title: tStr('admin_menu_badges_title'), sub: tStr('admin_menu_badges_sub'), onPress: () => navigation.navigate('AdminBadges'), show: !isLite },
+          { key: 'retention', ion: 'mail-outline', title: tStr('admin_menu_retention_title'), sub: tStr('admin_menu_retention_sub'), onPress: () => navigation.navigate('AdminRetention'), show: !isLite },
+        ],
+      },
+      {
+        key: 'cobros',
+        title: tStr('admin_group_cobros'),
+        tiles: [
+          { key: 'fin', ion: 'cash-outline', title: tStr('admin_finanzas'), sub: tStr('admin_menu_finanzas_sub'), onPress: () => navigation.navigate('AdminFinanzas', { tab: 'cobros' }), show: !isLite },
+          { key: 'mp', ion: 'wallet-outline', title: tStr('admin_nav_mercadopago'), sub: tStr('admin_menu_mercadopago_sub'), onPress: () => navigation.navigate('AdminMercadoPagoSettings'), show: !isLite && !!canEditGymConfig },
+          { key: 'stripe', ion: 'globe-outline', title: tStr('admin_nav_stripe'), sub: tStr('admin_menu_stripe_sub'), onPress: () => navigation.navigate('AdminStripeSettings'), show: !isLite && !!canEditGymConfig },
+          { key: 'commissions', ion: 'receipt-outline', title: tStr('admin_nav_commissions'), sub: tStr('admin_menu_commissions_sub'), onPress: () => navigation.navigate('AdminCommissions'), show: !isLite },
+          { key: 'reportes', ion: 'bar-chart-outline', title: tStr('admin_nav_reportes'), sub: tStr('admin_menu_reportes_sub'), onPress: () => navigation.navigate('AdminReportes'), show: !isLite },
+        ],
+      },
+      {
+        key: 'config',
+        title: tStr('admin_group_config'),
+        tiles: [
+          { key: 'marca', ion: 'color-wand-outline', title: tStr('admin_menu_marca_title'), sub: tStr('admin_menu_marca_sub'), onPress: () => navigation.navigate('GymConfig'), show: !!canEditGymConfig },
+          { key: 'perfil', ion: 'person-outline', title: tStr('admin_mi_perfil'), sub: tStr('admin_menu_perfil_sub'), onPress: () => navigation.navigate('Perfil'), show: true },
+          { key: 'observ', ion: 'pulse-outline', title: tStr('admin_menu_diagnostico_title'), sub: tStr('admin_menu_diagnostico_sub'), onPress: () => navigation.navigate('AdminObservability'), show: !isLite },
+        ],
+      },
+    ]
+      .map((g) => ({ ...g, tiles: g.tiles.filter((x) => x.show) }))
+      .filter((g) => g.tiles.length > 0);
+
+    const tiles = groups.flatMap((g) => g.tiles);
+    return { tiles, groups };
+  }, [navigation, tStr, canEditGymConfig, isLite]);
 }

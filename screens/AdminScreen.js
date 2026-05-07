@@ -542,7 +542,7 @@ export default function AdminScreen() {
     PLAN_VALUE_TO_CHAT_PLAN_ID[planSeleccionado] ||
     planSeleccionado;
 
-  const adminNavTiles = useStaffAdminNavTiles(navigation, tStr);
+  const { groups: adminNavGroups } = useStaffAdminNavTiles(navigation, tStr);
   const scrollViewRef = useRef(null);
   const listsSectionY = useRef(0);
   const editorSectionY = useRef(0);
@@ -1059,20 +1059,32 @@ export default function AdminScreen() {
         },
         financeBtnText: t.buttonPrimaryText,
 
+        group: {
+          marginBottom: 14,
+        },
+        groupTitle: {
+          color: t.subText,
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 0.6,
+          textTransform: 'uppercase',
+          marginBottom: 6,
+          marginLeft: 4,
+        },
         menuGrid: {
           flexDirection: 'row',
           flexWrap: 'wrap',
           columnGap: menuGap,
           rowGap: menuGap,
           justifyContent: menuColumns === 1 ? 'flex-start' : 'space-between',
-          marginBottom: 8,
-          marginTop: 4,
+          marginBottom: 6,
+          marginTop: 2,
         },
         menuTile: {
           width: menuTileWidth,
-          minHeight: 96,
-          padding: 12,
-          borderRadius: 14,
+          minHeight: 88,
+          padding: 10,
+          borderRadius: 12,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
@@ -1084,18 +1096,18 @@ export default function AdminScreen() {
           backgroundColor: hexToRgbaLocal(t.brand, 0.14),
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 8,
+          marginBottom: 6,
         },
         menuTileTitle: {
           color: t.text,
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: '700',
         },
         menuTileSub: {
           color: t.subText,
-          fontSize: 11,
-          marginTop: 4,
-          lineHeight: 15,
+          fontSize: 10,
+          marginTop: 2,
+          lineHeight: 14,
         },
 
         dropdown: {
@@ -1733,22 +1745,31 @@ export default function AdminScreen() {
                 <Text style={styles.title}>{tStr('admin_title')}</Text>
 
                 {!isStaffWebDesktop ? (
-                  <View style={styles.menuGrid}>
-                    {adminNavTiles.map((tile) => (
-                      <TouchableOpacity
-                        key={tile.key}
-                        style={styles.menuTile}
-                        onPress={tile.onPress}
-                        activeOpacity={0.88}
-                      >
-                        <View style={styles.menuTileIconWrap}>
-                          <Ionicons name={tile.ion} size={20} color={t.brand} />
+                  <>
+                    {adminNavGroups.map((group) => (
+                      <View key={group.key} style={styles.group}>
+                        <Text style={styles.groupTitle}>{group.title}</Text>
+                        <View style={styles.menuGrid}>
+                          {group.tiles.map((tile) => (
+                            <TouchableOpacity
+                              key={tile.key}
+                              style={styles.menuTile}
+                              onPress={tile.onPress}
+                              activeOpacity={0.88}
+                            >
+                              <View style={styles.menuTileIconWrap}>
+                                <Ionicons name={tile.ion} size={20} color={t.brand} />
+                              </View>
+                              <Text style={styles.menuTileTitle}>{tile.title}</Text>
+                              <Text style={styles.menuTileSub} numberOfLines={2}>
+                                {tile.sub}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
                         </View>
-                        <Text style={styles.menuTileTitle}>{tile.title}</Text>
-                        <Text style={styles.menuTileSub}>{tile.sub}</Text>
-                      </TouchableOpacity>
+                      </View>
                     ))}
-                  </View>
+                  </>
                 ) : null}
 
                 {!isStaffWebDesktop ? (

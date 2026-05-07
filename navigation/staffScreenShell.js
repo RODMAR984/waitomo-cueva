@@ -13,6 +13,7 @@ import AdminReportesScreen from '../screens/AdminReportesScreen';
 import AdminRetentionScreen from '../screens/AdminRetentionScreen';
 import AdminCommissionsScreen from '../screens/AdminCommissionsScreen';
 import AdminStripeSettingsScreen from '../screens/AdminStripeSettingsScreen';
+import AdminMercadoPagoSettingsScreen from '../screens/AdminMercadoPagoSettingsScreen';
 import AdminBadgesScreen from '../screens/AdminBadgesScreen';
 
 export function wrapStaffScreen(Component) {
@@ -77,4 +78,5 @@ export const AdminReportesScreenWithShell = wrapStaffScreen(AdminReportesScreen)
 export const AdminRetentionScreenWithShell = wrapStaffScreen(AdminRetentionScreen);
 export const AdminCommissionsScreenWithShell = wrapStaffScreen(AdminCommissionsScreen);
 export const AdminStripeSettingsScreenWithShell = wrapStaffScreen(AdminStripeSettingsScreen);
+export const AdminMercadoPagoSettingsScreenWithShell = wrapStaffScreen(AdminMercadoPagoSettingsScreen);
 export const AdminBadgesScreenWithShell = wrapStaffScreen(AdminBadgesScreen);

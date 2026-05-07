@@ -172,10 +172,14 @@ export default function PagoScreen({ navigation, route }) {
             amount: monto,
             title,
             externalReference: pid,
+            organizationId: organization?.id || null,
           });
           url = initPoint;
         } catch (e) {
           console.warn('Checkout Pro MP:', e?.message || e);
+          if (String(e?.message || '') === 'mercadopago_checkout_disabled') {
+            Alert.alert(tStr('pago_mp_checkout_disabled_title'), tStr('pago_mp_checkout_disabled_msg'));
+          }
           url = null;
         }
       }

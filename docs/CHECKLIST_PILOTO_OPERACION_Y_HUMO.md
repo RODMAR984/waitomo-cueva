@@ -15,7 +15,7 @@ Marcá cuando esté listo **antes** de Play/App Store públicos.
 | P1 | **Build instalable** en el dispositivo del cliente | TestFlight (iOS), Internal testing o APK (Android), o build de desarrollo si son de confianza. |
 | P2 | **Supabase** del proyecto **real** (URL + anon key en la app que van a usar) | No mocks; mismo proyecto donde aplicaste migraciones. |
 | P3 | **Migraciones** aplicadas en remoto | Ver §4 abajo; como mínimo las de trial + comunidad citadas en `REVISION…` §0.1. |
-| P4 | **Canal de soporte** acordado | WhatsApp, mail `soporte@waitomo.com` u otro; horario de respuesta esperable. |
+| P4 | **Canal de soporte** acordado | WhatsApp, mail `soporte@fitengine.app` u otro; horario de respuesta esperable. |
 | P5 | **Acuerdo con el gym** | Qué van a usar (trial, chat, calendario, planes); usuario staff de prueba si hace falta. |
 | P6 | **Cuentas de prueba** | Al menos 1 cliente + 1 staff/coach con org y plan coherentes. |
 

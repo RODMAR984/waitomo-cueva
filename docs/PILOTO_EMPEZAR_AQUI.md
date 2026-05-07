@@ -45,7 +45,7 @@ Seguir **§3** del checklist (flujos H1–H15). Prioridad mínima para trial + c
 
 ## Soporte al piloto
 
-- Canal acordado (WhatsApp, mail `soporte@waitomo.com`, etc.).
+- Canal acordado (WhatsApp, mail `soporte@fitengine.app`, etc.).
 - Anotar bugs con pasos para reproducir.
 
 ---

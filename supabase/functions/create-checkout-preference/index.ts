@@ -1,6 +1,5 @@
-// Crea una preferencia de Checkout Pro (Mercado Pago) y devuelve init_point.
-// Requiere secretos: MP_ACCESS_TOKEN, SUPABASE_URL, SUPABASE_ANON_KEY.
-// Opcional: CHECKOUT_BACK_URL_BASE (HTTPS, ej. https://waitomofitengine.com) para back_urls.
+// Crea preferencia Checkout Pro MP. Token: credencial OAuth de la org (si organization_id + habilitado) o MP_ACCESS_TOKEN (legacy).
+// Body: amount, title, external_reference, organization_id (recomendado para cobrar en cuenta del gym).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -31,10 +30,10 @@ Deno.serve(async (req: Request) => {
   }
 
   const token = authHeader.replace("Bearer ", "");
-  const supabaseAnon = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabaseAnon = createClient(supabaseUrl, anonKey);
 
   const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(
     token,
@@ -50,6 +49,7 @@ Deno.serve(async (req: Request) => {
     amount?: number;
     title?: string;
     external_reference?: string;
+    organization_id?: string;
   };
   try {
     body = await req.json();
@@ -65,6 +65,7 @@ Deno.serve(async (req: Request) => {
   const external_reference = String(
     body?.external_reference || `${user.id}_${Date.now()}`,
   ).slice(0, 256);
+  const organizationId = String(body?.organization_id || "").trim();
 
   if (!(amount > 0) || Number.isNaN(amount)) {
     return new Response(JSON.stringify({ error: "amount must be > 0" }), {
@@ -73,19 +74,72 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const mpToken = Deno.env.get("MP_ACCESS_TOKEN");
+  const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+
+  let mpToken = (Deno.env.get("MP_ACCESS_TOKEN") || "").trim();
+  let orgForMetadata = organizationId;
+
+  if (organizationId) {
+    const { data: mem } = await supabaseAdmin
+      .from("organization_memberships")
+      .select("organization_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", user.id)
+      .eq("active", true)
+      .limit(1)
+      .maybeSingle();
+    if (!mem) {
+      return new Response(JSON.stringify({ error: "forbidden", detail: "not_a_member" }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: orgRow } = await supabaseAdmin
+      .from("organizations")
+      .select("mercadopago_checkout_enabled")
+      .eq("id", organizationId)
+      .maybeSingle();
+
+    const { data: cred } = await supabaseAdmin
+      .from("mercadopago_org_credentials")
+      .select("access_token")
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    const accessOk = !!(cred?.access_token && String(cred.access_token).trim());
+    if (accessOk && !orgRow?.mercadopago_checkout_enabled) {
+      return new Response(
+        JSON.stringify({
+          error: "mercadopago_checkout_disabled",
+          detail: "enable_checkout_in_admin_or_disconnect",
+        }),
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+    if (accessOk && orgRow?.mercadopago_checkout_enabled) {
+      mpToken = String(cred.access_token).trim();
+    }
+  }
+
   if (!mpToken) {
-    return new Response(JSON.stringify({ error: "MP_ACCESS_TOKEN not configured" }), {
-      status: 503,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "MP_ACCESS_TOKEN not configured",
+        detail: "connect_mercadopago_in_admin_or_set_MP_ACCESS_TOKEN",
+      }),
+      {
+        status: 503,
+        headers: { ...cors, "Content-Type": "application/json" },
+      },
+    );
   }
 
   const base = (Deno.env.get("CHECKOUT_BACK_URL_BASE") || "https://waitomofitengine.com")
     .replace(/\/$/, "");
-  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
-  const notificationUrl = supabaseUrl
-    ? `${supabaseUrl}/functions/v1/mercadopago-webhook`
+  const supabaseUrlClean = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
+  const notificationUrl = supabaseUrlClean
+    ? `${supabaseUrlClean}/functions/v1/mercadopago-webhook`
     : undefined;
 
   const unit_price = Math.round(amount * 100) / 100;
@@ -99,6 +153,9 @@ Deno.serve(async (req: Request) => {
       },
     ],
     external_reference,
+    metadata: orgForMetadata
+      ? { organization_id: orgForMetadata, fitengine_external_ref: external_reference }
+      : { fitengine_external_ref: external_reference },
     back_urls: {
       success: `${base}/`,
       failure: `${base}/`,

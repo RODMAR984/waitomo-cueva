@@ -80,6 +80,7 @@ import {
   AdminRetentionScreenWithShell,
   AdminCommissionsScreenWithShell,
   AdminStripeSettingsScreenWithShell,
+  AdminMercadoPagoSettingsScreenWithShell,
   AdminBadgesScreenWithShell,
 } from './navigation/staffScreenShell';
 
@@ -556,6 +557,8 @@ function AppContent() {
                     <Stack.Screen name="AdminCommissionsScreen" component={AdminCommissionsScreenWithShell} />
                     <Stack.Screen name="AdminStripeSettings" component={AdminStripeSettingsScreenWithShell} />
                     <Stack.Screen name="AdminStripeSettingsScreen" component={AdminStripeSettingsScreenWithShell} />
+                    <Stack.Screen name="AdminMercadoPagoSettings" component={AdminMercadoPagoSettingsScreenWithShell} />
+                    <Stack.Screen name="AdminMercadoPagoSettingsScreen" component={AdminMercadoPagoSettingsScreenWithShell} />
                     <Stack.Screen name="AdminBadges" component={AdminBadgesScreenWithShell} />
                     <Stack.Screen name="AdminBadgesScreen" component={AdminBadgesScreenWithShell} />
                   </Stack.Group>

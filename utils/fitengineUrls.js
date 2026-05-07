@@ -85,3 +85,11 @@ export function getStripeConnectRedirectUri() {
   }
   return 'waitomo://stripe-connect';
 }
+
+/** OAuth MP vendedor: mismo patrón que Stripe (openAuthSessionAsync). */
+export function getMercadoPagoConnectRedirectUri() {
+  if (Platform.OS === 'web') {
+    return AuthSession.makeRedirectUri({ path: 'mercadopago-connect' });
+  }
+  return 'waitomo://mercadopago-connect';
+}

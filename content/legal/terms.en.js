@@ -2,7 +2,7 @@
 const paragraphs = [
   'Responsible party: Rodrigo Pérez Pulti (National ID 28,519,402) — operating under the brand FitEngine by WAITOMO',
   '',
-  'Contact: soporte@waitomo.com',
+  'Contact: soporte@fitengine.app',
   '',
   'Address: Maipú, Buenos Aires Province, Argentina',
   '',
@@ -72,7 +72,7 @@ const paragraphs = [
   '',
   '11. Termination',
   '',
-  'We may suspend or delete your account if you violate these Terms, without prior notice in serious cases. You may request account deletion at any time by writing to soporte@waitomo.com.',
+  'We may suspend or delete your account if you violate these Terms, without prior notice in serious cases. You may request account deletion at any time by writing to soporte@fitengine.app.',
   '',
   '12. Governing law and jurisdiction',
   '',
@@ -80,7 +80,7 @@ const paragraphs = [
   '',
   '13. Contact',
   '',
-  'For questions about these Terms: soporte@waitomo.com',
+  'For questions about these Terms: soporte@fitengine.app',
   '',
   'Address: Maipú, Buenos Aires Province, Argentina',
 ];

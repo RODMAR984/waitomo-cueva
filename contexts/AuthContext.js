@@ -467,7 +467,7 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('organizations')
         .select(
-          'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,client_invite_code,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled'
+          'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,client_invite_code,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked'
         )
         .eq('id', orgId)
         .maybeSingle();
@@ -594,7 +594,7 @@ export const AuthProvider = ({ children }) => {
         const { data: memberships, error: membershipsError } = await supabase
           .from('organization_memberships')
           .select(
-            'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled)'
+            'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked)'
           )
           .eq('user_id', session.user.id)
           .eq('active', true);
@@ -616,7 +616,7 @@ export const AuthProvider = ({ children }) => {
           const { data: ownerOrgRows, error: ownerOrgErr } = await supabase
             .from('organizations')
             .select(
-              'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled'
+              'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked'
             )
             .eq('owner_id', session.user.id);
           if (!ownerOrgErr && Array.isArray(ownerOrgRows)) {
@@ -663,7 +663,7 @@ export const AuthProvider = ({ children }) => {
         const { data, error } = await supabase
           .from('organizations')
           .select(
-            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled'
+            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked'
           )
           .eq('owner_id', session.user.id);
         if (cancelled) return;

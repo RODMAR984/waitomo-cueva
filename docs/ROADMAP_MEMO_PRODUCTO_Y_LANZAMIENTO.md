@@ -24,7 +24,7 @@ Esto **no** reemplaza las fases de abajo; es trabajo que ya quedó implementado 
 
 | # | Tema | Qué implica | Estado repo (orientativo) |
 |---|------|-------------|---------------------------|
-| 1 | Privacidad / términos | Enlaces legales coherentes (web + app). | Texto legal **en la app** (`content/legal/`, ES/EN). `app.json`: URLs marketing; soporte **`soporte@waitomo.com`**. HTML opcional en `deploy/legal-stub-public/`. |
+| 1 | Privacidad / términos | Enlaces legales coherentes (web + app). | Texto legal **en la app** (`content/legal/`, ES/EN). `app.json`: URLs marketing; soporte **`soporte@fitengine.app`**. HTML opcional en `deploy/legal-stub-public/`. |
 | 2 | Acerca de + versión | Marca FitEngine/Waitomo + versión (`expo.version` / `app.json`). | `AboutFitEngineScreen` + rutas en `App.js`. **Revisar** copy y que la versión mostrada sea la deseada. |
 | 3 | Onboarding | Solo si confunde; tooltips o saltar. | **Pendiente criterio producto** (no bloquea piloto si el flujo actual alcanza). |
 
@@ -32,7 +32,7 @@ Esto **no** reemplaza las fases de abajo; es trabajo que ya quedó implementado 
 
 | # | Tema | Qué implica | Estado |
 |---|------|-------------|--------|
-| 4 | Contacto / soporte | `mailto:` o enlace desde Config. | `fitengineSupportEmail` **`soporte@waitomo.com`** (Acerca de); **activar buzón** en el dominio cuando corresponda. |
+| 4 | Contacto / soporte | `mailto:` o enlace desde Config. | `fitengineSupportEmail` **`soporte@fitengine.app`** (Acerca de); **activar buzón** en el dominio cuando corresponda. |
 | 5 | Alta de gims | Checklist interno / documentación. | Definido en [`CHECKLIST_PILOTO_OPERACION_Y_HUMO.md`](./CHECKLIST_PILOTO_OPERACION_Y_HUMO.md) §2. |
 
 ### Fase 3 — Calidad y estabilidad
@@ -86,7 +86,7 @@ Esto **no** reemplaza las fases de abajo; es trabajo que ya quedó implementado 
 3. **Cuando el mínimo (C) esté listo** → calendarizar piloto sin esperar Fase 6.
 4. **Fase 6** solo cuando checklist **`REVISION…` §2** esté razonablemente verde.
 
-**Siguiente paso sugerido:** correr §3 humo en dispositivo real; activar buzón `soporte@waitomo.com` si aún no responde; fijar fecha piloto cuando §1 esté en verde.
+**Siguiente paso sugerido:** correr §3 humo en dispositivo real; activar buzón `soporte@fitengine.app` si aún no responde; fijar fecha piloto cuando §1 esté en verde.
 
 ---
 

@@ -41,8 +41,8 @@ const ROUTE_NAME_TO_TILE_KEY = {
   OrgMembersScreen: 'mem',
   OrgMemberDetail: 'mem',
   OrgMemberDetailScreen: 'mem',
-  AdminNovedades: 'novadm',
-  AdminNovedadesScreen: 'novadm',
+  AdminNovedades: 'novedades',
+  AdminNovedadesScreen: 'novedades',
   AdminPlanes: 'planes',
   AdminPlanesScreen: 'planes',
   AdminAbonos: 'abonos',
@@ -61,12 +61,14 @@ const ROUTE_NAME_TO_TILE_KEY = {
   AdminCommissionsScreen: 'commissions',
   AdminStripeSettings: 'stripe',
   AdminStripeSettingsScreen: 'stripe',
+  AdminMercadoPagoSettings: 'mp',
+  AdminMercadoPagoSettingsScreen: 'mp',
   AdminBadges: 'badges',
   AdminBadgesScreen: 'badges',
   Perfil: 'perfil',
   PerfilUsuario: 'perfil',
-  Novedades: 'nov',
-  NovedadesScreen: 'nov',
+  Novedades: 'novedades',
+  NovedadesScreen: 'novedades',
 };
 
 /**
@@ -78,7 +80,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const isDesktopWeb = Platform.OS === 'web' && width >= STAFF_WEB_MIN_WIDTH;
-  const adminNavTiles = useStaffAdminNavTiles(navigation, tStr);
+  const { groups: adminNavGroups } = useStaffAdminNavTiles(navigation, tStr);
   const activeTileKey = ROUTE_NAME_TO_TILE_KEY[route?.name] || null;
 
   const styles = useMemo(
@@ -105,8 +107,18 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           fontWeight: '800',
           letterSpacing: 0.5,
           textTransform: 'uppercase',
-          marginBottom: 10,
+          marginBottom: 8,
           paddingHorizontal: 6,
+        },
+        staffWebRailGroupTitle: {
+          color: t.subText,
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
+          marginBottom: 6,
+          paddingHorizontal: 6,
+          opacity: 0.9,
         },
         staffWebRailScroll: {
           flexGrow: 1,
@@ -116,7 +128,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           flexDirection: 'row',
           alignItems: 'center',
           columnGap: 10,
-          paddingVertical: 10,
+          paddingVertical: 8,
           paddingHorizontal: 8,
           borderRadius: 10,
           marginBottom: 4,
@@ -126,7 +138,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         },
         staffWebRailItemText: {
           color: t.text,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: '600',
           flex: 1,
         },
@@ -151,22 +163,27 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           showsVerticalScrollIndicator
           keyboardShouldPersistTaps="handled"
         >
-          {adminNavTiles.map((tile) => {
-            const active = activeTileKey && tile.key === activeTileKey;
-            return (
-              <TouchableOpacity
-                key={tile.key}
-                style={[styles.staffWebRailItem, active && styles.staffWebRailItemActive]}
-                onPress={tile.onPress}
-                activeOpacity={0.88}
-              >
-                <Ionicons name={tile.ion} size={20} color={t.brand} />
-                <Text style={styles.staffWebRailItemText} numberOfLines={2}>
-                  {tile.title}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {adminNavGroups.map((group) => (
+            <View key={group.key} style={{ marginBottom: 8 }}>
+              <Text style={styles.staffWebRailGroupTitle}>{group.title}</Text>
+              {group.tiles.map((tile) => {
+                const active = activeTileKey && tile.key === activeTileKey;
+                return (
+                  <TouchableOpacity
+                    key={tile.key}
+                    style={[styles.staffWebRailItem, active && styles.staffWebRailItemActive]}
+                    onPress={tile.onPress}
+                    activeOpacity={0.88}
+                  >
+                    <Ionicons name={tile.ion} size={20} color={t.brand} />
+                    <Text style={styles.staffWebRailItemText} numberOfLines={2}>
+                      {tile.title}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
         </ScrollView>
       </View>
       <View style={styles.staffWebMainColumn}>{children}</View>

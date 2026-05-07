@@ -2,7 +2,7 @@
 const paragraphs = [
   'Responsable: Rodrigo Pérez Pulti (DNI 28.519.402) — operando bajo la marca FitEngine by WAITOMO',
   '',
-  'Contacto: soporte@waitomo.com',
+  'Contacto: soporte@fitengine.app',
   '',
   'Domicilio: Maipú, Provincia de Buenos Aires, Argentina',
   '',
@@ -72,7 +72,7 @@ const paragraphs = [
   '',
   '11. Terminación',
   '',
-  'Podemos suspender o eliminar tu cuenta si violás estos Términos, sin aviso previo en casos graves. Vos podés solicitar la eliminación de tu cuenta en cualquier momento escribiendo a soporte@waitomo.com.',
+  'Podemos suspender o eliminar tu cuenta si violás estos Términos, sin aviso previo en casos graves. Vos podés solicitar la eliminación de tu cuenta en cualquier momento escribiendo a soporte@fitengine.app.',
   '',
   '12. Ley aplicable y jurisdicción',
   '',
@@ -80,7 +80,7 @@ const paragraphs = [
   '',
   '13. Contacto',
   '',
-  'Para consultas sobre estos Términos: soporte@waitomo.com',
+  'Para consultas sobre estos Términos: soporte@fitengine.app',
   '',
   'Domicilio: Maipú, Provincia de Buenos Aires, Argentina',
 ];
