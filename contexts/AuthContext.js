@@ -1871,7 +1871,7 @@ export const AuthProvider = ({ children }) => {
         console.log('🟠 OAuth openAuthSessionAsync result:', result.type, result.url ? '(con url)' : '(sin url)');
         if (result.type === 'cancel' || result.type === 'dismiss') {
           throw new Error(
-            'OAuth se cerró sin completar. Si la web te mandó a la app al toque, desactivá ese redirect: el login tiene que terminar en https://fitengine.app/auth/callback en la misma ventana.',
+            'OAuth se cerró sin completar. En web, el login debe terminar en la misma URL de la app (no en una landing intermedia).',
           );
         }
         throw new Error(
