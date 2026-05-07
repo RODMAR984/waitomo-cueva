@@ -179,6 +179,15 @@ const getWebOAuthSessionFromHash = () => {
   return { access_token, refresh_token };
 };
 
+const getWebOAuthCodeFromQuery = () => {
+  if (Platform.OS !== 'web') return '';
+  if (typeof window === 'undefined') return '';
+  const search = String(window.location?.search || '');
+  if (!search) return '';
+  const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  return String(p.get('code') || '').trim();
+};
+
 // -------------------------
 // Limpieza storage auth (definitiva)
 // -------------------------
@@ -1353,6 +1362,20 @@ export const AuthProvider = ({ children }) => {
     const restore = async () => {
       try {
         if (Platform.OS === 'web') {
+          const authCode = getWebOAuthCodeFromQuery();
+          if (authCode) {
+            const { data: codeData, error: codeError } = await supabase.auth.exchangeCodeForSession(authCode);
+            if (!codeError && codeData?.session?.user?.id) {
+              try {
+                const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+                window.history.replaceState({}, document.title, cleanUrl);
+              } catch (_) {}
+              if (mounted) await syncFromSession(codeData.session);
+              return;
+            }
+            console.log('🟠 restore web code exchange error:', codeError?.message || codeError);
+          }
+
           const hashSession = getWebOAuthSessionFromHash();
           if (hashSession) {
             const { data: setData, error: setError } = await supabase.auth.setSession(hashSession);
