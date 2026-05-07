@@ -20,9 +20,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    // Web: procesar callback OAuth en URL.
+    // Web: el callback OAuth se maneja manualmente en AuthContext para evitar
+    // carreras/doble intercambio del code en algunos navegadores.
     // Nativo: deep links / sesión manual, sin parseo de URL web.
-    detectSessionInUrl: isWeb,
+    detectSessionInUrl: false,
     ...(isWeb ? {} : { storage: AsyncStorage }),
   },
 });

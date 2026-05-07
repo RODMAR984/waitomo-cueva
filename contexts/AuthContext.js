@@ -1364,6 +1364,17 @@ export const AuthProvider = ({ children }) => {
         if (Platform.OS === 'web') {
           const authCode = getWebOAuthCodeFromQuery();
           if (authCode) {
+            // Si otra capa ya resolvió la sesión, usarla y no re-intercambiar.
+            const { data: preData } = await supabase.auth.getSession();
+            if (preData?.session?.user?.id) {
+              try {
+                const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+                window.history.replaceState({}, document.title, cleanUrl);
+              } catch (_) {}
+              if (mounted) await syncFromSession(preData.session);
+              return;
+            }
+
             const currentUrl = String(window.location?.href || '');
             const { data: codeData, error: codeError } = await supabase.auth.exchangeCodeForSession(currentUrl);
             if (!codeError && codeData?.session?.user?.id) {
@@ -1379,6 +1390,18 @@ export const AuthProvider = ({ children }) => {
               authCodeLen: authCode.length,
               url: currentUrl,
             });
+            // Error típico cuando hubo doble intercambio/race del code verifier.
+            if (errMsg.toLowerCase().includes('code verifier')) {
+              try {
+                const { data: retryData } = await supabase.auth.getSession();
+                if (retryData?.session?.user?.id) {
+                  const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+                  window.history.replaceState({}, document.title, cleanUrl);
+                  if (mounted) await syncFromSession(retryData.session);
+                  return;
+                }
+              } catch (_) {}
+            }
             try {
               if (typeof window !== 'undefined' && typeof window.alert === 'function') {
                 window.alert(`OAuth web exchange error: ${errMsg}`);
