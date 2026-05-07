@@ -13,6 +13,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import * as ExpoLinking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,7 +109,7 @@ export default function AdminStripeSettingsScreen() {
       if (result.type !== 'success' || !result.url) {
         throw new Error(tStr('admin_stripe_connect_unknown_result'));
       }
-      const parsed = Linking.parse(result.url);
+      const parsed = ExpoLinking.parse(result.url);
       const status = String(parsed.queryParams?.status || '').trim();
       const reason = String(parsed.queryParams?.reason || '').trim();
       if (status === 'ok') {

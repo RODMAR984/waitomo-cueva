@@ -15,14 +15,16 @@ export const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mamprdmpzc3NneHhzdW9jbWhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjQ5NDcsImV4cCI6MjA3ODgwMDk0N30.4B3dZbIRb_PYWM3U_NfvyfaURlN_Ta7FsBq7EK3UDK8';
 
 // ✅ CLIENTE SUPABASE ESTÁNDAR (SIN aborts manuales)
+const isWeb = Platform.OS === 'web';
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    // En web OAuth vuelve con params en la URL; hay que parsearlos para crear sesión.
-    // En nativo mantenemos false porque el flujo usa deep links + manejo manual.
-    detectSessionInUrl: Platform.OS === 'web',
-    storage: AsyncStorage,
+    // Web: procesar callback OAuth en URL + flujo PKCE estable.
+    // Nativo: deep links / sesión manual, sin parseo de URL web.
+    detectSessionInUrl: isWeb,
+    flowType: isWeb ? 'pkce' : undefined,
+    ...(isWeb ? {} : { storage: AsyncStorage }),
   },
 });
 

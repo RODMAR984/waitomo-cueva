@@ -166,6 +166,19 @@ const isOAuthCallbackUrl = (url) => {
   return u.includes('#') && (u.includes('access_token') || u.includes('code='));
 };
 
+const getWebOAuthSessionFromHash = () => {
+  if (Platform.OS !== 'web') return null;
+  if (typeof window === 'undefined') return null;
+  const hash = String(window.location?.hash || '');
+  if (!hash || !hash.includes('access_token=')) return null;
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash;
+  const p = new URLSearchParams(raw);
+  const access_token = String(p.get('access_token') || '').trim();
+  const refresh_token = String(p.get('refresh_token') || '').trim();
+  if (!access_token || !refresh_token) return null;
+  return { access_token, refresh_token };
+};
+
 // -------------------------
 // Limpieza storage auth (definitiva)
 // -------------------------
@@ -1339,6 +1352,23 @@ export const AuthProvider = ({ children }) => {
 
     const restore = async () => {
       try {
+        if (Platform.OS === 'web') {
+          const hashSession = getWebOAuthSessionFromHash();
+          if (hashSession) {
+            const { data: setData, error: setError } = await supabase.auth.setSession(hashSession);
+            if (!setError && setData?.session?.user?.id) {
+              try {
+                const cleanUrl =
+                  `${window.location.origin}${window.location.pathname}${window.location.search}`;
+                window.history.replaceState({}, document.title, cleanUrl);
+              } catch (_) {}
+              if (mounted) await syncFromSession(setData.session);
+              return;
+            }
+            console.log('🟠 restore web hash session error:', setError?.message || setError);
+          }
+        }
+
         const initialUrl = await Linking.getInitialURL();
         console.log('🧠 restore: getInitialURL =>', initialUrl ? initialUrl.substring(0, 50) + '...' : 'null');
         if (initialUrl && isOAuthCallbackUrl(initialUrl)) {
