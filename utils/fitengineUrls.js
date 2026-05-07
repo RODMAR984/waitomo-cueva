@@ -72,8 +72,9 @@ export function buildClientInviteNativeLink(code) {
  */
 export function getOAuthRedirectUriForSupabase() {
   if (Platform.OS === 'web') {
-    const { linksBaseUrl } = getFitEngineUrls();
-    return `${linksBaseUrl}/auth/callback`;
+    // En web local/prod usar el origin actual (localhost o dominio) para evitar rebotes
+    // a otro host que termine redirigiendo al deep link nativo.
+    return AuthSession.makeRedirectUri({ path: 'auth/callback' });
   }
   return 'waitomo://auth/callback';
 }

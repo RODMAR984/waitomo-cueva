@@ -61,7 +61,7 @@ export default function AdminMercadoPagoSettingsScreen() {
     const { data: s0 } = await supabase.auth.getSession();
     accessToken = String(s0?.session?.access_token || '').trim();
 
-    if (!accessToken) {
+    if (!accessToken && typeof supabase?.auth?.refreshSession === 'function') {
       const { data: s1 } = await supabase.auth.refreshSession();
       accessToken = String(s1?.session?.access_token || '').trim();
     }
@@ -75,6 +75,9 @@ export default function AdminMercadoPagoSettingsScreen() {
   const invokeEdgeAuthed = useCallback(
     async (fnName, body) => {
       const authHeader = await getAuthHeader();
+      if (typeof fetch !== 'function') {
+        throw new Error('fetch_unavailable');
+      }
       const res = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
         method: 'POST',
         headers: {
@@ -168,6 +171,10 @@ export default function AdminMercadoPagoSettingsScreen() {
         Alert.alert(tStr('security_error_title'), tStr('security_sign_in_required_body'));
         return;
       }
+      if (String(e?.message || '').includes('fetch_unavailable')) {
+        Alert.alert(tStr('gym_config_alert_title_error'), 'Runtime sin fetch; actualizá la app.');
+        return;
+      }
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
     } finally {
       setConnecting(false);
@@ -193,6 +200,8 @@ export default function AdminMercadoPagoSettingsScreen() {
           } catch (e) {
             if (String(e?.message || '').includes('auth_session_missing')) {
               Alert.alert(tStr('security_error_title'), tStr('security_sign_in_required_body'));
+            } else if (String(e?.message || '').includes('fetch_unavailable')) {
+              Alert.alert(tStr('gym_config_alert_title_error'), 'Runtime sin fetch; actualizá la app.');
             } else {
               Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
             }

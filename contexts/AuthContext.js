@@ -18,6 +18,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import {
   readActiveAppMode,
   writeActiveAppMode,
@@ -1813,11 +1814,20 @@ export const AuthProvider = ({ children }) => {
       const redirectTo = getOAuthRedirectUriForSupabase();
       console.log('🟡 OAUTH redirectTo =>', redirectTo);
 
+      const oauthOptions =
+        Platform.OS === 'web'
+          ? { redirectTo, skipBrowserRedirect: false }
+          : { redirectTo, skipBrowserRedirect: true };
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo, skipBrowserRedirect: true },
+        options: oauthOptions,
       });
       if (error) throw error;
+      if (Platform.OS === 'web') {
+        // En web el navegador redirige automáticamente al proveedor.
+        // No usar openAuthSessionAsync porque dispara flujo nativo y rompe localhost.
+        return { session: null, user: null };
+      }
       if (!data?.url) throw new Error('OAuth: proveedor no devolvió URL.');
 
       WebBrowser.maybeCompleteAuthSession();

@@ -6,6 +6,7 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // ✅ EXPORTS (para usar en AuthContext REST directo)
 export const SUPABASE_URL = 'https://nfjjkvjsssgxxsuocmhj.supabase.co';
@@ -18,7 +19,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false,
+    // En web OAuth vuelve con params en la URL; hay que parsearlos para crear sesión.
+    // En nativo mantenemos false porque el flujo usa deep links + manejo manual.
+    detectSessionInUrl: Platform.OS === 'web',
     storage: AsyncStorage,
   },
 });
