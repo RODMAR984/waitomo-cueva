@@ -63,6 +63,26 @@ export function useWelcomeRouting() {
       }
 
       if (isDualByMemberships && !mode) {
+        // "Continuar" nunca debe quedar en no-op: elegimos un modo por defecto.
+        const fallbackMode = hasClientMembership ? 'client' : 'staff';
+        // eslint-disable-next-line no-console
+        console.log('ROUTING_DEBUG WelcomeGlobal dual without mode, using fallback', {
+          fallbackMode,
+          hasClientMembership,
+          hasStaffMembership,
+        });
+        if (persistActiveAppMode && session?.user?.id) {
+          void persistActiveAppMode(fallbackMode, session.user.id);
+        }
+        if (fallbackMode === 'staff') {
+          navigateForStaffDual();
+          return;
+        }
+        if (!profile) {
+          navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
+          return;
+        }
+        navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
         return;
       }
 
