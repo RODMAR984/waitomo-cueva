@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
-import { supabase } from '../supabaseClient';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../supabaseClient';
 import { getMercadoPagoConnectRedirectUri } from '../utils/fitengineUrls';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
@@ -72,6 +72,34 @@ export default function AdminMercadoPagoSettingsScreen() {
     return { Authorization: `Bearer ${accessToken}` };
   }, []);
 
+  const invokeEdgeAuthed = useCallback(
+    async (fnName, body) => {
+      const authHeader = await getAuthHeader();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          ...authHeader,
+        },
+        body: JSON.stringify(body || {}),
+      });
+      const text = await res.text();
+      let json = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch (_) {
+        json = null;
+      }
+      if (!res.ok) {
+        const detail = json?.message || json?.error || text || `http_${res.status}`;
+        throw new Error(String(detail));
+      }
+      return json || {};
+    },
+    [getAuthHeader],
+  );
+
   const save = useCallback(async () => {
     if (!orgId || !canEdit) {
       Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
@@ -104,17 +132,11 @@ export default function AdminMercadoPagoSettingsScreen() {
     }
     setConnecting(true);
     try {
-      const authHeader = await getAuthHeader();
-
       const nativeReturn = Platform.OS !== 'web' ? getMercadoPagoConnectRedirectUri() : '';
       const body = { organization_id: orgId };
       if (nativeReturn) body.native_return_url = nativeReturn;
 
-      const { data, error } = await supabase.functions.invoke('mercadopago-oauth-start', {
-        body,
-        headers: authHeader,
-      });
-      if (error) throw error;
+      const data = await invokeEdgeAuthed('mercadopago-oauth-start', body);
       const oauthUrl = String(data?.oauth_url || '');
       if (!oauthUrl) throw new Error('missing_oauth_url');
 
@@ -150,7 +172,7 @@ export default function AdminMercadoPagoSettingsScreen() {
     } finally {
       setConnecting(false);
     }
-  }, [canEdit, getAuthHeader, orgId, refreshOrganization, tStr]);
+  }, [canEdit, invokeEdgeAuthed, orgId, refreshOrganization, tStr]);
 
   const disconnectMp = useCallback(() => {
     if (!orgId || !canEdit) {
@@ -165,12 +187,7 @@ export default function AdminMercadoPagoSettingsScreen() {
         onPress: async () => {
           setDisconnecting(true);
           try {
-            const authHeader = await getAuthHeader();
-            const { error } = await supabase.functions.invoke('mercadopago-disconnect', {
-              body: { organization_id: orgId },
-              headers: authHeader,
-            });
-            if (error) throw error;
+            await invokeEdgeAuthed('mercadopago-disconnect', { organization_id: orgId });
             if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
             Alert.alert(tStr('admin_mp_disconnect_ok'));
           } catch (e) {
@@ -185,7 +202,7 @@ export default function AdminMercadoPagoSettingsScreen() {
         },
       },
     ]);
-  }, [canEdit, getAuthHeader, orgId, refreshOrganization, tStr]);
+  }, [canEdit, invokeEdgeAuthed, orgId, refreshOrganization, tStr]);
 
   const styles = useMemo(
     () =>
