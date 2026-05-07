@@ -188,6 +188,21 @@ const getWebOAuthCodeFromQuery = () => {
   return String(p.get('code') || '').trim();
 };
 
+const getWebPkceDebug = () => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.localStorage) {
+    return { hasVerifier: false, keys: [] };
+  }
+  try {
+    const keys = Object.keys(window.localStorage).filter(
+      (k) => k.includes('code-verifier') || k.includes('auth-token') || k.includes('supabase')
+    );
+    const hasVerifier = keys.some((k) => k.includes('code-verifier'));
+    return { hasVerifier, keys };
+  } catch (_) {
+    return { hasVerifier: false, keys: [] };
+  }
+};
+
 // -------------------------
 // Limpieza storage auth (definitiva)
 // -------------------------
@@ -1364,6 +1379,11 @@ export const AuthProvider = ({ children }) => {
         if (Platform.OS === 'web') {
           const authCode = getWebOAuthCodeFromQuery();
           if (authCode) {
+            const pkceDbg = getWebPkceDebug();
+            console.log('🟡 restore web pkce debug before exchange', {
+              hasVerifier: pkceDbg.hasVerifier,
+              keyCount: pkceDbg.keys.length,
+            });
             // Si otra capa ya resolvió la sesión, usarla y no re-intercambiar.
             const { data: preData } = await supabase.auth.getSession();
             if (preData?.session?.user?.id) {
@@ -1899,6 +1919,15 @@ export const AuthProvider = ({ children }) => {
 
       const redirectTo = getOAuthRedirectUriForSupabase();
       console.log('🟡 OAUTH redirectTo =>', redirectTo);
+      if (Platform.OS === 'web') {
+        const pkceDbg = getWebPkceDebug();
+        console.log('🟡 OAUTH web pkce debug before signIn', {
+          origin: typeof window !== 'undefined' ? window.location?.origin : null,
+          redirectTo,
+          hasVerifier: pkceDbg.hasVerifier,
+          keyCount: pkceDbg.keys.length,
+        });
+      }
 
       const oauthOptions =
         Platform.OS === 'web'
