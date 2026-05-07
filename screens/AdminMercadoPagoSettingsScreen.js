@@ -56,6 +56,22 @@ export default function AdminMercadoPagoSettingsScreen() {
 
   const dirty = checkoutOn !== !!organization?.mercadopago_checkout_enabled;
 
+  const getAuthHeader = useCallback(async () => {
+    let accessToken = '';
+    const { data: s0 } = await supabase.auth.getSession();
+    accessToken = String(s0?.session?.access_token || '').trim();
+
+    if (!accessToken) {
+      const { data: s1 } = await supabase.auth.refreshSession();
+      accessToken = String(s1?.session?.access_token || '').trim();
+    }
+
+    if (!accessToken) {
+      throw new Error('auth_session_missing');
+    }
+    return { Authorization: `Bearer ${accessToken}` };
+  }, []);
+
   const save = useCallback(async () => {
     if (!orgId || !canEdit) {
       Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
@@ -88,10 +104,7 @@ export default function AdminMercadoPagoSettingsScreen() {
     }
     setConnecting(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+      const authHeader = await getAuthHeader();
 
       const nativeReturn = Platform.OS !== 'web' ? getMercadoPagoConnectRedirectUri() : '';
       const body = { organization_id: orgId };
@@ -129,11 +142,15 @@ export default function AdminMercadoPagoSettingsScreen() {
         Alert.alert(tStr('admin_mp_connect_title'), reason || tStr('gym_config_alert_title_error'));
       }
     } catch (e) {
+      if (String(e?.message || '').includes('auth_session_missing')) {
+        Alert.alert(tStr('security_error_title'), tStr('security_sign_in_required_body'));
+        return;
+      }
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
     } finally {
       setConnecting(false);
     }
-  }, [canEdit, orgId, refreshOrganization, tStr]);
+  }, [canEdit, getAuthHeader, orgId, refreshOrganization, tStr]);
 
   const disconnectMp = useCallback(() => {
     if (!orgId || !canEdit) {
@@ -148,10 +165,7 @@ export default function AdminMercadoPagoSettingsScreen() {
         onPress: async () => {
           setDisconnecting(true);
           try {
-            const {
-              data: { session },
-            } = await supabase.auth.getSession();
-            const authHeader = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+            const authHeader = await getAuthHeader();
             const { error } = await supabase.functions.invoke('mercadopago-disconnect', {
               body: { organization_id: orgId },
               headers: authHeader,
@@ -160,14 +174,18 @@ export default function AdminMercadoPagoSettingsScreen() {
             if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
             Alert.alert(tStr('admin_mp_disconnect_ok'));
           } catch (e) {
-            Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
+            if (String(e?.message || '').includes('auth_session_missing')) {
+              Alert.alert(tStr('security_error_title'), tStr('security_sign_in_required_body'));
+            } else {
+              Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
+            }
           } finally {
             setDisconnecting(false);
           }
         },
       },
     ]);
-  }, [canEdit, orgId, refreshOrganization, tStr]);
+  }, [canEdit, getAuthHeader, orgId, refreshOrganization, tStr]);
 
   const styles = useMemo(
     () =>
