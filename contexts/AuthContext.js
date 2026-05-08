@@ -31,6 +31,9 @@ import {
 } from '../utils/pendingClientInviteStorage';
 import { getOAuthRedirectUriForSupabase } from '../utils/fitengineUrls';
 
+/** Dónde se inició OAuth en web: si Google vuelve a otro origen, redirigimos acá con el mismo ?code=. */
+const WEB_OAUTH_START_REDIRECT_KEY = 'waitomo_oauth_web_redirect';
+
 // No llamar aquí: al cargar la app "completa" una sesión pendiente y la siguiente openAuthSessionAsync
 // devuelve esa URL al instante (sesión fantasma). Se llama solo dentro de signInWithProvider.
 
@@ -186,21 +189,6 @@ const getWebOAuthCodeFromQuery = () => {
   if (!search) return '';
   const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   return String(p.get('code') || '').trim();
-};
-
-const getWebPkceDebug = () => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.localStorage) {
-    return { hasVerifier: false, keys: [] };
-  }
-  try {
-    const keys = Object.keys(window.localStorage).filter(
-      (k) => k.includes('code-verifier') || k.includes('auth-token') || k.includes('supabase')
-    );
-    const hasVerifier = keys.some((k) => k.includes('code-verifier'));
-    return { hasVerifier, keys };
-  } catch (_) {
-    return { hasVerifier: false, keys: [] };
-  }
 };
 
 // -------------------------
@@ -1376,72 +1364,62 @@ export const AuthProvider = ({ children }) => {
 
     const restore = async () => {
       try {
-        if (Platform.OS === 'web') {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const authCode = getWebOAuthCodeFromQuery();
-          if (authCode) {
-            const pkceDbg = getWebPkceDebug();
-            console.log('🟡 restore web pkce debug before exchange', {
-              hasVerifier: pkceDbg.hasVerifier,
-              keyCount: pkceDbg.keys.length,
-            });
-            // Si otra capa ya resolvió la sesión, usarla y no re-intercambiar.
-            const { data: preData } = await supabase.auth.getSession();
-            if (preData?.session?.user?.id) {
-              try {
-                const cleanUrl = `${window.location.origin}${window.location.pathname}`;
-                window.history.replaceState({}, document.title, cleanUrl);
-              } catch (_) {}
-              if (mounted) await syncFromSession(preData.session);
-              return;
-            }
-
-            const currentUrl = String(window.location?.href || '');
-            const { data: codeData, error: codeError } = await supabase.auth.exchangeCodeForSession(currentUrl);
-            if (!codeError && codeData?.session?.user?.id) {
-              try {
-                const cleanUrl = `${window.location.origin}${window.location.pathname}`;
-                window.history.replaceState({}, document.title, cleanUrl);
-              } catch (_) {}
-              if (mounted) await syncFromSession(codeData.session);
-              return;
-            }
-            const errMsg = String(codeError?.message || codeError || 'unknown_code_exchange_error');
-            console.log('🟠 restore web code exchange error:', errMsg, {
-              authCodeLen: authCode.length,
-              url: currentUrl,
-            });
-            // Error típico cuando hubo doble intercambio/race del code verifier.
-            if (errMsg.toLowerCase().includes('code verifier')) {
-              try {
-                const { data: retryData } = await supabase.auth.getSession();
-                if (retryData?.session?.user?.id) {
-                  const cleanUrl = `${window.location.origin}${window.location.pathname}`;
-                  window.history.replaceState({}, document.title, cleanUrl);
-                  if (mounted) await syncFromSession(retryData.session);
+          // Volver al mismo origen donde quedó el code_verifier PKCE (localStorage por host).
+          if (authCode && typeof sessionStorage !== 'undefined') {
+            try {
+              const saved = sessionStorage.getItem(WEB_OAUTH_START_REDIRECT_KEY);
+              if (saved) {
+                const savedBase = new URL(saved);
+                if (window.location.origin !== savedBase.origin) {
+                  const path = window.location.pathname || '/';
+                  const target = `${savedBase.origin}${path}${window.location.search}${window.location.hash}`;
+                  window.location.replace(target);
                   return;
                 }
-              } catch (_) {}
-            }
-            try {
-              if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-                window.alert(`OAuth web exchange error: ${errMsg}`);
               }
-            } catch (_) {}
+            } catch (e) {
+              console.log('🟠 restore web oauth origin redirect:', e?.message || e);
+            }
           }
 
           const hashSession = getWebOAuthSessionFromHash();
-          if (hashSession) {
-            const { data: setData, error: setError } = await supabase.auth.setSession(hashSession);
-            if (!setError && setData?.session?.user?.id) {
+          const hasOAuthInUrl = Boolean(authCode || hashSession);
+          if (hasOAuthInUrl) {
+            // supabaseClient: detectSessionInUrl (web) canjea ?code= una sola vez al leer sesión.
+            let { data: urlSessionData } = await supabase.auth.getSession();
+            if (!urlSessionData?.session?.user?.id && authCode) {
+              await new Promise((r) => setTimeout(r, 120));
+              ({ data: urlSessionData } = await supabase.auth.getSession());
+            }
+            if (urlSessionData?.session?.user?.id) {
               try {
-                const cleanUrl =
-                  `${window.location.origin}${window.location.pathname}${window.location.search}`;
+                sessionStorage.removeItem(WEB_OAUTH_START_REDIRECT_KEY);
+                const cleanUrl = `${window.location.origin}${window.location.pathname}`;
                 window.history.replaceState({}, document.title, cleanUrl);
               } catch (_) {}
-              if (mounted) await syncFromSession(setData.session);
+              if (mounted) await syncFromSession(urlSessionData.session);
               return;
             }
-            console.log('🟠 restore web hash session error:', setError?.message || setError);
+
+            if (hashSession) {
+              const { data: setData, error: setError } = await supabase.auth.setSession(hashSession);
+              if (!setError && setData?.session?.user?.id) {
+                try {
+                  sessionStorage.removeItem(WEB_OAUTH_START_REDIRECT_KEY);
+                  const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+                  window.history.replaceState({}, document.title, cleanUrl);
+                } catch (_) {}
+                if (mounted) await syncFromSession(setData.session);
+                return;
+              }
+              console.log('🟠 restore web hash session error:', setError?.message || setError);
+            } else if (authCode) {
+              console.log(
+                '🟠 restore web: hay ?code= pero sin sesión (revisá Redirect URLs en Supabase o mezcla de hosts).',
+              );
+            }
           }
         }
 
@@ -1909,9 +1887,9 @@ export const AuthProvider = ({ children }) => {
       const allowed = ['google', 'apple'];
       if (!allowed.includes(provider)) throw new Error('Proveedor no habilitado.');
 
-      // Expo Go no es un entorno confiable para OAuth nativo con deep links personalizados.
-      // En este repo, el flujo soportado "para siempre" es: development build / app instalada.
-      if (Constants.appOwnership === 'expo') {
+      // Expo Go: OAuth nativo + waitomo:// no es fiable. En web (npm run web) sí usamos Google
+      // en el navegador; no bloquear por appOwnership === 'expo'.
+      if (Constants.appOwnership === 'expo' && Platform.OS !== 'web') {
         throw new Error(
           'Google/Apple login no está soportado en Expo Go. Usá un development build (npm run start:dev-client) o la app instalada.',
         );
@@ -1919,14 +1897,10 @@ export const AuthProvider = ({ children }) => {
 
       const redirectTo = getOAuthRedirectUriForSupabase();
       console.log('🟡 OAUTH redirectTo =>', redirectTo);
-      if (Platform.OS === 'web') {
-        const pkceDbg = getWebPkceDebug();
-        console.log('🟡 OAUTH web pkce debug before signIn', {
-          origin: typeof window !== 'undefined' ? window.location?.origin : null,
-          redirectTo,
-          hasVerifier: pkceDbg.hasVerifier,
-          keyCount: pkceDbg.keys.length,
-        });
+      if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
+        try {
+          sessionStorage.setItem(WEB_OAUTH_START_REDIRECT_KEY, redirectTo);
+        } catch (_) {}
       }
 
       const oauthOptions =

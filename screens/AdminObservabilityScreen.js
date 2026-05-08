@@ -16,10 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { supabase } from '../supabaseClient';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import {
   clearObservabilityEvents,
   getObservabilitySnapshot,
@@ -50,7 +52,7 @@ export default function AdminObservabilityScreen({ navigation }) {
 
   const refresh = () => setRefreshTick((x) => x + 1);
   const syncedCount = Math.max(0, stats.total - stats.unsynced);
-  const maxWidth = Platform.OS === 'web' ? Math.min(Math.max(width - 24, 360), 1200) : undefined;
+  const maxWidth = Platform.OS === 'web' ? WEB_CONTENT_MAX_WIDTH : undefined;
 
   const events = useMemo(() => snapshot.events.slice().reverse(), [snapshot.events]);
   const perfMetricDefs = useMemo(
@@ -198,13 +200,13 @@ export default function AdminObservabilityScreen({ navigation }) {
         contentMax: { width: '100%', alignSelf: 'center', maxWidth },
         header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
         title: { color: t.text, fontSize: 22, fontWeight: '800' },
-        iconBtn: { padding: 8, marginLeft: -8 },
+        iconBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
         statCard: {
           minWidth: 120,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 10,
           backgroundColor: t.boxBg,
         },
@@ -318,9 +320,7 @@ export default function AdminObservabilityScreen({ navigation }) {
         <View style={styles.contentMax}>
         <View style={styles.header}>
           {!hideInlineBack ? (
-            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.iconBtn} />
           ) : null}
           <Text style={styles.title}>{tStr('admin_observ_title')}</Text>
           <View style={{ width: 20 }} />

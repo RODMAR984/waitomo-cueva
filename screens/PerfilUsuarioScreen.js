@@ -34,6 +34,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { navigationRef } from '../navigationRef';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const PerfilUsuarioScreen = () => {
   const navigation = useNavigation();
@@ -376,8 +377,8 @@ const PerfilUsuarioScreen = () => {
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        titulo: { fontSize: 22, fontWeight: '700', color: t.text, marginBottom: 4 },
-        subtitulo: { fontSize: 14, color: t.subText, marginBottom: 16 },
+        titulo: { fontSize: MOBILE_TYPE.title, fontWeight: '700', color: t.text, marginBottom: 4 },
+        subtitulo: { fontSize: MOBILE_TYPE.body, color: t.subText, marginBottom: 16 },
         gymRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
         gymLogo: { width: 40, height: 40, borderRadius: 8 },
         gymLogoPlaceholder: { backgroundColor: t.faintStrong, justifyContent: 'center', alignItems: 'center' },
@@ -410,8 +411,10 @@ const PerfilUsuarioScreen = () => {
         aptoBadgeText: { color: t.primaryText, fontWeight: '700', fontSize: 12 },
         aptoHint: { flex: 1, color: t.subText, fontSize: 12 },
         aptoButton: {
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 10,
+          paddingHorizontal: MOBILE_SPACING.lg,
           alignItems: 'center',
           justifyContent: 'center',
           ...t.buttonPrimary,
@@ -420,12 +423,13 @@ const PerfilUsuarioScreen = () => {
         field: { marginBottom: 10 },
         label: { fontSize: 13, color: t.subText, marginBottom: 4 },
         input: {
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           paddingHorizontal: 10,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 8,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           color: t.text,
           backgroundColor: t.inputBg,
         },
@@ -436,8 +440,10 @@ const PerfilUsuarioScreen = () => {
         buttonsRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'center' },
         saveButton: {
           flexGrow: 1,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 10,
+          paddingHorizontal: MOBILE_SPACING.lg,
           alignItems: 'center',
           justifyContent: 'center',
           ...t.buttonPrimary,
@@ -445,8 +451,10 @@ const PerfilUsuarioScreen = () => {
         saveButtonText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: 15 },
         securityButton: {
           flexGrow: 1,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 10,
+          paddingHorizontal: MOBILE_SPACING.lg,
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row',
@@ -456,8 +464,10 @@ const PerfilUsuarioScreen = () => {
         securityButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: 14 },
         logoutButton: {
           flexGrow: 1,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 10,
+          paddingHorizontal: MOBILE_SPACING.lg,
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row',

@@ -7,11 +7,13 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import LogoCompleto from '../components/LogoCompleto';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { getFitEngineUrls } from '../utils/fitengineUrls';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 export default function AboutFitEngineScreen() {
   const navigation = useNavigation();
@@ -48,9 +50,17 @@ export default function AboutFitEngineScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 80, paddingBottom: 40 },
+        container: {
+          flexGrow: 1,
+          paddingHorizontal: 20,
+          paddingTop: 80,
+          paddingBottom: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         panel: {
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 18,
           backgroundColor: t.boxBg,
           borderWidth: 1,
@@ -173,10 +183,7 @@ export default function AboutFitEngineScreen() {
             </>
           )}
 
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
-            <Ionicons name="arrow-back" size={18} color={t.primaryText} />
-            <Text style={styles.backButtonText}>{tStr('config_back')}</Text>
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </View>
       </ScrollView>
     </BackgroundWrapper>

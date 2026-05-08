@@ -15,9 +15,11 @@ import {
   Alert,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function ReservaScreen({ route, navigation }) {
   const plan = route?.params?.plan ?? null;
@@ -46,14 +48,14 @@ export default function ReservaScreen({ route, navigation }) {
         // overlay principal para contenido
         content: {
           flex: 1,
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 100,
         },
         panelTitle: {
           alignSelf: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           marginBottom: 24,
           paddingHorizontal: 16,
@@ -61,7 +63,7 @@ export default function ReservaScreen({ route, navigation }) {
         },
         titulo: {
           color: t.subText,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           textAlign: 'center',
         },
@@ -74,17 +76,19 @@ export default function ReservaScreen({ route, navigation }) {
           alignItems: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1.2,
+          minHeight: MOBILE_SIZES.controlHeightLg,
           paddingHorizontal: 20,
-          paddingVertical: 14,
+          paddingVertical: MOBILE_SPACING.md,
+          justifyContent: 'center',
         },
         itemSelected: {
           ...t.buttonPrimary,
         },
         itemText: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: 'bold',
         },
         itemTextSelected: {
@@ -99,13 +103,16 @@ export default function ReservaScreen({ route, navigation }) {
         confirmar: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingHorizontal: 22,
-          paddingVertical: 12,
+          paddingVertical: MOBILE_SPACING.md,
+          justifyContent: 'center',
         },
         confirmarTxt: {
           ...t.buttonPrimaryText,
           fontWeight: 'bold',
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         volver: {
           alignItems: 'center',
@@ -113,7 +120,7 @@ export default function ReservaScreen({ route, navigation }) {
         },
         volverTxt: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
       }),
     [t],
@@ -173,9 +180,7 @@ export default function ReservaScreen({ route, navigation }) {
               <Text style={styles.confirmarTxt}>{tStr('reserva_confirm_back')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.volver}>
-              <Text style={styles.volverTxt}>{tStr('common_back')}</Text>
-            </TouchableOpacity>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.volver} />
           </View>
         </View>
       </View>

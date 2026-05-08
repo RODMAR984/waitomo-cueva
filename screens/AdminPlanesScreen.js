@@ -19,12 +19,18 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { supabase } from '../supabaseClient';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
+import {
+  WEB_CONTENT_MAX_WIDTH,
+  WEB_DESKTOP_BREAKPOINT,
+  WEB_PANEL_RADIUS,
+} from '../theme/webSpec';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -81,7 +87,7 @@ export default function AdminPlanesScreen() {
   const navigation = useNavigation();
   const hideInlineBack = useStaffWebHideInlineBack();
   const { width } = useWindowDimensions();
-  const isWebWide = Platform.OS === 'web' && width >= 1200;
+  const isWebWide = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const MODES = useMemo(
@@ -355,10 +361,10 @@ export default function AdminPlanesScreen() {
           paddingTop: 56,
           width: '100%',
           alignSelf: 'center',
-          maxWidth: Platform.OS === 'web' ? (isWebWide ? 1180 : Math.min(Math.max(width - 24, 340), 1080)) : undefined,
+          maxWidth: Platform.OS === 'web' ? WEB_CONTENT_MAX_WIDTH : undefined,
         },
         header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-        backBtn: { padding: 8, marginLeft: -8 },
+        backBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         title: { color: t.text, fontSize: 22, fontWeight: '800' },
         btn: { ...t.buttonPrimary, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
         btnText: { ...t.buttonPrimaryText, fontSize: 14 },
@@ -386,7 +392,7 @@ export default function AdminPlanesScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 14,
           marginBottom: 12,
           flexDirection: 'row',
@@ -401,7 +407,7 @@ export default function AdminPlanesScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 16,
           marginBottom: 16,
         },
@@ -486,9 +492,7 @@ export default function AdminPlanesScreen() {
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             {!hideInlineBack ? (
-              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                <Ionicons name="arrow-back" size={26} color={t.text} />
-              </TouchableOpacity>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
             ) : null}
             <Text style={styles.title}>{tStr('admin_plans_screen_title')}</Text>
             {isOwner && (

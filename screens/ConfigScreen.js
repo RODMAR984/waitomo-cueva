@@ -18,10 +18,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { LOCALE_ES, LOCALE_EN, LOCALE_PT } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const MODES = [
   { key: 'dark', labelKey: 'config_dark', icon: 'moon' },
@@ -112,16 +115,24 @@ const ConfigScreen = () => {
     () =>
       StyleSheet.create({
         flex: { flex: 1 },
-        container: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 80, paddingBottom: 40 },
+        container: {
+          flexGrow: 1,
+          paddingHorizontal: MOBILE_SPACING.xl,
+          paddingTop: 80,
+          paddingBottom: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         panel: {
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 18,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        title: { fontSize: 22, fontWeight: '700', color: t.text, marginBottom: 6 },
-        subtitle: { fontSize: 13, color: t.subText, marginBottom: 18 },
+        title: { fontSize: MOBILE_TYPE.title, fontWeight: '700', color: t.text, marginBottom: 6 },
+        subtitle: { fontSize: MOBILE_TYPE.caption, color: t.subText, marginBottom: 18 },
         section: {
           marginTop: 10,
           marginBottom: 14,
@@ -143,8 +154,9 @@ const ConfigScreen = () => {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 6,
-          paddingVertical: 12,
-          borderRadius: 12,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
         },
         modeBtnActive: {},
@@ -153,7 +165,8 @@ const ConfigScreen = () => {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingVertical: 12,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.sm,
           borderBottomWidth: 1,
           borderBottomColor: t.overlayBorder,
         },
@@ -163,9 +176,10 @@ const ConfigScreen = () => {
         backButton: {
           marginTop: 16,
           alignSelf: 'center',
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 10,
-          paddingHorizontal: 20,
-          borderRadius: 999,
+          paddingHorizontal: MOBILE_SPACING.xl,
+          borderRadius: MOBILE_RADII.pill,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
@@ -357,10 +371,7 @@ const ConfigScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
-            <Ionicons name="arrow-back" size={18} color={t.primaryText} />
-            <Text style={styles.backButtonText}>{tStr('config_back')}</Text>
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </View>
       </ScrollView>
     </BackgroundWrapper>

@@ -25,6 +25,7 @@ import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import { supabase } from '../supabaseClient';
 import { resolvePostAuthDestination } from '../utils/authRoutingGuard';
 import { reportError, trackEvent } from '../utils/observability';
@@ -132,9 +133,9 @@ export default function LoginScreen() {
         scrollContent: {
           flexGrow: 1,
           justifyContent: 'center',
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           paddingTop: 60,
-          paddingBottom: 8,
+          paddingBottom: MOBILE_SPACING.sm,
           alignItems: 'center',
         },
         pageColumn: {
@@ -145,40 +146,46 @@ export default function LoginScreen() {
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           width: '100%',
         },
         title: {
           color: fe.subText,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
-          marginBottom: 20,
+          marginBottom: MOBILE_SPACING.xl,
           textAlign: 'center',
         },
         input: {
           backgroundColor: fe.inputBg,
           borderColor: fe.inputBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: fe.text,
           marginBottom: 15,
-          padding: 12,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingHorizontal: MOBILE_SPACING.md,
+          paddingVertical: MOBILE_SPACING.md,
         },
         button: {
           alignItems: 'center',
           backgroundColor: fe.buttonBg,
           borderColor: fe.buttonBorder,
           borderWidth: 1,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeightLg,
           marginTop: 10,
-          padding: 16,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
         },
         buttonText: {
           color: fe.buttonText,
           fontWeight: 'bold',
           textAlign: 'center',
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         linkText: {
           color: fe.subText,
@@ -206,15 +213,34 @@ export default function LoginScreen() {
           backgroundColor: fe.buttonBg,
           borderColor: fe.buttonBorder,
           borderWidth: 1,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeightLg,
           marginTop: 10,
-          padding: 16,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
         },
         socialButtonText: {
           color: fe.buttonText,
           fontWeight: 'bold',
           textAlign: 'center',
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
+        brandTop: { width: '100%', alignItems: 'center', marginBottom: 12 },
+        brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
+        notStaffText: { marginTop: 0, marginBottom: 16 },
+        buttonSpaced: { marginBottom: 10 },
+        staffSessionHint: {
+          color: fe.subText,
+          fontSize: 13,
+          textAlign: 'center',
+          marginBottom: 10,
+        },
+        buttonStaffContinue: { marginBottom: 14 },
+        socialButtonStack: { marginTop: 10 },
+        linkRowSpaced: { marginTop: 10 },
+        brandBottom: { width: '100%', alignItems: 'center', marginTop: 24, paddingBottom: 16 },
+        brandFooter: { color: fe.subText, fontSize: 11, opacity: 0.8 },
       }),
     [winW],
   );
@@ -490,19 +516,19 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.pageColumn}>
-            <View style={{ width: '100%', alignItems: 'center', marginBottom: 12 }}>
+            <View style={styles.brandTop}>
               <LogoCompleto height={50} />
-              <Text style={{ color: fe.subText, fontSize: 12, marginTop: 4 }}>{tStr('login_brand_powered')}</Text>
+              <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
             </View>
             <View style={styles.panel}>
               {showStaffAccessChoice ? (
                 <>
                   <Text style={styles.title}>{tStr('login_not_staff_title')}</Text>
-                  <Text style={[styles.linkText, { marginTop: 0, marginBottom: 16 }]}>
+                  <Text style={[styles.linkText, styles.notStaffText]}>
                     {tStr('login_not_staff_message')}
                   </Text>
                   <TouchableOpacity
-                    style={[styles.button, { marginBottom: 10 }]}
+                    style={[styles.button, styles.buttonSpaced]}
                     onPress={handleCrearCuentaStaffDesdeCliente}
                   >
                     <Text style={styles.buttonText}>{tStr('login_create_staff_account')}</Text>
@@ -526,18 +552,11 @@ export default function LoginScreen() {
                 !allowStaffAutoNav &&
                 (profile || postAuthGateOpen) && (
                   <>
-                    <Text
-                      style={{
-                        color: fe.subText,
-                        fontSize: 13,
-                        textAlign: 'center',
-                        marginBottom: 10,
-                      }}
-                    >
+                    <Text style={styles.staffSessionHint}>
                       {tStr('login_session_active_staff')}
                     </Text>
                     <TouchableOpacity
-                      style={[styles.button, { marginBottom: 14 }]}
+                      style={[styles.button, styles.buttonStaffContinue]}
                       onPress={() => setAllowStaffAutoNav(true)}
                       disabled={disabled}
                     >
@@ -596,7 +615,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.socialButton, { marginTop: 10 }]}
+                style={[styles.socialButton, styles.socialButtonStack]}
                 onPress={() => handleOAuthLogin('apple')}
                 disabled={disabled}
               >
@@ -622,7 +641,7 @@ export default function LoginScreen() {
                 <TouchableOpacity
                   onPress={() => navigation.navigate('JoinWithInvite')}
                   disabled={disabled}
-                  style={{ marginTop: 10 }}
+                  style={styles.linkRowSpaced}
                 >
                   <Text style={styles.linkText}>{tStr('welcome_join_with_code')}</Text>
                 </TouchableOpacity>
@@ -630,9 +649,9 @@ export default function LoginScreen() {
                 </>
               )}
             </View>
-            <View style={{ width: '100%', alignItems: 'center', marginTop: 24, paddingBottom: 16 }}>
+            <View style={styles.brandBottom}>
               <LogoCompleto height={30} style={{ marginBottom: 6 }} />
-              <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.8 }}>{tStr('gym_config_footer')}</Text>
+              <Text style={styles.brandFooter}>{tStr('gym_config_footer')}</Text>
             </View>
           </View>
         </ScrollView>

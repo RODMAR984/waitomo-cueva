@@ -1,7 +1,7 @@
 // WelcomeGlobalScreen — Tras Splash: acciones claras (crear cuenta / iniciar sesión).
 // Cuenta dual: se redirige a WelcomeDualChoice (misma estética, flujo aparte).
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -32,25 +32,48 @@ export default function WelcomeGlobalScreen() {
     hasStaffMembership,
     hasClientMembership,
     authNavigationReady,
+    initialProfileSyncDone,
     logout,
   } = useAuth() || {};
 
   const { navigateToDestination, onContinue, isDualByMemberships } = useWelcomeRouting();
 
-  const isDualSession =
-    !!session?.user?.id && authNavigationReady && (isDualByMemberships || isDualHatUser);
+  /** Sin esto, "Continuar" puede dispararse con profile=null (OAuth) y el routing manda a Registro o no-op. */
+  const sessionRoutingReady =
+    !!session?.user?.id &&
+    authNavigationReady &&
+    (Platform.OS !== 'web' || initialProfileSyncDone === true);
+
+  const isDualSession = sessionRoutingReady && (isDualByMemberships || isDualHatUser);
 
   // Dual solo si aún no hay modo guardado (ej. login staff ya persistió "staff" → no mostrar elección).
   const needsDualRedirect =
-    !!session?.user?.id &&
-    authNavigationReady &&
-    (isDualByMemberships || isDualHatUser) &&
-    activeAppMode == null;
+    sessionRoutingReady && (isDualByMemberships || isDualHatUser) && activeAppMode == null;
 
   useEffect(() => {
     if (!needsDualRedirect) return;
     navigation.replace('WelcomeDualChoice');
   }, [needsDualRedirect, navigation]);
+
+  // En web: al volver de OAuth deberíamos caer directo al panel (no depender del botón).
+  // En móvil lo dejamos intacto (ya funciona).
+  const lastAutoNavUserIdRef = useRef(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!sessionRoutingReady) return;
+    if (needsDualRedirect) return;
+    const uid = session?.user?.id || null;
+    if (!uid) return;
+    if (lastAutoNavUserIdRef.current === uid) return;
+    lastAutoNavUserIdRef.current = uid;
+    try {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        // eslint-disable-next-line no-console
+        console.log('ROUTING_DEBUG WelcomeGlobal autoContinue', { uid });
+      }
+    } catch (_) {}
+    onContinue();
+  }, [Platform.OS, sessionRoutingReady, needsDualRedirect, session?.user?.id, onContinue]);
 
   const onLogout = async () => {
     try {
@@ -58,8 +81,7 @@ export default function WelcomeGlobalScreen() {
     } catch (_) {}
   };
 
-  const showContinueSession =
-    !!session?.user?.id && authNavigationReady && !needsDualRedirect;
+  const showContinueSession = sessionRoutingReady && !needsDualRedirect;
 
   const showGuestActions = !session?.user?.id;
 
@@ -77,7 +99,10 @@ export default function WelcomeGlobalScreen() {
     [insets.top, isWideWeb],
   );
 
-  if (session?.user?.id && !authNavigationReady) {
+  if (
+    session?.user?.id &&
+    (!authNavigationReady || (Platform.OS === 'web' && initialProfileSyncDone !== true))
+  ) {
     return (
       <View style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}>
         <LogoCompleto height={120} />

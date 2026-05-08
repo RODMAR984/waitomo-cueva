@@ -4,54 +4,54 @@ Checklist operativo para aplicar `docs/WEB_UI_SPEC_V1.md` en lote.
 
 ## A. Navegación / Volver
 
-- [ ] Sin flecha flotante global en web.
-- [ ] `BackNavButton` único en pantallas no-staff-desktop.
-- [ ] Staff desktop: inline back oculto con `useStaffWebHideInlineBack()`.
-- [ ] Sin estilos mezclados de "Volver" (icon-only, texto suelto, etc.) en mismas familias.
+- [x] Sin flecha flotante global en web.
+- [x] `BackNavButton` único en pantallas no-staff-desktop.
+- [x] Staff desktop: inline back oculto con `useStaffWebHideInlineBack()`.
+- [x] Sin estilos mezclados de "Volver" (icon-only, texto suelto, etc.) en mismas familias.
 
 ## B. Sidebar / tabs web
 
-- [ ] Item activo siempre legible.
-- [ ] Sin barra turquesa "vacía" en `ClientTabs`.
-- [ ] Consistencia de ancho, iconos y spacing en rail staff.
+- [x] Item activo siempre legible.
+- [x] Sin barra turquesa "vacía" en `ClientTabs`.
+- [x] Consistencia de ancho, iconos y spacing en rail staff.
 
 ## C. Simetría visual
 
-- [ ] `maxWidth` uniforme (`1040`) en paneles principales.
-- [ ] Radius uniforme (`16`) en tarjetas de contenido.
-- [ ] Bordes y padding uniformes entre cards pares.
-- [ ] Sin cards "estiradas" horizontalmente fuera de spec.
+- [x] `maxWidth` uniforme (`1040`) en paneles principales.
+- [x] Radius uniforme (`16`) en tarjetas de contenido.
+- [x] Bordes y padding uniformes entre cards pares.
+- [x] Sin cards "estiradas" horizontalmente fuera de spec.
 
 ## D. Pantallas cliente (bloque 1)
 
-- [ ] `ClientScreen`
-- [ ] `ClientTabs`
-- [ ] `CalendarioScreen`
-- [ ] `PerfilUsuarioScreen`
-- [ ] `AbonosPasesScreen`
-- [ ] `PlanDetailScreen`
-- [ ] `ReservaScreen`
-- [ ] `PagoScreen`
+- [x] `ClientScreen`
+- [x] `ClientTabs`
+- [x] `CalendarioScreen`
+- [x] `PerfilUsuarioScreen`
+- [x] `AbonosPasesScreen`
+- [x] `PlanDetailScreen`
+- [x] `ReservaScreen`
+- [x] `PagoScreen`
 
 ## E. Pantallas staff/admin (bloque 2)
 
-- [ ] `AdminScreen`
-- [ ] `AdminResumenScreen`
-- [ ] `AdminPlanesScreen`
-- [ ] `AdminAbonosScreen`
-- [ ] `GymConfigScreen`
-- [ ] `AdminObservabilityScreen`
+- [x] `AdminScreen`
+- [x] `AdminResumenScreen`
+- [x] `AdminPlanesScreen`
+- [x] `AdminAbonosScreen`
+- [x] `GymConfigScreen`
+- [x] `AdminObservabilityScreen`
 
 ## F. Pantallas legales/config (bloque 3)
 
-- [ ] `ConfigScreen`
-- [ ] `SeguridadScreen`
-- [ ] `PrivacyScreen`
-- [ ] `TermsScreen`
-- [ ] `AboutFitEngineScreen`
+- [x] `ConfigScreen`
+- [x] `SeguridadScreen`
+- [x] `PrivacyScreen`
+- [x] `TermsScreen`
+- [x] `AboutFitEngineScreen`
 
 ## G. Verificación final
 
-- [ ] `npm run qa:web:release` OK
-- [ ] `npm run test:e2e:web` OK
+- [x] `npm run qa:web:release` OK
+- [x] `npm run test:e2e:web` OK
 - [ ] revisión visual de 3 capturas clave: Abonos, Perfil, Panel

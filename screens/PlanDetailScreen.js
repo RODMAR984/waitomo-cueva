@@ -13,12 +13,14 @@ import {
   ScrollView,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { usePlanContext } from '../contexts/PlanContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { IMAGENES_POR_PLAN } from '../utils/imagenesFijas';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function PlanDetailScreen({ route, navigation }) {
   const plan = route?.params?.plan;
@@ -91,22 +93,28 @@ export default function PlanDetailScreen({ route, navigation }) {
           alignItems: 'center',
           backgroundColor: t.faintStrong,
           borderColor: t.brand,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1.5,
-          padding: 14,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
         },
         buttonPrimary: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeightLg,
           marginBottom: 12,
-          padding: 14,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
         },
-        buttonText: { color: t.text, fontWeight: 'bold' },
-        buttonTextOn: t.buttonPrimaryText,
+        buttonText: { color: t.text, fontWeight: 'bold', fontSize: MOBILE_TYPE.bodyStrong },
+        buttonTextOn: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
         description: {
           color: t.subText,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
           marginBottom: 20,
           textAlign: 'center',
         },
@@ -127,7 +135,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,   // unificado
           borderWidth: 1,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           marginHorizontal: 20,
           paddingTop: 30,
           paddingBottom: 10,
@@ -142,7 +150,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,   // unificado
           borderWidth: 1,
-          borderRadius: 20,
+          borderRadius: MOBILE_RADII.lg,
           margin: 20,
           padding: 16,
           // sombra sutil
@@ -159,14 +167,14 @@ export default function PlanDetailScreen({ route, navigation }) {
         },
         subtitle: {
           color: t.subText,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.body,
           marginTop: 4,
           textAlign: 'center',
         },
         /** Título del plan: tipografía principal de la org (features.text_color → t.text), no solo acento/borde. */
         title: {
           color: t.text,
-          fontSize: 26,
+          fontSize: 24,
           fontWeight: 'bold',
           textAlign: 'center',
         },
@@ -179,9 +187,7 @@ export default function PlanDetailScreen({ route, navigation }) {
       <BackgroundWrapper>
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyTitle}>{tStr('plan_detail_no_plan')}</Text>
-          <TouchableOpacity onPress={handleVolver} style={styles.buttonOutline}>
-            <Text style={styles.buttonText}>{tStr('config_back')}</Text>
-          </TouchableOpacity>
+          <BackNavButton onPress={handleVolver} label={tStr('config_back')} style={styles.buttonOutline} />
         </View>
       </BackgroundWrapper>
     );
@@ -214,9 +220,7 @@ export default function PlanDetailScreen({ route, navigation }) {
             <Text style={styles.buttonTextOn}>{tStr('plan_detail_see_abonos')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleVolver} style={styles.buttonOutline}>
-            <Text style={styles.buttonText}>{tStr('plan_detail_back_plans')}</Text>
-          </TouchableOpacity>
+          <BackNavButton onPress={handleVolver} label={tStr('plan_detail_back_plans')} style={styles.buttonOutline} />
         </View>
       </ScrollView>
     </BackgroundWrapper>

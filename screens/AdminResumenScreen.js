@@ -25,6 +25,7 @@ import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
@@ -36,6 +37,7 @@ import { isUserAbonoActive, abonoCoversUserPlan } from '../utils/clientWorkoutEn
 import { staffCancelClassBookingServer, staffMoveClassBookingServer } from '../utils/classBookingSupabase';
 import { reportError, trackEvent } from '../utils/observability';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 function hexToRgbaLocal(hex, alpha = 1) {
   const clean = String(hex || '').replace('#', '');
@@ -672,7 +674,7 @@ export default function AdminResumenScreen() {
         contentMax: {
           width: '100%',
           alignSelf: 'center',
-          maxWidth: Platform.OS === 'web' ? Math.min(Math.max(width - 24, 360), 1380) : undefined,
+          maxWidth: Platform.OS === 'web' ? WEB_CONTENT_MAX_WIDTH : undefined,
         },
         mainLayout: {
           flexDirection: isDesktopWeb ? 'row' : 'column',
@@ -694,11 +696,12 @@ export default function AdminResumenScreen() {
           paddingTop: Math.max(insets.top, 10) + 4,
           paddingBottom: 4,
         },
-        backBtn: { padding: 10, marginLeft: -4 },
+        backBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         iconBtn: { padding: 10 },
         hero: {
           paddingHorizontal: 20,
           paddingBottom: 14,
+          borderRadius: WEB_PANEL_RADIUS,
         },
         heroDateRow: {
           flexDirection: 'row',
@@ -1249,9 +1252,7 @@ export default function AdminResumenScreen() {
         <View style={styles.contentMax}>
         <View style={styles.topBar}>
           {!hideInlineBack ? (
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
           ) : null}
           <View style={{ flex: 1 }} />
           <TouchableOpacity

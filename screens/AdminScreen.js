@@ -50,6 +50,7 @@ import {
   ADMIN_SCROLL_EDITOR,
   emitAdminScrollToEditor,
 } from '../utils/adminScrollBus';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -286,13 +287,13 @@ export default function AdminScreen() {
   const { t: tStr, locale } = useLocale();
   const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
   const STAFF_WEB_RAIL = 232;
-  const isDesktopWeb = Platform.OS === 'web' && windowWidth >= 1100;
+  const isDesktopWeb = Platform.OS === 'web' && windowWidth >= WEB_DESKTOP_BREAKPOINT;
   /** Web ancho: navegación staff fija a la izquierda (negocio en escritorio). */
   const isStaffWebDesktop = isDesktopWeb;
   const panelWidth = isDesktopWeb
     ? Math.min(
         windowWidth - 40 - (isStaffWebDesktop ? STAFF_WEB_RAIL + 14 : 0),
-        1180,
+        WEB_CONTENT_MAX_WIDTH,
       )
     : Math.max(320, Math.min(windowWidth - 20, 920));
   const menuColumns = isDesktopWeb ? 3 : windowWidth >= 760 ? 2 : 1;

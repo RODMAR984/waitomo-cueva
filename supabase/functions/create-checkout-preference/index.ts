@@ -198,16 +198,17 @@ Deno.serve(async (req: Request) => {
 
   const pref = await mpRes.json();
   const init_point = pref?.init_point;
+  const sandbox_init_point = pref?.sandbox_init_point;
   const preference_id = pref?.id;
-  if (!init_point) {
-    return new Response(JSON.stringify({ error: "No init_point in MP response" }), {
+  if (!init_point && !sandbox_init_point) {
+    return new Response(JSON.stringify({ error: "No checkout URL in MP response" }), {
       status: 502,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
   return new Response(
-    JSON.stringify({ init_point, preference_id }),
+    JSON.stringify({ init_point, sandbox_init_point, preference_id }),
     { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
   );
 });

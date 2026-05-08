@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { usePlanContext } from '../contexts/PlanContext';
 import { useAuth } from '../contexts/AuthContext';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
@@ -27,6 +28,7 @@ import { formatYmdLocal } from '../utils/formatYmdLocal';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import {
   bookClassSlotServer,
@@ -717,7 +719,7 @@ export default function CalendarioScreen({ route, navigation }) {
       StyleSheet.create({
         panel: {
           alignItems: 'center',
-          borderRadius: 24,
+          borderRadius: MOBILE_RADII.lg,
           marginBottom: 40,
           marginHorizontal: 16,
           marginTop: isWebDesktop ? 34 : height * 0.18,
@@ -736,7 +738,7 @@ export default function CalendarioScreen({ route, navigation }) {
         },
         mes: {
           color: t.brand,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: 'bold',
           marginBottom: 10,
           textAlign: 'center',
@@ -760,7 +762,7 @@ export default function CalendarioScreen({ route, navigation }) {
           backgroundColor: hexToRgba(t.brand, 0.08),
           borderLeftColor: hexToRgba(t.brand, 0.35),
           borderLeftWidth: 5,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.sm,
           marginBottom: 14,
           padding: 10,
           width: '100%',
@@ -847,7 +849,7 @@ export default function CalendarioScreen({ route, navigation }) {
         // horarios (cajas tipo input)
         subtitulo: {
           color: t.subText,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '600',
           marginBottom: 14,
           textAlign: isWebDesktop ? 'left' : 'center',
@@ -861,11 +863,13 @@ export default function CalendarioScreen({ route, navigation }) {
         horario: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder, // unificado
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1.2,
           margin: 6,
           paddingHorizontal: 20,
-          paddingVertical: 12,
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          paddingVertical: MOBILE_SPACING.md,
+          justifyContent: 'center',
         },
         horarioPrefill: {
           borderColor: t.brand,
@@ -917,11 +921,14 @@ export default function CalendarioScreen({ route, navigation }) {
         volver: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeight,
           marginTop: 30,
-          padding: 14,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
         },
-        volverTxt: t.buttonPrimaryText,
+        volverTxt: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
         lockText: {
           color: t.subText,
           fontSize: 14,
@@ -932,12 +939,15 @@ export default function CalendarioScreen({ route, navigation }) {
         lockCta: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeight,
           marginTop: 10,
-          padding: 14,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
           width: '100%',
         },
-        lockCtaTxt: t.buttonPrimaryText,
+        lockCtaTxt: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
       }),
     [t, isWebDesktop, panelMaxWidth],
   );
@@ -1127,9 +1137,7 @@ export default function CalendarioScreen({ route, navigation }) {
           </>
         )}
 
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.volver}>
-          <Text style={styles.volverTxt}>⬅ {tStr('config_back')}</Text>
-        </TouchableOpacity>
+        <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.volver} />
       </View>
     </BackgroundWrapper>
   );

@@ -66,19 +66,19 @@ export function buildClientInviteNativeLink(code) {
 }
 
 /**
- * OAuth redirect por plataforma:
- * - Nativo (Android/iOS): deep link `waitomo://auth/callback` para volver a la app.
- * - Web: callback HTTPS en `fitengine.app`.
+ * OAuth redirect por plataforma (debe coincidir con “Redirect URLs” en Supabase):
+ * - Nativo: `waitomo://auth/callback`
+ * - Web: mismo origen que la pestaña (`window.location.origin` + `/`), ej. `https://app.fitengine.app/` o `http://localhost:8081/`.
  */
 export function getOAuthRedirectUriForSupabase() {
   if (Platform.OS === 'web') {
-    // En web cerrar OAuth en la MISMA app web (sin landing intermedia /auth/callback
-    // pensada para deep-links nativos). Esto evita quedar clavado en "Volvé a la app".
+    // Siempre el mismo origen donde está abierta la app: Google vuelve acá y el
+    // code_verifier PKCE queda en el localStorage de ESTE origen (no mezclar hosts).
     if (typeof window !== 'undefined' && window.location?.origin) {
       return `${String(window.location.origin).replace(/\/+$/, '')}/`;
     }
     const { webAppUrl } = getFitEngineUrls();
-    return `${webAppUrl}/`;
+    return `${String(webAppUrl).replace(/\/+$/, '')}/`;
   }
   return 'waitomo://auth/callback';
 }

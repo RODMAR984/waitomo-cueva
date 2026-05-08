@@ -33,6 +33,7 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { formatYmdLocal } from '../utils/formatYmdLocal';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import {
   evaluateTrabajoHoyButton,
   evaluateCalendarioAccess,
@@ -1350,7 +1351,7 @@ export default function ClientScreen() {
           width: '100%',
           alignSelf: 'center',
           maxWidth: contentMaxWidth,
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 80,
           paddingBottom: 40,
         },
@@ -1374,7 +1375,7 @@ export default function ClientScreen() {
           borderColor: t.overlayBorder,
           borderWidth: 1,
           borderRadius: WEB_PANEL_RADIUS,
-          padding: isWebWide ? 20 : 18,
+          padding: isWebWide ? MOBILE_SPACING.xl : 18,
           marginBottom: 0,
         },
         headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
@@ -1394,7 +1395,7 @@ export default function ClientScreen() {
         logoWrap: { marginBottom: 12, alignItems: 'flex-start' },
         logoImg: { width: 120, height: 36 },
         headerGreeting: { fontSize: 13, color: t.metallicGrey ?? t.subText, marginBottom: 4 },
-        headerName: { fontSize: 22, fontWeight: '800', color: t.text },
+        headerName: { fontSize: MOBILE_TYPE.title, fontWeight: '800', color: t.text },
         headerSub: { marginTop: 8, fontSize: 13, color: t.metallicGrey ?? t.subText },
         headerTextCol: { flex: 1 },
         headerOrgName: { marginTop: 2, fontSize: 13, color: t.metallicGrey ?? t.subText, opacity: 0.9 },
@@ -1479,10 +1480,15 @@ export default function ClientScreen() {
         },
         metricLoadingWrap: { marginTop: 6 },
 
-        sectionTitle: { color: t.subText, fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
+        sectionTitle: {
+          color: t.subText,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: 'bold',
+          marginBottom: 10,
+        },
 
         planBox: {
-          borderRadius: 18,
+          borderRadius: MOBILE_RADII.lg,
           paddingVertical: 18,
           paddingHorizontal: 16,
           borderWidth: 1.5,
@@ -1506,10 +1512,10 @@ export default function ClientScreen() {
         },
         activityNavBtn: {
           width: 44,
-          height: 48,
+          height: MOBILE_SIZES.controlHeight,
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: hexToRgba(t.brand, 0.06),
@@ -1542,19 +1548,21 @@ export default function ClientScreen() {
         planPillBtn: {
           paddingHorizontal: 14,
           paddingVertical: 7,
-          borderRadius: 999,
+          minHeight: MOBILE_SIZES.controlHeight,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: hexToRgba(t.brand, 0.8),
           backgroundColor: hexToRgba(t.brand, 0.12),
           marginHorizontal: 6,
           minWidth: 118,
           alignItems: 'center',
+          justifyContent: 'center',
           ...(t.buttonGlow || {}),
         },
         planPillText: { color: t.primaryText, fontSize: 11, fontWeight: '700' },
 
         novedadesCaja: {
-          borderRadius: 18,
+          borderRadius: MOBILE_RADII.lg,
           paddingVertical: 14,
           paddingHorizontal: 16,
           borderWidth: 1.5,
@@ -1637,7 +1645,7 @@ export default function ClientScreen() {
         },
         quickBtn: {
           flex: 1,
-          borderRadius: 18,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
@@ -1666,8 +1674,9 @@ export default function ClientScreen() {
 
         secondaryBtn: {
           marginTop: 14,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 10,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           alignItems: 'center',
           justifyContent: 'center',
           ...t.buttonPrimary,
@@ -1678,7 +1687,7 @@ export default function ClientScreen() {
 
         freeClassCard: {
           marginTop: 14,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
@@ -1690,11 +1699,13 @@ export default function ClientScreen() {
         freeClassActions: { flexDirection: 'row', marginTop: 12, gap: 10 },
         freeClassAction: {
           flex: 1,
-          borderRadius: 12,
+          minHeight: MOBILE_SIZES.controlHeight,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           paddingVertical: 10,
           alignItems: 'center',
+          justifyContent: 'center',
           backgroundColor: hexToRgba(t.brand, 0.08),
         },
         freeClassActionPrimary: {

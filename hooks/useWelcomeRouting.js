@@ -1,8 +1,23 @@
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { navigationRef } from '../navigationRef';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 import { resolveStaffDestination } from '../utils/authRoutingGuard';
+
+function resetStackTo(navigation, routes) {
+  const state = { index: 0, routes };
+  try {
+    if (navigationRef.isReady()) {
+      navigationRef.resetRoot(state);
+      return;
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.log('ROUTING_DEBUG resetRoot failed', e?.message || e);
+  }
+  navigation.reset(state);
+}
 
 /**
  * Navegación post-welcome: destino según rol, membresías y modo (cliente/staff).
@@ -34,7 +49,7 @@ export function useWelcomeRouting() {
     });
     const params =
       destination === 'ConfiguraTuEspacio' ? { email: session?.user?.email } : undefined;
-    navigation.reset({ index: 0, routes: [{ name: destination, params }] });
+    resetStackTo(navigation, [{ name: destination, params }]);
   }, [navigation, ownedOrganizations?.length, profile, role, needsFitEngineSpaceSetup, session?.user?.email]);
 
   const membershipsLoaded = Array.isArray(organizationMemberships);
@@ -58,7 +73,7 @@ export function useWelcomeRouting() {
       });
 
       if (role === 'superadmin') {
-        navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
+        resetStackTo(navigation, [{ name: 'Admin' }]);
         return;
       }
 
@@ -79,10 +94,10 @@ export function useWelcomeRouting() {
           return;
         }
         if (!profile) {
-          navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
+          resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
-        navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
+        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
         return;
       }
 
@@ -101,10 +116,10 @@ export function useWelcomeRouting() {
 
       if ((isDualByMemberships || isDualHatUser) && mode === 'client') {
         if (!profile) {
-          navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
+          resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
-        navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
+        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
         return;
       }
 
@@ -122,23 +137,22 @@ export function useWelcomeRouting() {
       }
       if (membershipsLoaded && hasClientMembership && !hasStaffMembership) {
         if (!profile) {
-          navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
+          resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
-        navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
+        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
         return;
       }
 
       if ((role === 'coach' || role === 'admin') && needsFitEngineSpaceSetup) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'ConfiguraTuEspacio', params: { email: session?.user?.email } }],
-        });
+        resetStackTo(navigation, [
+          { name: 'ConfiguraTuEspacio', params: { email: session?.user?.email } },
+        ]);
         return;
       }
 
       if (role === 'coach' || role === 'admin') {
-        navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
+        resetStackTo(navigation, [{ name: 'AdminLite' }]);
         return;
       }
       if (ownedOrganizations?.length > 0 && !hasClientMembership) {
@@ -149,10 +163,10 @@ export function useWelcomeRouting() {
         return;
       }
       if (!profile) {
-        navigation.reset({ index: 0, routes: [{ name: 'RegistroInicial' }] });
+        resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
         return;
       }
-      navigation.reset({ index: 0, routes: [{ name: getClientPostAuthRouteName(profile) }] });
+      resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
     },
     [
       navigation,

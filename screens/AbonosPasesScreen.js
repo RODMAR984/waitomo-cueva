@@ -25,6 +25,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import BackNavButton from '../components/BackNavButton';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgbaLocal = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -264,8 +265,8 @@ export default function AbonosPasesScreen({ navigation, route }) {
         },
         container: {
           flexGrow: 1,
-          paddingHorizontal: 16,
-          paddingTop: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          paddingTop: MOBILE_SPACING.lg,
           paddingBottom: 24 + bottomSafe,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
@@ -277,7 +278,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
         },
         title: {
           color: t.brand,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: '800',
           letterSpacing: 1,
           textShadowColor: hexToRgbaLocal(t.brand, 0.25),
@@ -288,13 +289,13 @@ export default function AbonosPasesScreen({ navigation, route }) {
         subtitle: {
           marginTop: 6,
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           textAlign: 'center',
           width: '100%',
         },
         sectionTitle: {
           color: t.brand,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '800',
           marginTop: 16,
           marginBottom: 8,
@@ -304,7 +305,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: isWebDesktop ? 20 : 16,
           marginBottom: 12,
         },
@@ -318,25 +319,27 @@ export default function AbonosPasesScreen({ navigation, route }) {
         },
         cardTitle: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           letterSpacing: 0.5,
         },
         cardSubtitle: {
           marginTop: 4,
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
         },
         price: {
           marginTop: 10,
           color: t.brand,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
         },
         button: {
           marginTop: 12,
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingVertical: 10,
-          borderRadius: 14,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          borderRadius: MOBILE_RADII.md,
           alignItems: 'center',
           justifyContent: 'center',
           ...t.buttonPrimary,
@@ -344,6 +347,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
         buttonText: {
           ...t.buttonPrimaryText,
           fontWeight: '800',
+          fontSize: MOBILE_TYPE.bodyStrong,
           letterSpacing: 0.6,
         },
         backBtn: {
@@ -353,6 +357,15 @@ export default function AbonosPasesScreen({ navigation, route }) {
           color: t.subText,
           fontWeight: '700',
         },
+        stateBlock: { paddingVertical: MOBILE_SPACING.xl, alignItems: 'center' },
+        stateText: { color: t.subText, fontSize: MOBILE_TYPE.caption, textAlign: 'center' },
+        stateTextSmall: {
+          color: t.subText,
+          fontSize: 11,
+          marginTop: 6,
+          textAlign: 'center',
+        },
+        stateTextSpaced: { marginTop: 10 },
       }),
     [t, bottomSafe, isWebDesktop],
   );
@@ -469,36 +482,36 @@ export default function AbonosPasesScreen({ navigation, route }) {
         </View>
 
         {abonosLoading ? (
-          <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+          <View style={styles.stateBlock}>
             <ActivityIndicator size="small" color={t.brand} />
-            <Text style={{ color: t.subText, marginTop: 10, fontSize: 12 }}>
+            <Text style={[styles.stateText, styles.stateTextSpaced]}>
               {tStr('abonos_loading')}
             </Text>
           </View>
         ) : null}
 
         {!abonosLoading && abonosError ? (
-          <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-            <Text style={{ color: t.subText, fontSize: 12, textAlign: 'center' }}>
+          <View style={styles.stateBlock}>
+            <Text style={styles.stateText}>
               {tStr('abonos_error')}
             </Text>
-            <Text style={{ color: t.subText, fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+            <Text style={styles.stateTextSmall}>
               {String(abonosError)}
             </Text>
           </View>
         ) : null}
 
         {!abonosLoading && !abonosError && isEvolucion && evolucionAbonos.length === 0 ? (
-          <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-            <Text style={{ color: t.subText, fontSize: 12, textAlign: 'center' }}>
+          <View style={styles.stateBlock}>
+            <Text style={styles.stateText}>
               {tStr('abonos_empty_evolucion')}
             </Text>
           </View>
         ) : null}
 
         {!abonosLoading && !abonosError && !isEvolucion && abonos.length === 0 && !showAddonPlani ? (
-          <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-            <Text style={{ color: t.subText, fontSize: 12, textAlign: 'center' }}>
+          <View style={styles.stateBlock}>
+            <Text style={styles.stateText}>
               {isPaseTotal ? tStr('abonos_empty_total') : tStr('abonos_empty_plan')}
             </Text>
           </View>

@@ -1,25 +1,33 @@
 FitEngine — Auth / URLs (Supabase Dashboard)
 ============================================
 
-Canónico en app: https://fitengine.app (apex) para invitaciones /join.
+Proyecto (ref en código): nfjjkvjsssgxxsuocmhj  →  https://nfjjkvjsssgxxsuocmhj.supabase.co
 
-1) Site URL: https://app.fitengine.app
+Verificar desde tu PC (sin pegar el token en el chat):
+  1) Supabase → tu cuenta (abajo) → Access Tokens → Generate new token (empieza con sbp_).
+  2) PowerShell en la raíz del repo:
+       $env:SUPABASE_ACCESS_TOKEN='sbp_...'
+       node scripts/supabase-mgmt-auth-config.cjs
+  3) Pegá acá solo la salida (JSON o site_url / uri_allow_list), nunca el token.
 
-2) Redirect URLs: incluir
-   https://fitengine.app/**
-   https://fitengine.app/join
-   (+ app.fitengine.app, waitomo://, exp, marketing como ya tengas)
+---
 
-3) DNS (Vercel): para que el apex NO muestre Squarespace "Coming soon":
-   - Nameservers del dominio: ns1.vercel-dns.com, ns2.vercel-dns.com
-   - En Vercel → Domains → fitengine.app → DNS:
-     - A  @  → 216.198.79.1 (o IP que indique Vercel)
-     - CNAME www → …vercel-dns-….com
-   - Opcional: en el proyecto, redirect 307 de www → apex o al revés (una sola URL pública).
+1) Site URL (recomendado): https://app.fitengine.app
 
-4) GitHub html-starter: servir .well-known en el MISMO host que los links:
-   https://fitengine.app/.well-known/apple-app-site-association
-   https://fitengine.app/.well-known/assetlinks.json
-   Mantener Team ID en appID del AASA.
+2) Redirect URLs (uri_allow_list): deben incluir lo que manda la app hoy:
 
-Referencias: utils/fitengineUrls.js, app.json → expo.extra.fitengineLinksBaseUrl
+   Web OAuth (PKCE): mismo origen + barra final, ej.:
+     https://app.fitengine.app/
+     http://localhost:8081/     (o el puerto que muestre `npm run web`)
+     http://127.0.0.1:8081/
+
+   Nativo:
+     waitomo://auth/callback
+
+   Opcional (export estático / marketing si aplica):
+     https://fitengine.app/**
+     https://fitengine.app/join
+
+3) Google provider: Auth → Providers → Google (client id/secret del proyecto correcto).
+
+Referencias: utils/fitengineUrls.js → getOAuthRedirectUriForSupabase()

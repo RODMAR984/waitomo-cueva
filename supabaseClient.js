@@ -20,10 +20,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    // Web: el callback OAuth se maneja manualmente en AuthContext para evitar
-    // carreras/doble intercambio del code en algunos navegadores.
-    // Nativo: deep links / sesión manual, sin parseo de URL web.
-    detectSessionInUrl: false,
+    // CRÍTICO: el default de supabase-js es flowType "implicit"; OAuth Google vuelve
+    // con ?code= (PKCE). Sin "pkce" el cliente rechaza el URL y no hay sesión en web.
+    flowType: 'pkce',
+    // Web: detectSessionInUrl + PKCE canjea ?code= al inicializar / getSession.
+    // Nativo: sin parseo de URL web (deep link en AuthContext).
+    detectSessionInUrl: isWeb,
     ...(isWeb ? {} : { storage: AsyncStorage }),
   },
 });

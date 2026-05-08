@@ -1,4 +1,5 @@
 import { Platform, StyleSheet } from 'react-native';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 /** Estética compartida: WelcomeGlobal + WelcomeDualChoice (logo, CTAs, locale). */
 export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}) {
@@ -22,17 +23,19 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
     },
     localeGroup: {
       flexDirection: 'row',
-      borderRadius: 10,
+      borderRadius: MOBILE_RADII.sm,
       borderWidth: 1,
       borderColor: t.overlayBorder,
       overflow: 'hidden',
       backgroundColor: t.inputBg,
     },
     localeBtn: {
-      paddingVertical: 6,
+      minHeight: MOBILE_SIZES.localeControlHeight,
+      paddingVertical: MOBILE_SPACING.xs,
       paddingHorizontal: 10,
       minWidth: 44,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     localeBtnActive: {
       backgroundColor: fe.buttonBg,
@@ -43,7 +46,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
     },
     localeText: {
       color: t.subText,
-      fontSize: 12,
+      fontSize: MOBILE_TYPE.caption,
       fontWeight: '800',
       letterSpacing: 0.3,
     },
@@ -68,12 +71,12 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       color: t.subText,
       fontSize: 14,
       textAlign: 'center',
-      marginBottom: 16,
+      marginBottom: MOBILE_SPACING.lg,
       maxWidth: subtitleMaxWidth,
     },
     ctaWrap: {
       alignItems: 'center',
-      gap: 8,
+      gap: MOBILE_SPACING.sm,
       width: '100%',
       maxWidth: ctaMaxWidth,
     },
@@ -81,30 +84,34 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       backgroundColor: fe.buttonBg,
       borderColor: fe.buttonBorder,
       borderWidth: 1,
-      borderRadius: 10,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
+      borderRadius: MOBILE_RADII.sm,
+      minHeight: MOBILE_SIZES.controlHeightLg,
+      paddingVertical: MOBILE_SPACING.md,
+      paddingHorizontal: MOBILE_SPACING.lg,
       alignItems: 'center',
+      justifyContent: 'center',
       width: '100%',
     },
     ctaSecondary: {
       backgroundColor: fe.buttonBg,
       borderColor: fe.buttonBorder,
       borderWidth: 1,
-      borderRadius: 10,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
+      borderRadius: MOBILE_RADII.sm,
+      minHeight: MOBILE_SIZES.controlHeightLg,
+      paddingVertical: MOBILE_SPACING.md,
+      paddingHorizontal: MOBILE_SPACING.lg,
       alignItems: 'center',
+      justifyContent: 'center',
       width: '100%',
     },
     ctaPrimaryText: {
       color: fe.buttonText,
-      fontSize: 15,
+      fontSize: MOBILE_TYPE.bodyStrong,
       fontWeight: 'bold',
     },
     ctaSecondaryText: {
       color: fe.buttonText,
-      fontSize: 15,
+      fontSize: MOBILE_TYPE.bodyStrong,
       fontWeight: 'bold',
     },
     linkRow: {

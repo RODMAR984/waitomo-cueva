@@ -22,6 +22,7 @@ import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useTrainingData } from '../contexts/TrainingDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../theme/colors';
@@ -32,6 +33,7 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { createCheckoutPreference } from '../utils/mercadoPagoCheckout';
 import { createStripeCheckoutSession } from '../utils/stripeCheckout';
 import { resolveClientPaymentMethods } from '../utils/clientPaymentMethods';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -314,9 +316,9 @@ export default function PagoScreen({ navigation, route }) {
           paddingVertical: 40,
         },
         panel: {
-          borderRadius: 20,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1.2,
-          padding: 24,
+          padding: MOBILE_SPACING.xxl,
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           shadowColor: t.brand,
@@ -326,7 +328,7 @@ export default function PagoScreen({ navigation, route }) {
         },
         title: {
           color: t.subText,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           marginBottom: 10,
           textAlign: 'center',
@@ -350,22 +352,28 @@ export default function PagoScreen({ navigation, route }) {
         btnPrimary: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeightLg,
           marginBottom: 14,
-          paddingVertical: 14,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
         },
-        btnTextOn: t.buttonPrimaryText,
+        btnTextOn: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
 
         btnSecondary: {
           alignItems: 'center',
           backgroundColor: t.faintStrong,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
+          minHeight: MOBILE_SIZES.controlHeightLg,
           marginBottom: 20,
-          paddingVertical: 14,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          justifyContent: 'center',
         },
-        btnText: { color: t.text, fontWeight: 'bold' },
+        btnText: { color: t.text, fontWeight: 'bold', fontSize: MOBILE_TYPE.bodyStrong },
 
         volverWrap: { alignItems: 'center', marginTop: 6 },
         volverText: { color: t.text, fontSize: 16 },
@@ -505,9 +513,7 @@ export default function PagoScreen({ navigation, route }) {
             ) : null}
 
             <View style={styles.volverWrap}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={styles.volverText}>{tStr('pago_back')}</Text>
-              </TouchableOpacity>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} />
             </View>
           </View>
         </ScrollView>

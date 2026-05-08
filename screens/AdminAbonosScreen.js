@@ -13,17 +13,20 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { supabase } from '../supabaseClient';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -54,6 +57,8 @@ function pesosInputToCents(raw) {
 export default function AdminAbonosScreen() {
   const navigation = useNavigation();
   const hideInlineBack = useStaffWebHideInlineBack();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
   const insets = useSafeAreaInsets();
   const saveLockRef = useRef(false);
   const { t } = useThemeContext();
@@ -214,7 +219,7 @@ export default function AdminAbonosScreen() {
       StyleSheet.create({
         screen: { flex: 1, padding: 20, paddingTop: 56 },
         header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-        backBtn: { padding: 8, marginLeft: -8 },
+        backBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         title: { color: t.text, fontSize: 22, fontWeight: '800' },
         /** Única acción primaria fuerte (ej. Nuevo). */
         btn: { ...t.buttonPrimary, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
@@ -240,13 +245,13 @@ export default function AdminAbonosScreen() {
         filterChipTextActive: { color: t.text, fontSize: 13, fontWeight: '700' },
         filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 },
         filterLabel: { color: t.subText, fontSize: 13 },
-        list: { paddingBottom: 40 },
+        list: { paddingBottom: 40, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         card: {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
-          padding: 14,
+          borderRadius: WEB_PANEL_RADIUS,
+          padding: isWebDesktop ? 20 : 14,
           marginBottom: 12,
           flexDirection: 'row',
           alignItems: 'center',
@@ -259,8 +264,8 @@ export default function AdminAbonosScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
-          padding: 16,
+          borderRadius: WEB_PANEL_RADIUS,
+          padding: isWebDesktop ? 20 : 16,
           marginBottom: 16,
         },
         label: { color: t.subText, fontSize: 13, marginBottom: 6, fontWeight: '600' },
@@ -279,7 +284,7 @@ export default function AdminAbonosScreen() {
         empty: { paddingVertical: 40, alignItems: 'center' },
         emptyText: { color: t.placeholder, fontSize: 16 },
       }),
-    [t]
+    [t, isWebDesktop]
   );
 
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8) + 28;
@@ -298,9 +303,7 @@ export default function AdminAbonosScreen() {
         >
           <View style={styles.header}>
             {!hideInlineBack ? (
-              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                <Ionicons name="arrow-back" size={26} color={t.text} />
-              </TouchableOpacity>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
             ) : null}
             <Text style={styles.title}>{tStr('admin_abonos_screen_title')}</Text>
             {isOwner && (

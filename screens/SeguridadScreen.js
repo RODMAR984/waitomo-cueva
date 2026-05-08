@@ -21,11 +21,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { navigationRef } from '../navigationRef';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const SeguridadScreen = () => {
   const navigation = useNavigation();
@@ -194,9 +196,17 @@ const handleChangePassword = async () => {
     () =>
       StyleSheet.create({
         flex: { flex: 1 },
-        container: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 80, paddingBottom: 40 },
+        container: {
+          flexGrow: 1,
+          paddingHorizontal: 20,
+          paddingTop: 80,
+          paddingBottom: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         panel: {
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 18,
           backgroundColor: t.boxBg,
           borderWidth: 1,
@@ -426,17 +436,7 @@ const handleChangePassword = async () => {
             </View>
 
             {/* VOLVER */}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons
-                name="arrow-back"
-                size={18}
-                color={t.primaryText}
-              />
-              <Text style={styles.backButtonText}>{tStr('common_back')}</Text>
-            </TouchableOpacity>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backButton} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

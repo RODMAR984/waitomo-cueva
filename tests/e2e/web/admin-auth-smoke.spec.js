@@ -22,7 +22,7 @@ test.describe('Web smoke: admin autenticado', () => {
   });
 
   test('abre pantalla de observabilidad', async ({ page }) => {
-    await page.getByText('Observabilidad', { exact: true }).first().click();
+    await page.getByText(/Observabilidad|Diagn[oó]stico/i).first().click();
     await expect(page.getByText('Sincronizar backend', { exact: true })).toBeVisible();
   });
 });

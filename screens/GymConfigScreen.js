@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
@@ -37,6 +38,7 @@ import { buildClientInvitePublicLink } from '../utils/fitengineUrls';
 import { FULL_HEX_CHOICE_GYM } from '../utils/gymColorPalette';
 import { DEFAULT_CLIENT_PAYMENT_COPY } from '../utils/clientPaymentMethods';
 import { draftMessageWithAi } from '../utils/aiAssistant';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -200,7 +202,7 @@ function gymConfigStateStringFromLocals(p) {
 export default function GymConfigScreen() {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
-  const isWebWide = isWeb && width >= 1200;
+  const isWebWide = isWeb && width >= WEB_DESKTOP_BREAKPOINT;
   const navigation = useNavigation();
   const hideInlineBack = useStaffWebHideInlineBack();
   const { t, mode } = useThemeContext();
@@ -943,10 +945,10 @@ export default function GymConfigScreen() {
           paddingTop: 56,
           width: '100%',
           alignSelf: 'center',
-          maxWidth: isWeb ? (isWebWide ? 1180 : 980) : undefined,
+          maxWidth: isWeb ? WEB_CONTENT_MAX_WIDTH : undefined,
         },
         header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-        backBtn: { padding: 8, marginLeft: -8 },
+        backBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         title: { color: t.text, fontSize: 22, fontWeight: '800', marginLeft: 8 },
         scroll: { paddingBottom: 40 },
         tabBarWrap: {
@@ -984,7 +986,7 @@ export default function GymConfigScreen() {
         logoWrap: {
           width: 100,
           height: 100,
-          borderRadius: 14,
+          borderRadius: WEB_PANEL_RADIUS,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -1194,9 +1196,7 @@ export default function GymConfigScreen() {
       >
         <View style={styles.header}>
           {!hideInlineBack ? (
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
           ) : null}
           <Text style={styles.title}>{tStr('gym_config_screen_title')}</Text>
         </View>

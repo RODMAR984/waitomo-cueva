@@ -3,9 +3,15 @@
  */
 import { supabase } from '../supabaseClient';
 
+function isLocalWebHost() {
+  if (typeof window === 'undefined') return false;
+  const host = String(window.location?.hostname || '').toLowerCase();
+  return host === 'localhost' || host === '127.0.0.1';
+}
+
 /**
  * @param {{ amount: number, title: string, externalReference: string, organizationId?: string|null }} p
- * @returns {Promise<{ init_point: string, preference_id?: string }>}
+ * @returns {Promise<{ init_point: string, sandbox_init_point?: string, preference_id?: string }>}
  */
 export async function createCheckoutPreference({ amount, title, externalReference, organizationId }) {
   const {
@@ -40,11 +46,17 @@ export async function createCheckoutPreference({ amount, title, externalReferenc
     const d = data.detail ? ` ${data.detail}` : '';
     throw new Error(`${data.error}${d}`);
   }
-  if (!data?.init_point) {
+  const preferredCheckoutUrl = isLocalWebHost()
+    ? (data?.sandbox_init_point || data?.init_point)
+    : (data?.init_point || data?.sandbox_init_point);
+
+  if (!preferredCheckoutUrl) {
     throw new Error('no_init_point');
   }
+
   return {
-    init_point: data.init_point,
+    init_point: preferredCheckoutUrl,
+    sandbox_init_point: data?.sandbox_init_point || null,
     preference_id: data.preference_id,
   };
 }
