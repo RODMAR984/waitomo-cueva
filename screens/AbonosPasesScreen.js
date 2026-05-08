@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PropTypes from 'prop-types';
@@ -22,6 +23,8 @@ import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
+import BackNavButton from '../components/BackNavButton';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const hexToRgbaLocal = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -44,6 +47,8 @@ export default function AbonosPasesScreen({ navigation, route }) {
 
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
 
   const soloEvolucion = route?.params?.soloEvolucion === true;
 
@@ -58,9 +63,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
         <Text style={{ color: 'white', padding: 20 }}>
           No se recibió un plan. Volvé atrás y elegí uno.
         </Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 16, padding: 12 }}>
-          <Text style={{ color: '#0dd' }}>Volver</Text>
-        </TouchableOpacity>
+        <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={{ marginTop: 16 }} />
       </BackgroundWrapper>
     );
   }
@@ -264,6 +267,9 @@ export default function AbonosPasesScreen({ navigation, route }) {
           paddingHorizontal: 16,
           paddingTop: 16,
           paddingBottom: 24 + bottomSafe,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         header: {
           marginBottom: 14,
@@ -298,8 +304,8 @@ export default function AbonosPasesScreen({ navigation, route }) {
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
-          borderRadius: 18,
-          padding: 14,
+          borderRadius: WEB_PANEL_RADIUS,
+          padding: isWebDesktop ? 20 : 16,
           marginBottom: 12,
         },
         featuredCard: {
@@ -341,21 +347,14 @@ export default function AbonosPasesScreen({ navigation, route }) {
           letterSpacing: 0.6,
         },
         backBtn: {
-          marginTop: 6,
-          paddingVertical: 10,
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: hexToRgbaLocal(t.brand, 0.2),
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: hexToRgbaLocal('#000000', 0.25),
+          marginTop: 8,
         },
         backText: {
           color: t.subText,
           fontWeight: '700',
         },
       }),
-    [t, bottomSafe],
+    [t, bottomSafe, isWebDesktop],
   );
 
   // -------------------------
@@ -547,13 +546,9 @@ export default function AbonosPasesScreen({ navigation, route }) {
           </>
         )}
 
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.backText}>{tStr('abonos_volver')}</Text>
-        </TouchableOpacity>
+        {Platform.OS !== 'web' ? (
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('abonos_volver')} style={styles.backBtn} />
+        ) : null}
       </ScrollView>
     </BackgroundWrapper>
   );

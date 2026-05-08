@@ -19,11 +19,13 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { useThemeContext } from '../contexts/ThemeContext';
@@ -31,12 +33,15 @@ import { useLocale } from '../contexts/LocaleContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { navigationRef } from '../navigationRef';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const PerfilUsuarioScreen = () => {
   const navigation = useNavigation();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const { profile, updateProfile, uploadAvatar, logout, user, ensureProfile, organization } = useAuth();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
 
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
@@ -356,10 +361,17 @@ const PerfilUsuarioScreen = () => {
     () =>
       StyleSheet.create({
         flex: { flex: 1 },
-        container: { flexGrow: 1, padding: 20, paddingBottom: 32 },
+        container: {
+          flexGrow: 1,
+          padding: isWebDesktop ? 24 : 20,
+          paddingBottom: 32,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         panel: {
-          borderRadius: 18,
-          padding: 18,
+          borderRadius: WEB_PANEL_RADIUS,
+          padding: isWebDesktop ? 20 : 18,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -454,18 +466,11 @@ const PerfilUsuarioScreen = () => {
         },
         logoutButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: 14 },
         backButton: {
-          flexGrow: 1,
-          borderRadius: 12,
-          paddingVertical: 10,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'row',
-          gap: 6,
-          ...t.buttonPrimary,
+          marginTop: 6,
         },
         backButtonText: { ...t.buttonPrimaryText, fontSize: 14 },
       }),
-    [t],
+    [t, isWebDesktop],
   );
 
   // ---------------------------------------------
@@ -701,12 +706,11 @@ const PerfilUsuarioScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.buttonsRow}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.9}>
-                <Ionicons name="arrow-back" size={18} color={t.primaryText} />
-                <Text style={styles.backButtonText}>{tStr('config_back')}</Text>
-              </TouchableOpacity>
-            </View>
+            {Platform.OS !== 'web' ? (
+              <View style={styles.buttonsRow}>
+                <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

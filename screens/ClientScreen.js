@@ -32,6 +32,7 @@ import { navigationRef } from '../navigationRef';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { formatYmdLocal } from '../utils/formatYmdLocal';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import {
   evaluateTrabajoHoyButton,
   evaluateCalendarioAccess,
@@ -144,8 +145,8 @@ const CHAT_LAST_OPEN = 'waitomo_chat_last_open';
 export default function ClientScreen() {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
-  const isWebWide = isWeb && width >= 1100;
-  const contentMaxWidth = isWebWide ? 1140 : isWeb ? 980 : 760;
+  const isWebWide = isWeb && width >= WEB_DESKTOP_BREAKPOINT;
+  const contentMaxWidth = isWebWide ? WEB_CONTENT_MAX_WIDTH : isWeb ? 900 : 760;
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const navigation = useNavigation();
@@ -1362,17 +1363,19 @@ export default function ClientScreen() {
         },
         mainColPrimary: {
           flex: isWebWide ? 1.45 : 0,
+          gap: 16,
         },
         mainColSecondary: {
           flex: isWebWide ? 1 : 0,
+          gap: 16,
         },
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1,
-          borderRadius: 22,
-          padding: 18,
-          marginBottom: 20,
+          borderRadius: WEB_PANEL_RADIUS,
+          padding: isWebWide ? 20 : 18,
+          marginBottom: 0,
         },
         headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
         avatarWrap: {
@@ -1456,6 +1459,7 @@ export default function ClientScreen() {
           borderColor: t.overlayBorder,
           borderWidth: 1,
           marginRight: 10,
+          minHeight: isWebWide ? 130 : 0,
         },
         metricBoxLast: { marginRight: 0 },
         metricLabel: { color: t.metallicGrey ?? t.subText, fontSize: 11 },
@@ -1628,6 +1632,8 @@ export default function ClientScreen() {
           flexDirection: isWeb && !isWebWide ? 'column' : 'row',
           justifyContent: 'space-between',
           marginTop: 10,
+          alignItems: 'stretch',
+          gap: isWeb && !isWebWide ? 10 : 12,
         },
         quickBtn: {
           flex: 1,
@@ -1637,10 +1643,11 @@ export default function ClientScreen() {
           backgroundColor: t.boxBg,
           paddingVertical: 16,
           paddingHorizontal: 12,
-          marginRight: 10,
+          minHeight: isWebWide ? 130 : 0,
           alignItems: 'center',
+          justifyContent: 'center',
         },
-        quickBtnLast: { marginRight: 0 },
+        quickBtnLast: {},
         quickBtnStacked: { marginRight: 0, marginBottom: 10 },
         quickBtnLastStacked: { marginBottom: 0 },
         quickIconWrap: {

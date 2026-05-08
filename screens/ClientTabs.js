@@ -7,6 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_DESKTOP_BREAKPOINT, WEB_RAIL_WIDTH } from '../theme/webSpec';
 
 import ClientScreen from './ClientScreen';
 import CalendarioScreen from './CalendarioScreen';
@@ -18,7 +19,7 @@ export default function ClientTabs() {
   const { width } = useWindowDimensions();
   const { t } = useThemeContext();
   const { locale, t: tStr } = useLocale();
-  const isWebDesktop = Platform.OS === 'web' && width >= 1100;
+  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
@@ -26,29 +27,34 @@ export default function ClientTabs() {
       tabBarPosition: isWebDesktop ? 'left' : 'bottom',
       tabBarStyle: isWebDesktop
         ? {
-            width: 210,
+            width: WEB_RAIL_WIDTH,
             borderRightWidth: 1,
             borderRightColor: t.overlayBorder,
             borderTopWidth: 0,
             backgroundColor: t.boxBg,
             paddingTop: 16,
             paddingBottom: 16,
+            paddingHorizontal: 8,
           }
         : { display: 'none' },
+      tabBarLabelPosition: isWebDesktop ? 'beside-icon' : 'below-icon',
       tabBarLabelStyle: {
         fontSize: 13,
         fontWeight: '700',
       },
       tabBarItemStyle: isWebDesktop
         ? {
-            justifyContent: 'center',
-            marginHorizontal: 10,
+            justifyContent: 'flex-start',
+            marginHorizontal: 4,
             marginVertical: 4,
             borderRadius: 10,
+            minHeight: 44,
+            paddingHorizontal: 10,
           }
         : undefined,
-      tabBarActiveTintColor: t.brand,
+      tabBarActiveTintColor: t.text,
       tabBarInactiveTintColor: t.subText,
+      tabBarActiveBackgroundColor: isWebDesktop ? t.faintStrong : undefined,
       tabBarIconStyle: isWebDesktop ? { marginBottom: 0 } : undefined,
     }),
     [isWebDesktop, t],
