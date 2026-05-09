@@ -23,6 +23,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -190,24 +192,31 @@ export default function AdminNovedadesScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        screen: { flex: 1, padding: 20, paddingTop: 56 },
+        screen: {
+          flex: 1,
+          padding: MOBILE_SPACING.xl,
+          paddingTop: 56,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
         backBtn: { padding: 8, marginLeft: -8 },
-        title: { color: t.text, fontSize: 22, fontWeight: '800' },
-        btn: { ...t.buttonPrimary, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
-        btnText: { ...t.buttonPrimaryText, fontSize: 14 },
+        title: { color: t.text, fontSize: MOBILE_TYPE.title, fontWeight: '800' },
+        btn: { ...t.buttonPrimary, borderRadius: MOBILE_RADII.md, paddingVertical: 10, paddingHorizontal: MOBILE_SPACING.lg },
+        btnText: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.body },
         list: { paddingBottom: 40 },
         card: {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 14,
           marginBottom: 12,
         },
         cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-        cardTitle: { color: t.text, fontSize: 15, fontWeight: '600', flex: 1 },
-        cardMeta: { color: t.subText, fontSize: 12, marginTop: 4 },
+        cardTitle: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '600', flex: 1 },
+        cardMeta: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
         badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 6 },
         badgePinned: { backgroundColor: hexToRgba(t.brand, 0.25) },
         badgeInactive: { backgroundColor: 'rgba(128,128,128,0.3)' },
@@ -215,27 +224,27 @@ export default function AdminNovedadesScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
-          padding: 16,
+          borderRadius: WEB_PANEL_RADIUS,
+          padding: MOBILE_SPACING.lg,
           marginBottom: 16,
         },
-        label: { color: t.subText, fontSize: 13, marginBottom: 6, fontWeight: '600' },
+        label: { color: t.subText, fontSize: MOBILE_TYPE.body, marginBottom: 6, fontWeight: '600' },
         input: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.md,
           padding: 12,
           color: t.text,
           backgroundColor: t.inputBg,
           marginBottom: 12,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         textArea: { minHeight: 80, textAlignVertical: 'top' },
         row: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-        switchLabel: { color: t.text, fontSize: 14, marginLeft: 10, flex: 1 },
+        switchLabel: { color: t.text, fontSize: MOBILE_TYPE.body, marginLeft: 10, flex: 1 },
         actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
         empty: { paddingVertical: 40, alignItems: 'center' },
-        emptyText: { color: t.placeholder, fontSize: 16 },
+        emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong },
       }),
     [t]
   );

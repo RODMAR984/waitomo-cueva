@@ -7,6 +7,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -14,13 +15,14 @@ import {
   TextInput,
   Alert,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 export default function RegistroDesdeCiclo({ navigation, route }) {
   const { plan = { nombre: 'Ciclo Evolución' } } = route?.params || {};
@@ -46,7 +48,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
         button: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: 12,
           marginBottom: 16,
           padding: 14,
         },
@@ -58,7 +60,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
         container: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1.5,
           marginHorizontal: 20,
           padding: 24,
@@ -66,7 +68,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
         input: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           borderWidth: 1,
           color: t.text,
           fontSize: 16,
@@ -80,6 +82,9 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
           justifyContent: 'center',
           paddingHorizontal: 16,
           paddingVertical: 60,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         title: {
           color: t.subText,
@@ -108,6 +113,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.container}>
+            <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('reg_ciclo_title')}</Text>
 
             <TextInput
@@ -139,9 +145,11 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
               <Text style={styles.buttonText}>{tStr('reg_ciclo_continue')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.volver} onPress={() => navigation.goBack()}>
-              <Text style={styles.volverText}>{tStr('reg_ciclo_back')}</Text>
-            </TouchableOpacity>
+            {Platform.OS !== 'web' ? (
+              <TouchableOpacity style={styles.volver} onPress={() => navigation.goBack()}>
+                <Text style={styles.volverText}>{tStr('reg_ciclo_back')}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

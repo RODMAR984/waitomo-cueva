@@ -23,6 +23,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -113,14 +115,17 @@ export default function AdminRetentionScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? 16 : 8 + insets.top,
-          paddingHorizontal: 16,
+          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         backBtn: { padding: 8, marginRight: 4 },
         title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
-        body: { paddingHorizontal: 16, paddingBottom: 24 },
-        hint: { color: t.subText, fontSize: 12, marginBottom: 10, lineHeight: 18 },
+        body: { paddingHorizontal: MOBILE_SPACING.lg, paddingBottom: 24, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 10, lineHeight: 18 },
         row: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -131,7 +136,7 @@ export default function AdminRetentionScreen() {
           flex: 1,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.md,
           paddingHorizontal: 10,
           paddingVertical: 8,
           color: t.text,
@@ -139,21 +144,21 @@ export default function AdminRetentionScreen() {
           maxWidth: 120,
         },
         card: {
-          borderRadius: 14,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 14,
           marginBottom: 10,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
         },
-        name: { color: t.text, fontSize: 15, fontWeight: '800' },
-        meta: { color: t.subText, fontSize: 12, marginTop: 4 },
-        btn: { marginTop: 10, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, ...t.buttonPrimary },
+        name: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
+        meta: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
+        btn: { marginTop: 10, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: MOBILE_SPACING.md, borderRadius: MOBILE_RADII.md, ...t.buttonPrimary },
         btnText: { ...t.buttonPrimaryText, fontWeight: '800' },
         modalCard: {
-          margin: 20,
-          padding: 16,
-          borderRadius: 16,
+          margin: MOBILE_SPACING.xl,
+          padding: MOBILE_SPACING.lg,
+          borderRadius: WEB_PANEL_RADIUS,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -161,7 +166,7 @@ export default function AdminRetentionScreen() {
         modalInput: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           padding: 10,
           color: t.text,
           minHeight: 100,
@@ -176,10 +181,10 @@ export default function AdminRetentionScreen() {
           backgroundColor: hexToRgba(t.text, 0.45),
           justifyContent: 'center',
         },
-        modalTitle: { color: t.text, fontWeight: '900', fontSize: 16 },
+        modalTitle: { color: t.text, fontWeight: '900', fontSize: MOBILE_TYPE.bodyStrong },
         modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
         sendBtnBusy: { opacity: 0.6 },
-        cancelBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: t.overlayBg, justifyContent: 'center' },
+        cancelBtn: { paddingVertical: 8, paddingHorizontal: MOBILE_SPACING.md, borderRadius: MOBILE_RADII.sm, backgroundColor: t.overlayBg, justifyContent: 'center' },
         cancelBtnText: { ...t.buttonPrimaryText, color: t.text, fontWeight: '800' },
       }),
     [insets.top, t],

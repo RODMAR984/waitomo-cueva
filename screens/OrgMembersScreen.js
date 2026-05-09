@@ -22,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const ROLE_LABEL = {
   owner: 'Dueño',
@@ -122,6 +123,9 @@ export default function OrgMembersScreen() {
           paddingHorizontal: 20,
           paddingTop: Math.max(insets.top, 12) + 8,
           paddingBottom: 16,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         backBtn: { padding: 8, marginLeft: -8 },
         title: {
@@ -130,9 +134,9 @@ export default function OrgMembersScreen() {
           fontSize: 20,
           fontWeight: '800',
         },
-        list: { flex: 1, paddingHorizontal: 20, paddingBottom: 24 },
+        list: { flex: 1, paddingHorizontal: 20, paddingBottom: 24, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         card: {
-          borderRadius: 14,
+          borderRadius: WEB_PANEL_RADIUS,
           paddingVertical: 12,
           paddingHorizontal: 14,
           marginBottom: 10,

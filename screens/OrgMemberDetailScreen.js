@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase } from '../supabaseClient';
 import { draftMemberSummaryWithAi } from '../utils/aiAssistant';
 import { trackEvent } from '../utils/observability';
@@ -24,6 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const BOOKINGS_FACTS_LIMIT = 28;
 
@@ -386,15 +387,24 @@ export default function OrgMemberDetailScreen() {
           paddingHorizontal: 20,
           paddingTop: Math.max(insets.top, 12) + 8,
           paddingBottom: 12,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
-        backBtn: { padding: 8, marginLeft: -8 },
+        backBtn: { marginRight: 8, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         title: {
           flex: 1,
           color: t.brandText ?? t.brand,
           fontSize: 18,
           fontWeight: '800',
         },
-        body: { paddingHorizontal: 20, paddingBottom: 32 },
+        body: {
+          paddingHorizontal: 20,
+          paddingBottom: 32,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         name: { color: t.text, fontSize: 20, fontWeight: '800', marginBottom: 4 },
         subId: { color: t.subText, fontSize: 12, marginBottom: 16 },
         hint: { color: t.subText, fontSize: 13, lineHeight: 19, marginBottom: 16 },
@@ -423,7 +433,7 @@ export default function OrgMemberDetailScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 14,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 14,
           marginBottom: 12,
         },
@@ -446,11 +456,17 @@ export default function OrgMemberDetailScreen() {
   if (!userId) {
     return (
       <BackgroundWrapper screen="admin">
-        <View style={{ padding: 24, paddingTop: Math.max(insets.top, 12) + 20 }}>
+        <View
+          style={{
+            padding: 24,
+            paddingTop: Math.max(insets.top, 12) + 20,
+            width: '100%',
+            maxWidth: WEB_CONTENT_MAX_WIDTH,
+            alignSelf: 'center',
+          }}
+        >
           {!hideInlineBack ? (
-            <TouchableOpacity style={{ padding: 8, marginBottom: 16 }} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={26} color={t.text} />
-            </TouchableOpacity>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={{ marginBottom: 16 }} />
           ) : null}
           <Text style={{ color: t.subText, fontSize: 15 }}>{tStr('org_member_missing')}</Text>
         </View>
@@ -462,9 +478,7 @@ export default function OrgMemberDetailScreen() {
     <BackgroundWrapper screen="admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={26} color={t.text} />
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title} numberOfLines={1}>
           {tStr('org_member_detail_title')}

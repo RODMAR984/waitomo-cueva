@@ -19,11 +19,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const fmtIsoDate = (d) => {
   if (!d) return '';
@@ -265,24 +268,34 @@ export default function AdminMembershipFreezeScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? 16 : 8 + insets.top,
-          paddingHorizontal: 16,
+          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
-        backBtn: { padding: 8, marginRight: 4 },
+        backBtn: { marginRight: 8, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
-        body: { flex: 1, paddingHorizontal: 16, paddingBottom: 24 },
-        hint: { color: t.subText, fontSize: 12, marginBottom: 12, lineHeight: 18 },
+        scroll: { flex: 1 },
+        scrollInner: {
+          paddingHorizontal: MOBILE_SPACING.lg,
+          paddingBottom: 32,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 12, lineHeight: 18 },
         card: {
           backgroundColor: t.boxBg,
-          borderRadius: 16,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           padding: 14,
           marginBottom: 10,
         },
-        rowTitle: { color: t.text, fontSize: 15, fontWeight: '800' },
-        rowSub: { color: t.subText, fontSize: 12, marginTop: 4 },
+        rowTitle: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
+        rowSub: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
         primaryBtn: {
           marginTop: 12,
           alignSelf: 'flex-start',
@@ -290,25 +303,25 @@ export default function AdminMembershipFreezeScreen() {
           alignItems: 'center',
           paddingHorizontal: 14,
           paddingVertical: 10,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           ...t.buttonPrimary,
         },
         primaryBtnText: { ...t.buttonPrimaryText, fontWeight: '800', marginLeft: 8 },
         ghostBtn: {
           marginTop: 8,
           paddingVertical: 8,
-          paddingHorizontal: 12,
-          borderRadius: 10,
+          paddingHorizontal: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           alignSelf: 'flex-start',
         },
-        ghostBtnText: { color: t.brand, fontWeight: '700', fontSize: 13 },
+        ghostBtnText: { color: t.brand, fontWeight: '700', fontSize: MOBILE_TYPE.body },
         input: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
-          paddingHorizontal: 12,
+          borderRadius: MOBILE_RADII.md,
+          paddingHorizontal: MOBILE_SPACING.md,
           paddingVertical: Platform.OS === 'ios' ? 10 : 8,
           color: t.text,
           backgroundColor: t.inputBg,
@@ -318,12 +331,12 @@ export default function AdminMembershipFreezeScreen() {
           flex: 1,
           backgroundColor: 'rgba(0,0,0,0.45)',
           justifyContent: 'center',
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
         },
         modalCard: {
           backgroundColor: t.boxBg,
-          borderRadius: 18,
-          padding: 16,
+          borderRadius: WEB_PANEL_RADIUS,
+          padding: MOBILE_SPACING.lg,
           maxHeight: '88%',
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -337,14 +350,12 @@ export default function AdminMembershipFreezeScreen() {
     <BackgroundWrapper screen="Admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-            <Ionicons name="arrow-back" size={24} color={t.text} />
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_freeze_screen_title')}</Text>
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollInner} keyboardShouldPersistTaps="handled">
         <Text style={styles.hint}>{tStr('admin_freeze_screen_hint')}</Text>
 
         {!freezeEnabled ? (

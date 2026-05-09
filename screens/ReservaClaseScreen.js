@@ -7,6 +7,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  Platform,
   View,
   Text,
   TouchableOpacity,
@@ -15,8 +16,10 @@ import {
   ScrollView,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 // ---------- screen ----------
 export default function ReservaClaseScreen({ route, navigation }) {
@@ -67,7 +70,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
         confirmar: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: 12,
           marginBottom: 10,
           padding: 14,
         },
@@ -75,7 +78,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
         horaBtn: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           borderWidth: 1,
           margin: 5,
           paddingHorizontal: 20,
@@ -100,7 +103,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
           marginBottom: 20,
         },
         panel: {
-          borderRadius: 22,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 24,
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
@@ -117,6 +120,9 @@ export default function ReservaClaseScreen({ route, navigation }) {
           justifyContent: 'center',
           paddingHorizontal: 16,
           paddingVertical: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         title: {
           color: t.subText,
@@ -133,6 +139,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
     <BackgroundWrapper plan={plan}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.panel}>
+          <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{tStr('reserva_clase_title').replace('{{date}}', fecha)}</Text>
 
           <View style={styles.hourGrid}>
@@ -156,9 +163,11 @@ export default function ReservaClaseScreen({ route, navigation }) {
             <Text style={styles.confirmarTxt}>{tStr('reserva_clase_confirm')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelar}>
-            <Text style={styles.cancelarTxt}>{tStr('reserva_clase_cancel')}</Text>
-          </TouchableOpacity>
+          {Platform.OS !== 'web' ? (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelar}>
+              <Text style={styles.cancelarTxt}>{tStr('reserva_clase_cancel')}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
     </BackgroundWrapper>

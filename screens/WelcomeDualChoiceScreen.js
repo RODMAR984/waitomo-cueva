@@ -10,14 +10,19 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useLocale } from '../contexts/LocaleContext';
 import LogoCompleto from '../components/LogoCompleto';
 import { useAuth } from '../contexts/AuthContext';
 import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../theme/colors';
 import { createWelcomeGlobalLayoutStyles } from '../styles/welcomeGlobalLayoutStyles';
 import { useWelcomeRouting } from '../hooks/useWelcomeRouting';
+import { WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
+/** Misma escala que `createWelcomeGlobalLayoutStyles` → `theme/mobileSpec` */
+export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function WelcomeDualChoiceScreen() {
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t: tStr, locale, setLocale } = useLocale();
@@ -25,7 +30,7 @@ export default function WelcomeDualChoiceScreen() {
 
   const { onDualClient, onDualStaff } = useWelcomeRouting();
 
-  const isWideWeb = Platform.OS === 'web' && width >= 1024;
+  const isWideWeb = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
   const styles = useMemo(
     () => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top, { isWide: isWideWeb }),
     [insets.top, isWideWeb],
@@ -108,6 +113,14 @@ export default function WelcomeDualChoiceScreen() {
             <Text style={styles.ctaSecondaryText}>{tStr('welcome_dual_as_staff')}</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() => navigation.navigate('JoinWithInvite')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.linkText}>{tStr('welcome_join_code_cta')}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.linkRow} onPress={onLogout} activeOpacity={0.8}>
           <Text style={styles.linkText}>{tStr('welcome_logout_use_other')}</Text>

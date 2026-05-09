@@ -12,6 +12,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function AdminReportesScreen() {
   const navigation = useNavigation();
@@ -57,27 +59,30 @@ export default function AdminReportesScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? 16 : 8 + insets.top,
-          paddingHorizontal: 16,
+          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         backBtn: { padding: 8, marginRight: 4 },
         title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
-        scroll: { paddingHorizontal: 16, paddingBottom: 32 },
-        hint: { color: t.subText, fontSize: 12, marginBottom: 14, lineHeight: 18 },
+        scroll: { paddingHorizontal: MOBILE_SPACING.lg, paddingBottom: 32, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 14, lineHeight: 18 },
         grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
         card: {
           width: '47%',
           minWidth: 140,
           flexGrow: 1,
-          borderRadius: 16,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
           padding: 14,
         },
         cardVal: { color: t.text, fontSize: 26, fontWeight: '900', marginTop: 4 },
-        cardLab: { color: t.subText, fontSize: 12, fontWeight: '700', marginTop: 6 },
+        cardLab: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700', marginTop: 6 },
       }),
     [insets.top, t],
   );

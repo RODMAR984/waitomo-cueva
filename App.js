@@ -93,6 +93,7 @@ import AdminLoginScreen from './screens/AdminLoginScreen';
 import RegistroOwnerScreen from './screens/RegistroOwnerScreen';
 import ConfiguraTuEspacioScreen from './screens/ConfiguraTuEspacioScreen';
 import JoinWithInviteCodeScreen from './screens/JoinWithInviteCodeScreen';
+import PublicDirectoryScreen from './screens/PublicDirectoryScreen';
 
 import ClientInviteLinkHandler from './components/ClientInviteLinkHandler';
 
@@ -178,6 +179,7 @@ function AuthGate({ children }) {
           routeName === 'Login' ||
           routeName === 'LoginScreen' ||
           routeName === 'JoinWithInvite' ||
+          routeName === 'PublicDirectory' ||
           routeName === 'RegistroOwner' ||
           routeName === 'ConfiguraTuEspacio';
         if (isEntryScreen) return;
@@ -341,6 +343,7 @@ function AppContent() {
                     <Stack.Screen name="LoginScreen" component={LoginScreen} />
 
                     <Stack.Screen name="JoinWithInvite" component={JoinWithInviteCodeScreen} />
+                    <Stack.Screen name="PublicDirectory" component={PublicDirectoryScreen} />
 
                     <Stack.Screen name="CreaCuentaStaff" component={CreaCuentaStaffScreen} />
                     <Stack.Screen name="CreaCuentaStaffScreen" component={CreaCuentaStaffScreen} />

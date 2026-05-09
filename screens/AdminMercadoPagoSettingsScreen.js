@@ -19,12 +19,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../supabaseClient';
 import { getMercadoPagoConnectRedirectUri } from '../utils/fitengineUrls';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function AdminMercadoPagoSettingsScreen() {
   const navigation = useNavigation();
@@ -220,25 +223,28 @@ export default function AdminMercadoPagoSettingsScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? 16 : 8 + insets.top,
-          paddingHorizontal: 16,
+          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
-        backBtn: { padding: 8, marginRight: 4 },
+        backBtn: { marginRight: 8, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
-        body: { paddingHorizontal: 16, paddingBottom: 32 },
-        hint: { color: t.subText, fontSize: 12, marginBottom: 12, lineHeight: 18 },
+        body: { paddingHorizontal: MOBILE_SPACING.lg, paddingBottom: 32, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 12, lineHeight: 18 },
         label: { color: t.text, fontWeight: '700', marginTop: 12 },
-        row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+        row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: MOBILE_SPACING.lg },
         rowLabel: { color: t.text, fontWeight: '700', flex: 1, paddingRight: 12 },
         fieldCaption: { color: t.subText, fontSize: 11, marginTop: 4, lineHeight: 16 },
-        btn: { marginTop: 20, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, ...t.buttonPrimary },
+        btn: { marginTop: 20, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: MOBILE_RADII.sm, ...t.buttonPrimary },
         btnSecondary: {
           marginTop: 10,
           alignSelf: 'flex-start',
           paddingVertical: 12,
           paddingHorizontal: 18,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.faintStrong,
@@ -246,12 +252,12 @@ export default function AdminMercadoPagoSettingsScreen() {
         btnBusy: { opacity: 0.7 },
         btnText: { ...t.buttonPrimaryText, fontWeight: '800' },
         btnSecondaryText: { color: t.text, fontWeight: '800' },
-        noEditHint: { marginTop: 16 },
+        noEditHint: { marginTop: MOBILE_SPACING.lg },
         connectedBanner: {
           flexDirection: 'row',
           alignItems: 'flex-start',
           backgroundColor: t.boxBg,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           padding: 14,
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -261,14 +267,14 @@ export default function AdminMercadoPagoSettingsScreen() {
           flexDirection: 'row',
           alignItems: 'flex-start',
           backgroundColor: t.boxBg,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           padding: 14,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           marginBottom: 14,
         },
-        connectedTitle: { color: t.text, fontWeight: '900', fontSize: 16 },
-        connectedBody: { color: t.subText, fontSize: 13, marginTop: 6, lineHeight: 19 },
+        connectedTitle: { color: t.text, fontWeight: '900', fontSize: MOBILE_TYPE.bodyStrong },
+        connectedBody: { color: t.subText, fontSize: MOBILE_TYPE.body, marginTop: 6, lineHeight: 19 },
         link: { color: t.brand, textDecorationLine: 'underline', marginTop: 10 },
       }),
     [insets.top, t],
@@ -278,9 +284,7 @@ export default function AdminMercadoPagoSettingsScreen() {
     <BackgroundWrapper screen="Admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-            <Ionicons name="arrow-back" size={24} color={t.text} />
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_mp_title')}</Text>
       </View>

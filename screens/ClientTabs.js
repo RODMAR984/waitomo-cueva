@@ -7,7 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { WEB_DESKTOP_BREAKPOINT, WEB_RAIL_WIDTH } from '../theme/webSpec';
+import { WEB_DESKTOP_BREAKPOINT, WEB_RAIL_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 import ClientScreen from './ClientScreen';
 import CalendarioScreen from './CalendarioScreen';
@@ -47,7 +47,7 @@ export default function ClientTabs() {
             justifyContent: 'flex-start',
             marginHorizontal: 4,
             marginVertical: 4,
-            borderRadius: 10,
+            borderRadius: WEB_PANEL_RADIUS,
             minHeight: 44,
             paddingHorizontal: 10,
           }

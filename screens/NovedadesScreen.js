@@ -14,10 +14,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -95,29 +97,33 @@ export default function NovedadesScreen() {
     () =>
       StyleSheet.create({
         header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
+          paddingHorizontal: 16,
           paddingTop: 56,
-          paddingBottom: 16,
-        },
-        backBtn: {
-          padding: 8,
-          marginLeft: -8,
+          paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         title: {
           color: t.brandText ?? t.brand,
           fontSize: 22,
           fontWeight: '800',
+          marginTop: 6,
+          marginBottom: 12,
           letterSpacing: 0.8,
           textShadowColor: t.brandTextShadow ?? 'rgba(0,255,252,0.75)',
           textShadowOffset: { width: 0, height: 0 },
           textShadowRadius: 6,
         },
-        list: { paddingHorizontal: 20, paddingBottom: 40 },
+        list: {
+          paddingHorizontal: 16,
+          paddingBottom: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         card: {
-          borderRadius: 18,
+          borderRadius: WEB_PANEL_RADIUS,
           paddingVertical: 16,
           paddingHorizontal: 16,
           marginBottom: 12,
@@ -155,7 +161,7 @@ export default function NovedadesScreen() {
           marginTop: 10,
           backgroundColor: hexToRgba(t.text, 0.1),
         },
-        empty: { paddingVertical: 40, alignItems: 'center' },
+        empty: { paddingVertical: 40, alignItems: 'center', width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         emptyText: { color: t.placeholder, fontSize: 16 },
       }),
     [t]
@@ -176,11 +182,8 @@ export default function NovedadesScreen() {
   return (
     <BackgroundWrapper screen="ClientScreen">
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={26} color={t.text} />
-        </TouchableOpacity>
+        <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{tStr('novedades_title')}</Text>
-        <View style={{ width: 42 }} />
       </View>
 
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>

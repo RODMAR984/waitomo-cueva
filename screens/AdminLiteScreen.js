@@ -1,4 +1,5 @@
 // screens/AdminLiteScreen.js — Waitomo Dark Only
+// - Sin layout propio: el shell web (maxWidth / paneles) aplica vía AdminScreen + staffScreenShell.
 // - Wrapper sobre AdminScreen
 // - Superadmin usa modo "full"
 // - Coach/otros usan modo "lite"
@@ -7,6 +8,9 @@
 import React, { memo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminScreen from './AdminScreen';
+
+/** Re-export: misma spec de ancho web que el resto de screens; el layout efectivo está en AdminScreen + staffScreenShell. */
+export { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 
 function AdminLiteScreen(props) {
   const { currentUser, isSuperAdmin, organizationsOwnedByUser } = useAuth();

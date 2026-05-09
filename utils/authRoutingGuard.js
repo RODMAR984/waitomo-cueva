@@ -31,6 +31,7 @@ export function resolvePostAuthDestination({
   forStaff = false,
   needsFitEngineSpaceSetup = false,
   authNavigationReady = true,
+  hasClientMembership = false,
 }) {
   const normalizedRole = normalizeRole(role || profile?.role);
   const hasProfile = !!profile;
@@ -45,5 +46,5 @@ export function resolvePostAuthDestination({
   if (forStaff && !hasProfile) return 'ConfiguraTuEspacio';
   if (!hasProfile) return 'RegistroInicial';
 
-  return getClientPostAuthRouteName(profile);
+  return getClientPostAuthRouteName(profile, { hasClientMembership });
 }

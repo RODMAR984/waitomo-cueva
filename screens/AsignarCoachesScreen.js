@@ -24,6 +24,8 @@ import BackgroundWrapper from '../components/BackgroundWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 // ---------- fallback de planes (si navegación no provee) ----------
 const DEFAULT_PLANS = [
@@ -120,6 +122,9 @@ export default function AsignarCoachesScreen({ route }) {
           paddingHorizontal: 20,
           paddingTop: Math.max(insets.top, 12) + 8,
           paddingBottom: 12,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         backBtn: { padding: 8, marginLeft: -8 },
         title: {
@@ -133,12 +138,15 @@ export default function AsignarCoachesScreen({ route }) {
         scrollContent: {
           paddingHorizontal: 20,
           paddingBottom: Math.max(insets.bottom, 28) + 24,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         section: { marginBottom: 20 },
         card: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 16,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           paddingVertical: 12,
           paddingHorizontal: 14,
@@ -160,7 +168,7 @@ export default function AsignarCoachesScreen({ route }) {
         input: {
           backgroundColor: t.inputBg ?? t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           borderWidth: 1,
           color: t.text,
           flexGrow: 1,
@@ -172,7 +180,7 @@ export default function AsignarCoachesScreen({ route }) {
         addBtn: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: 12,
           justifyContent: 'center',
           paddingHorizontal: 14,
           paddingVertical: 10,

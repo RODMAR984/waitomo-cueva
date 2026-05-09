@@ -716,11 +716,9 @@ const PerfilUsuarioScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {Platform.OS !== 'web' ? (
-              <View style={styles.buttonsRow}>
-                <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
-              </View>
-            ) : null}
+            <View style={styles.buttonsRow}>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import BackNavButton from '../components/BackNavButton';
 import PasswordInput from '../components/PasswordInput';
 import LogoTriangleBackground from '../components/LogoTriangleBackground';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { supabase } from '../supabaseClient';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 export default function RegistroOwnerScreen() {
   const navigation = useNavigation();
@@ -44,6 +46,9 @@ export default function RegistroOwnerScreen() {
           paddingVertical: 32,
           paddingTop: 32 + insets.top,
           paddingBottom: 32 + insets.bottom,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         title: {
           color: fe.text,
@@ -61,7 +66,7 @@ export default function RegistroOwnerScreen() {
         input: {
           backgroundColor: fe.inputBg,
           borderColor: fe.inputBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           borderWidth: 1,
           color: fe.text,
           marginBottom: 12,
@@ -71,7 +76,7 @@ export default function RegistroOwnerScreen() {
         btn: {
           backgroundColor: fe.primary,
           borderWidth: 0,
-          borderRadius: 10,
+          borderRadius: 12,
           paddingVertical: 14,
           alignItems: 'center',
           marginTop: 16,
@@ -163,6 +168,7 @@ export default function RegistroOwnerScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.centerWrap}>
+            <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('registro_owner_titulo')}</Text>
             <Text style={styles.subtitle}>{tStr('registro_owner_subtitle')}</Text>
 

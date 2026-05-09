@@ -6,6 +6,8 @@ import { useNavigation } from '@react-navigation/native';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import LogoCompleto from '../components/LogoCompleto';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const SPLASH_DURATION_MS = 1600;
 
@@ -51,11 +53,12 @@ const styles = StyleSheet.create({
   },
   center: {
     width: '100%',
-    paddingHorizontal: 20,
+    maxWidth: WEB_CONTENT_MAX_WIDTH,
+    paddingHorizontal: MOBILE_SPACING.xl,
     alignItems: 'center',
   },
   logo: {
-    marginBottom: 4,
+    marginBottom: MOBILE_SPACING.xs,
   },
   fitEngine: {
     fontSize: 36,
@@ -63,9 +66,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   byWaitomo: {
-    fontSize: 16,
+    fontSize: MOBILE_TYPE.bodyStrong,
     fontWeight: '600',
-    marginTop: 8,
+    marginTop: MOBILE_SPACING.sm,
     letterSpacing: 1,
     opacity: 0.9,
   },

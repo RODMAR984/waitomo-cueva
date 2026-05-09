@@ -29,6 +29,7 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import {
   bookClassSlotServer,
@@ -109,8 +110,8 @@ function planFromProfile(planActual) {
 // ---------- screen ----------
 export default function CalendarioScreen({ route, navigation }) {
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 1100;
-  const panelMaxWidth = isWebDesktop ? 1180 : 780;
+  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
+  const panelMaxWidth = WEB_CONTENT_MAX_WIDTH;
   const { plan: contextPlan } = usePlanContext();
   const { profile, user, organization } = useAuth();
   const params = route?.params || {};
@@ -719,7 +720,7 @@ export default function CalendarioScreen({ route, navigation }) {
       StyleSheet.create({
         panel: {
           alignItems: 'center',
-          borderRadius: MOBILE_RADII.lg,
+          borderRadius: WEB_PANEL_RADIUS,
           marginBottom: 40,
           marginHorizontal: 16,
           marginTop: isWebDesktop ? 34 : height * 0.18,

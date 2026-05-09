@@ -17,6 +17,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -65,7 +67,10 @@ export default function WelcomeScreen() {
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          paddingHorizontal: 24,
+          paddingHorizontal: MOBILE_SPACING.xxl,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         heroTextBlock: { marginTop: 72 },
         titleTop: {
@@ -99,28 +104,28 @@ export default function WelcomeScreen() {
         },
         objectsRow: {
           position: 'absolute',
-          bottom: bottomInset + 20,
+          bottom: bottomInset + MOBILE_SPACING.xl,
           left: 0,
           right: 0,
           flexDirection: 'row',
           justifyContent: 'space-evenly',
           alignItems: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
         },
         objectButton: {
           alignItems: 'center',
           justifyContent: 'center',
           width: 72,
           height: 72,
-          borderRadius: 36,
+          borderRadius: MOBILE_RADII.lg,
           backgroundColor: hexToRgba(t.brand, 0.25),
           borderWidth: 1.5,
           borderColor: hexToRgba(t.brand, 0.5),
         },
-        objectIcon: { marginBottom: 4 },
+        objectIcon: { marginBottom: MOBILE_SPACING.xs },
         objectLabel: {
           color: t.subText,
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.caption - 2,
           fontWeight: '600',
           textAlign: 'center',
         },
@@ -143,7 +148,7 @@ export default function WelcomeScreen() {
       }
       return;
     }
-    navigation.navigate('PlanSelector');
+    navigation.navigate('WelcomeGlobal');
   };
 
   return (

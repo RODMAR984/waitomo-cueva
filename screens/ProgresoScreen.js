@@ -9,6 +9,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import getRandomPlanImage from '../utils/getRandomPlanImage';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -32,13 +33,16 @@ export default function ProgresoScreen() {
           justifyContent: 'center',
           alignItems: 'center',
           paddingHorizontal: 20,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
           // capa sutil para asegurar legibilidad del texto
           backgroundColor: hexToRgba(t.bg, 0.0),
         },
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 16,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           paddingHorizontal: 18,
           paddingVertical: 16,

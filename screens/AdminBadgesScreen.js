@@ -12,6 +12,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function AdminBadgesScreen() {
   const navigation = useNavigation();
@@ -58,25 +60,28 @@ export default function AdminBadgesScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? 16 : 8 + insets.top,
-          paddingHorizontal: 16,
+          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         backBtn: { padding: 8, marginRight: 4 },
         title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
-        body: { paddingHorizontal: 16, paddingBottom: 32 },
-        hint: { color: t.subText, fontSize: 12, marginBottom: 12, lineHeight: 18 },
+        body: { paddingHorizontal: MOBILE_SPACING.lg, paddingBottom: 32, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 12, lineHeight: 18 },
         card: {
           padding: 12,
-          borderRadius: 12,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           marginBottom: 8,
           backgroundColor: t.boxBg,
         },
         name: { color: t.text, fontWeight: '800' },
-        meta: { color: t.subText, fontSize: 12, marginTop: 4 },
-        btn: { marginTop: 16, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, ...t.buttonPrimary },
+        meta: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
+        btn: { marginTop: MOBILE_SPACING.lg, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: MOBILE_SPACING.lg, borderRadius: MOBILE_RADII.md, ...t.buttonPrimary },
         btnBusy: { opacity: 0.7 },
         btnText: { ...t.buttonPrimaryText, fontWeight: '800' },
       }),

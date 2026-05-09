@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 /** Estética compartida: WelcomeGlobal + WelcomeDualChoice (logo, CTAs, locale). */
 export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}) {
@@ -7,7 +8,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
   const isWide = !!layout?.isWide;
   /** Web: tarjeta centrada (no banda horizontal); nativo ancho amplio solo si !web. */
   const isWeb = Platform.OS === 'web';
-  const contentMaxWidth = isWeb ? 440 : isWide ? 720 : 420;
+  const contentMaxWidth = isWeb ? Math.min(WEB_CONTENT_MAX_WIDTH, 440) : isWide ? 720 : 420;
   const ctaMaxWidth = isWeb ? 400 : isWide ? 360 : 280;
   const subtitleMaxWidth = isWeb ? 400 : isWide ? 620 : 320;
   return StyleSheet.create({
@@ -23,7 +24,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
     },
     localeGroup: {
       flexDirection: 'row',
-      borderRadius: MOBILE_RADII.sm,
+      borderRadius: WEB_PANEL_RADIUS,
       borderWidth: 1,
       borderColor: t.overlayBorder,
       overflow: 'hidden',
@@ -80,11 +81,47 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       width: '100%',
       maxWidth: ctaMaxWidth,
     },
+    joinHub: {
+      width: '100%',
+      borderRadius: WEB_PANEL_RADIUS,
+      borderWidth: 1,
+      borderColor: t.overlayBorder,
+      backgroundColor: t.inputBg,
+      paddingVertical: MOBILE_SPACING.md,
+      paddingHorizontal: MOBILE_SPACING.md,
+      marginBottom: MOBILE_SPACING.sm,
+      gap: MOBILE_SPACING.xs,
+    },
+    joinHubTitle: {
+      color: t.subText,
+      fontSize: MOBILE_TYPE.bodyStrong,
+      fontWeight: '800',
+      textAlign: 'center',
+    },
+    joinHubHint: {
+      color: t.subText,
+      fontSize: 12,
+      textAlign: 'center',
+      opacity: 0.9,
+      marginBottom: MOBILE_SPACING.xs,
+    },
+    joinSubRow: {
+      flexDirection: isWide ? 'row' : 'column',
+      gap: MOBILE_SPACING.sm,
+      width: '100%',
+    },
+    joinSubBtnStack: {
+      width: '100%',
+    },
+    joinSubBtnWide: {
+      flex: 1,
+      minWidth: 0,
+    },
     ctaPrimary: {
       backgroundColor: fe.buttonBg,
       borderColor: fe.buttonBorder,
       borderWidth: 1,
-      borderRadius: MOBILE_RADII.sm,
+      borderRadius: WEB_PANEL_RADIUS,
       minHeight: MOBILE_SIZES.controlHeightLg,
       paddingVertical: MOBILE_SPACING.md,
       paddingHorizontal: MOBILE_SPACING.lg,
@@ -96,7 +133,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       backgroundColor: fe.buttonBg,
       borderColor: fe.buttonBorder,
       borderWidth: 1,
-      borderRadius: MOBILE_RADII.sm,
+      borderRadius: WEB_PANEL_RADIUS,
       minHeight: MOBILE_SIZES.controlHeightLg,
       paddingVertical: MOBILE_SPACING.md,
       paddingHorizontal: MOBILE_SPACING.lg,

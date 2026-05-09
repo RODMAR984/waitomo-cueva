@@ -4,6 +4,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -14,9 +15,11 @@ import {
   Dimensions,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const { height } = Dimensions.get('window');
 
@@ -161,7 +164,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1.5,
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 24,
           // sombra sutil ligada a la marca
           shadowColor: t.brand,
@@ -174,6 +177,9 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
           justifyContent: 'center',
           marginTop: height * 0.15,
           padding: 20,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         title: {
           color: t.brand,
@@ -197,6 +203,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
     <BackgroundWrapper plan={plan}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.panel}>
+          <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{tStr('registro_evolucion_title')}</Text>
           <Text style={styles.info}>{tStr('registro_evolucion_info')}</Text>
 
@@ -254,9 +261,11 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
             <Text style={styles.buttonText}>{tStr('registro_evolucion_send')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancel}>
-            <Text style={styles.cancelText}>{tStr('config_back')}</Text>
-          </TouchableOpacity>
+          {Platform.OS !== 'web' ? (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancel}>
+              <Text style={styles.cancelText}>{tStr('config_back')}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
     </BackgroundWrapper>

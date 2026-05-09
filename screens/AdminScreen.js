@@ -51,6 +51,7 @@ import {
   emitAdminScrollToEditor,
 } from '../utils/adminScrollBus';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -128,7 +129,7 @@ const sumarDias = (baseDate, delta) => {
 };
 
 const RM_PREVIEW_BASE = (extra = {}) => ({
-  fontSize: 15,
+  fontSize: MOBILE_TYPE.bodyStrong,
   lineHeight: 22,
   ...extra,
   ...(Platform.OS === 'android' ? { textAlignVertical: 'center', includeFontPadding: false } : {}),
@@ -763,7 +764,7 @@ export default function AdminScreen() {
           alignSelf: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           marginBottom: 30,
           padding: 20,
@@ -778,23 +779,23 @@ export default function AdminScreen() {
         },
         headerTitle: {
           color: t.text,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
         },
         headerLogoutBtn: {
           paddingVertical: 8,
           paddingHorizontal: 14,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           ...t.buttonPrimary,
         },
         headerLogout: {
           ...t.buttonPrimaryText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
         },
 
         title: {
           color: t.text,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           marginBottom: 20,
           textAlign: 'center',
@@ -811,7 +812,7 @@ export default function AdminScreen() {
         },
         blockListsSectionTitle: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           marginTop: 12,
           marginBottom: 6,
@@ -819,7 +820,7 @@ export default function AdminScreen() {
         },
         blockListsSectionSub: {
           color: t.placeholder,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 18,
           marginBottom: 12,
           textAlign: 'center',
@@ -832,10 +833,10 @@ export default function AdminScreen() {
           paddingVertical: 8,
           paddingHorizontal: 14,
         },
-        jumpToEditorText: { color: t.brand, fontSize: 13, fontWeight: '800' },
+        jumpToEditorText: { color: t.brand, fontSize: MOBILE_TYPE.body, fontWeight: '800' },
         blockEditorSectionTitle: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           marginTop: 16,
           marginBottom: 6,
@@ -843,7 +844,7 @@ export default function AdminScreen() {
         },
         blockEditorSectionSub: {
           color: t.placeholder,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 18,
           marginBottom: 14,
           textAlign: 'center',
@@ -872,7 +873,7 @@ export default function AdminScreen() {
         block: { marginBottom: 12 },
         label: {
           color: t.text,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
           marginBottom: 8,
         },
@@ -880,7 +881,7 @@ export default function AdminScreen() {
         input: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: t.text,
           marginBottom: 12,
@@ -903,7 +904,7 @@ export default function AdminScreen() {
         textarea: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: t.text,
           marginBottom: 12,
@@ -913,7 +914,7 @@ export default function AdminScreen() {
         primaryBtn: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           marginBottom: 14,
           marginTop: 4,
           padding: 12,
@@ -940,7 +941,7 @@ export default function AdminScreen() {
           minWidth: 0,
         },
         sectionCard: {
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
@@ -966,7 +967,7 @@ export default function AdminScreen() {
         primaryBtnTextOn: t.buttonPrimaryText,
         aiBtn: {
           alignItems: 'center',
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.brand,
           backgroundColor: hexToRgbaLocal(t.brand, 0.12),
@@ -978,7 +979,7 @@ export default function AdminScreen() {
         aiModePill: {
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.18)',
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           paddingHorizontal: 10,
           paddingVertical: 6,
           backgroundColor: BASE_TEAL,
@@ -987,7 +988,7 @@ export default function AdminScreen() {
           borderColor: t.brand,
           backgroundColor: hexToRgbaLocal(t.brand, 0.22),
         },
-        aiModeTxt: { color: t.subText, fontSize: 12, fontWeight: '700' },
+        aiModeTxt: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         aiModeTxtOn: { color: t.brand },
         aiPromptRow: {
           flexDirection: 'row',
@@ -999,7 +1000,7 @@ export default function AdminScreen() {
           flex: 1,
           backgroundColor: BASE_TEAL,
           borderColor: 'rgba(255,255,255,0.16)',
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: t.text,
           padding: 12,
@@ -1007,9 +1008,9 @@ export default function AdminScreen() {
         },
         aiVoiceMicBtn: {
           width: 48,
-          minHeight: 48,
+          minHeight: MOBILE_SIZES.controlHeight,
           marginTop: 2,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.16)',
           backgroundColor: BASE_TEAL,
@@ -1022,7 +1023,7 @@ export default function AdminScreen() {
         },
         aiVoiceHint: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           marginBottom: 8,
           marginTop: -8,
         },
@@ -1031,24 +1032,24 @@ export default function AdminScreen() {
           backgroundColor: BASE_TEAL,
           borderColor: 'rgba(255,255,255,0.16)',
           borderWidth: 1,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           padding: 10,
           minHeight: 100,
           marginTop: 10,
         },
-        aiOutputText: { color: t.text, fontSize: 14, lineHeight: 20 },
-        aiWarnLine: { color: t.subText, fontSize: 12, marginTop: 6 },
+        aiOutputText: { color: t.text, fontSize: MOBILE_TYPE.body, lineHeight: 20 },
+        aiWarnLine: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 6 },
         aiActionsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
         aiActionBtn: {
           flex: 1,
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.16)',
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           alignItems: 'center',
           paddingVertical: 10,
           backgroundColor: BASE_TEAL,
         },
-        aiActionTxt: { color: t.text, fontSize: 13, fontWeight: '700' },
+        aiActionTxt: { color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '700' },
 
         financeBtn: {
           alignSelf: 'flex-end',
@@ -1085,7 +1086,7 @@ export default function AdminScreen() {
           width: menuTileWidth,
           minHeight: 88,
           padding: 10,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
@@ -1093,7 +1094,7 @@ export default function AdminScreen() {
         menuTileIconWrap: {
           width: 36,
           height: 36,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           backgroundColor: hexToRgbaLocal(t.brand, 0.14),
           alignItems: 'center',
           justifyContent: 'center',
@@ -1101,7 +1102,7 @@ export default function AdminScreen() {
         },
         menuTileTitle: {
           color: t.text,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '700',
         },
         menuTileSub: {
@@ -1115,7 +1116,7 @@ export default function AdminScreen() {
           alignItems: 'center',
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -1146,7 +1147,7 @@ export default function AdminScreen() {
         dropdownListModal: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           width: Math.min(windowWidth * 0.92, 420),
           maxHeight: Math.min(Dimensions.get('window').height * 0.72, 460),
@@ -1160,7 +1161,7 @@ export default function AdminScreen() {
         dropdownList: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           width: '90%',
           height: 400,
@@ -1173,14 +1174,14 @@ export default function AdminScreen() {
         },
         dropdownListHeader: {
           paddingVertical: 12,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           borderBottomWidth: 1,
           borderBottomColor: t.overlayBorder,
           backgroundColor: hexToRgbaLocal(t.brand, 0.1),
         },
         dropdownListHeaderText: {
           color: t.brand,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '700',
         },
 
@@ -1211,13 +1212,13 @@ export default function AdminScreen() {
           backgroundColor: t.inputBg,
         },
         dropdownDoneBtn: {
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 8,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           ...t.buttonPrimary,
         },
         dropdownDoneText: {
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
           ...t.buttonPrimaryText,
         },
@@ -1248,17 +1249,17 @@ export default function AdminScreen() {
         bloqueCard: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginBottom: 14,
           padding: 12,
         },
         bloqueTitle: { color: t.text, fontWeight: 'bold' },
-        bloqueMeta: { color: t.text, fontSize: 12, opacity: 0.85 },
+        bloqueMeta: { color: t.text, fontSize: MOBILE_TYPE.caption, opacity: 0.85 },
         bloqueCoach: { color: t.text, fontSize: 11, opacity: 0.75 },
 
         iconButton: { alignItems: 'center' },
-        iconText: { color: t.text, fontSize: 12, marginTop: 2 },
+        iconText: { color: t.text, fontSize: MOBILE_TYPE.caption, marginTop: 2 },
 
         noteBox: {
           marginTop: 6,
@@ -1279,7 +1280,7 @@ export default function AdminScreen() {
         videoThumb: {
           alignItems: 'center',
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginRight: 8,
           marginTop: 8,
@@ -1299,7 +1300,7 @@ export default function AdminScreen() {
         chatContainer: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginTop: 6,
           padding: 10,
@@ -1312,11 +1313,11 @@ export default function AdminScreen() {
         },
         messageUser: {
           color: t.text,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: 'bold',
           marginBottom: 4,
         },
-        messageText: { color: t.text, fontSize: 14 },
+        messageText: { color: t.text, fontSize: MOBILE_TYPE.body },
         messageTime: {
           color: t.text,
           fontSize: 10,
@@ -1330,7 +1331,7 @@ export default function AdminScreen() {
         sendButton: {
           backgroundColor: hexToRgbaLocal(t.brand, 0.08),
           borderColor: t.brand,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginLeft: 8,
           padding: 10,
@@ -1347,7 +1348,7 @@ export default function AdminScreen() {
           borderColor: t.brand,
           borderRadius: 20,
           borderWidth: 1,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 8,
         },
         togglePillActive: { backgroundColor: t.brand },
@@ -1403,14 +1404,14 @@ export default function AdminScreen() {
         aiModesTitle: {
           alignSelf: 'stretch',
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '700',
           marginBottom: 6,
         },
         aiModeHintLine: {
           alignSelf: 'stretch',
           color: t.text,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 17,
           marginBottom: 10,
           opacity: 0.95,
@@ -1856,7 +1857,7 @@ export default function AdminScreen() {
               </View>
             ) : plansDisponibles.length === 0 && orgIdForPlans ? (
               <View style={styles.block}>
-                <Text style={{ color: t.subText, fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
+                <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.body, textAlign: 'center', lineHeight: 20 }}>
                   {tStr('admin_sin_planes_bloques')}
                 </Text>
               </View>

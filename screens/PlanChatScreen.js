@@ -13,14 +13,18 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../supabaseClient';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 export default function PlanChatScreen({ route }) {
+  const navigation = useNavigation();
   const { plan } = route.params;
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -73,10 +77,16 @@ export default function PlanChatScreen({ route }) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: { flex: 1, padding: 20 },
+        container: {
+          flex: 1,
+          padding: 20,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         title: { color: t.text, fontSize: 22, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
         msgList: { flex: 1 },
-        msg: { marginBottom: 10, backgroundColor: t.boxBg, padding: 10, borderRadius: 8 },
+        msg: { marginBottom: 10, backgroundColor: t.boxBg, padding: 10, borderRadius: WEB_PANEL_RADIUS },
         msgUser: { color: t.brand, fontWeight: 'bold' },
         msgText: { color: t.text },
         row: { flexDirection: 'row', alignItems: 'center' },
@@ -84,10 +94,10 @@ export default function PlanChatScreen({ route }) {
           flex: 1,
           backgroundColor: t.inputBg,
           padding: 12,
-          borderRadius: 8,
+          borderRadius: 12,
           color: t.text,
         },
-        btn: { padding: 10, borderRadius: 8, ...t.buttonPrimary },
+        btn: { padding: 10, borderRadius: 12, ...t.buttonPrimary },
       }),
     [t],
   );
@@ -98,6 +108,7 @@ export default function PlanChatScreen({ route }) {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>
           {plan.title}
           {tStr('plan_chat_title_suffix')}

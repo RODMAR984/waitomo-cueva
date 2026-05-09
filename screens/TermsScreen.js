@@ -7,7 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { getTermsBody } from '../content/legal';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function TermsScreen({ navigation }) {
   const { profile } = useAuth() || {};
@@ -21,50 +22,51 @@ export default function TermsScreen({ navigation }) {
       StyleSheet.create({
         container: {
           flexGrow: 1,
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 80,
-          paddingBottom: 40,
+          paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
         panel: {
-          borderRadius: WEB_PANEL_RADIUS,
-          padding: 18,
+          borderRadius: MOBILE_RADII.lg,
+          padding: MOBILE_SPACING.xl - 2,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
         title: {
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: '700',
           color: t.text,
-          marginBottom: 6,
+          marginBottom: MOBILE_SPACING.sm,
           textAlign: 'center',
         },
         subtitle: {
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           color: t.subText,
           textAlign: 'center',
-          marginBottom: 16,
+          marginBottom: MOBILE_SPACING.lg,
         },
         body: {
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           color: t.subText,
           lineHeight: 22,
         },
         backButton: {
-          marginTop: 16,
+          marginTop: MOBILE_SPACING.lg,
           alignSelf: 'center',
-          paddingVertical: 10,
-          paddingHorizontal: 20,
-          borderRadius: 999,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.sm + 2,
+          paddingHorizontal: MOBILE_SPACING.xl,
+          borderRadius: MOBILE_RADII.pill,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 6,
+          gap: MOBILE_SPACING.sm,
           ...t.buttonPrimary,
         },
-        backButtonText: { ...t.buttonPrimaryText, fontSize: 14 },
+        backButtonText: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.body },
       }),
     [t],
   );

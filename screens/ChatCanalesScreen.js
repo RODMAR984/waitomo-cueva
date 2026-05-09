@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { useThemeContext } from '../contexts/ThemeContext';
@@ -22,6 +23,7 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { evaluateCalendarioAccess, evaluateClientCommunityAccess } from '../utils/clientWorkoutEntitlement';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -184,20 +186,26 @@ export default function ChatCanalesScreen() {
     () =>
       StyleSheet.create({
         header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
+          paddingHorizontal: 16,
           paddingTop: 56,
-          paddingBottom: 16,
+          paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
-        backBtn: { padding: 8, marginLeft: -8 },
-        title: { color: t.brand ?? t.text, fontSize: 22, fontWeight: '800' },
-        list: { flex: 1, paddingHorizontal: 20, paddingBottom: 40 },
+        title: { color: t.brand ?? t.text, fontSize: 22, fontWeight: '800', marginTop: 6, marginBottom: 12 },
+        list: {
+          flex: 1,
+          paddingHorizontal: 16,
+          paddingBottom: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         card: {
           flexDirection: 'row',
           alignItems: 'center',
-          borderRadius: 18,
+          borderRadius: WEB_PANEL_RADIUS,
           paddingVertical: 18,
           paddingHorizontal: 16,
           marginBottom: 12,
@@ -216,7 +224,14 @@ export default function ChatCanalesScreen() {
         },
         cardName: { color: t.text, fontSize: 17, fontWeight: '700' },
         cardPlan: { color: t.placeholder, fontSize: 12, marginTop: 2 },
-        empty: { paddingVertical: 32, alignItems: 'center', paddingHorizontal: 20 },
+        empty: {
+          paddingVertical: 32,
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         emptyText: { color: t.placeholder, fontSize: 16, textAlign: 'center' },
         emptyHint: {
           color: t.subText ?? t.placeholder,
@@ -244,11 +259,8 @@ export default function ChatCanalesScreen() {
   return (
     <BackgroundWrapper screen="ClientScreen">
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={26} color={t.brand ?? t.text} />
-        </TouchableOpacity>
+        <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{tStr('chat_title')}</Text>
-        <View style={{ width: 42 }} />
       </View>
 
       {loading ? (

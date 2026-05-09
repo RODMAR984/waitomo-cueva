@@ -493,7 +493,7 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('organizations')
         .select(
-          'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,client_invite_code,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked'
+          'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,client_invite_code,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,public_directory_enabled,google_place_id,google_place_summary'
         )
         .eq('id', orgId)
         .maybeSingle();
@@ -620,7 +620,7 @@ export const AuthProvider = ({ children }) => {
         const { data: memberships, error: membershipsError } = await supabase
           .from('organization_memberships')
           .select(
-            'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked)'
+            'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,public_directory_enabled,google_place_id,google_place_summary)'
           )
           .eq('user_id', session.user.id)
           .eq('active', true);
@@ -642,7 +642,7 @@ export const AuthProvider = ({ children }) => {
           const { data: ownerOrgRows, error: ownerOrgErr } = await supabase
             .from('organizations')
             .select(
-              'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked'
+              'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,public_directory_enabled,google_place_id,google_place_summary'
             )
             .eq('owner_id', session.user.id);
           if (!ownerOrgErr && Array.isArray(ownerOrgRows)) {
@@ -689,7 +689,7 @@ export const AuthProvider = ({ children }) => {
         const { data, error } = await supabase
           .from('organizations')
           .select(
-            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked'
+            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,public_directory_enabled,google_place_id,google_place_summary'
           )
           .eq('owner_id', session.user.id);
         if (cancelled) return;
@@ -916,6 +916,34 @@ export const AuthProvider = ({ children }) => {
 
   const pendingInviteAppliedRef = useRef(null);
 
+  /**
+   * Aplica código de invitación guardado (AsyncStorage) para la sesión actual.
+   * Se llama desde sync (antes de abrir post-auth) y desde un efecto de respaldo.
+   * No borra el código ante fallos transitorios (red/RPC) para poder reintentar.
+   */
+  async function applyPendingClientInviteOnce() {
+    try {
+      const code = await getPendingClientInviteCode();
+      if (!code) return;
+      if (pendingInviteAppliedRef.current === code) return;
+      const res = await joinOrganizationWithInviteCode(code);
+      if (res?.ok) {
+        pendingInviteAppliedRef.current = code;
+        await clearPendingClientInviteCode();
+        return;
+      }
+      const fatal = res?.error === 'invalid_code' || res?.error === 'role_not_client' || res?.error === 'empty_code';
+      if (fatal) {
+        await clearPendingClientInviteCode();
+        console.log('🟠 pending client invite descartado:', res?.error || res);
+        return;
+      }
+      console.log('🟠 pending client invite no aplicado (se conserva el código):', res?.error || res);
+    } catch (e) {
+      console.log('🟠 applyPendingClientInviteOnce:', e?.message || e);
+    }
+  }
+
   useEffect(() => {
     if (!session?.user?.id) {
       pendingInviteAppliedRef.current = null;
@@ -923,7 +951,7 @@ export const AuthProvider = ({ children }) => {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!session?.user?.id || !profile?.id) return;
+    if (!session?.user?.id) return;
     if (initialProfileSyncDone === false) return;
     let cancelled = false;
     (async () => {
@@ -935,20 +963,19 @@ export const AuthProvider = ({ children }) => {
       if (res?.ok) {
         pendingInviteAppliedRef.current = code;
         await clearPendingClientInviteCode();
-      } else {
+      } else if (
+        res?.error === 'invalid_code' ||
+        res?.error === 'role_not_client' ||
+        res?.error === 'empty_code'
+      ) {
         await clearPendingClientInviteCode();
-        console.log('🟠 pending client invite no aplicado:', res?.error || res);
+        console.log('🟠 pending client invite (effect) descartado:', res?.error || res);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [
-    session?.user?.id,
-    profile?.id,
-    initialProfileSyncDone,
-    joinOrganizationWithInviteCode,
-  ]);
+  }, [session?.user?.id, initialProfileSyncDone, joinOrganizationWithInviteCode]);
 
   // -------------------------
   // ✅ ENSURE PROFILE (igual a tu versión, sin tocar lógica)
@@ -1272,6 +1299,7 @@ export const AuthProvider = ({ children }) => {
       // Si el ref dice "ya sincronicé" pero el estado perdió profile (carrera / remount / limpieza parcial),
       // NO omitir: si no, Login ve profile=null + initialProfileSyncDone=true y manda a RegistroInicial.
       if (profileRef.current?.id === userId) {
+        await applyPendingClientInviteOnce();
         setInitialProfileSyncDone(true);
         console.log('🧠 SYNC: omitido (perfil ya sincronizado para este usuario)', {
           userId,
@@ -1348,6 +1376,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       profileSyncInFlightRef.current = null;
       profileSyncConcurrentSkipLoggedRef.current = false;
+      await applyPendingClientInviteOnce();
       setInitialProfileSyncDone(true);
     }
 

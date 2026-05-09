@@ -18,6 +18,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../theme/colors';
 import { createWelcomeGlobalLayoutStyles } from '../styles/welcomeGlobalLayoutStyles';
 import { useWelcomeRouting } from '../hooks/useWelcomeRouting';
+import { WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
+/** Misma escala que `createWelcomeGlobalLayoutStyles` → `theme/mobileSpec` */
+export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function WelcomeGlobalScreen() {
   const navigation = useNavigation();
@@ -93,7 +96,7 @@ export default function WelcomeGlobalScreen() {
         : 'welcome_session_resume_subtitle'
       : 'welcome_global_subtitle';
 
-  const isWideWeb = Platform.OS === 'web' && width >= 1024;
+  const isWideWeb = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
   const layoutStyles = useMemo(
     () => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top, { isWide: isWideWeb }),
     [insets.top, isWideWeb],
@@ -167,6 +170,34 @@ export default function WelcomeGlobalScreen() {
 
         {showGuestActions && (
           <View style={layoutStyles.ctaWrap}>
+            <View style={layoutStyles.joinHub}>
+              <Text style={layoutStyles.joinHubTitle}>{tStr('welcome_join_hub_title')}</Text>
+              <Text style={layoutStyles.joinHubHint}>{tStr('welcome_join_hub_hint')}</Text>
+              <View style={layoutStyles.joinSubRow}>
+                <TouchableOpacity
+                  style={[
+                    layoutStyles.ctaPrimary,
+                    isWideWeb ? layoutStyles.joinSubBtnWide : layoutStyles.joinSubBtnStack,
+                  ]}
+                  onPress={() => navigation.navigate('JoinWithInvite')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_join_code_cta')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    layoutStyles.ctaSecondary,
+                    isWideWeb ? layoutStyles.joinSubBtnWide : layoutStyles.joinSubBtnStack,
+                  ]}
+                  onPress={() => navigation.navigate('PublicDirectory')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={layoutStyles.ctaSecondaryText}>{tStr('welcome_find_gym_cta')}</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={layoutStyles.joinHubHint}>{tStr('welcome_find_gym_soon_body')}</Text>
+            </View>
+
             <TouchableOpacity
               style={layoutStyles.ctaPrimary}
               onPress={() => navigation.navigate('Login', { forStaff: false })}
@@ -194,13 +225,6 @@ export default function WelcomeGlobalScreen() {
               activeOpacity={0.8}
             >
               <Text style={layoutStyles.linkText}>{tStr('welcome_create_gym_coach_short')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={layoutStyles.linkRow}
-              onPress={() => navigation.navigate('JoinWithInvite')}
-              activeOpacity={0.8}
-            >
-              <Text style={layoutStyles.linkText}>{tStr('welcome_join_with_code')}</Text>
             </TouchableOpacity>
           </View>
         )}

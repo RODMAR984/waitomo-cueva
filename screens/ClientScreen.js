@@ -1363,12 +1363,15 @@ export default function ClientScreen() {
           gap: 16,
         },
         mainColPrimary: {
-          flex: isWebWide ? 1.45 : 0,
+          flex: isWebWide ? 1 : 0,
           gap: 16,
         },
         mainColSecondary: {
           flex: isWebWide ? 1 : 0,
           gap: 16,
+        },
+        panelEqualHeight: {
+          minHeight: isWebWide ? 420 : 0,
         },
         panel: {
           backgroundColor: t.boxBg,
@@ -1892,7 +1895,7 @@ export default function ClientScreen() {
 
         <View style={styles.mainGrid}>
           <View style={styles.mainColPrimary}>
-            <View style={styles.panel}>
+            <View style={[styles.panel, styles.panelEqualHeight]}>
               <Text style={styles.sectionTitle}>{tStr('client_plan_activo')}</Text>
 
               <View style={styles.planBox}>
@@ -1989,6 +1992,59 @@ export default function ClientScreen() {
               <Text style={styles.footerInfo}>{tStr('client_reservas_hint')}</Text>
             </View>
 
+          </View>
+
+          <View style={styles.mainColSecondary}>
+            <View style={[styles.panel, styles.panelEqualHeight]}>
+              <Text style={styles.sectionTitle}>{tStr('client_quick_access')}</Text>
+
+              <View style={styles.quickRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.quickBtn,
+                    isWeb && !isWebWide && styles.quickBtnStacked,
+                  ]}
+                  onPress={goPerfil}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.quickIconWrap}>
+                    <Ionicons name="person-circle-outline" size={22} color={t.brand} />
+                  </View>
+                  <Text style={styles.quickLabel}>{tStr('client_my_profile')}</Text>
+                  <Text style={styles.quickHint}>{tStr('client_my_profile_hint')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.quickBtn,
+                    styles.quickBtnLast,
+                    isWeb && !isWebWide && styles.quickBtnStacked,
+                    isWeb && !isWebWide && styles.quickBtnLastStacked,
+                  ]}
+                  onPress={goChat}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.quickIconWrap}>
+                    <Ionicons name="chatbubbles-outline" size={20} color={t.brand} />
+                    {unreadChatCount > 0 && (
+                      <View style={styles.chatBadge}>
+                        <Text style={styles.chatBadgeText}>
+                          {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.quickLabel}>{tStr('config_notif_messages')}</Text>
+                  <Text style={styles.quickHint}>{tStr('client_chat_hint')}</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.quickSectionFooter}>{tStr('client_quick_access_section_footer')}</Text>
+
+              <TouchableOpacity style={[styles.secondaryBtn, styles.secondaryBtnLogout]} onPress={handleLogout}>
+                <Text style={styles.secondaryBtnText}>{tStr('client_logout')}</Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               style={styles.novedadesCaja}
               onPress={goNovedades}
@@ -2045,58 +2101,6 @@ export default function ClientScreen() {
               <Text style={styles.novedadesVerTodas}>{tStr('client_ver_todas')} ›</Text>
               <Text style={styles.novedadesFooterHint}>{tStr('client_novedades_footer_hint')}</Text>
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.mainColSecondary}>
-            <View style={styles.panel}>
-              <Text style={styles.sectionTitle}>{tStr('client_quick_access')}</Text>
-
-              <View style={styles.quickRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.quickBtn,
-                    isWeb && !isWebWide && styles.quickBtnStacked,
-                  ]}
-                  onPress={goPerfil}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.quickIconWrap}>
-                    <Ionicons name="person-circle-outline" size={22} color={t.brand} />
-                  </View>
-                  <Text style={styles.quickLabel}>{tStr('client_my_profile')}</Text>
-                  <Text style={styles.quickHint}>{tStr('client_my_profile_hint')}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.quickBtn,
-                    styles.quickBtnLast,
-                    isWeb && !isWebWide && styles.quickBtnStacked,
-                    isWeb && !isWebWide && styles.quickBtnLastStacked,
-                  ]}
-                  onPress={goChat}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.quickIconWrap}>
-                    <Ionicons name="chatbubbles-outline" size={20} color={t.brand} />
-                    {unreadChatCount > 0 && (
-                      <View style={styles.chatBadge}>
-                        <Text style={styles.chatBadgeText}>
-                          {unreadChatCount > 99 ? '99+' : unreadChatCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.quickLabel}>{tStr('config_notif_messages')}</Text>
-                  <Text style={styles.quickHint}>{tStr('client_chat_hint')}</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.quickSectionFooter}>{tStr('client_quick_access_section_footer')}</Text>
-
-              <TouchableOpacity style={[styles.secondaryBtn, styles.secondaryBtnLogout]} onPress={handleLogout}>
-                <Text style={styles.secondaryBtnText}>{tStr('client_logout')}</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </ScrollView>

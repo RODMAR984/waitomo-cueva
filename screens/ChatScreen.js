@@ -23,12 +23,14 @@ import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import BackNavButton from '../components/BackNavButton';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { evaluateCalendarioAccess } from '../utils/clientWorkoutEntitlement';
 import { draftChatReplyWithAi } from '../utils/aiAssistant';
 import { trackEvent } from '../utils/observability';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -343,21 +345,21 @@ export default function ChatScreen() {
     () =>
       StyleSheet.create({
         header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
+          paddingHorizontal: 16,
           paddingTop: 56,
-          paddingBottom: 12,
+          paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
-        backBtn: { padding: 8, marginLeft: -8 },
-        title: { color: t.brand ?? t.text, fontSize: 20, fontWeight: '800', marginLeft: 8 },
-        list: { flex: 1, paddingHorizontal: 16, paddingVertical: 8 },
+        title: { color: t.brand ?? t.text, fontSize: 20, fontWeight: '800', marginTop: 6, marginBottom: 8 },
+        list: { flex: 1, paddingHorizontal: 16, paddingVertical: 8, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         msgRow: { marginBottom: 12, maxWidth: '85%' },
         msgRowMe: { alignSelf: 'flex-end' },
         msgBubble: {
           paddingVertical: 10,
           paddingHorizontal: 14,
-          borderRadius: 16,
+          borderRadius: WEB_PANEL_RADIUS,
           borderBottomRightRadius: 4,
           backgroundColor: t.boxBg,
           borderWidth: 1,
@@ -366,7 +368,7 @@ export default function ChatScreen() {
         msgBubbleMe: {
           backgroundColor: hexToRgba(t.brand, 0.35),
           borderColor: hexToRgba(t.brand, 0.65),
-          borderBottomRightRadius: 16,
+          borderBottomRightRadius: WEB_PANEL_RADIUS,
           borderBottomLeftRadius: 4,
         },
         senderRow: {
@@ -400,6 +402,9 @@ export default function ChatScreen() {
           borderTopWidth: 1,
           borderTopColor: t.overlayBorder,
           backgroundColor: hexToRgba(t.bg, 0.96),
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         input: {
           flex: 1,
@@ -499,9 +504,7 @@ export default function ChatScreen() {
   return (
     <BackgroundWrapper screen="ClientScreen">
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={26} color={t.brand ?? t.text} />
-        </TouchableOpacity>
+        <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{channelName}</Text>
       </View>
 

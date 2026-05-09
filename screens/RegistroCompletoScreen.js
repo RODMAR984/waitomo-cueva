@@ -23,11 +23,13 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -314,11 +316,14 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           padding: 20,
           paddingBottom: 40,
           paddingTop: 60,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1.2,
           padding: 20,
         },
@@ -403,7 +408,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         input: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           borderWidth: 1,
           color: t.text,
           marginBottom: 15,
@@ -414,7 +419,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           alignItems: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           borderWidth: 1,
           marginBottom: 20,
           padding: 12,
@@ -427,7 +432,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         button: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
+          borderRadius: 12,
           marginTop: 4,
           padding: 16,
           opacity: saving ? 0.75 : 1,
@@ -451,6 +456,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.panel}>
+            <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('reg_complete_title')}</Text>
 
             {/* ✅ FIX (estética): banner solo cuando ESTAMOS asegurando sesión (no por !profile) */}

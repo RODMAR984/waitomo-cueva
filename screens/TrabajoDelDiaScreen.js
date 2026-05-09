@@ -48,6 +48,7 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { evaluateWorkoutEntitlement } from '../utils/clientWorkoutEntitlement';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -62,8 +63,8 @@ const hexToRgba = (hex, alpha = 1) => {
 // ---------- screen ----------
 export default function TrabajoDelDiaScreen({ route, navigation }) {
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 1100;
-  const panelMaxWidth = isWebDesktop ? 1180 : 860;
+  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
+  const panelMaxWidth = isWebDesktop ? WEB_CONTENT_MAX_WIDTH : 860;
   // ================== PARAMS ==================
   const { plan, planKey, planValue, fecha, horario: paramHorario, hora: paramHora } = route.params || {};
   const horario = paramHorario ?? paramHora;
@@ -124,7 +125,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1.5,
           marginHorizontal: isWebDesktop ? 14 : 20,
           padding: isWebDesktop ? 28 : 24,

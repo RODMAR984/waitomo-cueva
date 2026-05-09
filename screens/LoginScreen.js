@@ -20,12 +20,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import LogoCompleto from '../components/LogoCompleto';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { supabase } from '../supabaseClient';
 import { resolvePostAuthDestination } from '../utils/authRoutingGuard';
 import { reportError, trackEvent } from '../utils/observability';
@@ -54,6 +56,7 @@ export default function LoginScreen() {
     initialProfileSyncDone,
     needsFitEngineSpaceSetup,
     authNavigationReady,
+    hasClientMembership,
   } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -140,13 +143,13 @@ export default function LoginScreen() {
         },
         pageColumn: {
           width: '100%',
-          maxWidth: Platform.OS === 'web' ? Math.min(440, winW - 32) : 520,
+          maxWidth: Platform.OS === 'web' ? Math.min(WEB_CONTENT_MAX_WIDTH, 440) : 520,
           alignSelf: 'center',
         },
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: MOBILE_RADII.lg,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           padding: MOBILE_SPACING.xl,
           width: '100%',
@@ -258,6 +261,7 @@ export default function LoginScreen() {
         forStaff,
         needsFitEngineSpaceSetup,
         authNavigationReady,
+        hasClientMembership: !!hasClientMembership,
       });
       if (!destination) return;
 
@@ -276,6 +280,7 @@ export default function LoginScreen() {
       forStaff,
       needsFitEngineSpaceSetup,
       authNavigationReady,
+      hasClientMembership,
     ],
   );
 
@@ -405,10 +410,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleIrAPlanes = () => {
-    navigation.navigate('PlanSelector');
-  };
-
   const handleForgotPassword = async () => {
     if (!email) {
       Alert.alert(tStr('login_alert_email_required_title'), tStr('login_alert_email_required_body'));
@@ -521,6 +522,7 @@ export default function LoginScreen() {
               <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
             </View>
             <View style={styles.panel}>
+              <BackNavButton onPress={() => navigation.goBack()} />
               {showStaffAccessChoice ? (
                 <>
                   <Text style={styles.title}>{tStr('login_not_staff_title')}</Text>
@@ -630,11 +632,6 @@ export default function LoginScreen() {
                   disabled={disabled}
                 >
                   <Text style={styles.linkText}>{tStr('login_no_account_staff')}</Text>
-                </TouchableOpacity>
-              )}
-              {!fromRegistro && !forStaff && (
-                <TouchableOpacity onPress={handleIrAPlanes} disabled={disabled}>
-                  <Text style={styles.linkText}>{tStr('login_no_account_plans')}</Text>
                 </TouchableOpacity>
               )}
               {!fromRegistro && !forStaff && (

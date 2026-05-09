@@ -19,6 +19,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { resolveOrgLogoUri } from '../utils/resolveOrgLogoUri';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function WelcomeOrganizationScreen() {
   const navigation = useNavigation();
@@ -96,7 +98,8 @@ export default function WelcomeOrganizationScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.hero}>
+        <View style={[styles.panel, { backgroundColor: t.boxBg, borderColor: t.overlayBorder }]}>
+          <View style={styles.hero}>
           {logoUri ? (
             <Image source={{ uri: logoUri }} style={styles.logo} resizeMode="contain" />
           ) : (
@@ -110,6 +113,7 @@ export default function WelcomeOrganizationScreen() {
           <Text style={[styles.kicker, { color: t.subText }]}>{tStr('welcome_org_kicker')}</Text>
           <Text style={[styles.title, { color: t.brandText ?? t.brand }]}>{orgName}</Text>
           <Text style={[styles.subtitle, { color: t.subText }]}>{tStr('welcome_org_subtitle')}</Text>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -135,39 +139,53 @@ export default function WelcomeOrganizationScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  muted: { fontSize: 14 },
-  scroll: { flexGrow: 1, paddingHorizontal: 24 },
-  hero: { alignItems: 'center', marginBottom: 28 },
-  logo: { width: 200, height: 120, marginBottom: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: MOBILE_SPACING.xxl },
+  muted: { fontSize: MOBILE_TYPE.body },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: MOBILE_SPACING.xxl,
+    width: '100%',
+    maxWidth: WEB_CONTENT_MAX_WIDTH,
+    alignSelf: 'center',
+  },
+  panel: {
+    borderWidth: 1,
+    borderRadius: MOBILE_RADII.lg,
+    padding: MOBILE_SPACING.xl,
+    marginBottom: MOBILE_SPACING.xl,
+  },
+  hero: { alignItems: 'center' },
+  logo: { width: 200, height: 120, marginBottom: MOBILE_SPACING.lg },
   logoPlaceholder: {
     width: 200,
     minHeight: 88,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: MOBILE_RADII.lg,
+    padding: MOBILE_SPACING.lg,
+    marginBottom: MOBILE_SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoPlaceholderText: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  kicker: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 6 },
+  logoPlaceholderText: { fontSize: MOBILE_TYPE.title - 4, fontWeight: '800', textAlign: 'center' },
+  kicker: { fontSize: MOBILE_TYPE.caption, fontWeight: '600', letterSpacing: 0.6, marginBottom: MOBILE_SPACING.sm },
   title: {
-    fontSize: 26,
+    fontSize: MOBILE_TYPE.title + 4,
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-  subtitle: { fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 12, maxWidth: 340 },
+  subtitle: { fontSize: MOBILE_TYPE.bodyStrong, lineHeight: 22, textAlign: 'center', marginTop: MOBILE_SPACING.md, maxWidth: 340 },
   primaryBtn: {
     alignSelf: 'stretch',
     alignItems: 'center',
-    paddingVertical: 16,
-    borderRadius: 14,
-    marginTop: 8,
+    justifyContent: 'center',
+    minHeight: MOBILE_SIZES.controlHeightLg,
+    paddingVertical: MOBILE_SPACING.md,
+    borderRadius: MOBILE_RADII.lg,
+    marginTop: MOBILE_SPACING.sm,
   },
-  primaryBtnText: { fontSize: 17, fontWeight: '800' },
-  linkRow: { alignItems: 'center', marginTop: 18, paddingVertical: 8 },
-  linkText: { fontSize: 15, fontWeight: '600' },
-  hint: { fontSize: 12, textAlign: 'center', marginTop: 28, lineHeight: 18 },
+  primaryBtnText: { fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
+  linkRow: { alignItems: 'center', marginTop: MOBILE_SPACING.xl - 2, paddingVertical: MOBILE_SPACING.sm },
+  linkText: { fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '600' },
+  hint: { fontSize: MOBILE_TYPE.caption, textAlign: 'center', marginTop: MOBILE_SPACING.xxl + MOBILE_SPACING.sm, lineHeight: 18 },
 });

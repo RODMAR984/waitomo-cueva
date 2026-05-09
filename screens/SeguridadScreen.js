@@ -27,7 +27,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { navigationRef } from '../navigationRef';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const SeguridadScreen = () => {
   const navigation = useNavigation();
@@ -198,78 +199,82 @@ const handleChangePassword = async () => {
         flex: { flex: 1 },
         container: {
           flexGrow: 1,
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 80,
-          paddingBottom: 40,
+          paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
         panel: {
-          borderRadius: WEB_PANEL_RADIUS,
-          padding: 18,
+          borderRadius: MOBILE_RADII.lg,
+          padding: MOBILE_SPACING.xl - 2,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        title: { fontSize: 22, fontWeight: '700', color: t.text, marginBottom: 6 },
-        subtitle: { fontSize: 13, color: t.subText, marginBottom: 18 },
+        title: { fontSize: MOBILE_TYPE.title, fontWeight: '700', color: t.text, marginBottom: MOBILE_SPACING.sm },
+        subtitle: { fontSize: MOBILE_TYPE.caption, color: t.subText, marginBottom: MOBILE_SPACING.xl - 2 },
         section: {
-          marginTop: 10,
-          marginBottom: 14,
-          paddingTop: 8,
+          marginTop: MOBILE_SPACING.sm + 2,
+          marginBottom: MOBILE_SPACING.md + 2,
+          paddingTop: MOBILE_SPACING.sm,
           borderTopWidth: 1,
           borderTopColor: t.border,
         },
-        sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-        sectionTitle: { fontSize: 16, fontWeight: '600', color: t.text },
-        label: { fontSize: 13, color: t.subText, marginBottom: 4 },
+        sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: MOBILE_SPACING.sm, marginBottom: MOBILE_SPACING.sm + 2 },
+        sectionTitle: { fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '600', color: t.text },
+        label: { fontSize: MOBILE_TYPE.caption, color: t.subText, marginBottom: MOBILE_SPACING.xs },
         input: {
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          fontSize: 14,
+          paddingHorizontal: MOBILE_SPACING.sm + 2,
+          paddingVertical: MOBILE_SPACING.sm,
+          fontSize: MOBILE_TYPE.body,
           color: t.text,
           backgroundColor: t.inputBg,
-          marginBottom: 10,
+          marginBottom: MOBILE_SPACING.sm + 2,
+          minHeight: MOBILE_SIZES.controlHeight,
         },
         primaryButton: {
-          marginTop: 6,
-          borderRadius: 12,
-          paddingVertical: 12,
+          marginTop: MOBILE_SPACING.sm,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.md,
           alignItems: 'center',
           justifyContent: 'center',
           ...t.buttonPrimary,
         },
-        primaryButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: 14 },
+        primaryButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: MOBILE_TYPE.body },
         secondaryButton: {
-          marginTop: 6,
-          borderRadius: 12,
-          paddingVertical: 12,
+          marginTop: MOBILE_SPACING.sm,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.md,
           alignItems: 'center',
           justifyContent: 'center',
           ...t.buttonPrimary,
         },
-        secondaryButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: 14 },
-        currentEmail: { fontSize: 12, color: t.subText, marginBottom: 8 },
+        secondaryButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: MOBILE_TYPE.body },
+        currentEmail: { fontSize: MOBILE_TYPE.caption, color: t.subText, marginBottom: MOBILE_SPACING.sm },
         currentEmailStrong: { color: t.text, fontWeight: '500' },
         backButton: {
-          marginTop: 8,
+          marginTop: MOBILE_SPACING.sm,
           alignSelf: 'center',
-          paddingVertical: 10,
-          paddingHorizontal: 20,
-          borderRadius: 999,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.sm + 2,
+          paddingHorizontal: MOBILE_SPACING.xl,
+          borderRadius: MOBILE_RADII.pill,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 6,
+          gap: MOBILE_SPACING.sm,
           ...t.buttonPrimary,
         },
-        backButtonText: { ...t.buttonPrimaryText, fontSize: 14 },
+        backButtonText: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.body },
         deleteSection: {
-          marginTop: 18,
-          paddingTop: 16,
+          marginTop: MOBILE_SPACING.xl - 2,
+          paddingTop: MOBILE_SPACING.lg,
           borderTopWidth: 1,
           borderTopColor: t.border,
         },
@@ -277,11 +282,12 @@ const handleChangePassword = async () => {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
-          marginTop: 8,
-          paddingVertical: 12,
-          paddingHorizontal: 16,
-          borderRadius: 12,
+          gap: MOBILE_SPACING.sm,
+          marginTop: MOBILE_SPACING.sm,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
@@ -289,7 +295,7 @@ const handleChangePassword = async () => {
         deleteButtonText: {
           color: t.subText,
           fontWeight: '600',
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
         },
       }),
     [t],
@@ -328,7 +334,7 @@ const handleChangePassword = async () => {
                 onChangeText={setCurrentPassword}
                 placeholder={tStr('security_ph_current_password')}
                 placeholderTextColor={t.placeholder}
-                containerStyle={{ marginBottom: 12 }}
+                containerStyle={{ marginBottom: MOBILE_SPACING.md }}
               />
 
               <Text style={styles.label}>{tStr('security_label_new_password')}</Text>
@@ -338,7 +344,7 @@ const handleChangePassword = async () => {
                 onChangeText={setNewPassword}
                 placeholder={tStr('security_ph_new_password')}
                 placeholderTextColor={t.placeholder}
-                containerStyle={{ marginBottom: 12 }}
+                containerStyle={{ marginBottom: MOBILE_SPACING.md }}
               />
 
               <Text style={styles.label}>{tStr('security_label_repeat_password')}</Text>
@@ -348,7 +354,7 @@ const handleChangePassword = async () => {
                 onChangeText={setRepeatPassword}
                 placeholder={tStr('security_ph_repeat_password')}
                 placeholderTextColor={t.placeholder}
-                containerStyle={{ marginBottom: 12 }}
+                containerStyle={{ marginBottom: MOBILE_SPACING.md }}
               />
 
               <TouchableOpacity
@@ -398,7 +404,7 @@ const handleChangePassword = async () => {
                 onChangeText={setEmailPassword}
                 placeholder={tStr('security_ph_current_password')}
                 placeholderTextColor={t.placeholder}
-                containerStyle={{ marginBottom: 12 }}
+                containerStyle={{ marginBottom: MOBILE_SPACING.md }}
               />
 
               <TouchableOpacity

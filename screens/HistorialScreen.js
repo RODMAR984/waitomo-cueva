@@ -8,10 +8,12 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
-export default function HistorialScreen({ route }) {
+export default function HistorialScreen({ route, navigation }) {
   const plan = route?.params?.plan || { nombre: 'Historial' };
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -29,8 +31,10 @@ export default function HistorialScreen({ route }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1,
-          borderRadius: 20,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 30,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
           // sombra sutil ligada a la marca
           shadowColor: t.brand,
           shadowOffset: { width: 0, height: 4 },
@@ -42,6 +46,7 @@ export default function HistorialScreen({ route }) {
           fontSize: 18,
           textAlign: 'center',
         },
+        backWrap: { marginTop: 14, alignItems: 'center' },
       }),
     [t],
   );
@@ -51,6 +56,9 @@ export default function HistorialScreen({ route }) {
       <View style={styles.container}>
         <View style={styles.panel}>
           <Text style={styles.text}>🗓️ {tStr('historial_empty')}</Text>
+          <View style={styles.backWrap}>
+            <BackNavButton onPress={() => navigation?.goBack?.()} label={tStr('common_back')} />
+          </View>
         </View>
       </View>
     </BackgroundWrapper>

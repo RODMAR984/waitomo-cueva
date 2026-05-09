@@ -20,6 +20,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { IMAGENES_POR_PLAN } from '../utils/imagenesFijas';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function PlanDetailScreen({ route, navigation }) {
@@ -135,7 +136,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,   // unificado
           borderWidth: 1,
-          borderRadius: MOBILE_RADII.md,
+          borderRadius: WEB_PANEL_RADIUS,
           marginHorizontal: 20,
           paddingTop: 30,
           paddingBottom: 10,
@@ -150,7 +151,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,   // unificado
           borderWidth: 1,
-          borderRadius: MOBILE_RADII.lg,
+          borderRadius: WEB_PANEL_RADIUS,
           margin: 20,
           padding: 16,
           // sombra sutil
@@ -164,12 +165,29 @@ export default function PlanDetailScreen({ route, navigation }) {
           flexGrow: 1,
           justifyContent: 'flex-end',
           paddingBottom: 20,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         subtitle: {
           color: t.subText,
           fontSize: MOBILE_TYPE.body,
           marginTop: 4,
           textAlign: 'center',
+        },
+        helperLine: {
+          color: t.subText,
+          fontSize: 12,
+          textAlign: 'center',
+          lineHeight: 17,
+          marginTop: -4,
+          marginBottom: 12,
+        },
+        featureLine: {
+          color: t.subText,
+          fontSize: 13,
+          lineHeight: 18,
+          marginTop: 4,
         },
         /** Título del plan: tipografía principal de la org (features.text_color → t.text), no solo acento/borde. */
         title: {
@@ -203,6 +221,10 @@ export default function PlanDetailScreen({ route, navigation }) {
 
         <View style={styles.panel}>
           {!!plan.description && <Text style={styles.description}>{plan.description}</Text>}
+          <Text style={styles.helperLine}>Elegí cómo arrancar hoy y te guiamos paso a paso.</Text>
+          <Text style={styles.featureLine}>✓ Vista clara de horarios y disponibilidad</Text>
+          <Text style={styles.featureLine}>✓ Contratación simple desde tu panel</Text>
+          <Text style={styles.featureLine}>✓ Gestión de reservas en segundos</Text>
           {plan.id === 'pase_total' && (
             <Text style={styles.description}>{tStr('plan_detail_pase_total_desc')}</Text>
           )}

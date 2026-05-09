@@ -97,7 +97,7 @@ export function useWelcomeRouting() {
           resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
-        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
+        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile, { hasClientMembership }) }]);
         return;
       }
 
@@ -119,7 +119,7 @@ export function useWelcomeRouting() {
           resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
-        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
+        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile, { hasClientMembership }) }]);
         return;
       }
 
@@ -140,7 +140,7 @@ export function useWelcomeRouting() {
           resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
-        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
+        resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile, { hasClientMembership }) }]);
         return;
       }
 
@@ -166,7 +166,7 @@ export function useWelcomeRouting() {
         resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
         return;
       }
-      resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile) }]);
+      resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile, { hasClientMembership }) }]);
     },
     [
       navigation,

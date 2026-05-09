@@ -20,6 +20,7 @@ import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 export default function ReservaScreen({ route, navigation }) {
   const plan = route?.params?.plan ?? null;
@@ -48,6 +49,9 @@ export default function ReservaScreen({ route, navigation }) {
         // overlay principal para contenido
         content: {
           flex: 1,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
           paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 100,
         },
@@ -55,7 +59,7 @@ export default function ReservaScreen({ route, navigation }) {
           alignSelf: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: MOBILE_RADII.md,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           marginBottom: 24,
           paddingHorizontal: 16,
@@ -76,7 +80,7 @@ export default function ReservaScreen({ route, navigation }) {
           alignItems: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: MOBILE_RADII.md,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1.2,
           minHeight: MOBILE_SIZES.controlHeightLg,
           paddingHorizontal: 20,

@@ -22,7 +22,7 @@ import LogoCompleto from '../components/LogoCompleto';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { fetchPublicOrganizationDirectory } from '../utils/publicDirectory';
-import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import { resolveOrgLogoUri } from '../utils/resolveOrgLogoUri';
 
@@ -156,7 +156,7 @@ export default function PublicDirectoryScreen() {
         card: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: MOBILE_RADII.lg,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           padding: MOBILE_SPACING.lg,
           marginBottom: MOBILE_SPACING.md,

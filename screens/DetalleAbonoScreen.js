@@ -14,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import BackgroundWrapper from '../components/BackgroundWrapper';
@@ -22,6 +23,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { abonoCoversUserPlan, isUserAbonoActive } from '../utils/clientWorkoutEntitlement';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 // helpers
 const hexToRgba = (hex, alpha = 1) => {
@@ -178,12 +180,19 @@ export default function DetalleAbonoScreen({ navigation, route }) {
     () =>
       StyleSheet.create({
         root: { flex: 1 },
-        scroll: { paddingHorizontal: 20, paddingTop: 70, paddingBottom: 40 },
+        scroll: {
+          paddingHorizontal: 20,
+          paddingTop: 70,
+          paddingBottom: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1,
-          borderRadius: 22,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 18,
           marginBottom: 16,
         },
@@ -192,7 +201,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
         row: {
           marginTop: 14,
           backgroundColor: t.boxBg,
-          borderRadius: 16,
+          borderRadius: WEB_PANEL_RADIUS,
           padding: 14,
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -221,6 +230,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
   return (
     <BackgroundWrapper screen="TrabajoDelDia">
       <ScrollView style={styles.root} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <BackNavButton onPress={() => navigation.goBack()} />
         <View style={styles.panel}>
           <Text style={styles.title}>{tStr('detalle_abono_title')}</Text>
           <Text style={styles.subtitle}>{tStr('detalle_abono_subtitle')}</Text>

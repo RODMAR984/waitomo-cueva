@@ -16,11 +16,14 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { getThemeTokens } from '../theme/colors';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function AdminLoginScreen() {
   const { isDark } = useThemeContext();
@@ -81,51 +84,57 @@ export default function AdminLoginScreen() {
       StyleSheet.create({
         screen: {
           flex: 1,
-          padding: 24,
+          padding: MOBILE_SPACING.xxl,
           paddingTop: 56,
           justifyContent: 'center',
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
         },
         title: {
           color: t.text,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
-          marginBottom: 6,
+          marginBottom: MOBILE_SPACING.sm,
           textAlign: 'center',
         },
         subtitle: {
           color: t.subText,
-          fontSize: 13,
-          marginBottom: 20,
+          fontSize: MOBILE_TYPE.caption,
+          marginBottom: MOBILE_SPACING.xl,
           textAlign: 'center',
         },
         input: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: t.text,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          marginBottom: 12,
-          fontSize: 16,
+          paddingHorizontal: MOBILE_SPACING.md + 2,
+          paddingVertical: MOBILE_SPACING.md,
+          marginBottom: MOBILE_SPACING.md,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          minHeight: MOBILE_SIZES.controlHeight,
         },
         button: {
           alignItems: 'center',
+          justifyContent: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
-          padding: 16,
-          marginTop: 8,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          paddingVertical: MOBILE_SPACING.md,
+          marginTop: MOBILE_SPACING.sm,
         },
-        buttonText: { ...t.buttonPrimaryText, fontSize: 16 },
-        backLink: { marginTop: 20, alignSelf: 'center' },
-        backLinkText: { color: t.subText, fontSize: 13, textDecorationLine: 'underline' },
+        buttonText: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
+        backLink: { marginTop: MOBILE_SPACING.xl, alignSelf: 'center' },
+        backLinkText: { color: t.subText, fontSize: MOBILE_TYPE.caption, textDecorationLine: 'underline' },
       }),
     [t]
   );
@@ -139,6 +148,7 @@ export default function AdminLoginScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.screen}>
             <View style={styles.panel}>
+              <BackNavButton onPress={() => navigation.goBack()} />
               <Text style={styles.title}>{tStr('admin_login_title')}</Text>
               <Text style={styles.subtitle}>{tStr('admin_login_subtitle')}</Text>
 
@@ -155,7 +165,7 @@ export default function AdminLoginScreen() {
                 placeholder={tStr('login_password')}
                 placeholderTextColor={t.placeholder}
                 style={styles.input}
-                containerStyle={{ marginBottom: 12 }}
+                containerStyle={{ marginBottom: MOBILE_SPACING.md }}
                 value={password}
                 onChangeText={setPassword}
               />
@@ -170,10 +180,7 @@ export default function AdminLoginScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.backLink}
-                onPress={() => navigation.goBack()}
-              >
+              <TouchableOpacity style={styles.backLink} onPress={() => navigation.goBack()}>
                 <Text style={styles.backLinkText}>{tStr('common_back')}</Text>
               </TouchableOpacity>
             </View>

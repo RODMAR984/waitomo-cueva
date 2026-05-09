@@ -21,6 +21,8 @@ import { supabase } from '../supabaseClient';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD', 'EUR'];
 
@@ -187,7 +189,13 @@ export default function AdminFinanzasScreen({ route }) {
       StyleSheet.create({
         safe: { backgroundColor: 'transparent', flex: 1, paddingTop: insets.top + 8 },
         container: { flex: 1 },
-        contentContainer: { padding: 16, paddingBottom: 28 },
+        contentContainer: {
+          padding: MOBILE_SPACING.lg,
+          paddingBottom: 28,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
 
         // tabs
         tabs: {
@@ -217,7 +225,7 @@ export default function AdminFinanzasScreen({ route }) {
         card: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           marginBottom: 10,
           padding: 12,
@@ -227,7 +235,7 @@ export default function AdminFinanzasScreen({ route }) {
         input: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           color: t.text,
           flex: 1,
@@ -241,17 +249,17 @@ export default function AdminFinanzasScreen({ route }) {
           gap: 10,
           marginBottom: 10,
         },
-        memberPickScroll: { marginBottom: 8, maxHeight: 48 },
+        memberPickScroll: { marginBottom: 8, maxHeight: MOBILE_SIZES.controlHeight },
         memberChip: {
           paddingHorizontal: 10,
           paddingVertical: 8,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.faintStrong,
           marginRight: 8,
         },
-        memberChipText: { color: t.text, fontSize: 12, fontWeight: '600' },
+        memberChipText: { color: t.text, fontSize: MOBILE_TYPE.caption, fontWeight: '600' },
         btnRow: { flexDirection: 'row', gap: 12, marginVertical: 10 },
         cardActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
 
@@ -259,7 +267,7 @@ export default function AdminFinanzasScreen({ route }) {
         btn: {
           alignSelf: 'flex-start',
           ...t.buttonPrimary,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.md,
           paddingHorizontal: 14,
           paddingVertical: 10,
         },

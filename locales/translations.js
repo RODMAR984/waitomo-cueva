@@ -66,7 +66,14 @@ export const translations = {
     welcome_client: 'Cliente',
     welcome_staff: 'Staff',
     welcome_admin: 'Admin',
-    welcome_global_subtitle: 'Creá tu cuenta o iniciá sesión para entrar',
+    welcome_global_subtitle: 'Unite con código, creá cuenta o iniciá sesión.',
+    welcome_join_hub_title: 'Unirme a mi gym o coach',
+    welcome_join_hub_hint: 'Si tu centro te pasó código o link, empezá por acá.',
+    welcome_join_code_cta: 'Tengo código o link',
+    welcome_find_gym_cta: 'Buscar gym o coach',
+    welcome_find_gym_soon_title: 'Directorio público',
+    welcome_find_gym_soon_body:
+      'Podés ver espacios que eligieron aparecer en FitEngine. Para unirte a uno, seguí necesitando el código o link que te dé tu coach.',
     welcome_action_login: 'Iniciar sesión',
     welcome_action_create_account: 'Crear cuenta',
     welcome_action_continue: 'Continuar',
@@ -307,6 +314,53 @@ export const translations = {
     plan_selector_empty_title: 'Aún no hay planes publicados',
     plan_selector_empty_hint:
       'El centro puede cargarlos en Administración → Planes. Solo se listan los planes activos de tu organización.',
+    plan_selector_no_org_title: 'Todavía no estás en ningún gym',
+    plan_selector_no_org_hint:
+      'Pedile a tu coach el código o el link de invitación para asociar esta cuenta a tu espacio.',
+    plan_selector_no_org_cta: 'Tengo código de invitación',
+
+    directory_title: 'Buscar gym o coach',
+    directory_subtitle:
+      'Solo aparecen espacios que eligieron listarse en FitEngine. Para anotarte, pedí el código o link a tu centro.',
+    directory_empty: 'Todavía no hay espacios publicados en el directorio.',
+    directory_load_error: 'No se pudo cargar el directorio. Probá de nuevo.',
+    directory_type_gym: 'Gimnasio',
+    directory_type_coach: 'Coach',
+    directory_badge_fitengine: 'FitEngine',
+    directory_cta_join_code: 'Tengo código para unirme',
+    directory_search_placeholder: 'Filtrar por nombre o dirección…',
+    directory_open_maps: 'Abrir en Google Maps',
+    directory_filter_all: 'Todos',
+    directory_filter_gym: 'Gimnasios',
+    directory_filter_coach: 'Coaches',
+
+    gym_config_tab_directory: 'Directorio',
+    gym_config_directory_intro:
+      'Opt-in: tu espacio puede aparecer en el buscador público de la app. La reseña visible viene de Google Places (solo lectura).',
+    gym_config_public_listing_label: 'Aparecer en el directorio público',
+    gym_config_public_listing_hint:
+      'Activá solo si querés que clientes nuevos te encuentren por nombre y ubicación. No publicamos chats ni datos sensibles.',
+    gym_config_google_place_id_label: 'Google Place ID',
+    gym_config_google_place_id_hint:
+      'Si buscaste arriba, este campo se completa solo. También podés pegar un Place ID (ChIJ…) a mano.',
+    gym_config_google_place_search_label: 'Buscar lugar en Google Maps',
+    gym_config_google_place_search_hint:
+      'Escribí al menos 2 caracteres y tocá una sugerencia para cargar el Place ID.',
+    gym_config_google_place_search_placeholder: 'Nombre del espacio, barrio, ciudad…',
+    gym_config_public_directory_terms_label:
+      'Confirmo que acepto la versión vigente del aviso de publicación en el directorio: el nombre, tipo (gym/coach), logo y datos públicos de Google Places pueden mostrarse. No se publican chats ni datos sensibles.',
+    gym_config_public_directory_link_terms: 'Términos del servicio',
+    gym_config_public_directory_link_privacy: 'Privacidad',
+    gym_config_public_directory_terms_version: 'Documento de referencia · versión {{version}}.',
+    gym_config_public_directory_reaccept_banner:
+      'Actualizamos el aviso legal del directorio (v2). Volvé a marcar la casilla y guardá para seguir publicados.',
+    gym_config_public_directory_must_ack:
+      'Marcá la casilla de confirmación arriba para poder activar el listado público.',
+    gym_config_public_directory_terms_saved_hint: 'Listado aceptado el {{date}}.',
+    gym_config_sync_google_cta: 'Sincronizar reseña con Google',
+    gym_config_sync_google_ok: 'Datos de Google actualizados.',
+    gym_config_sync_google_fail: 'No se pudo sincronizar. Revisá el Place ID y la clave en el servidor.',
+    gym_config_google_summary_label: 'Última sincronización',
 
     admin_menu_perfil_sub: 'Cuenta y datos personales',
     admin_menu_marca_title: 'Marca y apariencia',
@@ -1856,7 +1910,14 @@ export const translations = {
     welcome_client: 'Client',
     welcome_staff: 'Staff',
     welcome_admin: 'Admin',
-    welcome_global_subtitle: 'Create an account or sign in to continue',
+    welcome_global_subtitle: 'Join with a code, create an account, or sign in.',
+    welcome_join_hub_title: 'Join my gym or coach',
+    welcome_join_hub_hint: 'If your gym sent a code or link, start here.',
+    welcome_join_code_cta: 'I have a code or link',
+    welcome_find_gym_cta: 'Find a gym or coach',
+    welcome_find_gym_soon_title: 'Public directory',
+    welcome_find_gym_soon_body:
+      'You can browse spaces that opted in on FitEngine. To join one, you still need the invite code or link from your coach.',
     welcome_action_login: 'Sign in',
     welcome_action_create_account: 'Create account',
     welcome_action_continue: 'Continue',
@@ -2087,6 +2148,53 @@ export const translations = {
     plan_selector_empty_title: 'No plans published yet',
     plan_selector_empty_hint:
       'Your gym can add them under Admin → Plans. Only active plans for your organization are shown here.',
+    plan_selector_no_org_title: 'You’re not linked to a gym yet',
+    plan_selector_no_org_hint:
+      'Ask your coach for the invite code or link to attach this account to your gym.',
+    plan_selector_no_org_cta: 'I have an invite code',
+
+    directory_title: 'Find a gym or coach',
+    directory_subtitle:
+      'Only spaces that opted in are shown. To join, ask your gym for their invite code or link.',
+    directory_empty: 'No spaces are listed in the directory yet.',
+    directory_load_error: 'Could not load the directory. Try again.',
+    directory_type_gym: 'Gym',
+    directory_type_coach: 'Coach',
+    directory_badge_fitengine: 'FitEngine',
+    directory_cta_join_code: 'I have a code to join',
+    directory_search_placeholder: 'Filter by name or address…',
+    directory_open_maps: 'Open in Google Maps',
+    directory_filter_all: 'All',
+    directory_filter_gym: 'Gyms',
+    directory_filter_coach: 'Coaches',
+
+    gym_config_tab_directory: 'Directory',
+    gym_config_directory_intro:
+      'Opt-in: your space can appear in the public FitEngine directory. Ratings shown are read-only from Google Places.',
+    gym_config_public_listing_label: 'Show in public directory',
+    gym_config_public_listing_hint:
+      'Enable only if you want new clients to find you by name and location. We do not publish chats or sensitive data.',
+    gym_config_google_place_id_label: 'Google Place ID',
+    gym_config_google_place_id_hint:
+      'If you used search above, this field fills in automatically. You can also paste a Place ID (ChIJ…) manually.',
+    gym_config_google_place_search_label: 'Search on Google Maps',
+    gym_config_google_place_search_hint:
+      'Type at least 2 characters, then tap a suggestion to set the Place ID.',
+    gym_config_google_place_search_placeholder: 'Business name, neighborhood, city…',
+    gym_config_public_directory_terms_label:
+      'I confirm that I accept the current directory listing notice: your space name, type (gym/coach), logo, and public Google Places data may appear. We do not publish chats or sensitive data.',
+    gym_config_public_directory_link_terms: 'Terms of service',
+    gym_config_public_directory_link_privacy: 'Privacy policy',
+    gym_config_public_directory_terms_version: 'Reference notice · version {{version}}.',
+    gym_config_public_directory_reaccept_banner:
+      'We updated the directory legal notice (v2). Check the box again and save to stay listed.',
+    gym_config_public_directory_must_ack:
+      'Check the confirmation box above before enabling the public listing.',
+    gym_config_public_directory_terms_saved_hint: 'Listing accepted on {{date}}.',
+    gym_config_sync_google_cta: 'Sync rating from Google',
+    gym_config_sync_google_ok: 'Google data updated.',
+    gym_config_sync_google_fail: 'Sync failed. Check the Place ID and server API key.',
+    gym_config_google_summary_label: 'Last sync',
 
     admin_menu_perfil_sub: 'Account and profile',
     admin_menu_marca_title: 'Brand and look',
@@ -3583,5 +3691,60 @@ translations[LOCALE_PT] = {
   welcome_dual_as_client: 'Como cliente',
   welcome_dual_as_staff: 'Como coach / staff',
   welcome_logout_use_other: 'Sair e usar outra conta',
+  welcome_global_subtitle: 'Entre com código, crie conta ou faça login.',
+  welcome_join_hub_title: 'Entrar na minha academia ou com o coach',
+  welcome_join_hub_hint: 'Se o seu centro enviou código ou link, comece aqui.',
+  welcome_join_code_cta: 'Tenho código ou link',
+  welcome_find_gym_cta: 'Buscar academia ou coach',
+  welcome_find_gym_soon_title: 'Diretório público',
+  welcome_find_gym_soon_body:
+    'Você pode ver espaços que optaram por aparecer no FitEngine. Para entrar em um, ainda precisa do código ou link do seu coach.',
+  plan_selector_no_org_title: 'Você ainda não está em nenhuma academia',
+  plan_selector_no_org_hint:
+    'Peça ao seu coach o código ou o link de convite para vincular esta conta ao seu espaço.',
+  plan_selector_no_org_cta: 'Tenho código de convite',
+
+  directory_title: 'Buscar academia ou coach',
+  directory_subtitle:
+    'Só aparecem espaços que optaram por listar no FitEngine. Para entrar, peça o código ou o link ao seu centro.',
+  directory_empty: 'Ainda não há espaços no diretório.',
+  directory_load_error: 'Não foi possível carregar o diretório. Tente de novo.',
+  directory_type_gym: 'Academia',
+  directory_type_coach: 'Coach',
+  directory_badge_fitengine: 'FitEngine',
+  directory_cta_join_code: 'Tenho código para entrar',
+  directory_search_placeholder: 'Filtrar por nome ou endereço…',
+  directory_open_maps: 'Abrir no Google Maps',
+  directory_filter_all: 'Todos',
+  directory_filter_gym: 'Academias',
+  directory_filter_coach: 'Coaches',
+
+  gym_config_tab_directory: 'Diretório',
+  gym_config_directory_intro:
+    'Opt-in: seu espaço pode aparecer no diretório público do FitEngine. A avaliação vem do Google Places (somente leitura).',
+  gym_config_public_listing_label: 'Aparecer no diretório público',
+  gym_config_public_listing_hint:
+    'Ative só se quiser que novos clientes encontrem você. Não publicamos chats nem dados sensíveis.',
+  gym_config_google_place_id_label: 'Google Place ID',
+  gym_config_google_place_id_hint:
+    'Se você buscou acima, este campo é preenchido automaticamente. Também é possível colar um Place ID (ChIJ…) manualmente.',
+  gym_config_google_place_search_label: 'Buscar no Google Maps',
+  gym_config_google_place_search_hint:
+    'Digite pelo menos 2 caracteres e toque em uma sugestão para definir o Place ID.',
+  gym_config_google_place_search_placeholder: 'Nome do espaço, bairro, cidade…',
+  gym_config_public_directory_terms_label:
+    'Confirmo que aceito a versão vigente do aviso de publicação no diretório: nome, tipo (academia/coach), logo e dados públicos do Google Places podem aparecer. Não publicamos chats nem dados sensíveis.',
+  gym_config_public_directory_link_terms: 'Termos de serviço',
+  gym_config_public_directory_link_privacy: 'Privacidade',
+  gym_config_public_directory_terms_version: 'Documento de referência · versão {{version}}.',
+  gym_config_public_directory_reaccept_banner:
+    'Atualizamos o aviso legal do diretório (v2). Marque a caixa de novo e salve para continuar listado.',
+  gym_config_public_directory_must_ack:
+    'Marque a caixa de confirmação acima para poder ativar o diretório público.',
+  gym_config_public_directory_terms_saved_hint: 'Listagem aceita em {{date}}.',
+  gym_config_sync_google_cta: 'Sincronizar avaliação com o Google',
+  gym_config_sync_google_ok: 'Dados do Google atualizados.',
+  gym_config_sync_google_fail: 'Falha na sincronização. Verifique o Place ID e a chave no servidor.',
+  gym_config_google_summary_label: 'Última sincronização',
 };
 export const SUPPORTED_LOCALES = [LOCALE_ES, LOCALE_EN, LOCALE_PT];

@@ -20,12 +20,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase } from '../supabaseClient';
 import { getStripeConnectRedirectUri } from '../utils/fitengineUrls';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function AdminStripeSettingsScreen() {
   const navigation = useNavigation();
@@ -131,33 +134,36 @@ export default function AdminStripeSettingsScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? 16 : 8 + insets.top,
-          paddingHorizontal: 16,
+          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
-        backBtn: { padding: 8, marginRight: 4 },
+        backBtn: { marginRight: 8, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
-        body: { paddingHorizontal: 16, paddingBottom: 32 },
-        hint: { color: t.subText, fontSize: 12, marginBottom: 12, lineHeight: 18 },
+        body: { paddingHorizontal: MOBILE_SPACING.lg, paddingBottom: 32, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 12, lineHeight: 18 },
         label: { color: t.text, fontWeight: '700', marginTop: 12 },
         input: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           padding: 10,
           color: t.text,
           backgroundColor: t.inputBg,
           marginTop: 6,
         },
-        row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+        row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: MOBILE_SPACING.lg },
         rowLabel: { color: t.text, fontWeight: '700', flex: 1 },
-        btn: { marginTop: 20, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, ...t.buttonPrimary },
+        btn: { marginTop: 20, alignSelf: 'flex-start', paddingVertical: 12, paddingHorizontal: 18, borderRadius: MOBILE_RADII.sm, ...t.buttonPrimary },
         btnSecondary: {
           marginTop: 10,
           alignSelf: 'flex-start',
           paddingVertical: 12,
           paddingHorizontal: 18,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.faintStrong,
@@ -166,12 +172,12 @@ export default function AdminStripeSettingsScreen() {
         btnText: { ...t.buttonPrimaryText, fontWeight: '800' },
         btnSecondaryText: { color: t.text, fontWeight: '800' },
         link: { color: t.brand, textDecorationLine: 'underline', marginTop: 10 },
-        noEditHint: { marginTop: 16 },
+        noEditHint: { marginTop: MOBILE_SPACING.lg },
         connectedBanner: {
           flexDirection: 'row',
           alignItems: 'flex-start',
           backgroundColor: t.boxBg,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           padding: 14,
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -188,9 +194,7 @@ export default function AdminStripeSettingsScreen() {
     <BackgroundWrapper screen="Admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-            <Ionicons name="arrow-back" size={24} color={t.text} />
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_stripe_title')}</Text>
       </View>

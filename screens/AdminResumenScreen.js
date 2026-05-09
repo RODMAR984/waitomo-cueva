@@ -38,6 +38,7 @@ import { staffCancelClassBookingServer, staffMoveClassBookingServer } from '../u
 import { reportError, trackEvent } from '../utils/observability';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 function hexToRgbaLocal(hex, alpha = 1) {
   const clean = String(hex || '').replace('#', '');
@@ -675,6 +676,8 @@ export default function AdminResumenScreen() {
           width: '100%',
           alignSelf: 'center',
           maxWidth: Platform.OS === 'web' ? WEB_CONTENT_MAX_WIDTH : undefined,
+          flex: 1,
+          minHeight: 0,
         },
         mainLayout: {
           flexDirection: isDesktopWeb ? 'row' : 'column',
@@ -692,14 +695,14 @@ export default function AdminResumenScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: 12,
+          paddingHorizontal: MOBILE_SPACING.md,
           paddingTop: Math.max(insets.top, 10) + 4,
           paddingBottom: 4,
         },
         backBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         iconBtn: { padding: 10 },
         hero: {
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingBottom: 14,
           borderRadius: WEB_PANEL_RADIUS,
         },
@@ -715,7 +718,7 @@ export default function AdminResumenScreen() {
           flex: 1,
           textAlign: 'center',
           color: t.subText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
           paddingHorizontal: 6,
         },
@@ -733,14 +736,14 @@ export default function AdminResumenScreen() {
         },
         heroHint: {
           color: t.placeholder,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           lineHeight: 19,
         },
         screenTitle: {
           color: t.text,
           fontSize: 28,
           fontWeight: '800',
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           marginBottom: 8,
         },
         mainSheet: {
@@ -756,7 +759,7 @@ export default function AdminResumenScreen() {
         sectionCard: {
           marginHorizontal: 12,
           marginBottom: 10,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
@@ -765,7 +768,7 @@ export default function AdminResumenScreen() {
         },
         sectionTitle: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           marginHorizontal: isDesktopWeb ? 14 : 20,
           marginBottom: 10,
@@ -773,7 +776,7 @@ export default function AdminResumenScreen() {
         },
         sectionHint: {
           color: t.placeholder,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           marginHorizontal: isDesktopWeb ? 14 : 20,
           marginTop: -6,
           marginBottom: 10,
@@ -790,7 +793,7 @@ export default function AdminResumenScreen() {
         slotCard: {
           marginHorizontal: 0,
           marginBottom: 0,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.overlayBg || hexToRgbaLocal(t.subText || '#94a3b8', 0.08),
@@ -803,7 +806,7 @@ export default function AdminResumenScreen() {
           backgroundColor: 'transparent',
         },
         slotTopLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-        slotTitleMain: { color: t.text, fontSize: 16, fontWeight: '800', flex: 1, paddingRight: 4 },
+        slotTitleMain: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', flex: 1, paddingRight: 4 },
         countPill: {
           flexShrink: 0,
           alignSelf: 'center',
@@ -812,7 +815,7 @@ export default function AdminResumenScreen() {
           paddingHorizontal: 10,
           paddingVertical: 5,
           minHeight: 30,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
@@ -822,7 +825,7 @@ export default function AdminResumenScreen() {
           backgroundColor: hexToRgbaLocal('#b45309', 0.18),
           borderColor: hexToRgbaLocal('#b45309', 0.35),
         },
-        countPillText: { fontSize: 12, fontWeight: '800', lineHeight: 16 },
+        countPillText: { fontSize: MOBILE_TYPE.caption, fontWeight: '800', lineHeight: 16 },
         countPillTextZero: { color: t.subText },
         countPillTextOk: { color: '#14532d' },
         countPillTextFull: { color: '#92400e' },
@@ -835,8 +838,8 @@ export default function AdminResumenScreen() {
           backgroundColor: hexToRgbaLocal(t.text, 0.03),
           paddingBottom: 4,
         },
-        slotHeadLine2: { color: t.subText, fontSize: 13, marginTop: 8, lineHeight: 18 },
-        slotHeadLine3: { color: t.placeholder, fontSize: 12, marginTop: 4 },
+        slotHeadLine2: { color: t.subText, fontSize: MOBILE_TYPE.body, marginTop: 8, lineHeight: 18 },
+        slotHeadLine3: { color: t.placeholder, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
         personRow: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -849,7 +852,7 @@ export default function AdminResumenScreen() {
         },
         personName: {
           color: t.text,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
           lineHeight: 20,
           flex: 1,
           marginRight: 10,
@@ -857,7 +860,7 @@ export default function AdminResumenScreen() {
         badge: {
           paddingHorizontal: 10,
           paddingVertical: 5,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: 'transparent',
         },
@@ -872,7 +875,7 @@ export default function AdminResumenScreen() {
         staffActionBtn: {
           paddingHorizontal: 8,
           paddingVertical: 2,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
@@ -885,68 +888,68 @@ export default function AdminResumenScreen() {
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: t.overlayBorder,
         },
-        mutedText: { color: t.placeholder, fontSize: 13, fontStyle: 'italic' },
+        mutedText: { color: t.placeholder, fontSize: MOBILE_TYPE.body, fontStyle: 'italic' },
         rowActions: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 12,
         },
-        moreCount: { color: t.subText, fontSize: 14, fontWeight: '600' },
+        moreCount: { color: t.subText, fontSize: MOBILE_TYPE.body, fontWeight: '600' },
         linkBtn: {
           paddingVertical: 6,
           paddingHorizontal: 4,
         },
-        linkTxt: { color: t.brand, fontSize: 15, fontWeight: '700' },
-        empty: { paddingVertical: 22, paddingHorizontal: 24, alignItems: 'center' },
-        emptyText: { color: t.placeholder, textAlign: 'center', fontSize: 14, lineHeight: 20 },
-        err: { color: t.danger, marginHorizontal: 20, marginBottom: 10, fontSize: 14 },
+        linkTxt: { color: t.brand, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '700' },
+        empty: { paddingVertical: 22, paddingHorizontal: MOBILE_SPACING.xxl, alignItems: 'center' },
+        emptyText: { color: t.placeholder, textAlign: 'center', fontSize: MOBILE_TYPE.body, lineHeight: 20 },
+        err: { color: t.danger, marginHorizontal: 20, marginBottom: 10, fontSize: MOBILE_TYPE.body },
         payRow: {
           marginHorizontal: 20,
           marginBottom: 8,
           padding: 12,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
         },
-        payLine: { color: t.text, fontSize: 14 },
-        paySub: { color: t.subText, fontSize: 12, marginTop: 4 },
+        payLine: { color: t.text, fontSize: MOBILE_TYPE.body },
+        paySub: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
         cancelRow: {
           marginHorizontal: 20,
           marginBottom: 6,
           paddingVertical: 8,
-          paddingHorizontal: 12,
-          borderRadius: 10,
+          paddingHorizontal: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.sm,
           backgroundColor: t.overlayBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        cancelLine: { color: t.subText, fontSize: 13 },
+        cancelLine: { color: t.subText, fontSize: MOBILE_TYPE.body },
         alertCard: {
           marginHorizontal: 8,
           marginBottom: 8,
           padding: 12,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
         },
-        alertTitle: { color: t.text, fontSize: 14, fontWeight: '800' },
-        alertBody: { color: t.subText, fontSize: 13, marginTop: 4, lineHeight: 18 },
+        alertTitle: { color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '800' },
+        alertBody: { color: t.subText, fontSize: MOBILE_TYPE.body, marginTop: 4, lineHeight: 18 },
         alertMeta: { color: t.placeholder, fontSize: 11, marginTop: 6 },
         alertCtaBtn: {
           alignSelf: 'flex-start',
           marginTop: 8,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           paddingHorizontal: 10,
           paddingVertical: 4,
           backgroundColor: t.inputBg,
         },
-        alertCtaTxt: { color: t.brand, fontSize: 12, fontWeight: '700' },
+        alertCtaTxt: { color: t.brand, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         tplBtnRow: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -957,7 +960,7 @@ export default function AdminResumenScreen() {
           marginTop: 8,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           paddingHorizontal: 10,
           paddingVertical: 8,
           color: t.text,
@@ -965,7 +968,7 @@ export default function AdminResumenScreen() {
         },
         historyLine: {
           color: t.placeholder,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           marginTop: 4,
           lineHeight: 16,
         },
@@ -1299,7 +1302,7 @@ export default function AdminResumenScreen() {
           </View>
         ) : (
           <ScrollView
-            style={{ flex: 1 }}
+            style={{ flex: 1, minHeight: 0 }}
             contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 20) + 24 }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.brand} />}
             showsVerticalScrollIndicator={false}

@@ -13,6 +13,7 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PropTypes from 'prop-types';
 import BackgroundWrapper from '../components/BackgroundWrapper';
@@ -276,6 +277,11 @@ export default function AbonosPasesScreen({ navigation, route }) {
           marginBottom: 14,
           alignItems: 'center', // ✅ centra todo el bloque header
         },
+        headerBackWrap: {
+          width: '100%',
+          alignItems: 'flex-start',
+          marginBottom: 10,
+        },
         title: {
           color: t.brand,
           fontSize: MOBILE_TYPE.title,
@@ -293,6 +299,21 @@ export default function AbonosPasesScreen({ navigation, route }) {
           textAlign: 'center',
           width: '100%',
         },
+        introPanel: {
+          width: '100%',
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          borderRadius: WEB_PANEL_RADIUS,
+          backgroundColor: t.boxBg,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          marginTop: 10,
+        },
+        introLine: {
+          color: t.subText,
+          fontSize: 12,
+          lineHeight: 17,
+        },
         sectionTitle: {
           color: t.brand,
           fontSize: MOBILE_TYPE.body,
@@ -301,6 +322,14 @@ export default function AbonosPasesScreen({ navigation, route }) {
           marginBottom: 8,
           marginLeft: 4,
         },
+        cardsGrid: {
+          flexDirection: isWebDesktop ? 'row' : 'column',
+          flexWrap: isWebDesktop ? 'wrap' : 'nowrap',
+          columnGap: isWebDesktop ? 12 : 0,
+        },
+        cardCol: {
+          width: isWebDesktop ? '48.8%' : '100%',
+        },
         card: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -308,6 +337,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
           borderRadius: MOBILE_RADII.lg,
           padding: isWebDesktop ? 20 : 16,
           marginBottom: 12,
+          minHeight: isWebDesktop ? 270 : 0,
         },
         featuredCard: {
           borderColor: t.overlayBorder,
@@ -328,6 +358,28 @@ export default function AbonosPasesScreen({ navigation, route }) {
           color: t.subText,
           fontSize: MOBILE_TYPE.caption,
         },
+        cardBenefit: {
+          marginTop: 7,
+          color: t.subText,
+          fontSize: 12,
+          lineHeight: 16,
+        },
+        featuredPill: {
+          marginTop: 10,
+          alignSelf: 'flex-start',
+          borderWidth: 1,
+          borderColor: hexToRgbaLocal(t.brand, 0.5),
+          backgroundColor: hexToRgbaLocal(t.brand, 0.14),
+          borderRadius: 999,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+        },
+        featuredPillText: {
+          color: t.brand,
+          fontSize: 11,
+          fontWeight: '800',
+          letterSpacing: 0.5,
+        },
         price: {
           marginTop: 10,
           color: t.brand,
@@ -342,6 +394,8 @@ export default function AbonosPasesScreen({ navigation, route }) {
           borderRadius: MOBILE_RADII.md,
           alignItems: 'center',
           justifyContent: 'center',
+          alignSelf: isWebDesktop ? 'flex-start' : 'stretch',
+          width: isWebDesktop ? 170 : '100%',
           ...t.buttonPrimary,
         },
         buttonText: {
@@ -349,6 +403,12 @@ export default function AbonosPasesScreen({ navigation, route }) {
           fontWeight: '800',
           fontSize: MOBILE_TYPE.bodyStrong,
           letterSpacing: 0.6,
+        },
+        buttonRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
         },
         backBtn: {
           marginTop: 8,
@@ -439,20 +499,34 @@ export default function AbonosPasesScreen({ navigation, route }) {
   } : null;
 
   const renderAbonoCard = (a) => (
-    <View
-      key={a.id}
-      style={[styles.card, a.featured ? styles.featuredCard : null]}
-    >
-      <Text style={styles.cardTitle}>{a.title}</Text>
-      <Text style={styles.cardSubtitle}>{a.subtitle}</Text>
-      <Text style={styles.price}>{a.price}</Text>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => handleContratar(a)}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.buttonText}>{tStr('abonos_contratar')}</Text>
-      </TouchableOpacity>
+    <View key={a.id} style={styles.cardCol}>
+      <View style={[styles.card, a.featured ? styles.featuredCard : null]}>
+        <Text style={styles.cardTitle}>{a.title}</Text>
+        <Text style={styles.cardSubtitle}>{a.subtitle}</Text>
+        <Text style={styles.price}>{a.price}</Text>
+        {a.featured ? (
+          <View style={styles.featuredPill}>
+            <Text style={styles.featuredPillText}>RECOMENDADO</Text>
+          </View>
+        ) : null}
+        <Text style={styles.cardBenefit}>
+          ✓ {a.included_sessions == null ? 'Acceso a todas las clases del plan' : 'Clases incluidas según tu abono'}
+        </Text>
+        <Text style={styles.cardBenefit}>
+          ✓ {a.duration_days ? `${a.duration_days} días de vigencia` : 'Vigencia configurable por el gimnasio'}
+        </Text>
+        <Text style={styles.cardBenefit}>✓ Gestión simple desde tu panel</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => handleContratar(a)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.buttonRow}>
+            <Text style={styles.buttonText}>{tStr('abonos_contratar')}</Text>
+            <Ionicons name="arrow-forward" size={16} color={t.buttonPrimaryText?.color || '#fff'} />
+          </View>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -469,6 +543,9 @@ export default function AbonosPasesScreen({ navigation, route }) {
         bounces={true}
       >
         <View style={styles.header}>
+          <View style={styles.headerBackWrap}>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('abonos_volver')} style={styles.backBtn} />
+          </View>
           <Text style={styles.title}>
             {isPaseTotal ? tStr('abonos_title_total') : isEvolucion ? tStr('abonos_title_evolucion') : `ABONOS - ${plan?.title || plan?.nombre || plan?.id}`}
           </Text>
@@ -479,6 +556,9 @@ export default function AbonosPasesScreen({ navigation, route }) {
               ? tStr('abonos_subtitle_evolucion')
               : `Elegí tu abono o pase para ${plan?.title || plan?.nombre || plan?.id}`}
           </Text>
+          <View style={styles.introPanel}>
+            <Text style={styles.introLine}>Elegí el formato que mejor se adapta a tu semana y empezá hoy.</Text>
+          </View>
         </View>
 
         {abonosLoading ? (
@@ -517,51 +597,55 @@ export default function AbonosPasesScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {!abonosLoading && !abonosError && isEvolucion && evolucionAbonos.map(renderAbonoCard)}
+        {!abonosLoading && !abonosError && isEvolucion && (
+          <View style={styles.cardsGrid}>{evolucionAbonos.map(renderAbonoCard)}</View>
+        )}
 
         {!abonosLoading && !abonosError && !isEvolucion && (
           <>
             {isPaseTotal && paseLibreAbonos.length > 0 && (
               <>
                 {renderSectionTitle(tStr('abonos_section_total'))}
-                {paseLibreAbonos.map(renderAbonoCard)}
+                <View style={styles.cardsGrid}>{paseLibreAbonos.map(renderAbonoCard)}</View>
               </>
             )}
             {!isPaseTotal && planAbonos.length > 0 && (
               <>
                 {renderSectionTitle(`Abonos de ${plan?.title || plan?.nombre || plan?.id}`)}
-                {planAbonos.map(renderAbonoCard)}
+                <View style={styles.cardsGrid}>{planAbonos.map(renderAbonoCard)}</View>
               </>
             )}
             {!isPaseTotal && paseLibreAbonos.length > 0 && (
               <>
                 {renderSectionTitle(tStr('abonos_section_libre'))}
-                {paseLibreAbonos.map(renderAbonoCard)}
+                <View style={styles.cardsGrid}>{paseLibreAbonos.map(renderAbonoCard)}</View>
               </>
             )}
             {showAddonPlani && addonPlaniAbono && (
               <>
                 {renderSectionTitle(tStr('abonos_section_planificacion'))}
-                <View style={[styles.card]}>
-                  <Text style={styles.cardTitle}>{addonPlaniAbono.title}</Text>
-                  <Text style={styles.cardSubtitle}>{addonPlaniAbono.subtitle}</Text>
-                  <Text style={styles.price}>{addonPlaniAbono.price}</Text>
-                  <TouchableOpacity
-                    style={styles.button}
-                    onPress={() => handleContratar(addonPlaniAbono)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.buttonText}>{tStr('abonos_contratar')}</Text>
-                  </TouchableOpacity>
+                <View style={styles.cardsGrid}>
+                  <View style={styles.cardCol}>
+                    <View style={[styles.card]}>
+                      <Text style={styles.cardTitle}>{addonPlaniAbono.title}</Text>
+                      <Text style={styles.cardSubtitle}>{addonPlaniAbono.subtitle}</Text>
+                      <Text style={styles.price}>{addonPlaniAbono.price}</Text>
+                      <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => handleContratar(addonPlaniAbono)}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.buttonText}>{tStr('abonos_contratar')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
               </>
             )}
           </>
         )}
 
-        {Platform.OS !== 'web' ? (
-          <BackNavButton onPress={() => navigation.goBack()} label={tStr('abonos_volver')} style={styles.backBtn} />
-        ) : null}
+        <BackNavButton onPress={() => navigation.goBack()} label={tStr('abonos_volver')} style={styles.backBtn} />
       </ScrollView>
     </BackgroundWrapper>
   );

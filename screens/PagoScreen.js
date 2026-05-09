@@ -34,6 +34,7 @@ import { createCheckoutPreference } from '../utils/mercadoPagoCheckout';
 import { createStripeCheckoutSession } from '../utils/stripeCheckout';
 import { resolveClientPaymentMethods } from '../utils/clientPaymentMethods';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -314,9 +315,12 @@ export default function PagoScreen({ navigation, route }) {
           justifyContent: 'center',
           paddingHorizontal: 16,
           paddingVertical: 40,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         panel: {
-          borderRadius: MOBILE_RADII.lg,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1.2,
           padding: MOBILE_SPACING.xxl,
           backgroundColor: t.boxBg,

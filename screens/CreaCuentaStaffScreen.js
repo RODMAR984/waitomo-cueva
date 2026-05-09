@@ -17,11 +17,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import LogoCompleto from '../components/LogoCompleto';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
+import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -140,11 +142,14 @@ export default function CreaCuentaStaffScreen() {
           padding: 20,
           paddingTop: 52,
           paddingBottom: 24,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: 16,
+          borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
           padding: 20,
         },
@@ -164,7 +169,7 @@ export default function CreaCuentaStaffScreen() {
         input: {
           backgroundColor: fe.inputBg,
           borderColor: fe.inputBorder,
-          borderRadius: 10,
+          borderRadius: 12,
           borderWidth: 1,
           color: fe.text,
           paddingHorizontal: 14,
@@ -177,7 +182,7 @@ export default function CreaCuentaStaffScreen() {
           backgroundColor: fe.buttonBg,
           borderColor: fe.buttonBorder,
           borderWidth: 1,
-          borderRadius: 10,
+          borderRadius: 12,
           padding: 16,
           marginTop: 8,
         },
@@ -199,7 +204,7 @@ export default function CreaCuentaStaffScreen() {
           backgroundColor: fe.buttonBg,
           borderColor: fe.buttonBorder,
           borderWidth: 1,
-          borderRadius: 10,
+          borderRadius: 12,
           padding: 16,
           marginTop: 10,
         },
@@ -230,6 +235,7 @@ export default function CreaCuentaStaffScreen() {
               </View>
 
               <View style={styles.panel}>
+                <BackNavButton onPress={() => navigation.goBack()} />
                 <Text style={styles.title}>{tStr('creacuenta_staff_title')}</Text>
                 <Text style={styles.subtitle}>{tStr('creacuenta_staff_subtitle')}</Text>
 
