@@ -324,7 +324,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
 
         // Notas
         notesContainer: { marginBottom: 20 },
-        sectionTitle: { color: t.brand, fontSize: MOBILE_TYPE.title, fontWeight: 'bold', marginBottom: 10 },
+        sectionTitle: { color: t.brand, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: 'bold', marginBottom: 10 },
         notesSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.body, fontStyle: 'italic', marginBottom: 10 },
         notesInput: {
           backgroundColor: t.boxBg,
