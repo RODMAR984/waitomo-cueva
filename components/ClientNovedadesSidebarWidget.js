@@ -398,6 +398,8 @@ export default function ClientNovedadesSidebarWidget() {
     () =>
       StyleSheet.create({
         wrap: {
+          flex: 1,
+          minHeight: 0,
           borderTopWidth: 1,
           borderTopColor: t.overlayBorder,
           paddingTop: MOBILE_SPACING.sm,
@@ -405,11 +407,15 @@ export default function ClientNovedadesSidebarWidget() {
           paddingBottom: Platform.OS === 'web' ? MOBILE_SPACING.sm + 2 : MOBILE_SPACING.sm,
         },
         cajaNeo: {
+          flex: 1,
+          minHeight: 0,
           borderRadius: MOBILE_RADII.md,
           backgroundColor: t.boxBg,
           width: '100%',
         },
         cajaInner: {
+          flex: 1,
+          minHeight: 0,
           paddingVertical: MOBILE_SPACING.md - 2,
           paddingHorizontal: MOBILE_SPACING.sm,
         },
@@ -420,7 +426,12 @@ export default function ClientNovedadesSidebarWidget() {
           marginBottom: MOBILE_SPACING.sm / 2,
           letterSpacing: 0.5,
         },
-        tickerWrap: { minHeight: MOBILE_SPACING.xl, justifyContent: 'center', overflow: 'hidden' },
+        tickerWrap: {
+          minHeight: MOBILE_SPACING.xl,
+          maxHeight: 56,
+          justifyContent: 'center',
+          overflow: 'hidden',
+        },
         marqueeRow: { flexDirection: 'row' },
         tickerText: {
           color: t.brandText ?? t.brand,

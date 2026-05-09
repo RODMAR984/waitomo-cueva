@@ -7,7 +7,11 @@ import { createBottomTabNavigator, BottomTabBar } from '@react-navigation/bottom
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { WEB_DESKTOP_BREAKPOINT, WEB_RAIL_WIDTH } from '../theme/webSpec';
+import {
+  WEB_DESKTOP_BREAKPOINT,
+  WEB_RAIL_WIDTH,
+  WEB_RAIL_NOVEDADES_MAX_HEIGHT_CAP,
+} from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 import ClientNovedadesSidebarWidget from '../components/ClientNovedadesSidebarWidget';
@@ -19,7 +23,7 @@ import PublicDirectoryScreen from './PublicDirectoryScreen';
 const Tab = createBottomTabNavigator();
 
 export default function ClientTabs() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const { t } = useThemeContext();
   const { locale, t: tStr } = useLocale();
   const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
@@ -33,6 +37,7 @@ export default function ClientTabs() {
       flexShrink: 0,
       alignSelf: 'stretch',
       flexDirection: 'column',
+      gap: MOBILE_SPACING.sm,
       borderRightWidth: 1,
       borderRightColor: t.overlayBorder,
       backgroundColor: t.boxBg,
@@ -42,6 +47,13 @@ export default function ClientTabs() {
     }),
     [t],
   );
+
+  /** Más aire en pantallas altas; nunca se come el tab bar en laptops bajas. */
+  const webNovedadesMaxHeight = useMemo(() => {
+    if (!isWebDesktop || !height) return WEB_RAIL_NOVEDADES_MAX_HEIGHT_CAP;
+    const fromViewport = Math.round(height * 0.3);
+    return Math.min(WEB_RAIL_NOVEDADES_MAX_HEIGHT_CAP, Math.max(208, fromViewport));
+  }, [isWebDesktop, height]);
 
   const screenOptions = useMemo(
     () => ({
@@ -96,13 +108,21 @@ export default function ClientTabs() {
           <View style={{ flex: 1, minHeight: 0, width: '100%' }}>
             <BottomTabBar {...props} />
           </View>
-          <View style={{ flexShrink: 0, width: '100%', maxHeight: 240 }}>
+          <View
+            style={{
+              flexShrink: 0,
+              width: '100%',
+              maxHeight: webNovedadesMaxHeight,
+              minHeight: 0,
+              overflow: 'hidden',
+            }}
+          >
             <ClientNovedadesSidebarWidget />
           </View>
         </View>
       );
     },
-    [isWebDesktop, webRailShellStyle],
+    [isWebDesktop, webRailShellStyle, webNovedadesMaxHeight],
   );
 
   return (

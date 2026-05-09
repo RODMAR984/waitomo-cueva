@@ -37,7 +37,8 @@ export function ensureNeoPanelWebCss() {
 .${FITENGINE_NEO_PANEL_SPARK_CLASS} {
   position: relative;
   overflow: visible;
-  animation: fitengine-neo-sweep 2.6s ease-in-out infinite;
+  isolation: isolate;
+  animation: fitengine-neo-sweep 2.8s ease-in-out infinite;
 }
 .${FITENGINE_NEO_PANEL_SPARK_CLASS}::before {
   content: '';
@@ -45,11 +46,12 @@ export function ensureNeoPanelWebCss() {
   inset: -3px;
   border-radius: inherit;
   padding: 2px;
-  background: conic-gradient(from 0deg, rgba(0,245,255,0.05), rgba(0,245,255,0.85), rgba(0,245,255,0.15), rgba(0,245,255,0.05));
+  background: conic-gradient(from 0deg, rgba(0,245,255,0.08), rgba(0,245,255,0.72), rgba(0,245,255,0.22), rgba(0,245,255,0.06));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: fitengine-neo-spark-spin 4.2s linear infinite;
+  animation: fitengine-neo-spark-spin 5.5s linear infinite;
+  will-change: transform;
   pointer-events: none;
   z-index: 0;
 }
