@@ -1,5 +1,6 @@
 export const WEB_DESKTOP_BREAKPOINT = 1100;
-export const WEB_RAIL_WIDTH = 232;
+/** Rail cliente web: ancho fijo para etiquetas (Panel / Calendario / Perfil) sin apretar. */
+export const WEB_RAIL_WIDTH = 264;
 export const WEB_CONTENT_MAX_WIDTH = 1040;
 
 export const WEB_PANEL_RADIUS = 16;

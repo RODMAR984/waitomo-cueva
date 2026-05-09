@@ -6,6 +6,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function HomeScreen({ navigation }) {
   const plan = { nombre: 'Inicio' };
@@ -54,12 +55,12 @@ export default function HomeScreen({ navigation }) {
   return (
     <BackgroundWrapper plan={plan}>
       <View style={styles.container}>
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('home_title')}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Admin')} style={styles.button}>
             <Text style={styles.buttonText}>{tStr('home_admin')}</Text>
           </TouchableOpacity>
-        </View>
+        </NeoPanel>
       </View>
     </BackgroundWrapper>
   );

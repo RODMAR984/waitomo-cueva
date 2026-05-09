@@ -32,7 +32,11 @@ import { navigationRef } from '../navigationRef';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { formatYmdLocal } from '../utils/formatYmdLocal';
 import { normalizeSlotLabel } from '../utils/freeClassGrantStorage';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import {
+  WEB_CONTENT_MAX_WIDTH,
+  WEB_DESKTOP_BREAKPOINT,
+  WEB_PANEL_RADIUS,
+} from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import {
   evaluateTrabajoHoyButton,
@@ -45,6 +49,7 @@ import { clearFreeClassGrant } from '../utils/freeClassGrantStorage';
 import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../utils/freeClassPolicy';
 import { cancelTrialClassGrantServer, resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { reportError, trackEvent } from '../utils/observability';
+import NeoPanel from '../components/NeoPanel';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -581,7 +586,7 @@ export default function ClientScreen() {
     safeNavigate(['PlanSelector', 'PlanSelectorScreen']);
   }, [safeNavigate]);
 
-  /** Caja "Plan": lista clara de programas → cada plan lleva a detalle y abonos (PlanSelector → PlanDetail → Abonos). */
+  /** Caja "Plan": lista de programas → PlanSelector abre abonos (y clase de prueba) directo; PlanDetail queda por enlaces puntuales. */
   const goPlanHub = useCallback(() => {
     safeNavigate(['PlanSelector', 'PlanSelectorScreen'], {
       clientHomeContext: {
@@ -893,7 +898,20 @@ export default function ClientScreen() {
     tStr,
   ]);
 
+  const goDirectory = useCallback(() => {
+    try {
+      navigation.navigate('Directory');
+    } catch {
+      safeNavigate(['PublicDirectory', 'PublicDirectoryScreen']);
+    }
+  }, [navigation, safeNavigate]);
+
   useEffect(() => {
+    if (isWebWide) {
+      setNovedades([]);
+      setNovedadesLoading(false);
+      return undefined;
+    }
     let alive = true;
     const timeoutId = setTimeout(() => {
       if (alive && novedadesLoading) setNovedadesLoading(false);
@@ -945,7 +963,7 @@ export default function ClientScreen() {
       alive = false;
       clearTimeout(timeoutId);
     };
-  }, [organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok]);
+  }, [organization?.id, profile?.organization_id, abonoLoading, communityAccess.ok, isWebWide]);
 
   const aptoTickerItem = useMemo(() => {
     if (!aptoMedico) {
@@ -1010,13 +1028,14 @@ export default function ClientScreen() {
   }, [communityAccess.ok, communityAccess.reason, tickerItems, novedadesTickerIndex, safeNavigate, tStr, planObj, canonId]);
 
   useEffect(() => {
-    if (tickerItems.length <= 1) return;
+    if (isWebWide) return undefined;
+    if (tickerItems.length <= 1) return undefined;
     const id = setInterval(() => {
       if (novedadesTickerPausedRef.current) return;
       setNovedadesTickerIndex((i) => (i + 1) % tickerItems.length);
     }, 3500);
     return () => clearInterval(id);
-  }, [tickerItems.length]);
+  }, [tickerItems.length, isWebWide]);
 
   useEffect(() => {
     setNovedadesTickerIndex((prev) => (prev >= tickerItems.length ? 0 : prev));
@@ -1024,7 +1043,8 @@ export default function ClientScreen() {
 
   // Marquee: scroll automático del ticker actual
   useEffect(() => {
-    if (!currentNovedadTitle || novedadesTickerPausedRef.current) return;
+    if (isWebWide) return undefined;
+    if (!currentNovedadTitle || novedadesTickerPausedRef.current) return undefined;
     novedadesMarqueeAnim.setValue(0);
     const anim = Animated.loop(
       Animated.sequence([
@@ -1038,7 +1058,7 @@ export default function ClientScreen() {
     );
     anim.start();
     return () => anim.stop();
-  }, [currentNovedadTitle, novedadesTickerIndex]);
+  }, [currentNovedadTitle, novedadesTickerIndex, isWebWide, novedadesMarqueeAnim]);
 
   // Contador de mensajes sin leer (desde última vez que abrió el chat)
   useEffect(() => {
@@ -1375,8 +1395,6 @@ export default function ClientScreen() {
         },
         panel: {
           backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
-          borderWidth: 1,
           borderRadius: WEB_PANEL_RADIUS,
           padding: isWebWide ? MOBILE_SPACING.xl : 18,
           marginBottom: 0,
@@ -1458,14 +1476,11 @@ export default function ClientScreen() {
           flex: 1,
           paddingVertical: 10,
           paddingHorizontal: 12,
-          borderRadius: 14,
-          backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
-          borderWidth: 1,
-          marginRight: 10,
           minHeight: isWebWide ? 130 : 0,
         },
         metricBoxLast: { marginRight: 0 },
+        metricNeoShell: { flex: 1, marginRight: 10, minWidth: 0, backgroundColor: t.boxBg },
+        metricNeoShellLast: { marginRight: 0 },
         metricLabel: { color: t.metallicGrey ?? t.subText, fontSize: 11 },
         metricValue: { color: t.text, fontSize: 15, fontWeight: 'bold' },
         metricHint: { marginTop: 6, color: t.placeholder, fontSize: 10, lineHeight: 14 },
@@ -1572,6 +1587,16 @@ export default function ClientScreen() {
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
           marginBottom: 12,
+        },
+        novedadesRail: {
+          width: '100%',
+          maxWidth: 720,
+          alignSelf: 'stretch',
+          marginTop: 6,
+          marginBottom: 10,
+        },
+        novedadesCajaRail: {
+          marginBottom: 0,
         },
         novedadesTitle: {
           color: t.brandText ?? t.brand,
@@ -1690,11 +1715,8 @@ export default function ClientScreen() {
 
         freeClassCard: {
           marginTop: 14,
-          borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          borderColor: t.overlayBorder,
-          backgroundColor: t.boxBg,
           padding: 14,
+          backgroundColor: t.boxBg,
         },
         freeClassTitle: { color: t.text, fontSize: 15, fontWeight: '800' },
         freeClassMeta: { color: t.subText ?? t.placeholder, fontSize: 13, marginTop: 6, lineHeight: 18 },
@@ -1800,9 +1822,69 @@ export default function ClientScreen() {
     setHomeNudge(null);
   }, [homeNudge?.id]);
 
-  return (
-    <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+  const novedadesBox = (
+    <TouchableOpacity
+      style={[styles.novedadesCaja, styles.novedadesCajaRail]}
+      onPress={goNovedades}
+      onPressIn={() => { novedadesTickerPausedRef.current = true; }}
+      onPressOut={() => { novedadesTickerPausedRef.current = false; }}
+      activeOpacity={0.9}
+    >
+      <Text style={styles.novedadesTitle}>{tStr('client_novedades')}</Text>
+      {novedadesLoading && tickerItems.length <= 1 ? (
+        <View style={styles.novedadesTickerWrap}>
+          <ActivityIndicator size="small" color={t.brand} />
+        </View>
+      ) : tickerItems.length === 0 ? (
+        <Text style={styles.novedadesTickerText}>{tStr('client_sin_novedades')}</Text>
+      ) : (
+        <>
+          <View style={styles.novedadesTickerWrap}>
+            <Animated.View
+              style={[
+                styles.novedadesMarqueeRow,
+                {
+                  transform: [
+                    {
+                      translateX: novedadesMarqueeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -180],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Text style={styles.novedadesTickerText} numberOfLines={1}>
+                {currentNovedadTitle}
+                {'  ·  '}
+              </Text>
+              <Text style={styles.novedadesTickerText} numberOfLines={1}>
+                {currentNovedadTitle}
+              </Text>
+            </Animated.View>
+          </View>
+          {tickerItems.length > 1 && (
+            <View style={styles.novedadesDots}>
+              {tickerItems.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.novedadesDot, i === novedadesTickerIndex && styles.novedadesDotActive]}
+                />
+              ))}
+            </View>
+          )}
+        </>
+      )}
+      <Text style={styles.novedadesVerTodas}>{tStr('client_ver_todas')} ›</Text>
+      <Text style={styles.novedadesFooterHint}>{tStr('client_novedades_footer_hint')}</Text>
+    </TouchableOpacity>
+  );
+
+  const novedadesSection = <View style={styles.novedadesRail}>{novedadesBox}</View>;
+
+  const homeMainBody = (
+    <>
         {homeNudge?.body ? (
           <View style={styles.nudgeWrap}>
             <Text style={styles.nudgeTitle}>{tStr('client_nudge_title')}</Text>
@@ -1812,7 +1894,7 @@ export default function ClientScreen() {
             </TouchableOpacity>
           </View>
         ) : null}
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           {organization?.logo_url ? (
             <View style={styles.logoWrap}>
               <Image source={{ uri: organization.logo_url }} style={styles.logoImg} resizeMode="contain" />
@@ -1838,55 +1920,59 @@ export default function ClientScreen() {
           </View>
 
           <View style={styles.metricsRow}>
-            <TouchableOpacity
-              style={styles.metricBox}
-              onPress={goPlanHub}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={`${tStr('client_plan')}: ${planLabel}. ${tStr('client_metric_plan_hint_a11y')}`}
-            >
-              <Text style={styles.metricLabel}>{tStr('client_plan')}</Text>
-              {planLoading ? (
-                <View style={styles.metricLoadingWrap}>
-                  <ActivityIndicator color={t.brand} />
-                </View>
-              ) : (
-                <Text style={styles.metricValue}>{planLabel}</Text>
-              )}
-              <Text style={styles.metricHint}>{planHintLine}</Text>
-              <Text style={styles.metricPlanCue}>{tStr('client_metric_plan_open_programs')}</Text>
-            </TouchableOpacity>
+            <NeoPanel spark style={styles.metricNeoShell}>
+              <TouchableOpacity
+                style={[styles.metricBox, { marginRight: 0, flex: 1 }]}
+                onPress={goPlanHub}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={`${tStr('client_plan')}: ${planLabel}. ${tStr('client_metric_plan_hint_a11y')}`}
+              >
+                <Text style={styles.metricLabel}>{tStr('client_plan')}</Text>
+                {planLoading ? (
+                  <View style={styles.metricLoadingWrap}>
+                    <ActivityIndicator color={t.brand} />
+                  </View>
+                ) : (
+                  <Text style={styles.metricValue}>{planLabel}</Text>
+                )}
+                <Text style={styles.metricHint}>{planHintLine}</Text>
+                <Text style={styles.metricPlanCue}>{tStr('client_metric_plan_open_programs')}</Text>
+              </TouchableOpacity>
+            </NeoPanel>
 
-            <View style={[styles.metricBox, styles.metricBoxLast]}>
-              <Text style={styles.metricLabel}>{tStr('client_my_reservations')}</Text>
-              <Text style={styles.metricValue}>
-                {myReservations.length > 0
-                  ? tStr('client_my_reservations_count').replace('{{n}}', String(myReservations.length))
-                  : tStr('client_my_reservations_empty_short')}
-              </Text>
-              {myReservations.length > 0 ? (
-                <View style={styles.reservationList}>
-                  {reservationItemsWithLabel.map((r) => (
-                    <TouchableOpacity
-                      key={r.id}
-                      style={styles.reservationRowTouchable}
-                      activeOpacity={0.85}
-                      onPress={() => goCalendario(r)}
-                    >
-                      <Text style={styles.reservationChipText} numberOfLines={2}>
-                        {r.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.metricHint}>{tStr('client_my_reservations_empty_hint')}</Text>
-              )}
-              <Text style={styles.reservationsMicro}>{tStr('client_metric_reservations_caption')}</Text>
-            </View>
+            <NeoPanel spark style={[styles.metricNeoShell, styles.metricNeoShellLast]}>
+              <View style={[styles.metricBox, styles.metricBoxLast, { flex: 1 }]}>
+                <Text style={styles.metricLabel}>{tStr('client_my_reservations')}</Text>
+                <Text style={styles.metricValue}>
+                  {myReservations.length > 0
+                    ? tStr('client_my_reservations_count').replace('{{n}}', String(myReservations.length))
+                    : tStr('client_my_reservations_empty_short')}
+                </Text>
+                {myReservations.length > 0 ? (
+                  <View style={styles.reservationList}>
+                    {reservationItemsWithLabel.map((r) => (
+                      <TouchableOpacity
+                        key={r.id}
+                        style={styles.reservationRowTouchable}
+                        activeOpacity={0.85}
+                        onPress={() => goCalendario(r)}
+                      >
+                        <Text style={styles.reservationChipText} numberOfLines={2}>
+                          {r.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.metricHint}>{tStr('client_my_reservations_empty_hint')}</Text>
+                )}
+                <Text style={styles.reservationsMicro}>{tStr('client_metric_reservations_caption')}</Text>
+              </View>
+            </NeoPanel>
           </View>
           <Text style={styles.metricsRowCaption}>{tStr('client_metrics_row_caption')}</Text>
-        </View>
+        </NeoPanel>
 
         <View style={styles.crossSectionWrap}>
           <Text style={styles.crossSectionTitle}>{tStr('client_home_main_section_title')}</Text>
@@ -1895,7 +1981,7 @@ export default function ClientScreen() {
 
         <View style={styles.mainGrid}>
           <View style={styles.mainColPrimary}>
-            <View style={[styles.panel, styles.panelEqualHeight]}>
+            <NeoPanel spark style={[styles.panel, styles.panelEqualHeight]}>
               <Text style={styles.sectionTitle}>{tStr('client_plan_activo')}</Text>
 
               <View style={styles.planBox}>
@@ -1960,7 +2046,7 @@ export default function ClientScreen() {
                 <Text style={styles.planPillsHint}>{tStr('client_plan_pills_hint')}</Text>
 
                 {freeClassPanel ? (
-                  <View style={styles.freeClassCard}>
+                  <NeoPanel spark style={styles.freeClassCard}>
                     <Text style={styles.freeClassTitle}>{tStr('client_freeclass_card_title')}</Text>
                     <Text style={styles.freeClassMeta}>
                       {tStr('client_freeclass_card_body')
@@ -1985,17 +2071,17 @@ export default function ClientScreen() {
                         <Text style={styles.freeClassActionTextPrimary}>{tStr('client_freeclass_card_change')}</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </NeoPanel>
                 ) : null}
               </View>
 
               <Text style={styles.footerInfo}>{tStr('client_reservas_hint')}</Text>
-            </View>
+            </NeoPanel>
 
           </View>
 
           <View style={styles.mainColSecondary}>
-            <View style={[styles.panel, styles.panelEqualHeight]}>
+            <NeoPanel style={[styles.panel, styles.panelEqualHeight]}>
               <Text style={styles.sectionTitle}>{tStr('client_quick_access')}</Text>
 
               <View style={styles.quickRow}>
@@ -2013,6 +2099,23 @@ export default function ClientScreen() {
                   <Text style={styles.quickLabel}>{tStr('client_my_profile')}</Text>
                   <Text style={styles.quickHint}>{tStr('client_my_profile_hint')}</Text>
                 </TouchableOpacity>
+
+                {!isWebWide ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.quickBtn,
+                      isWeb && !isWebWide && styles.quickBtnStacked,
+                    ]}
+                    onPress={goDirectory}
+                    activeOpacity={0.9}
+                  >
+                    <View style={styles.quickIconWrap}>
+                      <Ionicons name="compass-outline" size={22} color={t.brand} />
+                    </View>
+                    <Text style={styles.quickLabel}>{tStr('client_directory_tab')}</Text>
+                    <Text style={styles.quickHint}>{tStr('client_directory_quick_hint')}</Text>
+                  </TouchableOpacity>
+                ) : null}
 
                 <TouchableOpacity
                   style={[
@@ -2043,66 +2146,22 @@ export default function ClientScreen() {
               <TouchableOpacity style={[styles.secondaryBtn, styles.secondaryBtnLogout]} onPress={handleLogout}>
                 <Text style={styles.secondaryBtnText}>{tStr('client_logout')}</Text>
               </TouchableOpacity>
-            </View>
+            </NeoPanel>
 
-            <TouchableOpacity
-              style={styles.novedadesCaja}
-              onPress={goNovedades}
-              onPressIn={() => { novedadesTickerPausedRef.current = true; }}
-              onPressOut={() => { novedadesTickerPausedRef.current = false; }}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.novedadesTitle}>{tStr('client_novedades')}</Text>
-              {novedadesLoading && tickerItems.length <= 1 ? (
-                <View style={styles.novedadesTickerWrap}>
-                  <ActivityIndicator size="small" color={t.brand} />
-                </View>
-              ) : tickerItems.length === 0 ? (
-                <Text style={styles.novedadesTickerText}>{tStr('client_sin_novedades')}</Text>
-              ) : (
-                <>
-                  <View style={styles.novedadesTickerWrap}>
-                    <Animated.View
-                      style={[
-                        styles.novedadesMarqueeRow,
-                        {
-                          transform: [
-                            {
-                              translateX: novedadesMarqueeAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, -180],
-                              }),
-                            },
-                          ],
-                        },
-                      ]}
-                    >
-                      <Text style={styles.novedadesTickerText} numberOfLines={1}>
-                        {currentNovedadTitle}
-                        {'  ·  '}
-                      </Text>
-                      <Text style={styles.novedadesTickerText} numberOfLines={1}>
-                        {currentNovedadTitle}
-                      </Text>
-                    </Animated.View>
-                  </View>
-                  {tickerItems.length > 1 && (
-                    <View style={styles.novedadesDots}>
-                      {tickerItems.map((_, i) => (
-                        <View
-                          key={i}
-                          style={[styles.novedadesDot, i === novedadesTickerIndex && styles.novedadesDotActive]}
-                        />
-                      ))}
-                    </View>
-                  )}
-                </>
-              )}
-              <Text style={styles.novedadesVerTodas}>{tStr('client_ver_todas')} ›</Text>
-              <Text style={styles.novedadesFooterHint}>{tStr('client_novedades_footer_hint')}</Text>
-            </TouchableOpacity>
           </View>
         </View>
+    </>
+  );
+
+  return (
+    <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
+      <ScrollView
+        style={isWeb ? { flex: 1, minHeight: 0 } : undefined}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {homeMainBody}
+        {!isWebWide ? novedadesSection : null}
       </ScrollView>
     </BackgroundWrapper>
   );

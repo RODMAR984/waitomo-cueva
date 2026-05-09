@@ -35,6 +35,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { navigationRef } from '../navigationRef';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 const PerfilUsuarioScreen = () => {
   const navigation = useNavigation();
@@ -494,7 +495,7 @@ const PerfilUsuarioScreen = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             <Text style={styles.titulo}>{tStr('perfil_title')}</Text>
             <Text style={styles.subtitulo}>{tStr('perfil_subtitle')}</Text>
 
@@ -719,7 +720,7 @@ const PerfilUsuarioScreen = () => {
             <View style={styles.buttonsRow}>
               <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
             </View>
-          </View>
+          </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
     </BackgroundWrapper>

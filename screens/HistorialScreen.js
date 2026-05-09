@@ -13,6 +13,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_SPACING } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function HistorialScreen({ route, navigation }) {
   const plan = route?.params?.plan || { nombre: 'Historial' };
@@ -55,12 +56,12 @@ export default function HistorialScreen({ route, navigation }) {
   return (
     <BackgroundWrapper plan={plan}>
       <View style={styles.container}>
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           <Text style={styles.text}>🗓️ {tStr('historial_empty')}</Text>
           <View style={styles.backWrap}>
             <BackNavButton onPress={() => navigation?.goBack?.()} label={tStr('common_back')} />
           </View>
-        </View>
+        </NeoPanel>
       </View>
     </BackgroundWrapper>
   );

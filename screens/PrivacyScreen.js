@@ -9,6 +9,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { getPrivacyBody } from '../content/legal';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function PrivacyScreen({ navigation }) {
   const { profile } = useAuth() || {};
@@ -74,13 +75,13 @@ export default function PrivacyScreen({ navigation }) {
   return (
     <BackgroundWrapper plan={{ id: profile?.plan_actual }} screen="config">
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('privacy_title')}</Text>
           <Text style={styles.subtitle}>{tStr('legal_last_updated_label')} 2026-04-16</Text>
           <Text style={styles.body}>{body}</Text>
 
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
-        </View>
+        </NeoPanel>
       </ScrollView>
     </BackgroundWrapper>
   );

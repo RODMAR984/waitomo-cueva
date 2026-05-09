@@ -25,6 +25,7 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { abonoCoversUserPlan, isUserAbonoActive } from '../utils/clientWorkoutEntitlement';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 // helpers
 const hexToRgba = (hex, alpha = 1) => {
@@ -232,26 +233,26 @@ export default function DetalleAbonoScreen({ navigation, route }) {
     <BackgroundWrapper screen="TrabajoDelDia">
       <ScrollView style={styles.root} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <BackNavButton onPress={() => navigation.goBack()} />
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('detalle_abono_title')}</Text>
           <Text style={styles.subtitle}>{tStr('detalle_abono_subtitle')}</Text>
-        </View>
+        </NeoPanel>
 
         {loading ? (
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             <ActivityIndicator color={t.brand} />
             <Text style={[styles.subtitle, { marginTop: 10 }]}>{tStr('detalle_abono_loading')}</Text>
-          </View>
+          </NeoPanel>
         ) : !sub ? (
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             <Text style={styles.subtitle}>{tStr('detalle_abono_empty')}</Text>
             <TouchableOpacity style={styles.btn} onPress={handleRenovar} activeOpacity={0.9}>
               <Ionicons name="card-outline" size={18} color={t.text} />
               <Text style={styles.btnText}>{tStr('detalle_abono_see_plans')}</Text>
             </TouchableOpacity>
-          </View>
+          </NeoPanel>
         ) : (
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             <View style={styles.row}>
               <Text style={styles.rowLabel}>{tStr('detalle_abono_label_plan')}</Text>
               <Text style={styles.rowValue}>{abono?.name || tStr('detalle_abono_fallback_name')}</Text>
@@ -301,7 +302,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
             <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
               <Text style={styles.backText}>{tStr('detalle_abono_back')}</Text>
             </TouchableOpacity>
-          </View>
+          </NeoPanel>
         )}
       </ScrollView>
     </BackgroundWrapper>

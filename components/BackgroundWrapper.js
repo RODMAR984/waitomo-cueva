@@ -69,6 +69,8 @@ export default function BackgroundWrapper({
   children,
   plan = null,
   screen = '',
+  /** Imagen de fondo explícita (`require(...)` o `{ uri }`). Tiene prioridad sobre plan/screen. */
+  fondo = null,
   style,
   imageStyle,
   seed = Date.now(),
@@ -122,6 +124,21 @@ export default function BackgroundWrapper({
       <View style={[styles.flex, style, { backgroundColor: '#050a0d' }]}>
         {children}
       </View>
+    );
+  }
+
+  // Fondo explícito (p. ej. clase de prueba / formularios con rotación general)
+  if (fondo) {
+    return (
+      <ImageBackground
+        source={fondo}
+        style={[styles.flex, style]}
+        imageStyle={imageStyle}
+        resizeMode="cover"
+      >
+        <View style={overlayStyle} />
+        {children}
+      </ImageBackground>
     );
   }
 

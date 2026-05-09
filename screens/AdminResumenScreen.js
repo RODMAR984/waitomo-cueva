@@ -37,7 +37,7 @@ import { isUserAbonoActive, abonoCoversUserPlan } from '../utils/clientWorkoutEn
 import { staffCancelClassBookingServer, staffMoveClassBookingServer } from '../utils/classBookingSupabase';
 import { reportError, trackEvent } from '../utils/observability';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 function hexToRgbaLocal(hex, alpha = 1) {
@@ -704,7 +704,7 @@ export default function AdminResumenScreen() {
         hero: {
           paddingHorizontal: MOBILE_SPACING.xl,
           paddingBottom: 14,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
         },
         heroDateRow: {
           flexDirection: 'row',
@@ -867,9 +867,9 @@ export default function AdminResumenScreen() {
         badgeAbono: { backgroundColor: hexToRgbaLocal('#15803d', 0.2) },
         badgeTrial: { backgroundColor: hexToRgbaLocal('#a8a29e', 0.22) },
         badgeDebt: { backgroundColor: hexToRgbaLocal('#b45309', 0.2) },
-        badgeTextAbono: { fontSize: 11, fontWeight: '800', color: '#166534' },
-        badgeTextTrial: { fontSize: 11, fontWeight: '800', color: '#57534e' },
-        badgeTextDebt: { fontSize: 11, fontWeight: '800', color: '#92400e' },
+        badgeTextAbono: { fontSize: MOBILE_TYPE.caption, fontWeight: '800', color: '#166534' },
+        badgeTextTrial: { fontSize: MOBILE_TYPE.caption, fontWeight: '800', color: '#57534e' },
+        badgeTextDebt: { fontSize: MOBILE_TYPE.caption, fontWeight: '800', color: '#92400e' },
         personRight: { alignItems: 'flex-end' },
         staffActionsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 8 },
         staffActionBtn: {
@@ -880,8 +880,8 @@ export default function AdminResumenScreen() {
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
         },
-        staffActionTxt: { color: t.brand, fontSize: 11, fontWeight: '700' },
-        staffActionTxtMuted: { color: t.subText, fontSize: 11, fontWeight: '700' },
+        staffActionTxt: { color: t.brand, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
+        staffActionTxtMuted: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         mutedRow: {
           paddingHorizontal: 14,
           paddingVertical: 10,
@@ -938,7 +938,7 @@ export default function AdminResumenScreen() {
         },
         alertTitle: { color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '800' },
         alertBody: { color: t.subText, fontSize: MOBILE_TYPE.body, marginTop: 4, lineHeight: 18 },
-        alertMeta: { color: t.placeholder, fontSize: 11, marginTop: 6 },
+        alertMeta: { color: t.placeholder, fontSize: MOBILE_TYPE.caption, marginTop: 6 },
         alertCtaBtn: {
           alignSelf: 'flex-start',
           marginTop: 8,
@@ -1128,9 +1128,7 @@ export default function AdminResumenScreen() {
         <View style={styles.root}>
           <View style={styles.topBar}>
             {!hideInlineBack ? (
-              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                <Ionicons name="arrow-back" size={26} color={t.text} />
-              </TouchableOpacity>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
             ) : null}
             <View style={{ flex: 1 }} />
           </View>

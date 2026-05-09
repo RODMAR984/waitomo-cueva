@@ -52,6 +52,7 @@ import {
 } from '../utils/adminScrollBus';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -1736,7 +1737,7 @@ export default function AdminScreen() {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              <View style={styles.panel}>
+              <NeoPanel style={styles.panel}>
                 <View style={styles.headerRow}>
                   <Text style={styles.headerTitle}>{tStr('admin_panel')}</Text>
                   <TouchableOpacity style={styles.headerLogoutBtn} onPress={handleLogout}>
@@ -2034,7 +2035,7 @@ export default function AdminScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-              </View>
+              </NeoPanel>
             </ScrollView>
       </KeyboardAvoidingView>
 

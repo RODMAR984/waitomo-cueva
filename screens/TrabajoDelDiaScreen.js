@@ -37,6 +37,7 @@ import {
   rowToFeedPayload,
 } from '../utils/trabajoDiaFeedSupabase';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import VideoLinksThumbs from '../components/VideoLinksThumbs';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -48,8 +49,9 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { evaluateWorkoutEntitlement } from '../utils/clientWorkoutEntitlement';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -126,14 +128,14 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1.5,
           marginHorizontal: isWebDesktop ? 14 : 20,
           padding: isWebDesktop ? 28 : 24,
           shadowColor: t.brand,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.35,
-          shadowRadius: 16,
+          shadowRadius: MOBILE_RADII.lg,
         },
         panelHeader: {
           borderBottomColor: t.overlayBorder,
@@ -141,9 +143,15 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           marginBottom: 16,
           paddingBottom: 12,
         },
+        backBtn: {
+          alignSelf: 'flex-start',
+          width: 'auto',
+          maxWidth: 180,
+          marginBottom: 10,
+        },
         planTitle: {
           color: t.brand,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           marginBottom: 4,
           textTransform: 'uppercase',
@@ -237,7 +245,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         blockTypeText: {
           color: t.brand2,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '600',
         },
         blockToggleIcon: {
@@ -290,7 +298,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         videoLabel: {
           color: t.text,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.caption,
           padding: 4,
         },
 
@@ -316,12 +324,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
 
         // Notas
         notesContainer: { marginBottom: 20 },
-        sectionTitle: { color: t.brand, fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+        sectionTitle: { color: t.brand, fontSize: MOBILE_TYPE.title, fontWeight: 'bold', marginBottom: 10 },
         notesSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.body, fontStyle: 'italic', marginBottom: 10 },
         notesInput: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: t.text,
           marginBottom: 12,
@@ -426,7 +434,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         userMessage: { alignSelf: 'flex-end', backgroundColor: hexToRgba(t.brand, 0.18), marginLeft: '20%' },
         adminMessage: { alignSelf: 'flex-start', backgroundColor: t.boxBg, marginRight: '20%' },
         messageText: { color: t.text, fontSize: MOBILE_TYPE.body },
-        messageTime: { color: t.subText, fontSize: 10, marginTop: 4, textAlign: 'right' },
+        messageTime: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4, textAlign: 'right' },
         messageUser: { color: t.brand2, fontSize: MOBILE_TYPE.caption, fontWeight: 'bold', marginBottom: 4 },
         messageHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
         scopeTag: {
@@ -442,7 +450,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         scopeTagPlan: { backgroundColor: hexToRgba(t.brand, 0.18) },
         scopeTagDay: { backgroundColor: t.boxBg },
         scopeTagBoth: { backgroundColor: hexToRgba(t.brand, 0.22) },
-        scopeTagText: { color: t.text, fontSize: 10, fontWeight: '700' },
+        scopeTagText: { color: t.text, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         emptyChatContainer: { alignItems: 'center', padding: 20 },
         emptyChatText: { color: t.placeholder, fontStyle: 'italic' },
         chatInputContainer: {
@@ -504,7 +512,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           padding: 20,
           width: '80%',
         },
-        modalTitle: { color: t.brand, fontSize: 20, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
+        modalTitle: { color: t.brand, fontSize: MOBILE_TYPE.title, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
         modalSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.body, marginBottom: 10, textAlign: 'center' },
         input: {
           backgroundColor: t.boxBg,
@@ -953,7 +961,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       <BackgroundWrapper screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.lockScroll} keyboardShouldPersistTaps="handled">
-            <View style={styles.panel}>
+            <NeoPanel style={styles.panel}>
               <View style={styles.panelHeader}>
                 <Text style={styles.planTitle}>{tStr('client_trabajo_locked_title')}</Text>
                 <Text style={styles.planSubtitle}>{tStr('client_trabajo_locked_body')}</Text>
@@ -972,10 +980,8 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               >
                 <Text style={styles.lockCtaText}>{tStr('client_entitlement_go_pay')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.lockBack} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-                <Text style={styles.lockBackText}>{tStr('common_back')}</Text>
-              </TouchableOpacity>
-            </View>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+            </NeoPanel>
           </ScrollView>
         </View>
       </BackgroundWrapper>
@@ -1003,9 +1009,10 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
             />
           }
         >
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             {/* Header */}
             <View style={styles.panelHeader}>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
               <Text style={styles.planTitle}>{planNombreCorregido || tStr('trabajo_plan_seleccionado')}</Text>
               <Text style={styles.planSubtitle}>{horarioEfectivo || tStr('trabajo_horario_libre')}</Text>
               {!!fechaTexto && <Text style={styles.dateText}>{fechaTexto}</Text>}
@@ -1313,7 +1320,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                 </View>
               </View>
             )}
-          </View>
+          </NeoPanel>
         </ScrollView>
 
         {/* MODAL RM */}

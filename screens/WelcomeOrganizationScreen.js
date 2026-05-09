@@ -21,6 +21,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { resolveOrgLogoUri } from '../utils/resolveOrgLogoUri';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function WelcomeOrganizationScreen() {
   const navigation = useNavigation();
@@ -98,7 +99,7 @@ export default function WelcomeOrganizationScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.panel, { backgroundColor: t.boxBg, borderColor: t.overlayBorder }]}>
+        <NeoPanel style={[styles.panel, { backgroundColor: t.boxBg, borderColor: t.overlayBorder }]}>
           <View style={styles.hero}>
           {logoUri ? (
             <Image source={{ uri: logoUri }} style={styles.logo} resizeMode="contain" />
@@ -114,7 +115,7 @@ export default function WelcomeOrganizationScreen() {
           <Text style={[styles.title, { color: t.brandText ?? t.brand }]}>{orgName}</Text>
           <Text style={[styles.subtitle, { color: t.subText }]}>{tStr('welcome_org_subtitle')}</Text>
           </View>
-        </View>
+        </NeoPanel>
 
         <TouchableOpacity
           style={[styles.primaryBtn, t.buttonPrimary]}

@@ -118,6 +118,7 @@ export default function AdminPlanesScreen() {
   const [formCode, setFormCode] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formSubtitle, setFormSubtitle] = useState('');
+  const [formCardHighlights, setFormCardHighlights] = useState('');
   const [formMode, setFormMode] = useState('class');
   const [formOrder, setFormOrder] = useState('0');
   const [formAttendance, setFormAttendance] = useState('dropin');
@@ -134,7 +135,9 @@ export default function AdminPlanesScreen() {
     try {
       const { data, error } = await supabase
         .from('plans')
-        .select('id, code, title, subtitle, mode, active, order, attendance_policy, default_capacity, near_full_threshold, cancel_notice_hours')
+        .select(
+          'id, code, title, subtitle, card_highlights, mode, active, order, attendance_policy, default_capacity, near_full_threshold, cancel_notice_hours',
+        )
         .eq('organization_id', orgId)
         .order('order', { ascending: true });
       if (error) throw error;
@@ -164,6 +167,7 @@ export default function AdminPlanesScreen() {
     setFormCode(row.code || '');
     setFormTitle(row.title || '');
     setFormSubtitle(row.subtitle || '');
+    setFormCardHighlights(row.card_highlights || '');
     setFormMode(row.mode || 'class');
     setFormOrder(String(row.order ?? 0));
     const ap = row.attendance_policy || (row.mode === 'program' ? 'not_applicable' : 'dropin');
@@ -181,6 +185,7 @@ export default function AdminPlanesScreen() {
     setFormCode('');
     setFormTitle('');
     setFormSubtitle('');
+    setFormCardHighlights('');
     setFormMode('class');
     setFormOrder(String((plans.length || 0) + 1));
     setFormAttendance('dropin');
@@ -290,10 +295,12 @@ export default function AdminPlanesScreen() {
     setSaving(true);
     try {
       const orderNum = parseInt(formOrder, 10) || 0;
+      const highlightsTrim = (formCardHighlights || '').trim();
       const payload = {
         code,
         title,
         subtitle: (formSubtitle || '').trim() || null,
+        card_highlights: highlightsTrim ? highlightsTrim : null,
         mode: formMode,
         order: orderNum,
         attendance_policy: attendance,
@@ -423,6 +430,10 @@ export default function AdminPlanesScreen() {
           marginBottom: 12,
           fontSize: MOBILE_TYPE.bodyStrong,
         },
+        inputMultiline: {
+          minHeight: 96,
+          textAlignVertical: 'top',
+        },
         row: { flexDirection: 'row', gap: 10, marginTop: 8 },
         empty: { paddingVertical: 40, alignItems: 'center' },
         emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong },
@@ -531,6 +542,15 @@ export default function AdminPlanesScreen() {
                 onChangeText={setFormSubtitle}
                 placeholder={tStr('admin_plans_ph_sub')}
                 placeholderTextColor={t.placeholder}
+              />
+              <Text style={styles.label}>{tStr('admin_plans_label_card_highlights')}</Text>
+              <TextInput
+                style={[styles.input, styles.inputMultiline]}
+                value={formCardHighlights}
+                onChangeText={setFormCardHighlights}
+                placeholder={tStr('admin_plans_ph_card_highlights')}
+                placeholderTextColor={t.placeholder}
+                multiline
               />
               <Text style={styles.label}>{tStr('admin_plans_label_order')}</Text>
               <TextInput

@@ -16,11 +16,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
+import NeoPanel from '../components/NeoPanel';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
+import { usePlanContext } from '../contexts/PlanContext';
 import { supabase } from '../supabaseClient';
 import { resolveOrgLogoUri } from '../utils/resolveOrgLogoUri';
+import { IMAGENES_POR_PLAN } from '../utils/imagenesFijas';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
@@ -36,9 +40,20 @@ const FALLBACK_PLAN_IDS = [
   { id: 'pase_total', active: true },
 ];
 
+const hexToRgba = (hex, alpha = 1) => {
+  const clean = String(hex || '').replace('#', '');
+  const full =
+    clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const r = parseInt(full.slice(0, 2), 16) || 0;
+  const g = parseInt(full.slice(2, 4), 16) || 0;
+  const b = parseInt(full.slice(4, 6), 16) || 0;
+  return `rgba(${r},${g},${b},${alpha})`;
+};
+
 export default function PlanSelectorScreen({ navigation, route }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
+  const { setPlan: setPlanSafe } = usePlanContext() || {};
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isWebDesktop = width >= WEB_DESKTOP_BREAKPOINT;
@@ -80,7 +95,7 @@ export default function PlanSelectorScreen({ navigation, route }) {
       try {
         const { data, error } = await supabase
           .from('plans')
-          .select('id, code, title, subtitle, active, order')
+          .select('id, code, title, subtitle, card_highlights, active, order')
           .eq('organization_id', effectiveOrgId)
           .eq('active', true)
           .order('order', { ascending: true });
@@ -105,6 +120,7 @@ export default function PlanSelectorScreen({ navigation, route }) {
         code: p.code,
         title: p.title,
         subtitle: p.subtitle,
+        card_highlights: p.card_highlights,
         active: p.active !== false,
       }));
     }
@@ -123,6 +139,12 @@ export default function PlanSelectorScreen({ navigation, route }) {
       StyleSheet.create({
         root: {
           flex: 1,
+        },
+        backBtn: {
+          width: 'auto',
+          maxWidth: 180,
+          alignSelf: 'flex-start',
+          marginBottom: MOBILE_SPACING.sm,
         },
         scroll: {
           flexGrow: 1,
@@ -203,33 +225,36 @@ export default function PlanSelectorScreen({ navigation, route }) {
           paddingHorizontal: MOBILE_SPACING.sm,
           marginBottom: MOBILE_SPACING.md,
         },
-        card: {
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: isWebDesktop ? 132 : 118,
+        cardInner: {
+          alignItems: 'flex-start',
+          justifyContent: 'flex-start',
+          minHeight: isWebDesktop ? 168 : 148,
           paddingHorizontal: MOBILE_SPACING.lg,
-          paddingVertical: MOBILE_SPACING.md + 2,
-          borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
+          paddingVertical: MOBILE_SPACING.md + 4,
+          alignSelf: 'stretch',
         },
         cardDisabled: {
           opacity: 0.5,
+          borderWidth: 1,
           borderStyle: 'dashed',
+          borderColor: hexToRgba(t.logoCian || t.brand, 0.45),
+          borderRadius: MOBILE_RADII.md,
         },
         title: {
           color: t.text,
           fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
-          textAlign: 'center',
+          textAlign: 'left',
           marginTop: 2,
+          alignSelf: 'stretch',
         },
-        subtitle: {
+        planBullet: {
           color: t.subText,
-          fontSize: MOBILE_TYPE.caption,
-          marginTop: MOBILE_SPACING.sm,
-          textAlign: 'center',
+          fontSize: 12,
+          lineHeight: 17,
+          marginTop: 6,
+          textAlign: 'left',
+          alignSelf: 'stretch',
         },
         emptyWrap: {
           paddingVertical: MOBILE_SPACING.xxl + MOBILE_SPACING.sm,
@@ -276,17 +301,17 @@ export default function PlanSelectorScreen({ navigation, route }) {
           fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
         },
-        homeAbonoCard: {
+        homeAbonoWrap: {
           marginBottom: MOBILE_SPACING.xl - 2,
-          padding: MOBILE_SPACING.lg,
           borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
+        },
+        homeAbonoInner: {
+          padding: MOBILE_SPACING.lg,
         },
         homeAbonoKicker: {
           color: t.subText,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '800',
           letterSpacing: 0.6,
           textTransform: 'uppercase',
@@ -318,8 +343,61 @@ export default function PlanSelectorScreen({ navigation, route }) {
     [t, isWebDesktop, isTablet],
   );
 
+  const parseCardHighlights = (text) => {
+    const s = String(text ?? '').trim();
+    if (!s) return null;
+    const lines = s.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+    return lines.length ? lines.slice(0, 8) : null;
+  };
+
+  const planCardBullets = (plan, line2) => {
+    const custom = parseCardHighlights(plan?.card_highlights);
+    if (custom?.length) return custom;
+    const raw = String(line2 || '').trim();
+    if (raw) {
+      const parts = raw.split(/\s*[|·]\s*/).map((x) => x.trim()).filter(Boolean);
+      if (parts.length >= 2) return parts;
+      if (parts.length === 1) return [parts[0], tStr('plan_selector_card_b2'), tStr('plan_selector_card_b3')];
+    }
+    return [tStr('plan_selector_card_b1'), tStr('plan_selector_card_b2'), tStr('plan_selector_card_b3')];
+  };
+
   const goToPlan = (plan) => {
-    navigation.navigate('PlanDetail', { plan });
+    const titleKey = `plan_${plan.id}_title`;
+    const planWithTitle = {
+      ...plan,
+      title: plan.title != null ? plan.title : tStr(titleKey),
+    };
+    const pidKey = String(plan.id || '').toLowerCase().trim();
+    const fallbackImg = IMAGENES_POR_PLAN[pidKey];
+    const images = Array.isArray(plan.images) && plan.images.length
+      ? plan.images
+      : [plan.image ?? fallbackImg].filter((x) => x != null);
+    const nombre = pidKey;
+    if (typeof setPlanSafe === 'function') {
+      setPlanSafe({ ...planWithTitle, images, nombre });
+    }
+
+    const pid = String(plan.id || '').toLowerCase().trim();
+    const isEvolucionPlan =
+      pid === 'evolucion' || /evoluci[oó]n/i.test(String(planWithTitle.title || ''));
+    if (isEvolucionPlan) {
+      navigation.navigate('RegistroEvolucion', { plan: planWithTitle });
+      return;
+    }
+    if (pid === 'pase_total') {
+      navigation.navigate('AbonosPases', {
+        plan: {
+          ...planWithTitle,
+          id: 'pase_total',
+          title: 'PASE TOTAL',
+          nombre: 'Pase Total',
+        },
+        soloEvolucion: false,
+      });
+      return;
+    }
+    navigation.navigate('AbonosPases', { plan: planWithTitle, soloEvolucion: false });
   };
 
   const resolveSubtitleLine = (plan) => {
@@ -343,19 +421,33 @@ export default function PlanSelectorScreen({ navigation, route }) {
       title: plan.title != null ? plan.title : tStr(titleKey),
     };
     const line2 = resolveSubtitleLine(plan);
+    const bullets = planCardBullets(plan, line2);
 
     return (
       <View key={key} style={styles.cardWrapper}>
         <Animated.View style={{ transform: [{ scale: pulseValuesRef.current[index] || 1 }] }}>
-          <TouchableOpacity
-            activeOpacity={0.88}
-            onPress={() => goToPlan(planWithTitle)}
-            disabled={disabled}
-            style={[styles.card, disabled && styles.cardDisabled]}
+          <NeoPanel
+            spark
+            style={{
+              borderRadius: MOBILE_RADII.lg,
+              width: '100%',
+              backgroundColor: t.boxBg,
+            }}
           >
-            <Text style={styles.title}>{planWithTitle.title}</Text>
-            {line2 ? <Text style={styles.subtitle}>{line2}</Text> : null}
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => goToPlan(plan)}
+              disabled={disabled}
+              style={[styles.cardInner, disabled && styles.cardDisabled]}
+            >
+              <Text style={styles.title}>{planWithTitle.title}</Text>
+              {bullets.map((b, i) => (
+                <Text key={i} style={styles.planBullet}>
+                  ✓ {b}
+                </Text>
+              ))}
+            </TouchableOpacity>
+          </NeoPanel>
         </Animated.View>
       </View>
     );
@@ -389,6 +481,16 @@ export default function PlanSelectorScreen({ navigation, route }) {
             { paddingTop: Math.max(insets.top, MOBILE_SPACING.md) + MOBILE_SPACING.sm },
           ]}
         >
+          {!waitingOrgForAuthedUser ? (
+            <BackNavButton
+              onPress={() => {
+                if (navigation.canGoBack()) navigation.goBack();
+                else navigation.navigate('Home');
+              }}
+              label={tStr('common_back')}
+              style={styles.backBtn}
+            />
+          ) : null}
           {waitingOrgForAuthedUser ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color={t.brand} />
@@ -419,44 +521,46 @@ export default function PlanSelectorScreen({ navigation, route }) {
           ) : null}
 
           {!waitingOrgForAuthedUser && clientHome && sessionUserId ? (
-            <TouchableOpacity
-              style={styles.homeAbonoCard}
-              activeOpacity={0.88}
-              onPress={() => {
-                const h = clientHome;
-                try {
-                  navigation.navigate('DetalleAbono', {
-                    planKey: h.planKey,
-                    subscription: h.abonoRow || null,
-                    plan: h.planKey ? { id: h.planKey, title: h.planLabel } : null,
-                  });
-                } catch {
+            <NeoPanel spark style={styles.homeAbonoWrap}>
+              <TouchableOpacity
+                style={styles.homeAbonoInner}
+                activeOpacity={0.88}
+                onPress={() => {
+                  const h = clientHome;
                   try {
-                    navigation.navigate('DetalleAbonoScreen', {
+                    navigation.navigate('DetalleAbono', {
                       planKey: h.planKey,
                       subscription: h.abonoRow || null,
                       plan: h.planKey ? { id: h.planKey, title: h.planLabel } : null,
                     });
                   } catch {
-                    // ignore
+                    try {
+                      navigation.navigate('DetalleAbonoScreen', {
+                        planKey: h.planKey,
+                        subscription: h.abonoRow || null,
+                        plan: h.planKey ? { id: h.planKey, title: h.planLabel } : null,
+                      });
+                    } catch {
+                      // ignore
+                    }
                   }
-                }
-              }}
-            >
-              <Text style={styles.homeAbonoKicker}>{tStr('plan_selector_home_abono_title')}</Text>
-              <Text style={styles.homeAbonoPlan} numberOfLines={2}>
-                {clientHome.planLabel || '—'}
-              </Text>
-              {!!clientHome.planHintLine && (
-                <Text style={styles.homeAbonoHint} numberOfLines={4}>
-                  {clientHome.planHintLine}
+                }}
+              >
+                <Text style={styles.homeAbonoKicker}>{tStr('plan_selector_home_abono_title')}</Text>
+                <Text style={styles.homeAbonoPlan} numberOfLines={2}>
+                  {clientHome.planLabel || '—'}
                 </Text>
-              )}
-              <View style={styles.homeAbonoRow}>
-                <Text style={styles.homeAbonoCta}>{tStr('plan_selector_home_abono_cta')}</Text>
-                <Ionicons name="chevron-forward" size={20} color={t.brand} />
-              </View>
-            </TouchableOpacity>
+                {!!clientHome.planHintLine && (
+                  <Text style={styles.homeAbonoHint} numberOfLines={4}>
+                    {clientHome.planHintLine}
+                  </Text>
+                )}
+                <View style={styles.homeAbonoRow}>
+                  <Text style={styles.homeAbonoCta}>{tStr('plan_selector_home_abono_cta')}</Text>
+                  <Ionicons name="chevron-forward" size={20} color={t.brand} />
+                </View>
+              </TouchableOpacity>
+            </NeoPanel>
           ) : null}
 
           {!waitingOrgForAuthedUser && showOrgHeader ? (

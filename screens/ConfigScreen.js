@@ -25,6 +25,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { LOCALE_ES, LOCALE_EN, LOCALE_PT } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 const MODES = [
   { key: 'dark', labelKey: 'config_dark', icon: 'moon' },
@@ -193,7 +194,7 @@ const ConfigScreen = () => {
   return (
     <BackgroundWrapper plan={{ id: profile?.plan_actual }} screen="config">
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('config_title')}</Text>
           <Text style={styles.subtitle}>{tStr('config_subtitle')}</Text>
 
@@ -372,7 +373,7 @@ const ConfigScreen = () => {
           </View>
 
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
-        </View>
+        </NeoPanel>
       </ScrollView>
     </BackgroundWrapper>
   );

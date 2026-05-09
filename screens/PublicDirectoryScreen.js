@@ -14,7 +14,7 @@ import {
   Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import BackNavButton from '../components/BackNavButton';
@@ -22,8 +22,8 @@ import LogoCompleto from '../components/LogoCompleto';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { fetchPublicOrganizationDirectory } from '../utils/publicDirectory';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import { resolveOrgLogoUri } from '../utils/resolveOrgLogoUri';
 
 const DIRECTORY_PAGE_SIZE = 40;
@@ -59,6 +59,7 @@ function buildDirectoryMapsUrl(item) {
 
 export default function PublicDirectoryScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
   const { t: tStr } = useLocale();
   const [rows, setRows] = useState([]);
@@ -156,7 +157,7 @@ export default function PublicDirectoryScreen() {
         card: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           padding: MOBILE_SPACING.lg,
           marginBottom: MOBILE_SPACING.md,
@@ -181,7 +182,7 @@ export default function PublicDirectoryScreen() {
           borderWidth: 1,
           borderColor: fe.panelBorder,
         },
-        badgeText: { color: fe.subText, fontSize: 11, fontWeight: '800' },
+        badgeText: { color: fe.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '800' },
         rating: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.sm },
         addr: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs, lineHeight: 17 },
         cta: { marginTop: MOBILE_SPACING.md, alignItems: 'flex-start' },
@@ -220,11 +221,40 @@ export default function PublicDirectoryScreen() {
         listFooter: { paddingVertical: MOBILE_SPACING.xl },
         empty: { color: fe.subText, textAlign: 'center', marginTop: MOBILE_SPACING.xxl, fontSize: MOBILE_TYPE.bodyStrong },
         err: { color: '#f87171', textAlign: 'center', marginTop: MOBILE_SPACING.lg, fontSize: MOBILE_TYPE.body },
-        orgInitial: { color: fe.subText, fontSize: 18, fontWeight: '800' },
+        orgInitial: { color: fe.subText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
         brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
     [insets.top],
   );
+
+  const handleBack = useCallback(() => {
+    if (route.name === 'Directory') {
+      try {
+        navigation.navigate('Panel');
+        return;
+      } catch {
+        void 0;
+      }
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const parent = navigation.getParent?.();
+    if (parent?.canGoBack?.()) {
+      parent.goBack();
+      return;
+    }
+    try {
+      navigation.navigate('Panel');
+    } catch {
+      try {
+        parent?.navigate?.('Panel');
+      } catch {
+        void 0;
+      }
+    }
+  }, [navigation, route.name]);
 
   const renderItem = useCallback(
     ({ item }) => {
@@ -284,10 +314,10 @@ export default function PublicDirectoryScreen() {
     <BackgroundWrapper screen="neutral">
       <View style={styles.kav}>
         <View style={styles.head}>
-          <LogoCompleto height={44} />
+          <LogoCompleto height={MOBILE_SIZES.localeControlHeight + MOBILE_SPACING.sm} />
           <Text style={styles.brandPowered}>powered by WAITOMO</Text>
         </View>
-        <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} />
+        <BackNavButton onPress={handleBack} label={tStr('common_back')} />
         <Text style={styles.title}>{tStr('directory_title')}</Text>
         <Text style={styles.subtitle}>{tStr('directory_subtitle')}</Text>
         <TextInput

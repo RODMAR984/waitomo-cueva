@@ -21,6 +21,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 const { height } = Dimensions.get('window');
 
@@ -203,7 +204,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
   return (
     <BackgroundWrapper plan={plan}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{tStr('registro_evolucion_title')}</Text>
           <Text style={styles.info}>{tStr('registro_evolucion_info')}</Text>
@@ -267,7 +268,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
               <Text style={styles.cancelText}>{tStr('config_back')}</Text>
             </TouchableOpacity>
           ) : null}
-        </View>
+        </NeoPanel>
       </ScrollView>
     </BackgroundWrapper>
   );

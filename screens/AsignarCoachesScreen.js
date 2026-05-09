@@ -21,11 +21,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 // ---------- fallback de planes (si navegación no provee) ----------
@@ -131,7 +132,7 @@ export default function AsignarCoachesScreen({ route }) {
         title: {
           flex: 1,
           color: t.brandText ?? t.brand,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: '800',
           marginRight: 8,
         },
@@ -147,7 +148,7 @@ export default function AsignarCoachesScreen({ route }) {
         card: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           paddingVertical: 12,
           paddingHorizontal: 14,
@@ -155,7 +156,7 @@ export default function AsignarCoachesScreen({ route }) {
         },
         planTitle: {
           color: t.text,
-          fontSize: 17,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '700',
         },
         planId: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
@@ -231,9 +232,7 @@ export default function AsignarCoachesScreen({ route }) {
   const headerEl = (
     <View style={styles.header}>
       {!hideInlineBack ? (
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={26} color={t.text} />
-        </TouchableOpacity>
+        <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
       ) : null}
       <Text style={styles.title} numberOfLines={2}>
         {tStr('admin_nav_assign_coaches')}

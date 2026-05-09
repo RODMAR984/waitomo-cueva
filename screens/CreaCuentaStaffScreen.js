@@ -25,6 +25,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -235,7 +236,7 @@ export default function CreaCuentaStaffScreen() {
                 <Text style={{ color: fe.subText, fontSize: 12, marginTop: 6 }}>{tStr('login_brand_powered')}</Text>
               </View>
 
-              <View style={styles.panel}>
+              <NeoPanel style={styles.panel}>
                 <BackNavButton onPress={() => navigation.goBack()} />
                 <Text style={styles.title}>{tStr('creacuenta_staff_title')}</Text>
                 <Text style={styles.subtitle}>{tStr('creacuenta_staff_subtitle')}</Text>
@@ -306,7 +307,7 @@ export default function CreaCuentaStaffScreen() {
                 >
                   <Text style={styles.linkText}>{tStr('creacuenta_staff_has_account')}</Text>
                 </TouchableOpacity>
-              </View>
+              </NeoPanel>
 
               <View style={{ width: '100%', alignItems: 'center', marginTop: 22 }}>
                 <LogoCompleto height={28} style={{ marginBottom: 6, opacity: 0.85 }} />

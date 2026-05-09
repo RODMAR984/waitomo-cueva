@@ -78,6 +78,7 @@ export default function AdminAbonosScreen() {
   const [formDurationDays, setFormDurationDays] = useState('30');
   const [formIncludedSessions, setFormIncludedSessions] = useState('');
   const [formPricePesos, setFormPricePesos] = useState('');
+  const [formCardHighlights, setFormCardHighlights] = useState('');
   const [filterPlanId, setFilterPlanId] = useState('');
 
   const isOwner = organization?.owner_id === profile?.id;
@@ -102,7 +103,7 @@ export default function AdminAbonosScreen() {
       try {
         let q = supabase
           .from('abonos')
-          .select('id, plan_id, name, duration_days, included_sessions, price_cents, currency, is_active')
+          .select('id, plan_id, name, duration_days, included_sessions, price_cents, currency, is_active, card_highlights')
           .eq('organization_id', orgId)
           .order('created_at', { ascending: false });
         if (effectiveFilter) q = q.eq('plan_id', effectiveFilter);
@@ -136,6 +137,7 @@ export default function AdminAbonosScreen() {
     setFormPricePesos(
       row.price_cents != null && row.price_cents > 0 ? String(Math.round(row.price_cents / 100)) : '',
     );
+    setFormCardHighlights(row.card_highlights || '');
     setShowNew(false);
   };
 
@@ -146,6 +148,7 @@ export default function AdminAbonosScreen() {
     setFormDurationDays('');
     setFormIncludedSessions('');
     setFormPricePesos('');
+    setFormCardHighlights('');
     setShowNew(true);
   };
 
@@ -170,6 +173,7 @@ export default function AdminAbonosScreen() {
     setSaving(true);
     try {
       const durationParsed = formDurationDays ? parseInt(formDurationDays, 10) : NaN;
+      const hl = (formCardHighlights || '').trim();
       const payload = {
         plan_id: planId,
         name,
@@ -178,6 +182,7 @@ export default function AdminAbonosScreen() {
         price_cents: pesosInputToCents(formPricePesos),
         currency: 'ARS',
         is_active: true,
+        card_highlights: hl ? hl : null,
       };
       if (editingId) {
         const { error } = await supabase.from('abonos').update(payload).eq('id', editingId);
@@ -281,6 +286,7 @@ export default function AdminAbonosScreen() {
           fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '400',
         },
+        inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
         row: { flexDirection: 'row', gap: 10, marginTop: 8 },
         empty: { paddingVertical: 40, alignItems: 'center' },
         emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong },
@@ -387,6 +393,15 @@ export default function AdminAbonosScreen() {
                 placeholder={tStr('admin_abonos_ph_price')}
                 placeholderTextColor={phColor}
                 keyboardType="decimal-pad"
+              />
+              <Text style={styles.label}>{tStr('admin_abonos_label_card_highlights')}</Text>
+              <TextInput
+                style={[styles.input, styles.inputMultiline]}
+                value={formCardHighlights}
+                onChangeText={setFormCardHighlights}
+                placeholder={tStr('admin_abonos_ph_card_highlights')}
+                placeholderTextColor={phColor}
+                multiline
               />
               <View style={styles.row}>
                 <TouchableOpacity style={[styles.btn, { flex: 1 }]} onPress={saveAbono} disabled={saving}>

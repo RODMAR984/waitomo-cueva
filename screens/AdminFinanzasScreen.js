@@ -14,14 +14,17 @@ import {
 } from 'react-native';
 import PropTypes from 'prop-types';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { useTrainingData } from '../contexts/TrainingDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD', 'EUR'];
@@ -39,6 +42,8 @@ const formatMonto = (num, moneda = 'ARS') => {
 };
 
 export default function AdminFinanzasScreen({ route }) {
+  const navigation = useNavigation();
+  const hideInlineBack = useStaffWebHideInlineBack();
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
@@ -204,6 +209,14 @@ export default function AdminFinanzasScreen({ route }) {
           borderColor: t.overlayBorder,
           flexDirection: 'row',
         },
+        topBackWrap: {
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+          paddingHorizontal: MOBILE_SPACING.lg,
+          paddingBottom: MOBILE_SPACING.sm,
+        },
+        backBtn: { alignSelf: 'flex-start', width: 'auto', maxWidth: 180 },
         tab: { alignItems: 'center', flex: 1, padding: 12 },
         activeTab: { backgroundColor: t.faintStrong },
         tabText: { color: t.brand, fontWeight: '600' },
@@ -211,7 +224,7 @@ export default function AdminFinanzasScreen({ route }) {
         // tipografías
         sectionTitle: {
           color: t.brand,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           marginBottom: 10,
         },
@@ -225,7 +238,7 @@ export default function AdminFinanzasScreen({ route }) {
         card: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           marginBottom: 10,
           padding: 12,
@@ -487,6 +500,11 @@ export default function AdminFinanzasScreen({ route }) {
   return (
     <BackgroundWrapper screen="adminfinanzas">
       <SafeAreaView style={styles.safe}>
+        {!hideInlineBack ? (
+          <View style={styles.topBackWrap}>
+            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+          </View>
+        ) : null}
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[styles.tab, tab === 'caja' && styles.activeTab]}
@@ -619,16 +637,16 @@ export default function AdminFinanzasScreen({ route }) {
 
               <View style={[styles.card, { marginBottom: 8 }]}>
                 <Text style={styles.cardTitle}>{tStr('fin_total_day_title')}</Text>
-                <Text style={[styles.cardLine, { fontSize: 16 }]}>
+                <Text style={[styles.cardLine, { fontSize: MOBILE_TYPE.bodyStrong }]}>
                   {tStr('fin_total_opening')} {formatMonto(cajaInicialHoy)}
                 </Text>
-                <Text style={[styles.cardLine, { fontSize: 16, color: t.brand }]}>
+                <Text style={[styles.cardLine, { fontSize: MOBILE_TYPE.bodyStrong, color: t.brand }]}>
                   {tStr('fin_total_in')} {formatMonto(resumenDia.ingresos)}
                 </Text>
-                <Text style={[styles.cardLine, { fontSize: 16, color: t.danger }]}>
+                <Text style={[styles.cardLine, { fontSize: MOBILE_TYPE.bodyStrong, color: t.danger }]}>
                   {tStr('fin_total_out')} {formatMonto(resumenDia.egresos)}
                 </Text>
-                <Text style={[styles.cardLine, { fontSize: 20, fontWeight: '700', marginTop: 8 }]}>
+                <Text style={[styles.cardLine, { fontSize: MOBILE_TYPE.title, fontWeight: '700', marginTop: 8 }]}>
                   = {formatMonto(totalCajaHoy)}
                 </Text>
               </View>

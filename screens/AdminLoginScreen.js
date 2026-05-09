@@ -24,6 +24,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { getThemeTokens } from '../theme/colors';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function AdminLoginScreen() {
   const { isDark } = useThemeContext();
@@ -147,7 +148,7 @@ export default function AdminLoginScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.screen}>
-            <View style={styles.panel}>
+            <NeoPanel style={styles.panel}>
               <BackNavButton onPress={() => navigation.goBack()} />
               <Text style={styles.title}>{tStr('admin_login_title')}</Text>
               <Text style={styles.subtitle}>{tStr('admin_login_subtitle')}</Text>
@@ -183,7 +184,7 @@ export default function AdminLoginScreen() {
               <TouchableOpacity style={styles.backLink} onPress={() => navigation.goBack()}>
                 <Text style={styles.backLinkText}>{tStr('common_back')}</Text>
               </TouchableOpacity>
-            </View>
+            </NeoPanel>
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>

@@ -29,6 +29,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { navigationRef } from '../navigationRef';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 const SeguridadScreen = () => {
   const navigation = useNavigation();
@@ -312,7 +313,7 @@ const handleChangePassword = async () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <ScrollView contentContainerStyle={styles.container}>
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('security_screen_title')}</Text>
             <Text style={styles.subtitle}>{tStr('security_subtitle')}</Text>
 
@@ -443,7 +444,7 @@ const handleChangePassword = async () => {
 
             {/* VOLVER */}
             <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backButton} />
-          </View>
+          </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
     </BackgroundWrapper>

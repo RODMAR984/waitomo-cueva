@@ -15,6 +15,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { getFitEngineUrls } from '../utils/fitengineUrls';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function AboutFitEngineScreen() {
   const navigation = useNavigation();
@@ -125,7 +126,7 @@ export default function AboutFitEngineScreen() {
   return (
     <BackgroundWrapper plan={{ id: profile?.plan_actual }} screen="config">
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           <View style={styles.logoWrap}>
             <LogoCompleto height={44} />
           </View>
@@ -187,7 +188,7 @@ export default function AboutFitEngineScreen() {
           )}
 
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
-        </View>
+        </NeoPanel>
       </ScrollView>
     </BackgroundWrapper>
   );

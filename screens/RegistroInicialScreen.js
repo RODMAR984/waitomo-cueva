@@ -28,6 +28,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function RegistroInicialScreen({ route, navigation }) {
   // Recibimos plan y abono desde Abonos/PlanDetail o desde CreaCuenta (OAuth)
@@ -335,7 +336,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
                 <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
               </View>
             ) : null}
-            <View style={styles.panel}>
+            <NeoPanel style={styles.panel}>
               <BackNavButton onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('WelcomeGlobal'))} />
               <Text style={styles.title}>
                 {isOAuth ? tStr('registro_title_oauth') : tStr('registro_title')}
@@ -417,7 +418,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
                   {tStr('registro_has_account')}
                 </Text>
               </TouchableOpacity>
-            </View>
+            </NeoPanel>
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>

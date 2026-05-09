@@ -18,6 +18,7 @@ export function applyWebDocumentTitle(navigationState, tStr) {
     Panel: 'web_doc_title_client',
     ClientScreen: 'web_doc_title_client',
     Calendario: 'web_doc_title_calendario',
+    Directory: 'web_doc_title_directory',
     Perfil: 'web_doc_title_profile',
     Chat: 'web_doc_title_chat',
     TrabajoDelDia: 'web_doc_title_trabajo',

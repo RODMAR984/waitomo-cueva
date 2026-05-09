@@ -7,12 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function AdminReportesScreen() {
@@ -67,7 +68,7 @@ export default function AdminReportesScreen() {
           alignSelf: 'center',
         },
         backBtn: { padding: 8, marginRight: 4 },
-        title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
+        title: { flex: 1, color: t.text, fontSize: MOBILE_TYPE.title, fontWeight: '900' },
         scroll: { paddingHorizontal: MOBILE_SPACING.lg, paddingBottom: 32, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 14, lineHeight: 18 },
         grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -75,7 +76,7 @@ export default function AdminReportesScreen() {
           width: '47%',
           minWidth: 140,
           flexGrow: 1,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
@@ -101,9 +102,7 @@ export default function AdminReportesScreen() {
     <BackgroundWrapper screen="Admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-            <Ionicons name="arrow-back" size={24} color={t.text} />
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_reportes_title')}</Text>
       </View>

@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import BackgroundWrapper from '../components/BackgroundWrapper';
-import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +28,7 @@ import { clearFreeClassGrant, saveFreeClassGrant } from '../utils/freeClassGrant
 import { insertTrialClassGrantServer } from '../utils/trialClassGrantSupabase';
 import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../utils/freeClassPolicy';
 import BackNavButton from '../components/BackNavButton';
+import NeoPanel from '../components/NeoPanel';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
@@ -208,22 +208,15 @@ export default function FreeClassRequestScreen({ route, navigation }) {
         },
         panel: {
           borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1.2,
           padding: MOBILE_SPACING.xxl,
           marginHorizontal: MOBILE_SPACING.sm + 2,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
           backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
-          // sombra sutil en relación a brand
-          shadowColor: t.brand,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 10,
         },
         scroll: {
-          backgroundColor: t.bg,
+          backgroundColor: 'transparent',
           flexGrow: 1,
           justifyContent: 'center',
           paddingHorizontal: MOBILE_SPACING.lg,
@@ -255,14 +248,18 @@ export default function FreeClassRequestScreen({ route, navigation }) {
   const hoursNotice = String(FREE_CLASS_CANCEL_NOTICE_HOURS);
 
   return (
-    <BackgroundWrapper fondo={getRandomGeneralImage()}>
+    <BackgroundWrapper screen="ClientScreen" plan={plan}>
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 20}
       >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.panel}>
+        <ScrollView
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('freeclass_screen_title')}</Text>
 
             <TextInput
@@ -359,7 +356,7 @@ export default function FreeClassRequestScreen({ route, navigation }) {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancel}>
               <Text style={styles.cancelText}>{tStr('freeclass_cancel')}</Text>
             </TouchableOpacity>
-          </View>
+          </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
     </BackgroundWrapper>

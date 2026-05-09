@@ -17,12 +17,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const ROLE_LABEL = {
@@ -132,12 +133,12 @@ export default function OrgMembersScreen() {
         title: {
           flex: 1,
           color: t.brandText ?? t.brand,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: '800',
         },
         list: { flex: 1, paddingHorizontal: MOBILE_SPACING.xl, paddingBottom: 24, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         card: {
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           paddingVertical: 12,
           paddingHorizontal: 14,
           marginBottom: 10,
@@ -151,12 +152,12 @@ export default function OrgMembersScreen() {
         pill: {
           paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: 4,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.sm,
           backgroundColor: t.overlayBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        pillText: { color: t.brand, fontSize: 11, fontWeight: '600' },
+        pillText: { color: t.brand, fontSize: MOBILE_TYPE.caption, fontWeight: '600' },
         inactive: { color: t.danger, fontSize: MOBILE_TYPE.caption, marginTop: 6 },
         empty: { paddingVertical: 40, alignItems: 'center' },
         emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong, textAlign: 'center' },
@@ -204,9 +205,7 @@ export default function OrgMembersScreen() {
     <BackgroundWrapper screen="admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={26} color={t.text} />
-          </TouchableOpacity>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title} numberOfLines={1}>
           {tStr('admin_miembros')}

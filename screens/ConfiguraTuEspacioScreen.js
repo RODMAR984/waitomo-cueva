@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BackNavButton from '../components/BackNavButton';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
@@ -167,6 +168,12 @@ export default function ConfiguraTuEspacioScreen() {
           borderRadius: MOBILE_RADII.lg,
           backgroundColor: FE.panel,
           padding: MOBILE_SPACING.lg,
+        },
+        backBtn: {
+          alignSelf: 'flex-start',
+          width: 'auto',
+          maxWidth: 180,
+          marginBottom: MOBILE_SPACING.md,
         },
         sectionTitle: {
           color: FE.text,
@@ -600,6 +607,7 @@ export default function ConfiguraTuEspacioScreen() {
           nestedScrollEnabled
         >
           <View style={styles.mainPanel}>
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
           <Text style={styles.title}>{tStr('fe_setup_title')}</Text>
           <Text style={styles.subtitle}>{tStr('fe_setup_subtitle')}</Text>
 
@@ -630,7 +638,7 @@ export default function ConfiguraTuEspacioScreen() {
                     <Text style={[styles.previewCardText, { color: previewTokens.text, fontWeight: '700' }]}>
                       {presetLabel(themePreset)}
                     </Text>
-                    <Text style={[styles.previewCardText, { color: previewTokens.subText, marginTop: 6, fontSize: 11 }]}>
+                    <Text style={[styles.previewCardText, { color: previewTokens.subText, marginTop: 6, fontSize: MOBILE_TYPE.caption }]}>
                       {tStr('fe_setup_secondary_line').replace('{{type}}', bgTypeLabel(backgroundType))}
                     </Text>
                   </View>

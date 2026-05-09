@@ -941,6 +941,9 @@ export const translations = {
     admin_plans_ph_title: 'CROSS TRAINING',
     admin_plans_label_sub: 'Subtítulo',
     admin_plans_ph_sub: 'Clases grupales',
+    admin_plans_label_card_highlights: 'Tildes en la tarjeta del plan (cliente)',
+    admin_plans_ph_card_highlights:
+      'Una línea por tilde (Enter entre líneas). Vacío = la app arma textos desde el subtítulo.',
     admin_plans_label_order: 'Orden',
     admin_plans_ph_order: '0',
     admin_plans_empty: 'No hay planes. Creá uno desde "Nuevo".',
@@ -1005,6 +1008,9 @@ export const translations = {
     admin_abonos_ph_sessions: 'Ej.: 4, 8, 12',
     admin_abonos_label_price: 'Precio (pesos ARS, sin símbolo)',
     admin_abonos_ph_price: 'Ej.: 25000',
+    admin_abonos_label_card_highlights: 'Tildes en la tarjeta del abono (cliente)',
+    admin_abonos_ph_card_highlights:
+      'Una línea por tilde (Enter). Vacío = textos automáticos según días y clases.',
     admin_abonos_empty: 'No hay abonos para este plan. Creá uno desde "Nuevo".',
     admin_abonos_days_short: '{{n}} días',
     admin_abonos_sessions_short: '{{n}} clases',
@@ -1258,6 +1264,12 @@ export const translations = {
     abonos_section_total: 'Pase Total',
     abonos_section_libre: 'Pase libre',
     abonos_section_planificacion: 'Planificación personalizada',
+    abonos_free_class_title: '¿Primera vez en este plan?',
+    abonos_free_class_hint: 'Podés solicitar una clase de prueba sin compromiso antes de contratar.',
+    abonos_free_class_cta: 'Solicitar clase de prueba',
+    plan_selector_card_b1: 'Horarios y cupos claros desde la app',
+    plan_selector_card_b2: 'Contratación guiada en pocos pasos',
+    plan_selector_card_b3: 'Gestioná reservas y tu plan desde el panel',
 
     // RegistroInicial
     registro_title: 'Crear cuenta',
@@ -1525,6 +1537,8 @@ export const translations = {
     client_my_profile: 'Mi perfil',
     client_my_profile_hint: 'Datos personales, objetivos y apto.',
     client_chat_hint: 'Consultas con el coach y avisos del plan.',
+    client_directory_tab: 'Directorio',
+    client_directory_quick_hint: 'Buscar otros espacios publicados en FitEngine.',
     client_home_main_section_title: 'Tu programa y herramientas',
     client_home_main_section_sub:
       'Acá gestionás el plan del día, reservás clases, ves la rutina y los avisos del gym. Cada bloque tiene una ayuda breve abajo.',
@@ -1537,10 +1551,11 @@ export const translations = {
     client_novedades_footer_hint:
       'Avisos del gimnasio (horarios, eventos, cambios). Tocá la caja para leer todas.',
     client_quick_access_section_footer:
-      'Perfil: datos, apto y foto. Mensajes: canal con coaches o staff. Cerrar sesión desvincula este dispositivo de tu cuenta.',
+      'Perfil: datos, apto y foto. Directorio: otros espacios en FitEngine. Mensajes: coaches o staff. Cerrar sesión desvincula este dispositivo de tu cuenta.',
     web_doc_title_app: 'FitEngine',
     web_doc_title_client: 'Inicio',
     web_doc_title_calendario: 'Calendario',
+    web_doc_title_directory: 'Directorio',
     web_doc_title_profile: 'Perfil',
     web_doc_title_chat: 'Mensajes',
     web_doc_title_trabajo: 'Trabajo del día',
@@ -2778,6 +2793,9 @@ export const translations = {
     admin_plans_ph_title: 'CROSS TRAINING',
     admin_plans_label_sub: 'Subtitle',
     admin_plans_ph_sub: 'Group classes',
+    admin_plans_label_card_highlights: 'Checkmarks on client plan card',
+    admin_plans_ph_card_highlights:
+      'One bullet per line (press Enter between lines). Empty = app builds copy from subtitle.',
     admin_plans_label_order: 'Order',
     admin_plans_ph_order: '0',
     admin_plans_empty: 'No plans yet. Create one with "New".',
@@ -2842,6 +2860,9 @@ export const translations = {
     admin_abonos_ph_sessions: 'E.g. 4, 8, 12',
     admin_abonos_label_price: 'Price (ARS, no symbol)',
     admin_abonos_ph_price: 'E.g. 25000',
+    admin_abonos_label_card_highlights: 'Checkmarks on client membership card',
+    admin_abonos_ph_card_highlights:
+      'One line per bullet (Enter). Empty = auto copy from duration and sessions.',
     admin_abonos_empty: 'No memberships for this plan. Create one with "New".',
     admin_abonos_days_short: '{{n}} days',
     admin_abonos_sessions_short: '{{n}} sessions',
@@ -3093,6 +3114,12 @@ export const translations = {
     abonos_section_total: 'Total Pass',
     abonos_section_libre: 'All access',
     abonos_section_planificacion: 'Personalized planning',
+    abonos_free_class_title: 'First time with this program?',
+    abonos_free_class_hint: 'You can request a no-obligation trial class before subscribing.',
+    abonos_free_class_cta: 'Request trial class',
+    plan_selector_card_b1: 'Clear schedules and spots in the app',
+    plan_selector_card_b2: 'Guided signup in a few steps',
+    plan_selector_card_b3: 'Manage bookings and your plan from the panel',
 
     registro_title: 'Create account',
     registro_title_oauth: 'Complete your profile',
@@ -3354,6 +3381,8 @@ export const translations = {
     client_my_profile: 'My profile',
     client_my_profile_hint: 'Personal details, goals and medical clearance.',
     client_chat_hint: 'Chat with your coach and plan updates.',
+    client_directory_tab: 'Directory',
+    client_directory_quick_hint: 'Browse other spaces listed on FitEngine.',
     client_home_main_section_title: 'Your program & tools',
     client_home_main_section_sub:
       'Manage today’s plan, book classes, see the workout, and read gym announcements. Each block has a short hint below.',
@@ -3366,10 +3395,11 @@ export const translations = {
     client_novedades_footer_hint:
       'Gym announcements (hours, events, changes). Tap the card to read everything.',
     client_quick_access_section_footer:
-      'Profile: details, medical clearance, photo. Messages: coaches or staff. Sign out unlinks this device from your account.',
+      'Profile: details, medical clearance, photo. Directory: other FitEngine spaces. Messages: coaches or staff. Sign out unlinks this device from your account.',
     web_doc_title_app: 'FitEngine',
     web_doc_title_client: 'Home',
     web_doc_title_calendario: 'Calendar',
+    web_doc_title_directory: 'Directory',
     web_doc_title_profile: 'Profile',
     web_doc_title_chat: 'Messages',
     web_doc_title_trabajo: "Today's workout",
@@ -3746,5 +3776,11 @@ translations[LOCALE_PT] = {
   gym_config_sync_google_ok: 'Dados do Google atualizados.',
   gym_config_sync_google_fail: 'Falha na sincronização. Verifique o Place ID e a chave no servidor.',
   gym_config_google_summary_label: 'Última sincronização',
+
+  client_directory_tab: 'Diretório',
+  client_directory_quick_hint: 'Ver outros espaços listados no FitEngine.',
+  client_quick_access_section_footer:
+    'Perfil: dados, apto e foto. Diretório: outros espaços no FitEngine. Mensagens: coaches ou staff. Sair desvincula este dispositivo da sua conta.',
+  web_doc_title_directory: 'Diretório',
 };
 export const SUPPORTED_LOCALES = [LOCALE_ES, LOCALE_EN, LOCALE_PT];

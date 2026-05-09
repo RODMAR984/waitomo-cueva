@@ -7,10 +7,13 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ImageBackground } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import BackNavButton from '../components/BackNavButton';
 import getRandomPlanImage from '../utils/getRandomPlanImage';
 import { useThemeContext } from '../contexts/ThemeContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
-import { MOBILE_SPACING } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -22,6 +25,7 @@ const hexToRgba = (hex, alpha = 1) => {
 };
 
 export default function ProgresoScreen() {
+  const navigation = useNavigation();
   const fondo = getRandomPlanImage('admin');
   const { t } = useThemeContext();
 
@@ -43,14 +47,20 @@ export default function ProgresoScreen() {
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
-          paddingHorizontal: 18,
-          paddingVertical: 16,
+          paddingHorizontal: MOBILE_SPACING.xl - 2,
+          paddingVertical: MOBILE_SPACING.lg,
+        },
+        backBtn: {
+          alignSelf: 'flex-start',
+          width: 'auto',
+          maxWidth: 180,
+          marginBottom: MOBILE_SPACING.md,
         },
         text: {
           color: t.brand,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: '600',
           textAlign: 'center',
         },
@@ -61,9 +71,10 @@ export default function ProgresoScreen() {
   return (
     <ImageBackground source={fondo} style={styles.background} resizeMode="cover">
       <View style={styles.container}>
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
+          <BackNavButton onPress={() => navigation.goBack()} style={styles.backBtn} />
           <Text style={styles.text}>📈 Próximamente podrás ver tu progreso.</Text>
-        </View>
+        </NeoPanel>
       </View>
     </ImageBackground>
   );

@@ -1,18 +1,20 @@
 // screens/ClientTabs.js — ClientTabs
 // Mobile: sin tab bar (comportamiento actual)
 // Web desktop: navegación lateral visible para flujo más profesional
-import React, { useMemo } from 'react';
-import { Platform, useWindowDimensions } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React, { useCallback, useMemo } from 'react';
+import { Platform, View, useWindowDimensions } from 'react-native';
+import { createBottomTabNavigator, BottomTabBar } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { WEB_DESKTOP_BREAKPOINT, WEB_RAIL_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
-import { MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_DESKTOP_BREAKPOINT, WEB_RAIL_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
+import ClientNovedadesSidebarWidget from '../components/ClientNovedadesSidebarWidget';
 import ClientScreen from './ClientScreen';
 import CalendarioScreen from './CalendarioScreen';
 import PerfilUsuarioScreen from './PerfilUsuarioScreen';
+import PublicDirectoryScreen from './PublicDirectoryScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,6 +23,26 @@ export default function ClientTabs() {
   const { t } = useThemeContext();
   const { locale, t: tStr } = useLocale();
   const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
+
+  const webRailShellStyle = useMemo(
+    () => ({
+      width: WEB_RAIL_WIDTH,
+      minWidth: WEB_RAIL_WIDTH,
+      maxWidth: WEB_RAIL_WIDTH,
+      flexGrow: 0,
+      flexShrink: 0,
+      alignSelf: 'stretch',
+      flexDirection: 'column',
+      borderRightWidth: 1,
+      borderRightColor: t.overlayBorder,
+      backgroundColor: t.boxBg,
+      paddingTop: MOBILE_SPACING.lg,
+      paddingBottom: MOBILE_SPACING.sm,
+      paddingHorizontal: MOBILE_SPACING.sm,
+    }),
+    [t],
+  );
+
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
@@ -28,14 +50,17 @@ export default function ClientTabs() {
       tabBarPosition: isWebDesktop ? 'left' : 'bottom',
       tabBarStyle: isWebDesktop
         ? {
-            width: WEB_RAIL_WIDTH,
-            borderRightWidth: 1,
-            borderRightColor: t.overlayBorder,
+            width: '100%',
+            flexGrow: 0,
+            flexShrink: 0,
+            borderRightWidth: 0,
             borderTopWidth: 0,
-            backgroundColor: t.boxBg,
-            paddingTop: MOBILE_SPACING.lg,
-            paddingBottom: MOBILE_SPACING.lg,
-            paddingHorizontal: MOBILE_SPACING.sm,
+            backgroundColor: 'transparent',
+            paddingTop: 0,
+            paddingBottom: 0,
+            paddingHorizontal: 0,
+            elevation: 0,
+            shadowOpacity: 0,
           }
         : { display: 'none' },
       tabBarLabelPosition: isWebDesktop ? 'beside-icon' : 'below-icon',
@@ -46,11 +71,11 @@ export default function ClientTabs() {
       tabBarItemStyle: isWebDesktop
         ? {
             justifyContent: 'flex-start',
-            marginHorizontal: 4,
-            marginVertical: 4,
-            borderRadius: WEB_PANEL_RADIUS,
-            minHeight: 44,
-            paddingHorizontal: 10,
+            marginHorizontal: MOBILE_SPACING.sm / 2,
+            marginVertical: MOBILE_SPACING.sm / 2,
+            borderRadius: MOBILE_RADII.lg,
+            minHeight: MOBILE_SIZES.controlHeight,
+            paddingHorizontal: MOBILE_SPACING.sm + 2,
           }
         : undefined,
       tabBarActiveTintColor: t.text,
@@ -61,8 +86,27 @@ export default function ClientTabs() {
     [isWebDesktop, t],
   );
 
+  const renderTabBar = useCallback(
+    (props) => {
+      if (!isWebDesktop) {
+        return <BottomTabBar {...props} />;
+      }
+      return (
+        <View style={webRailShellStyle}>
+          <View style={{ flex: 1, minHeight: 0, width: '100%' }}>
+            <BottomTabBar {...props} />
+          </View>
+          <View style={{ flexShrink: 0, width: '100%', maxHeight: 240 }}>
+            <ClientNovedadesSidebarWidget />
+          </View>
+        </View>
+      );
+    },
+    [isWebDesktop, webRailShellStyle],
+  );
+
   return (
-    <Tab.Navigator screenOptions={screenOptions}>
+    <Tab.Navigator screenOptions={screenOptions} tabBar={renderTabBar}>
       <Tab.Screen
         name="Panel"
         component={ClientScreen}
@@ -80,6 +124,16 @@ export default function ClientTabs() {
           tabBarLabel: tStr('client_calendario'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" color={color} size={size || 20} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Directory"
+        component={PublicDirectoryScreen}
+        options={{
+          tabBarLabel: tStr('client_directory_tab'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="compass-outline" color={color} size={size || 20} />
           ),
         }}
       />

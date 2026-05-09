@@ -25,6 +25,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function CreaCuentaScreen() {
   const { t: tStr } = useLocale();
@@ -199,7 +200,7 @@ export default function CreaCuentaScreen() {
               <LogoCompleto height={52} />
               <Text style={styles.brandPowered}>powered by WAITOMO</Text>
             </View>
-            <View style={styles.panel}>
+            <NeoPanel style={styles.panel}>
               <BackNavButton onPress={handleVolver} />
               <Text style={styles.title}>{tStr('creacuenta_title')}</Text>
               <Text style={styles.subtitle}>{tStr('creacuenta_subtitle')}</Text>
@@ -230,7 +231,7 @@ export default function CreaCuentaScreen() {
                   {plan || abono ? tStr('creacuenta_back_plans') : tStr('creacuenta_back_welcome')}
                 </Text>
               </TouchableOpacity>
-            </View>
+            </NeoPanel>
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>

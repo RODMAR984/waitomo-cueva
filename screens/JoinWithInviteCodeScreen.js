@@ -32,6 +32,7 @@ import { supabase } from '../supabaseClient';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function JoinWithInviteCodeScreen() {
   const navigation = useNavigation();
@@ -191,7 +192,7 @@ export default function JoinWithInviteCodeScreen() {
               <Text style={styles.brandPowered}>powered by WAITOMO</Text>
             </View>
             <View style={styles.outer}>
-              <View style={styles.panel}>
+              <NeoPanel style={styles.panel}>
                 <BackNavButton onPress={() => navigation.goBack()} />
                 <Text style={styles.title}>{tStr('invite_title')}</Text>
                 <Text style={styles.hint}>{tStr('invite_hint')}</Text>
@@ -221,7 +222,7 @@ export default function JoinWithInviteCodeScreen() {
                 <TouchableOpacity style={styles.link} onPress={() => navigation.goBack()} activeOpacity={0.85}>
                   <Text style={styles.linkText}>{tStr('invite_back')}</Text>
                 </TouchableOpacity>
-              </View>
+              </NeoPanel>
             </View>
           </View>
         </TouchableWithoutFeedback>

@@ -31,6 +31,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -456,7 +457,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('reg_complete_title')}</Text>
 
@@ -547,7 +548,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
                 {saving ? tStr('reg_complete_saving') : tStr('reg_complete_continue')}
               </Text>
             </TouchableOpacity>
-          </View>
+          </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
     </BackgroundWrapper>

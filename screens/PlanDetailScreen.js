@@ -11,6 +11,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import BackNavButton from '../components/BackNavButton';
@@ -22,9 +23,11 @@ import { IMAGENES_POR_PLAN } from '../utils/imagenesFijas';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import NeoPanel from '../components/NeoPanel';
 
 export default function PlanDetailScreen({ route, navigation }) {
   const plan = route?.params?.plan;
+  const { height: winH } = useWindowDimensions();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const { session, profile, updateProfile } = useAuth() || {};
@@ -163,31 +166,37 @@ export default function PlanDetailScreen({ route, navigation }) {
         scroll: {
           backgroundColor: 'transparent',
           flexGrow: 1,
-          justifyContent: 'flex-end',
-          paddingBottom: 20,
+          justifyContent: 'center',
+          paddingTop: 24,
+          paddingBottom: 32,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
+          minHeight: Math.max(420, winH - 80),
         },
         subtitle: {
           color: t.subText,
           fontSize: MOBILE_TYPE.body,
-          marginTop: 4,
+          marginTop: 8,
           textAlign: 'center',
+          lineHeight: 22,
+          paddingHorizontal: 8,
         },
         helperLine: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: 13,
           textAlign: 'center',
-          lineHeight: 17,
-          marginTop: -4,
-          marginBottom: 12,
+          lineHeight: 20,
+          marginTop: 14,
+          marginBottom: 16,
+          paddingHorizontal: 8,
         },
         featureLine: {
           color: t.subText,
           fontSize: 13,
-          lineHeight: 18,
-          marginTop: 4,
+          lineHeight: 20,
+          marginTop: 10,
+          paddingHorizontal: 4,
         },
         /** Título del plan: tipografía principal de la org (features.text_color → t.text), no solo acento/borde. */
         title: {
@@ -197,7 +206,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           textAlign: 'center',
         },
       }),
-    [t],
+    [t, winH],
   );
 
   if (!plan) {
@@ -219,7 +228,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           {!!plan.subtitle && <Text style={styles.subtitle}>{plan.subtitle}</Text>}
         </View>
 
-        <View style={styles.panel}>
+        <NeoPanel style={styles.panel}>
           {!!plan.description && <Text style={styles.description}>{plan.description}</Text>}
           <Text style={styles.helperLine}>Elegí cómo arrancar hoy y te guiamos paso a paso.</Text>
           <Text style={styles.featureLine}>✓ Vista clara de horarios y disponibilidad</Text>
@@ -243,7 +252,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           </TouchableOpacity>
 
           <BackNavButton onPress={handleVolver} label={tStr('plan_detail_back_plans')} style={styles.buttonOutline} />
-        </View>
+        </NeoPanel>
       </ScrollView>
     </BackgroundWrapper>
   );

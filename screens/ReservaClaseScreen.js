@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import BackNavButton from '../components/BackNavButton';
+import NeoPanel from '../components/NeoPanel';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
@@ -107,16 +108,9 @@ export default function ReservaClaseScreen({ route, navigation }) {
           borderRadius: WEB_PANEL_RADIUS,
           padding: MOBILE_SPACING.xxl,
           backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder,
-          borderWidth: 1,
-          // sombra sutil ligada a brand
-          shadowColor: t.brand,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
-          shadowRadius: 10,
         },
         scroll: {
-          backgroundColor: t.bg,
+          backgroundColor: 'transparent',
           flexGrow: 1,
           justifyContent: 'center',
           paddingHorizontal: MOBILE_SPACING.lg,
@@ -138,8 +132,8 @@ export default function ReservaClaseScreen({ route, navigation }) {
 
   return (
     <BackgroundWrapper plan={plan}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.panel}>
+      <ScrollView style={{ flex: 1, backgroundColor: 'transparent' }} contentContainerStyle={styles.scroll}>
+        <NeoPanel style={styles.panel}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{tStr('reserva_clase_title').replace('{{date}}', fecha)}</Text>
 
@@ -169,7 +163,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
               <Text style={styles.cancelarTxt}>{tStr('reserva_clase_cancel')}</Text>
             </TouchableOpacity>
           ) : null}
-        </View>
+        </NeoPanel>
       </ScrollView>
     </BackgroundWrapper>
   );

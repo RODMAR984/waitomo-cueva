@@ -20,6 +20,7 @@ import { usePlanContext } from '../contexts/PlanContext';
 import { useAuth } from '../contexts/AuthContext';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import BackNavButton from '../components/BackNavButton';
+import NeoPanel from '../components/NeoPanel';
 import { colors } from '../theme/colors';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
@@ -956,9 +957,9 @@ export default function CalendarioScreen({ route, navigation }) {
   if (user?.id && abonoLoading) {
     return (
       <BackgroundWrapper plan={plan}>
-        <View style={[styles.panel, { marginTop: height * 0.25, minHeight: 120 }]}>
+        <NeoPanel style={[styles.panel, { marginTop: height * 0.25, minHeight: 120 }]}>
           <ActivityIndicator size="large" color={t.brand} />
-        </View>
+        </NeoPanel>
       </BackgroundWrapper>
     );
   }
@@ -967,7 +968,7 @@ export default function CalendarioScreen({ route, navigation }) {
 
   return (
     <BackgroundWrapper plan={plan}>
-      <View style={styles.panel}>
+      <NeoPanel style={styles.panel}>
         <Text style={styles.mes}>{mes.toUpperCase()}</Text>
 
         {mostrarRecordatorioApto && (
@@ -1139,7 +1140,7 @@ export default function CalendarioScreen({ route, navigation }) {
         )}
 
         <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.volver} />
-      </View>
+      </NeoPanel>
     </BackgroundWrapper>
   );
 }

@@ -2,7 +2,7 @@
 // ✅ Lee abonos reales desde Supabase (public.abonos)
 // - price_cents NULL => "Precio a definir"
 // - Incluye también plan_id = 'all_access' (pase libre total)
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Platform,
   useWindowDimensions,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +26,8 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import BackNavButton from '../components/BackNavButton';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import NeoPanel from '../components/NeoPanel';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgbaLocal = (hex, alpha = 1) => {
@@ -87,10 +89,23 @@ export default function AbonosPasesScreen({ navigation, route }) {
   const [abonos, setAbonos] = useState([]);
   const [abonosLoading, setAbonosLoading] = useState(false);
   const [abonosError, setAbonosError] = useState(null);
+  const cardPulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (soloEvolucion) setAbonos([]);
   }, [soloEvolucion]);
+
+  useEffect(() => {
+    if (abonosLoading) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cardPulse, { toValue: 1.014, duration: 1200, useNativeDriver: true }),
+        Animated.timing(cardPulse, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [abonosLoading, cardPulse]);
 
   const formatMoney = (priceCents, currency = 'ARS') => {
     if (priceCents == null) return null;
@@ -118,11 +133,46 @@ export default function AbonosPasesScreen({ navigation, route }) {
     // Ciclo Evolución: no usar "Acceso ilimitado"; son rutinas personalizadas por frecuencia
     const rowPlan = rowPlanCanon(row?.plan_id);
     const isEvolRow = rowPlan === 'evolucion';
-    const subtitle = isEvolRow
-      ? (duration ? `Rutina personalizada • ${duration} días` : 'Rutina personalizada')
-      : isUnlimited
-        ? `Acceso ilimitado • ${duration} días`
-        : `${row?.included_sessions} clases • ${duration} días`;
+    const buildBullets = () => {
+      if (isEvolRow) {
+        if (duration) {
+          return [
+            `Rutina personalizada con vigencia de ${duration} días`,
+            'Progresión pensada para tu nivel',
+            'Gestión simple desde tu panel',
+          ];
+        }
+        return [
+          'Rutina personalizada para tu nivel',
+          'Seguimiento semanal desde el gym',
+          'Gestión simple desde tu panel',
+        ];
+      }
+      if (isUnlimited) {
+        return [
+          duration
+            ? `Acceso ilimitado a las clases del plan durante ${duration} días`
+            : 'Acceso ilimitado a las clases del plan',
+          'Reservá cuando quieras dentro de la vigencia',
+          'Gestión simple desde tu panel',
+        ];
+      }
+      const sessions = row?.included_sessions;
+      const line1 =
+        duration != null && sessions != null
+          ? `${sessions} clases para usar en ${duration} días`
+          : sessions != null
+            ? `${sessions} clases incluidas en tu abono`
+            : 'Clases incluidas según tu abono';
+      return [line1, 'Reservá tus cupos con anticipación', 'Gestión simple desde tu panel'];
+    };
+    const customBullets = (() => {
+      const s = String(row?.card_highlights ?? '').trim();
+      if (!s) return null;
+      const lines = s.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+      return lines.length ? lines.slice(0, 10) : null;
+    })();
+    const bullets = customBullets ?? buildBullets();
 
     const isFeatured =
       !isEvolRow &&
@@ -134,7 +184,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
       id: row?.id,
       plan_id: rowPlan,
       title: row?.name,
-      subtitle,
+      bullets,
       price: money || 'Precio a definir',
       // compat con Pago/RegistroInicial
       precio: money || null,
@@ -209,7 +259,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
         let q = supabase
           .from('abonos')
           .select(
-            'id, plan_id, name, duration_days, included_sessions, price_cents, currency, is_active, organization_id'
+            'id, plan_id, name, duration_days, included_sessions, price_cents, currency, is_active, organization_id, card_highlights'
           )
           .eq('is_active', true);
         // Regla robusta: primero scope por org; luego filtramos por clave canónica en app.
@@ -258,6 +308,11 @@ export default function AbonosPasesScreen({ navigation, route }) {
   // -------------------------
   // UI helpers
   // -------------------------
+  const cardEdgeCyan = useMemo(
+    () => hexToRgbaLocal(t.logoCian || t.brand, 0.92),
+    [t.logoCian, t.brand],
+  );
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -303,15 +358,15 @@ export default function AbonosPasesScreen({ navigation, route }) {
           width: '100%',
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           backgroundColor: t.boxBg,
-          paddingVertical: 12,
-          paddingHorizontal: 14,
-          marginTop: 10,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.md + 2,
+          marginTop: MOBILE_SPACING.sm + 2,
         },
         introLine: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 17,
         },
         sectionTitle: {
@@ -331,21 +386,11 @@ export default function AbonosPasesScreen({ navigation, route }) {
           width: isWebDesktop ? '48.8%' : '100%',
         },
         card: {
-          borderWidth: 1,
-          borderColor: t.overlayBorder,
-          backgroundColor: t.boxBg,
-          borderRadius: MOBILE_RADII.lg,
           padding: isWebDesktop ? 20 : 16,
           marginBottom: 12,
           minHeight: isWebDesktop ? 270 : 0,
-        },
-        featuredCard: {
-          borderColor: t.overlayBorder,
-          shadowColor: t.brand,
-          shadowOpacity: 0.2,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 6,
+          borderRadius: MOBILE_RADII.lg,
+          backgroundColor: t.boxBg,
         },
         cardTitle: {
           color: t.text,
@@ -353,16 +398,38 @@ export default function AbonosPasesScreen({ navigation, route }) {
           fontWeight: '800',
           letterSpacing: 0.5,
         },
-        cardSubtitle: {
-          marginTop: 4,
+        cardBenefit: {
+          marginTop: 8,
           color: t.subText,
           fontSize: MOBILE_TYPE.caption,
+          lineHeight: 17,
         },
-        cardBenefit: {
-          marginTop: 7,
+        trialStrip: {
+          marginTop: 12,
+          marginBottom: 4,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          borderRadius: MOBILE_RADII.md,
+          borderWidth: 1.5,
+          borderColor: cardEdgeCyan,
+          backgroundColor: hexToRgbaLocal(t.logoCian || t.brand, 0.1),
+        },
+        trialStripTitle: {
+          color: t.brandText ?? t.brand,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '800',
+        },
+        trialStripHint: {
+          marginTop: 6,
           color: t.subText,
-          fontSize: 12,
-          lineHeight: 16,
+          fontSize: MOBILE_TYPE.caption,
+          lineHeight: 18,
+        },
+        trialStripCta: {
+          marginTop: 10,
+          color: t.brand,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '800',
         },
         featuredPill: {
           marginTop: 10,
@@ -370,13 +437,13 @@ export default function AbonosPasesScreen({ navigation, route }) {
           borderWidth: 1,
           borderColor: hexToRgbaLocal(t.brand, 0.5),
           backgroundColor: hexToRgbaLocal(t.brand, 0.14),
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           paddingHorizontal: 10,
           paddingVertical: 4,
         },
         featuredPillText: {
           color: t.brand,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '800',
           letterSpacing: 0.5,
         },
@@ -421,13 +488,13 @@ export default function AbonosPasesScreen({ navigation, route }) {
         stateText: { color: t.subText, fontSize: MOBILE_TYPE.caption, textAlign: 'center' },
         stateTextSmall: {
           color: t.subText,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.caption,
           marginTop: 6,
           textAlign: 'center',
         },
         stateTextSpaced: { marginTop: 10 },
       }),
-    [t, bottomSafe, isWebDesktop],
+    [t, bottomSafe, isWebDesktop, cardEdgeCyan],
   );
 
   // -------------------------
@@ -491,7 +558,11 @@ export default function AbonosPasesScreen({ navigation, route }) {
   const addonPlaniAbono = showAddonPlani ? {
     id: 'addon-plani-openbox',
     title: 'Add-on Plani Open Box',
-    subtitle: 'Planificación mensual personalizada para Open Box',
+    bullets: [
+      'Planificación mensual personalizada para Open Box',
+      'Ajustes según tu disponibilidad y objetivos',
+      'Coordinación con recepción del gym',
+    ],
     price: 'Consultar',
     precio: null,
     plan_id: 'openbox',
@@ -500,33 +571,32 @@ export default function AbonosPasesScreen({ navigation, route }) {
 
   const renderAbonoCard = (a) => (
     <View key={a.id} style={styles.cardCol}>
-      <View style={[styles.card, a.featured ? styles.featuredCard : null]}>
-        <Text style={styles.cardTitle}>{a.title}</Text>
-        <Text style={styles.cardSubtitle}>{a.subtitle}</Text>
-        <Text style={styles.price}>{a.price}</Text>
-        {a.featured ? (
-          <View style={styles.featuredPill}>
-            <Text style={styles.featuredPillText}>RECOMENDADO</Text>
-          </View>
-        ) : null}
-        <Text style={styles.cardBenefit}>
-          ✓ {a.included_sessions == null ? 'Acceso a todas las clases del plan' : 'Clases incluidas según tu abono'}
-        </Text>
-        <Text style={styles.cardBenefit}>
-          ✓ {a.duration_days ? `${a.duration_days} días de vigencia` : 'Vigencia configurable por el gimnasio'}
-        </Text>
-        <Text style={styles.cardBenefit}>✓ Gestión simple desde tu panel</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => handleContratar(a)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.buttonRow}>
-            <Text style={styles.buttonText}>{tStr('abonos_contratar')}</Text>
-            <Ionicons name="arrow-forward" size={16} color={t.buttonPrimaryText?.color || '#fff'} />
-          </View>
-        </TouchableOpacity>
-      </View>
+      <Animated.View style={{ transform: [{ scale: cardPulse }] }}>
+        <NeoPanel spark style={styles.card}>
+          <Text style={styles.cardTitle}>{a.title}</Text>
+          <Text style={styles.price}>{a.price}</Text>
+          {a.featured ? (
+            <View style={styles.featuredPill}>
+              <Text style={styles.featuredPillText}>RECOMENDADO</Text>
+            </View>
+          ) : null}
+          {(Array.isArray(a.bullets) ? a.bullets : []).map((line, i) => (
+            <Text key={i} style={styles.cardBenefit}>
+              ✓ {line}
+            </Text>
+          ))}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => handleContratar(a)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.buttonRow}>
+              <Text style={styles.buttonText}>{tStr('abonos_contratar')}</Text>
+              <Ionicons name="arrow-forward" size={16} color={t.buttonPrimaryText?.color || '#fff'} />
+            </View>
+          </TouchableOpacity>
+        </NeoPanel>
+      </Animated.View>
     </View>
   );
 
@@ -559,6 +629,17 @@ export default function AbonosPasesScreen({ navigation, route }) {
           <View style={styles.introPanel}>
             <Text style={styles.introLine}>Elegí el formato que mejor se adapta a tu semana y empezá hoy.</Text>
           </View>
+          {!isEvolucion && !isPaseTotal ? (
+            <TouchableOpacity
+              style={styles.trialStrip}
+              onPress={() => navigation.navigate('FreeClassRequest', { plan })}
+              activeOpacity={0.88}
+            >
+              <Text style={styles.trialStripTitle}>{tStr('abonos_free_class_title')}</Text>
+              <Text style={styles.trialStripHint}>{tStr('abonos_free_class_hint')}</Text>
+              <Text style={styles.trialStripCta}>{tStr('abonos_free_class_cta')} ›</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {abonosLoading ? (
@@ -626,10 +707,14 @@ export default function AbonosPasesScreen({ navigation, route }) {
                 {renderSectionTitle(tStr('abonos_section_planificacion'))}
                 <View style={styles.cardsGrid}>
                   <View style={styles.cardCol}>
-                    <View style={[styles.card]}>
+                    <NeoPanel spark style={styles.card}>
                       <Text style={styles.cardTitle}>{addonPlaniAbono.title}</Text>
-                      <Text style={styles.cardSubtitle}>{addonPlaniAbono.subtitle}</Text>
                       <Text style={styles.price}>{addonPlaniAbono.price}</Text>
+                      {(addonPlaniAbono.bullets || []).map((line, i) => (
+                        <Text key={i} style={styles.cardBenefit}>
+                          ✓ {line}
+                        </Text>
+                      ))}
                       <TouchableOpacity
                         style={styles.button}
                         onPress={() => handleContratar(addonPlaniAbono)}
@@ -637,7 +722,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
                       >
                         <Text style={styles.buttonText}>{tStr('abonos_contratar')}</Text>
                       </TouchableOpacity>
-                    </View>
+                    </NeoPanel>
                   </View>
                 </View>
               </>
@@ -645,7 +730,6 @@ export default function AbonosPasesScreen({ navigation, route }) {
           </>
         )}
 
-        <BackNavButton onPress={() => navigation.goBack()} label={tStr('abonos_volver')} style={styles.backBtn} />
       </ScrollView>
     </BackgroundWrapper>
   );

@@ -35,6 +35,7 @@ import { createStripeCheckoutSession } from '../utils/stripeCheckout';
 import { resolveClientPaymentMethods } from '../utils/clientPaymentMethods';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import NeoPanel from '../components/NeoPanel';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -393,7 +394,7 @@ export default function PagoScreen({ navigation, route }) {
         style={styles.root}
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.panel}>
+          <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('pago_title_select')}</Text>
 
             {!anyPaymentMethod ? (
@@ -519,7 +520,7 @@ export default function PagoScreen({ navigation, route }) {
             <View style={styles.volverWrap}>
               <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} />
             </View>
-          </View>
+          </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
     </BackgroundWrapper>

@@ -18,12 +18,13 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha) => {
@@ -210,7 +211,7 @@ export default function AdminNovedadesScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: 14,
           marginBottom: 12,
         },
@@ -224,7 +225,7 @@ export default function AdminNovedadesScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: MOBILE_SPACING.lg,
           marginBottom: 16,
         },
@@ -260,9 +261,7 @@ export default function AdminNovedadesScreen() {
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             {!hideInlineBack ? (
-              <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-                <Ionicons name="arrow-back" size={26} color={t.text} />
-              </TouchableOpacity>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
             ) : null}
             <Text style={styles.title}>{tStr('admin_news_screen_title')}</Text>
             <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>
@@ -338,12 +337,12 @@ export default function AdminNovedadesScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {row.pinned && (
                       <View style={[styles.badge, styles.badgePinned]}>
-                        <Text style={{ color: t.brand, fontSize: 10, fontWeight: '700' }}>{tStr('admin_news_pinned')}</Text>
+                        <Text style={{ color: t.brand, fontSize: MOBILE_TYPE.caption, fontWeight: '700' }}>{tStr('admin_news_pinned')}</Text>
                       </View>
                     )}
                     {!row.is_active && (
                       <View style={[styles.badge, styles.badgeInactive]}>
-                        <Text style={{ color: t.subText, fontSize: 10 }}>{tStr('admin_news_hidden')}</Text>
+                        <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.caption }}>{tStr('admin_news_hidden')}</Text>
                       </View>
                     )}
                   </View>

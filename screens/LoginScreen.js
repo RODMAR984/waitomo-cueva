@@ -31,6 +31,7 @@ import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
 import { supabase } from '../supabaseClient';
 import { resolvePostAuthDestination } from '../utils/authRoutingGuard';
 import { reportError, trackEvent } from '../utils/observability';
+import NeoPanel from '../components/NeoPanel';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -521,7 +522,7 @@ export default function LoginScreen() {
               <LogoCompleto height={50} />
               <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
             </View>
-            <View style={styles.panel}>
+            <NeoPanel style={styles.panel}>
               <BackNavButton onPress={() => navigation.goBack()} />
               {showStaffAccessChoice ? (
                 <>
@@ -645,7 +646,7 @@ export default function LoginScreen() {
               )}
                 </>
               )}
-            </View>
+            </NeoPanel>
             <View style={styles.brandBottom}>
               <LogoCompleto height={30} style={{ marginBottom: 6 }} />
               <Text style={styles.brandFooter}>{tStr('gym_config_footer')}</Text>
