@@ -20,6 +20,7 @@ import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const { height } = Dimensions.get('window');
 
@@ -87,12 +88,12 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
         button: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 12,
-          padding: 16,
+          borderRadius: MOBILE_RADII.md,
+          padding: MOBILE_SPACING.lg,
         },
         buttonText: {
           ...t.buttonPrimaryText,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: 'bold',
           textAlign: 'center',
         },
@@ -112,11 +113,11 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
         levelButton: {
           flex: 1,
           marginHorizontal: 4,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1.5,
           borderColor: t.overlayBorder,
           paddingVertical: 10,
-          paddingHorizontal: 8,
+          paddingHorizontal: MOBILE_SPACING.sm,
           alignItems: 'center',
           backgroundColor: t.boxBg,
         },
@@ -133,7 +134,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
         levelTitle: {
           color: t.text,
           fontWeight: '700',
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
         },
         levelTitleActive: {
           color: t.brand,
@@ -152,10 +153,10 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
         input: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           marginBottom: 16,
           padding: 14,
         },
@@ -165,7 +166,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
           borderColor: t.overlayBorder,
           borderWidth: 1.5,
           borderRadius: WEB_PANEL_RADIUS,
-          padding: 24,
+          padding: MOBILE_SPACING.xxl,
           // sombra sutil ligada a la marca
           shadowColor: t.brand,
           shadowOffset: { width: 0, height: 4 },
@@ -176,21 +177,21 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
           flexGrow: 1,
           justifyContent: 'center',
           marginTop: height * 0.15,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
         title: {
           color: t.brand,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           marginBottom: 8,
           textAlign: 'center',
         },
         info: {
           color: t.subText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           marginBottom: 20,
           textAlign: 'center',
           lineHeight: 20,
