@@ -24,6 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -139,7 +140,7 @@ export default function CreaCuentaStaffScreen() {
         scrollContent: {
           flexGrow: 1,
           justifyContent: 'center',
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           paddingTop: 52,
           paddingBottom: 24,
           width: '100%',
@@ -151,61 +152,61 @@ export default function CreaCuentaStaffScreen() {
           borderColor: fe.panelBorder,
           borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
         },
         title: {
           color: fe.text,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           marginBottom: 8,
           textAlign: 'center',
         },
         subtitle: {
           color: fe.subText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           marginBottom: 20,
           textAlign: 'center',
         },
         input: {
           backgroundColor: fe.inputBg,
           borderColor: fe.inputBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           color: fe.text,
           paddingHorizontal: 14,
           paddingVertical: 12,
           marginBottom: 12,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         button: {
           alignItems: 'center',
           backgroundColor: fe.buttonBg,
           borderColor: fe.buttonBorder,
           borderWidth: 1,
-          borderRadius: 12,
-          padding: 16,
+          borderRadius: MOBILE_RADII.md,
+          padding: MOBILE_SPACING.lg,
           marginTop: 8,
         },
-        buttonText: { color: fe.buttonText, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
+        buttonText: { color: fe.buttonText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: 'bold', textAlign: 'center' },
         link: {
           marginTop: 20,
           alignSelf: 'center',
         },
-        linkText: { color: fe.subText, fontSize: 14, textDecorationLine: 'underline' },
+        linkText: { color: fe.subText, fontSize: MOBILE_TYPE.body, textDecorationLine: 'underline' },
         separatorText: {
           color: fe.subText,
-          marginTop: 16,
+          marginTop: MOBILE_SPACING.lg,
           marginBottom: 8,
           textAlign: 'center',
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
         },
         socialButton: {
           alignItems: 'center',
           backgroundColor: fe.buttonBg,
           borderColor: fe.buttonBorder,
           borderWidth: 1,
-          borderRadius: 12,
-          padding: 16,
+          borderRadius: MOBILE_RADII.md,
+          padding: MOBILE_SPACING.lg,
           marginTop: 10,
         },
         socialButtonText: { color: fe.buttonText, fontWeight: 'bold', textAlign: 'center' },

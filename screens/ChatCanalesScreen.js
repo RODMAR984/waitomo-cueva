@@ -24,6 +24,7 @@ import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { evaluateCalendarioAccess, evaluateClientCommunityAccess } from '../utils/clientWorkoutEntitlement';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -186,17 +187,17 @@ export default function ChatCanalesScreen() {
     () =>
       StyleSheet.create({
         header: {
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingTop: 56,
           paddingBottom: 8,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
-        title: { color: t.brand ?? t.text, fontSize: 22, fontWeight: '800', marginTop: 6, marginBottom: 12 },
+        title: { color: t.brand ?? t.text, fontSize: MOBILE_TYPE.title, fontWeight: '800', marginTop: 6, marginBottom: 12 },
         list: {
           flex: 1,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 40,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
@@ -207,35 +208,35 @@ export default function ChatCanalesScreen() {
           alignItems: 'center',
           borderRadius: WEB_PANEL_RADIUS,
           paddingVertical: 18,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           marginBottom: 12,
           borderWidth: 1.5,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
         },
         cardIcon: {
-          width: 48,
-          height: 48,
-          borderRadius: 24,
+          width: MOBILE_SIZES.controlHeight,
+          height: MOBILE_SIZES.controlHeight,
+          borderRadius: MOBILE_RADII.pill,
           backgroundColor: hexToRgba(t.brand, 0.2),
           alignItems: 'center',
           justifyContent: 'center',
           marginRight: 14,
         },
         cardName: { color: t.text, fontSize: 17, fontWeight: '700' },
-        cardPlan: { color: t.placeholder, fontSize: 12, marginTop: 2 },
+        cardPlan: { color: t.placeholder, fontSize: MOBILE_TYPE.caption, marginTop: 2 },
         empty: {
           paddingVertical: 32,
           alignItems: 'center',
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
-        emptyText: { color: t.placeholder, fontSize: 16, textAlign: 'center' },
+        emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong, textAlign: 'center' },
         emptyHint: {
           color: t.subText ?? t.placeholder,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           marginTop: 12,
           textAlign: 'center',
           lineHeight: 20,
@@ -244,10 +245,10 @@ export default function ChatCanalesScreen() {
           marginTop: 20,
           paddingVertical: 12,
           paddingHorizontal: 22,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           ...t.buttonPrimary,
         },
-        ctaText: { ...t.buttonPrimaryText, fontWeight: '700', fontSize: 15 },
+        ctaText: { ...t.buttonPrimaryText, fontWeight: '700', fontSize: MOBILE_TYPE.bodyStrong },
       }),
     [t],
   );

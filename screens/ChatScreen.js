@@ -31,6 +31,7 @@ import { evaluateCalendarioAccess } from '../utils/clientWorkoutEntitlement';
 import { draftChatReplyWithAi } from '../utils/aiAssistant';
 import { trackEvent } from '../utils/observability';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -345,7 +346,7 @@ export default function ChatScreen() {
     () =>
       StyleSheet.create({
         header: {
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingTop: 56,
           paddingBottom: 8,
           width: '100%',
@@ -353,7 +354,7 @@ export default function ChatScreen() {
           alignSelf: 'center',
         },
         title: { color: t.brand ?? t.text, fontSize: 20, fontWeight: '800', marginTop: 6, marginBottom: 8 },
-        list: { flex: 1, paddingHorizontal: 16, paddingVertical: 8, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
+        list: { flex: 1, paddingHorizontal: MOBILE_SPACING.lg, paddingVertical: 8, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         msgRow: { marginBottom: 12, maxWidth: '85%' },
         msgRowMe: { alignSelf: 'flex-end' },
         msgBubble: {
@@ -389,14 +390,14 @@ export default function ChatScreen() {
           borderColor: hexToRgba(t.brand, 0.45),
         },
         staffBadgeText: { color: t.brand, fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
-        msgBody: { color: t.text, fontSize: 15 },
-        msgBodyMe: { color: t.text, fontSize: 15 },
+        msgBody: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong },
+        msgBodyMe: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong },
         msgTime: { color: t.placeholder, fontSize: 10, marginTop: 4 },
         msgTimeMe: { color: t.onBrand, fontSize: 10, marginTop: 4 },
         inputRow: {
           flexDirection: 'row',
           alignItems: 'flex-end',
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 12,
           paddingBottom: Math.max(insets.bottom || 0, Platform.OS === 'android' ? 28 : 12) + (Platform.OS === 'ios' ? 16 : 0),
           borderTopWidth: 1,
@@ -417,7 +418,7 @@ export default function ChatScreen() {
           color: t.text,
           paddingHorizontal: 18,
           paddingVertical: 10,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         sendBtn: {
           width: 44,
@@ -443,14 +444,14 @@ export default function ChatScreen() {
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 8,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingTop: 8,
           paddingBottom: 2,
         },
         templateChip: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           paddingVertical: 6,
           paddingHorizontal: 10,
           backgroundColor: t.boxBg,
@@ -459,10 +460,10 @@ export default function ChatScreen() {
           borderColor: t.brand,
           backgroundColor: hexToRgba(t.brand, 0.14),
         },
-        templateChipText: { color: t.subText, fontSize: 12, fontWeight: '700' },
+        templateChipText: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         templateChipTextOn: { color: t.brand },
         empty: { paddingVertical: 40, alignItems: 'center' },
-        emptyText: { color: t.placeholder, fontSize: 15 },
+        emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong },
       }),
     [t, insets.bottom, locale]
   );

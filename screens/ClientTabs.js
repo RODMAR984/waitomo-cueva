@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_DESKTOP_BREAKPOINT, WEB_RAIL_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 import ClientScreen from './ClientScreen';
 import CalendarioScreen from './CalendarioScreen';
@@ -32,14 +33,14 @@ export default function ClientTabs() {
             borderRightColor: t.overlayBorder,
             borderTopWidth: 0,
             backgroundColor: t.boxBg,
-            paddingTop: 16,
-            paddingBottom: 16,
-            paddingHorizontal: 8,
+            paddingTop: MOBILE_SPACING.lg,
+            paddingBottom: MOBILE_SPACING.lg,
+            paddingHorizontal: MOBILE_SPACING.sm,
           }
         : { display: 'none' },
       tabBarLabelPosition: isWebDesktop ? 'beside-icon' : 'below-icon',
       tabBarLabelStyle: {
-        fontSize: 13,
+        fontSize: MOBILE_TYPE.body,
         fontWeight: '700',
       },
       tabBarItemStyle: isWebDesktop

@@ -20,6 +20,7 @@ import { supabase } from '../supabaseClient';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -97,7 +98,7 @@ export default function NovedadesScreen() {
     () =>
       StyleSheet.create({
         header: {
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingTop: 56,
           paddingBottom: 8,
           width: '100%',
@@ -106,7 +107,7 @@ export default function NovedadesScreen() {
         },
         title: {
           color: t.brandText ?? t.brand,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: '800',
           marginTop: 6,
           marginBottom: 12,
@@ -116,7 +117,7 @@ export default function NovedadesScreen() {
           textShadowRadius: 6,
         },
         list: {
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 40,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
@@ -124,8 +125,8 @@ export default function NovedadesScreen() {
         },
         card: {
           borderRadius: WEB_PANEL_RADIUS,
-          paddingVertical: 16,
-          paddingHorizontal: 16,
+          paddingVertical: MOBILE_SPACING.lg,
+          paddingHorizontal: MOBILE_SPACING.lg,
           marginBottom: 12,
           borderWidth: 1.5,
           borderColor: t.overlayBorder,
@@ -134,7 +135,7 @@ export default function NovedadesScreen() {
         cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
         cardTitle: {
           color: t.brandText ?? t.brand,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '700',
           flex: 1,
           letterSpacing: 0.3,
@@ -144,25 +145,25 @@ export default function NovedadesScreen() {
         },
         cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
         tag: {
-          paddingHorizontal: 8,
+          paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: 4,
           borderRadius: 8,
           backgroundColor: hexToRgba(t.brand, 0.2),
         },
         tagText: { color: t.brandText ?? t.brand, fontSize: 11, fontWeight: '600' },
-        dateText: { color: t.placeholder, fontSize: 12 },
+        dateText: { color: t.placeholder, fontSize: MOBILE_TYPE.caption },
         pinnedBadge: { color: t.brandText ?? t.brand, marginLeft: 4 },
         bodyWrap: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: t.overlayBorder },
-        bodyText: { color: t.subText, fontSize: 14, lineHeight: 22 },
+        bodyText: { color: t.subText, fontSize: MOBILE_TYPE.body, lineHeight: 22 },
         cardImage: {
           width: '100%',
           height: 180,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           marginTop: 10,
           backgroundColor: hexToRgba(t.text, 0.1),
         },
         empty: { paddingVertical: 40, alignItems: 'center', width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
-        emptyText: { color: t.placeholder, fontSize: 16 },
+        emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong },
       }),
     [t]
   );

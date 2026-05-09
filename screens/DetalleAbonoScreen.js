@@ -24,6 +24,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { abonoCoversUserPlan, isUserAbonoActive } from '../utils/clientWorkoutEntitlement';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 // helpers
 const hexToRgba = (hex, alpha = 1) => {
@@ -181,7 +182,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
       StyleSheet.create({
         root: { flex: 1 },
         scroll: {
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 70,
           paddingBottom: 40,
           width: '100%',
@@ -194,10 +195,10 @@ export default function DetalleAbonoScreen({ navigation, route }) {
           borderWidth: 1,
           borderRadius: WEB_PANEL_RADIUS,
           padding: 18,
-          marginBottom: 16,
+          marginBottom: MOBILE_SPACING.lg,
         },
         title: { color: t.text, fontSize: 20, fontWeight: '900', textAlign: 'center' },
-        subtitle: { color: t.subText, fontSize: 12, textAlign: 'center', marginTop: 6 },
+        subtitle: { color: t.subText, fontSize: MOBILE_TYPE.caption, textAlign: 'center', marginTop: 6 },
         row: {
           marginTop: 14,
           backgroundColor: t.boxBg,
@@ -207,7 +208,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
           borderColor: t.overlayBorder,
         },
         rowLabel: { color: t.subText, fontSize: 11 },
-        rowValue: { color: t.text, fontSize: 15, fontWeight: '800', marginTop: 4 },
+        rowValue: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', marginTop: 4 },
         hint: { color: t.subText, fontSize: 11, marginTop: 6 },
         btn: {
           marginTop: 14,
@@ -217,12 +218,12 @@ export default function DetalleAbonoScreen({ navigation, route }) {
           justifyContent: 'center',
           paddingHorizontal: 18,
           paddingVertical: 12,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           ...t.buttonPrimary,
         },
-        btnText: { marginLeft: 8, ...t.buttonPrimaryText, fontSize: 13 },
+        btnText: { marginLeft: 8, ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.body },
         back: { marginTop: 12, alignSelf: 'center' },
-        backText: { color: t.subText, fontSize: 12, fontWeight: '700' },
+        backText: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
       }),
     [t]
   );

@@ -12,6 +12,7 @@ import BackNavButton from '../components/BackNavButton';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_SPACING } from '../theme/mobileSpec';
 
 export default function HistorialScreen({ route, navigation }) {
   const plan = route?.params?.plan || { nombre: 'Historial' };
@@ -32,7 +33,7 @@ export default function HistorialScreen({ route, navigation }) {
           borderColor: t.overlayBorder,
           borderWidth: 1,
           borderRadius: WEB_PANEL_RADIUS,
-          padding: 30,
+          padding: MOBILE_SPACING.xxl,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           // sombra sutil ligada a la marca

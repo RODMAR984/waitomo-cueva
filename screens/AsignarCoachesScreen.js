@@ -26,6 +26,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 // ---------- fallback de planes (si navegación no provee) ----------
 const DEFAULT_PLANS = [
@@ -119,7 +120,7 @@ export default function AsignarCoachesScreen({ route }) {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: Math.max(insets.top, 12) + 8,
           paddingBottom: 12,
           width: '100%',
@@ -136,13 +137,13 @@ export default function AsignarCoachesScreen({ route }) {
         },
         scroll: { flex: 1 },
         scrollContent: {
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingBottom: Math.max(insets.bottom, 28) + 24,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
-        section: { marginBottom: 20 },
+        section: { marginBottom: MOBILE_SPACING.xl },
         card: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
@@ -157,7 +158,7 @@ export default function AsignarCoachesScreen({ route }) {
           fontSize: 17,
           fontWeight: '700',
         },
-        planId: { color: t.subText, fontSize: 12, marginTop: 4 },
+        planId: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
         row: {
           alignItems: 'center',
           flexDirection: 'row',
@@ -168,19 +169,19 @@ export default function AsignarCoachesScreen({ route }) {
         input: {
           backgroundColor: t.inputBg ?? t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           color: t.text,
           flexGrow: 1,
           flexShrink: 1,
           minWidth: 120,
-          paddingHorizontal: 12,
+          paddingHorizontal: MOBILE_SPACING.md,
           paddingVertical: 10,
         },
         addBtn: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           justifyContent: 'center',
           paddingHorizontal: 14,
           paddingVertical: 10,
@@ -199,21 +200,21 @@ export default function AsignarCoachesScreen({ route }) {
         delBtn: {
           alignItems: 'center',
           backgroundColor: t.danger,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           justifyContent: 'center',
-          paddingHorizontal: 12,
+          paddingHorizontal: MOBILE_SPACING.md,
           paddingVertical: 8,
         },
         delTxt: { ...t.buttonDangerText, fontWeight: '700' },
-        uidText: { color: t.text, flex: 1, marginRight: 8, fontSize: 14 },
-        emptyText: { color: t.placeholder, marginTop: 10, fontSize: 14 },
+        uidText: { color: t.text, flex: 1, marginRight: 8, fontSize: MOBILE_TYPE.body },
+        emptyText: { color: t.placeholder, marginTop: 10, fontSize: MOBILE_TYPE.body },
         centerWrap: {
           flex: 1,
           justifyContent: 'center',
-          paddingHorizontal: 24,
+          paddingHorizontal: MOBILE_SPACING.xxl,
           paddingBottom: 40,
         },
-        centerMsg: { color: t.text, fontSize: 16, textAlign: 'center', lineHeight: 22 },
+        centerMsg: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, textAlign: 'center', lineHeight: 22 },
       }),
     [t, insets.top, insets.bottom],
   );
