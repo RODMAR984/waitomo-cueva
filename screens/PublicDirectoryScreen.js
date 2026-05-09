@@ -19,8 +19,11 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
 import BackNavButton from '../components/BackNavButton';
 import LogoCompleto from '../components/LogoCompleto';
+import NeoPanel from '../components/NeoPanel';
 import { useLocale } from '../contexts/LocaleContext';
-import { fitengineLogoColors as fe } from '../theme/colors';
+import { useThemeContext } from '../contexts/ThemeContext';
+import { usePlanContext } from '../contexts/PlanContext';
+import { hexToRgba } from '../theme/colors';
 import { fetchPublicOrganizationDirectory } from '../utils/publicDirectory';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
@@ -61,7 +64,10 @@ export default function PublicDirectoryScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
+  const { t } = useThemeContext();
   const { t: tStr } = useLocale();
+  const planCtx = usePlanContext();
+  const plan = planCtx?.plan ?? null;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -138,6 +144,7 @@ export default function PublicDirectoryScreen() {
       StyleSheet.create({
         kav: {
           flex: 1,
+          backgroundColor: 'transparent',
           paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: Math.max(insets.top, MOBILE_SPACING.md) + MOBILE_SPACING.sm,
           width: '100%',
@@ -145,22 +152,22 @@ export default function PublicDirectoryScreen() {
           alignSelf: 'center',
         },
         head: { alignItems: 'center', marginBottom: MOBILE_SPACING.xl - 2 },
-        title: { color: fe.subText, fontSize: MOBILE_TYPE.title, fontWeight: '800', textAlign: 'center' },
+        title: { color: t.subText, fontSize: MOBILE_TYPE.title, fontWeight: '800', textAlign: 'center' },
         subtitle: {
-          color: fe.subText,
+          color: t.subText,
           fontSize: MOBILE_TYPE.body,
           lineHeight: 20,
           textAlign: 'center',
           marginTop: MOBILE_SPACING.sm,
           opacity: 0.95,
         },
-        card: {
-          backgroundColor: fe.panelBg,
-          borderColor: fe.panelBorder,
-          borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          padding: MOBILE_SPACING.lg,
+        cardNeo: {
           marginBottom: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.lg,
+          backgroundColor: t.boxBg,
+        },
+        cardInner: {
+          padding: MOBILE_SPACING.lg,
         },
         row: { flexDirection: 'row', alignItems: 'center' },
         orgLogo: {
@@ -168,36 +175,36 @@ export default function PublicDirectoryScreen() {
           height: 44,
           borderRadius: MOBILE_RADII.sm,
           marginRight: MOBILE_SPACING.md,
-          backgroundColor: fe.inputBg,
+          backgroundColor: hexToRgba(t.brand, 0.12),
         },
-        name: { color: fe.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', flex: 1 },
-        type: { color: fe.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700', marginTop: MOBILE_SPACING.xs },
+        name: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', flex: 1 },
+        type: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700', marginTop: MOBILE_SPACING.xs },
         badge: {
           alignSelf: 'flex-start',
           marginTop: MOBILE_SPACING.sm,
           paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: MOBILE_SPACING.xs,
           borderRadius: MOBILE_RADII.sm,
-          backgroundColor: fe.inputBg,
+          backgroundColor: hexToRgba(t.brand, 0.1),
           borderWidth: 1,
-          borderColor: fe.panelBorder,
+          borderColor: t.overlayBorder,
         },
-        badgeText: { color: fe.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '800' },
-        rating: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.sm },
-        addr: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs, lineHeight: 17 },
+        badgeText: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '800' },
+        rating: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.sm },
+        addr: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs, lineHeight: 17 },
         cta: { marginTop: MOBILE_SPACING.md, alignItems: 'flex-start' },
-        ctaText: { color: fe.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700', textDecorationLine: 'underline' },
+        ctaText: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700', textDecorationLine: 'underline' },
         mapsLink: { marginTop: MOBILE_SPACING.sm, alignSelf: 'flex-start' },
-        mapsLinkText: { color: fe.buttonBg, fontSize: MOBILE_TYPE.caption, fontWeight: '700', textDecorationLine: 'underline' },
+        mapsLinkText: { color: t.brand, fontSize: MOBILE_TYPE.caption, fontWeight: '700', textDecorationLine: 'underline' },
         searchInput: {
           marginTop: MOBILE_SPACING.md + 2,
           borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
-          borderColor: fe.panelBorder,
-          backgroundColor: fe.inputBg,
+          borderColor: t.overlayBorder,
+          backgroundColor: hexToRgba(t.brand, 0.08),
           paddingHorizontal: MOBILE_SPACING.md + 2,
           paddingVertical: MOBILE_SPACING.sm + 2,
-          color: fe.text,
+          color: t.text,
           fontSize: MOBILE_TYPE.bodyStrong,
         },
         filterRow: {
@@ -212,19 +219,22 @@ export default function PublicDirectoryScreen() {
           paddingHorizontal: MOBILE_SPACING.md + 2,
           borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
-          borderColor: fe.panelBorder,
-          backgroundColor: fe.inputBg,
+          borderColor: t.overlayBorder,
+          backgroundColor: hexToRgba(t.brand, 0.08),
         },
-        filterChipOn: { borderColor: fe.buttonBg, backgroundColor: 'rgba(134, 196, 199, 0.22)' },
-        filterChipText: { color: fe.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
-        filterChipTextOn: { color: fe.text },
+        filterChipOn: {
+          borderColor: t.brand,
+          backgroundColor: hexToRgba(t.brand, 0.2),
+        },
+        filterChipText: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
+        filterChipTextOn: { color: t.text },
         listFooter: { paddingVertical: MOBILE_SPACING.xl },
-        empty: { color: fe.subText, textAlign: 'center', marginTop: MOBILE_SPACING.xxl, fontSize: MOBILE_TYPE.bodyStrong },
+        empty: { color: t.subText, textAlign: 'center', marginTop: MOBILE_SPACING.xxl, fontSize: MOBILE_TYPE.bodyStrong },
         err: { color: '#f87171', textAlign: 'center', marginTop: MOBILE_SPACING.lg, fontSize: MOBILE_TYPE.body },
-        orgInitial: { color: fe.subText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
-        brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
+        orgInitial: { color: t.subText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
+        brandPowered: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
-    [insets.top],
+    [insets.top, t],
   );
 
   const handleBack = useCallback(() => {
@@ -263,55 +273,57 @@ export default function PublicDirectoryScreen() {
       const addr = item?.google_place_summary?.formatted_address;
       const mapsUrl = buildDirectoryMapsUrl(item);
       return (
-        <View style={styles.card}>
-          <View style={styles.row}>
-            {logoUri ? (
-              <Image source={{ uri: logoUri }} style={styles.orgLogo} resizeMode="contain" />
-            ) : (
-              <View style={[styles.orgLogo, { alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={styles.orgInitial}>
-                  {(item?.name || '?').trim().slice(0, 1).toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <Text style={styles.name} numberOfLines={2}>
-              {item?.name || '—'}
-            </Text>
-          </View>
-          <Text style={styles.type}>{item?.type === 'coach' ? tStr('directory_type_coach') : tStr('directory_type_gym')}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{tStr('directory_badge_fitengine')}</Text>
-          </View>
-          {ratingLine ? <Text style={styles.rating}>{ratingLine}</Text> : null}
-          {addr ? (
-            <Text style={styles.addr} numberOfLines={3}>
-              {addr}
-            </Text>
-          ) : null}
-          {mapsUrl ? (
+        <NeoPanel spark style={styles.cardNeo}>
+          <View style={styles.cardInner}>
+            <View style={styles.row}>
+              {logoUri ? (
+                <Image source={{ uri: logoUri }} style={styles.orgLogo} resizeMode="contain" />
+              ) : (
+                <View style={[styles.orgLogo, { alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={styles.orgInitial}>
+                    {(item?.name || '?').trim().slice(0, 1).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.name} numberOfLines={2}>
+                {item?.name || '—'}
+              </Text>
+            </View>
+            <Text style={styles.type}>{item?.type === 'coach' ? tStr('directory_type_coach') : tStr('directory_type_gym')}</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{tStr('directory_badge_fitengine')}</Text>
+            </View>
+            {ratingLine ? <Text style={styles.rating}>{ratingLine}</Text> : null}
+            {addr ? (
+              <Text style={styles.addr} numberOfLines={3}>
+                {addr}
+              </Text>
+            ) : null}
+            {mapsUrl ? (
+              <TouchableOpacity
+                style={styles.mapsLink}
+                onPress={() => void Linking.openURL(mapsUrl)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.mapsLinkText}>{tStr('directory_open_maps')}</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
-              style={styles.mapsLink}
-              onPress={() => void Linking.openURL(mapsUrl)}
+              style={styles.cta}
+              onPress={() => navigation.navigate('JoinWithInvite')}
               activeOpacity={0.85}
             >
-              <Text style={styles.mapsLinkText}>{tStr('directory_open_maps')}</Text>
+              <Text style={styles.ctaText}>{tStr('directory_cta_join_code')}</Text>
             </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            style={styles.cta}
-            onPress={() => navigation.navigate('JoinWithInvite')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.ctaText}>{tStr('directory_cta_join_code')}</Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </NeoPanel>
       );
     },
     [navigation, styles, tStr],
   );
 
   return (
-    <BackgroundWrapper screen="neutral">
+    <BackgroundWrapper screen="PublicDirectory" plan={plan}>
       <View style={styles.kav}>
         <View style={styles.head}>
           <LogoCompleto height={MOBILE_SIZES.localeControlHeight + MOBILE_SPACING.sm} />
@@ -325,7 +337,7 @@ export default function PublicDirectoryScreen() {
           value={filterText}
           onChangeText={setFilterText}
           placeholder={tStr('directory_search_placeholder')}
-          placeholderTextColor={fe.subText}
+          placeholderTextColor={t.placeholder ?? t.subText}
           autoCapitalize="none"
           autoCorrect={false}
         />
@@ -350,7 +362,7 @@ export default function PublicDirectoryScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator style={{ marginTop: MOBILE_SPACING.xxl + MOBILE_SPACING.lg }} color={fe.buttonBg} size="large" />
+          <ActivityIndicator style={{ marginTop: MOBILE_SPACING.xxl + MOBILE_SPACING.lg }} color={t.brand} size="large" />
         ) : errMsg ? (
           <Text style={styles.err}>{errMsg}</Text>
         ) : (
@@ -367,7 +379,7 @@ export default function PublicDirectoryScreen() {
             ListFooterComponent={
               loadingMore ? (
                 <View style={styles.listFooter}>
-                  <ActivityIndicator color={fe.buttonBg} />
+                  <ActivityIndicator color={t.brand} />
                 </View>
               ) : null
             }

@@ -100,7 +100,8 @@ export default function BackgroundWrapper({
     screenLower.includes('trabajodeldia') ||
     screenLower.includes('admin') ||
     screenLower.includes('clientscreen') ||
-    screenLower.includes('clienttabs');
+    screenLower.includes('clienttabs') ||
+    screenLower.includes('publicdirectory');
 
   const useOrgBackground =
     orgForBackground &&

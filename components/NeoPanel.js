@@ -31,6 +31,29 @@ export function ensureNeoPanelWebCss() {
 @keyframes fitengine-neo-spark-spin {
   to { transform: rotate(360deg); }
 }
+@keyframes fitengine-neo-spark-sweep {
+  0%, 100% {
+    box-shadow:
+      0 0 14px rgba(0, 245, 255, 0.35),
+      0 0 4px rgba(255, 248, 200, 0.25),
+      inset 0 0 0 1px rgba(0, 245, 255, 0.14);
+    border-color: rgba(0, 245, 255, 0.55) !important;
+  }
+  45% {
+    box-shadow:
+      0 0 32px rgba(255, 230, 120, 0.55),
+      0 0 22px rgba(0, 245, 255, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 245, 200, 0.85) !important;
+  }
+  55% {
+    box-shadow:
+      0 0 38px rgba(255, 120, 60, 0.45),
+      0 0 18px rgba(0, 245, 255, 0.5),
+      inset 0 0 0 1px rgba(255, 200, 80, 0.2);
+    border-color: rgba(255, 180, 90, 0.9) !important;
+  }
+}
 .${FITENGINE_NEO_PANEL_CLASS} {
   animation: fitengine-neo-sweep 3.5s ease-in-out infinite;
 }
@@ -38,19 +61,29 @@ export function ensureNeoPanelWebCss() {
   position: relative;
   overflow: visible;
   isolation: isolate;
-  animation: fitengine-neo-sweep 2.8s ease-in-out infinite;
+  animation: fitengine-neo-spark-sweep 2.4s ease-in-out infinite;
 }
 .${FITENGINE_NEO_PANEL_SPARK_CLASS}::before {
   content: '';
   position: absolute;
-  inset: -3px;
+  inset: -5px;
   border-radius: inherit;
-  padding: 2px;
-  background: conic-gradient(from 0deg, rgba(0,245,255,0.08), rgba(0,245,255,0.72), rgba(0,245,255,0.22), rgba(0,245,255,0.06));
+  padding: 3px;
+  background: conic-gradient(
+    from 210deg,
+    rgba(0,245,255,0.05),
+    rgba(0,245,255,0.25),
+    rgba(255,255,240,1),
+    rgba(255,210,80,0.98),
+    rgba(255,85,40,0.92),
+    rgba(0,245,255,0.55),
+    rgba(0,245,255,0.08),
+    rgba(0,245,255,0.05)
+  );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: fitengine-neo-spark-spin 5.5s linear infinite;
+  animation: fitengine-neo-spark-spin 2.6s linear infinite;
   will-change: transform;
   pointer-events: none;
   z-index: 0;
@@ -73,9 +106,9 @@ function nativeHalo(brand, spark) {
   return {
     shadowColor: glow,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: spark ? 0.38 : 0.24,
-    shadowRadius: spark ? MOBILE_SPACING.xl : MOBILE_RADII.lg,
-    elevation: spark ? 9 : 7,
+    shadowOpacity: spark ? 0.52 : 0.24,
+    shadowRadius: spark ? MOBILE_SPACING.xl + 4 : MOBILE_RADII.lg,
+    elevation: spark ? 11 : 7,
   };
 }
 
