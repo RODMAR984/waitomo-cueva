@@ -49,6 +49,7 @@ import { fetchLatestUserAbono } from '../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
 import { evaluateWorkoutEntitlement } from '../utils/clientWorkoutEntitlement';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -162,7 +163,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         tabRow: {
           backgroundColor: t.inactiveTabBg,
           borderColor: t.overlayBorder,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           flexDirection: 'row',
           marginBottom: 16,
@@ -229,7 +230,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         blockTypeTag: {
           borderColor: t.overlayBorder,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           paddingHorizontal: 8,
           paddingVertical: 2,
@@ -276,7 +277,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         videoThumb: {
           alignItems: 'center',
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginRight: 8,
           marginTop: 8,
@@ -297,7 +298,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         coachNotesContainer: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginTop: 8,
           padding: 10,
@@ -335,7 +336,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         button: {
           alignItems: 'center',
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           minWidth: 120,
           paddingHorizontal: 16,
           paddingVertical: 10,
@@ -385,7 +386,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         accordionHeader: {
           alignItems: 'center',
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -396,7 +397,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         existingRMsContainer: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginBottom: 16,
           padding: 10,
@@ -421,7 +422,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         chatScrollView: { flex: 1 },
         chatContentContainer: { flexGrow: 1, justifyContent: 'flex-end', paddingVertical: 10 },
         chatSubtitle: { color: t.subText, fontSize: 14, fontStyle: 'italic', marginBottom: 15 },
-        messageBubble: { borderRadius: 10, marginVertical: 5, maxWidth: '80%', padding: 10 },
+        messageBubble: { borderRadius: MOBILE_RADII.sm, marginVertical: 5, maxWidth: '80%', padding: 10 },
         userMessage: { alignSelf: 'flex-end', backgroundColor: hexToRgba(t.brand, 0.18), marginLeft: '20%' },
         adminMessage: { alignSelf: 'flex-start', backgroundColor: t.boxBg, marginRight: '20%' },
         messageText: { color: t.text, fontSize: 14 },
@@ -429,7 +430,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         messageUser: { color: t.brand2, fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
         messageHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
         scopeTag: {
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           paddingHorizontal: 8,
@@ -452,7 +453,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         chatInput: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           color: t.text,
           flex: 1,
@@ -464,7 +465,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         chatSendButton: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderColor: t.overlayBorder,
           height: 40,
           justifyContent: 'center',

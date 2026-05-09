@@ -20,6 +20,7 @@ import BackNavButton from '../components/BackNavButton';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 // ---------- screen ----------
 export default function ReservaClaseScreen({ route, navigation }) {
@@ -70,7 +71,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
         confirmar: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           marginBottom: 10,
           padding: 14,
         },
@@ -78,10 +79,10 @@ export default function ReservaClaseScreen({ route, navigation }) {
         horaBtn: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           margin: 5,
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingVertical: 10,
         },
         horaBtnSelected: {
@@ -104,7 +105,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
         },
         panel: {
           borderRadius: WEB_PANEL_RADIUS,
-          padding: 24,
+          padding: MOBILE_SPACING.xxl,
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1,
@@ -118,7 +119,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
           backgroundColor: t.bg,
           flexGrow: 1,
           justifyContent: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 40,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
