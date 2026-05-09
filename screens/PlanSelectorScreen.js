@@ -1,7 +1,7 @@
 // screens/PlanSelectorScreen.js — Planes por org + marca (logo, fondo org, saludo opcional)
 // Waitomo Dark Only | Fase 3: planes desde Supabase por organization_id; fallback a lista fija
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Animated,
   ActivityIndicator,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,15 +21,8 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { resolveOrgLogoUri } from '../utils/resolveOrgLogoUri';
-
-const hexToRgba = (hex, alpha = 1) => {
-  const clean = String(hex).replace('#', '');
-  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
-  const r = parseInt(full.slice(0, 2), 16) || 0;
-  const g = parseInt(full.slice(2, 4), 16) || 0;
-  const b = parseInt(full.slice(4, 6), 16) || 0;
-  return `rgba(${r},${g},${b},${alpha})`;
-};
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const FALLBACK_PLAN_IDS = [
   { id: 'cross', active: true },
@@ -42,20 +36,17 @@ const FALLBACK_PLAN_IDS = [
   { id: 'pase_total', active: true },
 ];
 
-const MAX_CARDS = 12;
-const animatedValues = (() => {
-  const arr = [];
-  for (let i = 0; i < MAX_CARDS; i++) arr.push(new Animated.Value(1));
-  return arr;
-})();
-
 export default function PlanSelectorScreen({ navigation, route }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = width >= WEB_DESKTOP_BREAKPOINT;
+  const isTablet = width >= 760 && width < WEB_DESKTOP_BREAKPOINT;
   const { profile, organization, session, initialProfileSyncDone } = useAuth() || {};
   const [plansFromApi, setPlansFromApi] = useState([]);
   const [loading, setLoading] = useState(true);
+  const pulseValuesRef = useRef([]);
 
   /** Perfil y objeto org pueden desfasarse un frame tras invitación / refresh: unificar para no mostrar grilla Waitomo legacy. */
   const effectiveOrgId = profile?.organization_id || organization?.id || null;
@@ -127,32 +118,6 @@ export default function PlanSelectorScreen({ navigation, route }) {
     return FALLBACK_PLAN_IDS;
   }, [plansFromApi, effectiveOrgId, sessionUserId]);
 
-  useEffect(() => {
-    displayPlans.forEach((plan, index) => {
-      if (index < animatedValues.length && plan.active) startPulseAnimation(index);
-    });
-    return () => {
-      animatedValues.forEach((value) => value.stopAnimation?.());
-    };
-  }, [displayPlans.length]);
-
-  const startPulseAnimation = (index) => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValues[index], {
-          toValue: 1.04,
-          duration: 1100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValues[index], {
-          toValue: 1,
-          duration: 1100,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  };
-
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -161,20 +126,23 @@ export default function PlanSelectorScreen({ navigation, route }) {
         },
         scroll: {
           flexGrow: 1,
-          paddingHorizontal: 16,
-          paddingTop: 12,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          paddingTop: MOBILE_SPACING.md,
           paddingBottom: 80,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         topBrandRow: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 14,
+          marginBottom: MOBILE_SPACING.md + 2,
           minHeight: 44,
         },
         logoSmall: { width: 120, height: 40, marginRight: 0 },
         orgNameCompact: {
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           textAlign: 'center',
           maxWidth: '90%',
@@ -183,17 +151,17 @@ export default function PlanSelectorScreen({ navigation, route }) {
           color: t.text,
           textAlign: 'center',
           fontWeight: '800',
-          fontSize: 20,
-          marginBottom: 8,
-          paddingHorizontal: 8,
+          fontSize: MOBILE_TYPE.title,
+          marginBottom: MOBILE_SPACING.sm,
+          paddingHorizontal: MOBILE_SPACING.sm,
         },
         orgMessage: {
           color: t.subText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           lineHeight: 20,
           textAlign: 'center',
-          marginBottom: 16,
-          paddingHorizontal: 8,
+          marginBottom: MOBILE_SPACING.lg,
+          paddingHorizontal: MOBILE_SPACING.sm,
           maxWidth: 420,
           alignSelf: 'center',
         },
@@ -201,93 +169,117 @@ export default function PlanSelectorScreen({ navigation, route }) {
           color: t.subText,
           textAlign: 'center',
           fontWeight: '700',
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.caption,
           letterSpacing: 0.8,
-          marginBottom: 14,
+          marginBottom: MOBILE_SPACING.md + 2,
           textTransform: 'uppercase',
         },
         header: {
           color: t.subText,
           textAlign: 'center',
           fontWeight: 'bold',
-          fontSize: 18,
-          marginBottom: 20,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          marginBottom: MOBILE_SPACING.xl,
         },
-        row: {
+        loadingWrap: {
+          minHeight: 420,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: MOBILE_SPACING.xxl,
+        },
+        loadingText: {
+          color: t.subText,
+          marginTop: MOBILE_SPACING.md + 2,
+          fontSize: MOBILE_TYPE.body,
+          textAlign: 'center',
+        },
+        grid: {
           flexDirection: 'row',
-          justifyContent: 'space-between',
-          marginBottom: 10,
+          flexWrap: 'wrap',
+          marginHorizontal: -MOBILE_SPACING.sm,
         },
         cardWrapper: {
-          flex: 1,
+          width: isWebDesktop ? '33.333%' : isTablet ? '50%' : '100%',
+          paddingHorizontal: MOBILE_SPACING.sm,
+          marginBottom: MOBILE_SPACING.md,
         },
         card: {
           alignItems: 'center',
           justifyContent: 'center',
-          height: 120,
-          margin: 8,
-          padding: 20,
-          borderRadius: 18,
-          borderWidth: 2.5,
+          minHeight: isWebDesktop ? 132 : 118,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          paddingVertical: MOBILE_SPACING.md + 2,
+          borderRadius: MOBILE_RADII.lg,
+          borderWidth: 1,
           backgroundColor: t.boxBg,
-          borderColor: t.borderStrong,
-          shadowColor: t.borderStrong,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.6,
-          shadowRadius: 16,
-          elevation: 10,
+          borderColor: t.overlayBorder,
         },
         cardDisabled: {
-          opacity: 0.4,
+          opacity: 0.5,
           borderStyle: 'dashed',
         },
         title: {
-          color: t.brand,
-          fontSize: 16,
+          color: t.text,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           textAlign: 'center',
-          marginTop: 4,
-          textShadowColor: hexToRgba(t.brand, 0.6),
-          textShadowRadius: 12,
+          marginTop: 2,
         },
         subtitle: {
           color: t.subText,
-          fontSize: 12,
-          marginTop: 6,
+          fontSize: MOBILE_TYPE.caption,
+          marginTop: MOBILE_SPACING.sm,
           textAlign: 'center',
         },
         emptyWrap: {
-          paddingVertical: 32,
-          paddingHorizontal: 20,
+          paddingVertical: MOBILE_SPACING.xxl + MOBILE_SPACING.sm,
+          paddingHorizontal: MOBILE_SPACING.xl,
           alignItems: 'center',
         },
         emptyTitle: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '700',
           textAlign: 'center',
-          marginBottom: 10,
+          marginBottom: MOBILE_SPACING.sm + 2,
         },
         emptyHint: {
           color: t.subText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           textAlign: 'center',
           lineHeight: 20,
         },
         skipLink: {
-          marginTop: 20,
+          marginTop: MOBILE_SPACING.xl,
           alignItems: 'center',
-          paddingVertical: 10,
+          paddingVertical: MOBILE_SPACING.sm + 2,
         },
         skipLinkText: {
           color: t.brand,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
         },
+        noOrgCta: {
+          marginTop: MOBILE_SPACING.xl - 2,
+          alignSelf: 'stretch',
+          maxWidth: 320,
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.xl - 2,
+          borderRadius: MOBILE_RADII.md,
+          backgroundColor: t.brand,
+        },
+        noOrgCtaText: {
+          color: '#fff',
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '800',
+        },
         homeAbonoCard: {
-          marginBottom: 18,
-          padding: 16,
-          borderRadius: 18,
+          marginBottom: MOBILE_SPACING.xl - 2,
+          padding: MOBILE_SPACING.lg,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
@@ -301,29 +293,29 @@ export default function PlanSelectorScreen({ navigation, route }) {
         },
         homeAbonoPlan: {
           color: t.text,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
-          marginTop: 8,
+          marginTop: MOBILE_SPACING.sm,
         },
         homeAbonoHint: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 17,
-          marginTop: 8,
+          marginTop: MOBILE_SPACING.sm,
         },
         homeAbonoRow: {
-          marginTop: 12,
+          marginTop: MOBILE_SPACING.md,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         },
         homeAbonoCta: {
           color: t.brand,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '800',
         },
       }),
-    [t],
+    [t, isWebDesktop, isTablet],
   );
 
   const goToPlan = (plan) => {
@@ -343,9 +335,6 @@ export default function PlanSelectorScreen({ navigation, route }) {
   };
 
   const renderPlanCard = (plan, index) => {
-    const animatedStyle = {
-      transform: [{ scale: index < animatedValues.length ? animatedValues[index] : animatedValues[0] }],
-    };
     const key = `${plan.id}_${index}`;
     const disabled = !plan.active;
     const titleKey = `plan_${plan.id}_title`;
@@ -357,9 +346,9 @@ export default function PlanSelectorScreen({ navigation, route }) {
 
     return (
       <View key={key} style={styles.cardWrapper}>
-        <Animated.View style={animatedStyle}>
+        <Animated.View style={{ transform: [{ scale: pulseValuesRef.current[index] || 1 }] }}>
           <TouchableOpacity
-            activeOpacity={0.9}
+            activeOpacity={0.88}
             onPress={() => goToPlan(planWithTitle)}
             disabled={disabled}
             style={[styles.card, disabled && styles.cardDisabled]}
@@ -372,26 +361,38 @@ export default function PlanSelectorScreen({ navigation, route }) {
     );
   };
 
-  const planPairs = [];
-  for (let i = 0; i < displayPlans.length; i += 2) {
-    planPairs.push(displayPlans.slice(i, i + 2));
-  }
-
   const hasPlanStored = !!(profile?.plan_actual && String(profile.plan_actual).trim());
-  const showSkipToPanel = !!session?.user?.id && !hasPlanStored;
+  const showSkipToPanel = !!session?.user?.id && !hasPlanStored && !!effectiveOrgId;
+
+  useEffect(() => {
+    const values = displayPlans.map((_, i) => pulseValuesRef.current[i] || new Animated.Value(1));
+    pulseValuesRef.current = values;
+    const loops = values.map((v, i) => {
+      if (displayPlans[i]?.active === false) return null;
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(v, { toValue: 1.025, duration: 900, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 1, duration: 900, useNativeDriver: true }),
+        ]),
+      );
+    });
+    loops.forEach((l) => l?.start());
+    return () => loops.forEach((l) => l?.stop());
+  }, [displayPlans]);
 
   return (
     <BackgroundWrapper screen={backdropScreen}>
       <View style={styles.root}>
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: Math.max(insets.top, 12) + 8 }]}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingTop: Math.max(insets.top, MOBILE_SPACING.md) + MOBILE_SPACING.sm },
+          ]}
         >
           {waitingOrgForAuthedUser ? (
-            <View style={{ minHeight: 420, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+            <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color={t.brand} />
-              <Text style={{ color: t.subText, marginTop: 14, fontSize: 14, textAlign: 'center' }}>
-                {tStr('common_loading')}
-              </Text>
+              <Text style={styles.loadingText}>{tStr('common_loading')}</Text>
             </View>
           ) : null}
 
@@ -414,7 +415,7 @@ export default function PlanSelectorScreen({ navigation, route }) {
           ) : null}
 
           {!waitingOrgForAuthedUser && !showOrgHeader ? (
-            <Text style={[styles.header, { marginTop: 8 }]}>{tStr('plan_selector_header')}</Text>
+            <Text style={[styles.header, { marginTop: MOBILE_SPACING.sm }]}>{tStr('plan_selector_header')}</Text>
           ) : null}
 
           {!waitingOrgForAuthedUser && clientHome && sessionUserId ? (
@@ -475,13 +476,27 @@ export default function PlanSelectorScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          {!waitingOrgForAuthedUser && !loading && displayPlans.length > 0
-            ? planPairs.map((pair, rowIndex) => (
-                <View key={`row_${rowIndex}`} style={styles.row}>
-                  {pair.map((p, idx) => renderPlanCard(p, rowIndex * 2 + idx))}
-                </View>
-              ))
-            : null}
+          {!waitingOrgForAuthedUser &&
+          !loading &&
+          !!sessionUserId &&
+          !effectiveOrgId &&
+          displayPlans.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyTitle}>{tStr('plan_selector_no_org_title')}</Text>
+              <Text style={styles.emptyHint}>{tStr('plan_selector_no_org_hint')}</Text>
+              <TouchableOpacity
+                style={styles.noOrgCta}
+                activeOpacity={0.88}
+                onPress={() => navigation.navigate('JoinWithInvite')}
+              >
+                <Text style={styles.noOrgCtaText}>{tStr('plan_selector_no_org_cta')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {!waitingOrgForAuthedUser && !loading && displayPlans.length > 0 ? (
+            <View style={styles.grid}>{displayPlans.map((p, idx) => renderPlanCard(p, idx))}</View>
+          ) : null}
 
           {!waitingOrgForAuthedUser && showSkipToPanel ? (
             <TouchableOpacity

@@ -1,6 +1,6 @@
 // Unirse a un gym con código — shell FitEngine (misma línea que Login / Crear cuenta).
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,14 +18,20 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import LogoCompleto from '../components/LogoCompleto';
 import LogoTriangleBackground from '../components/LogoTriangleBackground';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
-import { setPendingClientInviteCode } from '../utils/pendingClientInviteStorage';
+import {
+  setPendingClientInviteCode,
+  getPendingClientInviteCode,
+} from '../utils/pendingClientInviteStorage';
 import { supabase } from '../supabaseClient';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function JoinWithInviteCodeScreen() {
   const navigation = useNavigation();
@@ -36,43 +42,81 @@ export default function JoinWithInviteCodeScreen() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const pending = await getPendingClientInviteCode();
+      if (cancelled || !pending) return;
+      setCode((prev) => (String(prev || '').trim() ? prev : String(pending).toUpperCase()));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        kav: { flex: 1, paddingHorizontal: 20, paddingTop: Math.max(insets.top, 12) + 8 },
+        kav: {
+          flex: 1,
+          paddingHorizontal: MOBILE_SPACING.xl,
+          paddingTop: Math.max(insets.top, MOBILE_SPACING.md) + MOBILE_SPACING.sm,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
+        },
         outer: { flex: 1, justifyContent: 'center' },
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
         },
-        title: { color: fe.subText, fontSize: 22, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
-        hint: { color: fe.subText, fontSize: 14, lineHeight: 20, marginBottom: 18, textAlign: 'center', opacity: 0.95 },
+        title: {
+          color: fe.subText,
+          fontSize: MOBILE_TYPE.title,
+          fontWeight: '800',
+          marginBottom: MOBILE_SPACING.sm,
+          textAlign: 'center',
+        },
+        hint: {
+          color: fe.subText,
+          fontSize: MOBILE_TYPE.body,
+          lineHeight: 20,
+          marginBottom: MOBILE_SPACING.xl - 2,
+          textAlign: 'center',
+          opacity: 0.95,
+        },
         input: {
           borderWidth: 1,
           borderColor: fe.panelBorder,
-          borderRadius: 12,
-          padding: 14,
+          borderRadius: MOBILE_RADII.sm,
+          paddingHorizontal: MOBILE_SPACING.md,
+          paddingVertical: MOBILE_SPACING.md,
           color: fe.text,
           backgroundColor: fe.inputBg,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.title - 4,
           fontWeight: '700',
           letterSpacing: 1,
-          marginBottom: 16,
+          marginBottom: MOBILE_SPACING.lg,
+          minHeight: MOBILE_SIZES.controlHeight,
         },
         primary: {
           alignItems: 'center',
-          paddingVertical: 16,
-          borderRadius: 12,
+          justifyContent: 'center',
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          borderRadius: MOBILE_RADII.sm,
           backgroundColor: fe.buttonBg,
           borderWidth: 1,
           borderColor: fe.buttonBorder,
         },
-        primaryText: { color: fe.buttonText, fontSize: 16, fontWeight: '800' },
-        link: { marginTop: 18, alignItems: 'center' },
-        linkText: { color: fe.subText, fontSize: 15, fontWeight: '600', textDecorationLine: 'underline' },
+        primaryText: { color: fe.buttonText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
+        link: { marginTop: MOBILE_SPACING.xl - 2, alignItems: 'center' },
+        linkText: { color: fe.subText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '600', textDecorationLine: 'underline' },
+        brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
     [insets.top]
   );
@@ -142,12 +186,13 @@ export default function JoinWithInviteCodeScreen() {
         >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.kav}>
-            <View style={{ width: '100%', alignItems: 'center', marginBottom: 14 }}>
+            <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
               <LogoCompleto height={52} />
-              <Text style={{ color: fe.subText, fontSize: 11, marginTop: 4 }}>powered by WAITOMO</Text>
+              <Text style={styles.brandPowered}>powered by WAITOMO</Text>
             </View>
             <View style={styles.outer}>
               <View style={styles.panel}>
+                <BackNavButton onPress={() => navigation.goBack()} />
                 <Text style={styles.title}>{tStr('invite_title')}</Text>
                 <Text style={styles.hint}>{tStr('invite_hint')}</Text>
                 <TextInput

@@ -17,6 +17,8 @@ import {
   Share,
   Switch,
   useWindowDimensions,
+  Linking,
+  Pressable,
 } from 'react-native';
 import { useNavigation, useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,11 +36,12 @@ import { imageUriToArrayBuffer } from '../utils/imageUriToArrayBuffer';
 import LogoCompleto from '../components/LogoCompleto';
 import * as Clipboard from 'expo-clipboard';
 import { generateClientInviteCode } from '../utils/clientInviteCode';
-import { buildClientInvitePublicLink } from '../utils/fitengineUrls';
+import { buildClientInvitePublicLink, getFitEngineUrls } from '../utils/fitengineUrls';
 import { FULL_HEX_CHOICE_GYM } from '../utils/gymColorPalette';
 import { DEFAULT_CLIENT_PAYMENT_COPY } from '../utils/clientPaymentMethods';
 import { draftMessageWithAi } from '../utils/aiAssistant';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -51,6 +54,23 @@ const hexToRgba = (hex, alpha) => {
 
 const BUCKET_ORG_LOGOS = 'org-logos';
 const BUCKET_ORG_BACKGROUNDS = 'org-backgrounds';
+
+/** Versión del aviso de publicación en directorio (persistida en `features`). Subir y pedir re-aceptación al cambiar texto legal. */
+const PUBLIC_DIRECTORY_TERMS_DOC_VERSION = 'v2';
+
+function directoryListingTermsComplete(org, docVersion) {
+  const f =
+    org?.features && typeof org.features === 'object' && !Array.isArray(org.features) ? org.features : {};
+  return !!f.public_directory_terms_v1 && String(f.public_directory_terms_doc_version || '') === String(docVersion);
+}
+
+function generatePlacesAutocompleteSessionToken() {
+  let s = '';
+  for (let i = 0; i < 32; i += 1) {
+    s += Math.floor(Math.random() * 16).toString(16);
+  }
+  return s;
+}
 
 
 const TEXT_PALETTES_GYM = [
@@ -121,6 +141,9 @@ function gymConfigBaselineString(org) {
     medical: { mode: medMode, grace_days: medGrace },
     freezeEn: !!org.membership_freeze_enabled,
     freezeDays,
+    pubDir: !!org.public_directory_enabled,
+    placeId: (org.google_place_id || '').trim(),
+    pubDirAck: directoryListingTermsComplete(org, PUBLIC_DIRECTORY_TERMS_DOC_VERSION),
   });
 }
 
@@ -153,6 +176,9 @@ function gymConfigStateStringFromLocals(p) {
     validSurfaceColor,
     validBorderColor,
     validOverlayColor,
+    publicDirectoryEnabled,
+    googlePlaceId,
+    publicDirectoryTermsAck,
   } = p;
 
   const maxRaw = (membershipFreezeMaxDays || '').trim();
@@ -196,6 +222,9 @@ function gymConfigStateStringFromLocals(p) {
     medical: { mode: medMode, grace_days: medGrace },
     freezeEn: !!membershipFreezeEnabled,
     freezeDays,
+    pubDir: !!publicDirectoryEnabled,
+    placeId: (googlePlaceId || '').trim(),
+    pubDirAck: !!publicDirectoryTermsAck,
   });
 }
 
@@ -206,7 +235,7 @@ export default function GymConfigScreen() {
   const navigation = useNavigation();
   const hideInlineBack = useStaffWebHideInlineBack();
   const { t, mode } = useThemeContext();
-  const { t: tStr } = useLocale();
+  const { t: tStr, locale } = useLocale();
   const { user, profile, organization, refreshOrganization } = useAuth() || {};
   const orgId = organization?.id || profile?.organization_id;
 
@@ -273,6 +302,21 @@ export default function GymConfigScreen() {
       ? String(Math.max(1, Number(organization.membership_freeze_max_days)))
       : '',
   );
+  const [publicDirectoryEnabled, setPublicDirectoryEnabled] = useState(
+    !!organization?.public_directory_enabled,
+  );
+  const [googlePlaceId, setGooglePlaceId] = useState(
+    String(organization?.google_place_id || '').trim(),
+  );
+  const [publicDirectoryTermsAck, setPublicDirectoryTermsAck] = useState(() =>
+    directoryListingTermsComplete(organization, PUBLIC_DIRECTORY_TERMS_DOC_VERSION),
+  );
+  const [placeSyncBusy, setPlaceSyncBusy] = useState(false);
+  const [placeAutocompleteQuery, setPlaceAutocompleteQuery] = useState('');
+  const [placePredictions, setPlacePredictions] = useState([]);
+  const [placeAutocompleteLoading, setPlaceAutocompleteLoading] = useState(false);
+  const placeAutocompleteSessionRef = useRef(generatePlacesAutocompleteSessionToken());
+  const placeAutocompleteTimerRef = useRef(null);
   /** Paleta completa plegada por defecto (menos invasiva). */
   const [paletteOpenKey, setPaletteOpenKey] = useState(null);
   /** Una pestaña = un tema; solo se monta el panel activo (toda la config sigue en el mismo save). */
@@ -357,6 +401,13 @@ export default function GymConfigScreen() {
           ? String(Math.max(1, Number(organization.membership_freeze_max_days)))
           : '',
       );
+      setPublicDirectoryEnabled(!!organization.public_directory_enabled);
+      setGooglePlaceId(String(organization.google_place_id || '').trim());
+      const f = organization.features;
+      const feat = f && typeof f === 'object' && !Array.isArray(f) ? f : {};
+      setPublicDirectoryTermsAck(
+        directoryListingTermsComplete(organization, PUBLIC_DIRECTORY_TERMS_DOC_VERSION),
+      );
     }
   }, [
     organization?.id,
@@ -370,6 +421,8 @@ export default function GymConfigScreen() {
     organization?.text_color,
     organization?.membership_freeze_enabled,
     organization?.membership_freeze_max_days,
+    organization?.public_directory_enabled,
+    organization?.google_place_id,
   ]);
 
   // Android: atrás del sistema debe volver al panel, no cerrar la app si el stack quedó raro.
@@ -467,6 +520,9 @@ export default function GymConfigScreen() {
         validSurfaceColor,
         validBorderColor,
         validOverlayColor,
+        publicDirectoryEnabled,
+        googlePlaceId,
+        publicDirectoryTermsAck,
       })
     );
   }, [
@@ -500,7 +556,91 @@ export default function GymConfigScreen() {
     validSurfaceColor,
     validBorderColor,
     validOverlayColor,
+    publicDirectoryEnabled,
+    googlePlaceId,
+    publicDirectoryTermsAck,
   ]);
+
+  const onTogglePublicDirectory = useCallback(
+    (next) => {
+      if (next && !publicDirectoryTermsAck) {
+        Alert.alert(tStr('gym_config_perm_title'), tStr('gym_config_public_directory_must_ack'));
+        return;
+      }
+      setPublicDirectoryEnabled(next);
+      if (!next) setPublicDirectoryTermsAck(false);
+    },
+    [publicDirectoryTermsAck, tStr],
+  );
+
+  useEffect(() => {
+    placeAutocompleteSessionRef.current = generatePlacesAutocompleteSessionToken();
+    setPlacePredictions([]);
+    setPlaceAutocompleteQuery('');
+  }, [organization?.id]);
+
+  const openFitEngineTerms = useCallback(() => {
+    const u = getFitEngineUrls().termsUrl;
+    if (u) void Linking.openURL(u);
+  }, []);
+
+  const openFitEnginePrivacy = useCallback(() => {
+    const u = getFitEngineUrls().privacyUrl;
+    if (u) void Linking.openURL(u);
+  }, []);
+
+  const runPlacesAutocomplete = useCallback(
+    async (raw) => {
+      const q = String(raw || '').trim();
+      if (!orgId || !canEdit || gymConfigTab !== 'directory') return;
+      if (q.length < 2) {
+        setPlacePredictions([]);
+        return;
+      }
+      setPlaceAutocompleteLoading(true);
+      try {
+        const lang = locale === 'pt' ? 'pt' : locale === 'en' ? 'en' : 'es';
+        const { data, error } = await supabase.functions.invoke('places-autocomplete', {
+          body: {
+            organization_id: orgId,
+            input: q,
+            session_token: placeAutocompleteSessionRef.current,
+            language: lang,
+          },
+        });
+        if (error) throw error;
+        const list = Array.isArray(data?.predictions) ? data.predictions : [];
+        setPlacePredictions(list);
+      } catch (_) {
+        setPlacePredictions([]);
+      } finally {
+        setPlaceAutocompleteLoading(false);
+      }
+    },
+    [orgId, canEdit, gymConfigTab, locale],
+  );
+
+  useEffect(() => {
+    if (gymConfigTab !== 'directory') return undefined;
+    if (placeAutocompleteTimerRef.current) clearTimeout(placeAutocompleteTimerRef.current);
+    placeAutocompleteTimerRef.current = setTimeout(() => {
+      void runPlacesAutocomplete(placeAutocompleteQuery);
+    }, 360);
+    return () => {
+      if (placeAutocompleteTimerRef.current) clearTimeout(placeAutocompleteTimerRef.current);
+    };
+  }, [placeAutocompleteQuery, gymConfigTab, runPlacesAutocomplete]);
+
+  const onPickPlacePrediction = useCallback((item) => {
+    if (!item?.place_id) return;
+    setGooglePlaceId(String(item.place_id).trim());
+    const label =
+      item.description ||
+      [item.main_text, item.secondary_text].filter(Boolean).join(' · ');
+    setPlaceAutocompleteQuery(String(label || '').trim());
+    setPlacePredictions([]);
+    // Mismo session_token hasta Place Details (sync); Google agrupa la sesión de facturación.
+  }, []);
 
   usePreventRemove(
     gymConfigDirty,
@@ -640,6 +780,10 @@ export default function GymConfigScreen() {
       Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_timezone_invalid'));
       return;
     }
+    if (publicDirectoryEnabled && !publicDirectoryTermsAck) {
+      Alert.alert(tStr('gym_config_perm_title'), tStr('gym_config_public_directory_must_ack'));
+      return;
+    }
     setSaving(true);
     try {
       const prevFeatures =
@@ -682,6 +826,16 @@ export default function GymConfigScreen() {
             : 0,
       };
 
+      if (publicDirectoryEnabled) {
+        if (!prevFeatures.public_directory_terms_v1) {
+          prevFeatures.public_directory_terms_v1 = new Date().toISOString();
+        }
+        prevFeatures.public_directory_terms_doc_version = PUBLIC_DIRECTORY_TERMS_DOC_VERSION;
+      } else {
+        delete prevFeatures.public_directory_terms_v1;
+        delete prevFeatures.public_directory_terms_doc_version;
+      }
+
       const { error } = await supabase
         .from('organizations')
         .update({
@@ -696,6 +850,8 @@ export default function GymConfigScreen() {
           features: prevFeatures,
           membership_freeze_enabled: !!membershipFreezeEnabled,
           membership_freeze_max_days: membershipFreezeMaxDaysOut,
+          public_directory_enabled: !!publicDirectoryEnabled,
+          google_place_id: (googlePlaceId || '').trim() || null,
         })
         .eq('id', orgId);
       if (error) throw error;
@@ -765,6 +921,36 @@ export default function GymConfigScreen() {
     refreshOrganization,
     tStr,
   ]);
+
+  const syncGooglePlaceSummary = useCallback(async () => {
+    if (!orgId || !canEdit) return;
+    const pid = (googlePlaceId || '').trim();
+    if (!pid) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('gym_config_google_place_id_hint'));
+      return;
+    }
+    setPlaceSyncBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-google-place-summary', {
+        body: {
+          organization_id: orgId,
+          place_id: pid,
+          session_token: placeAutocompleteSessionRef.current,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        throw new Error(data.message || String(data.error));
+      }
+      if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
+      placeAutocompleteSessionRef.current = generatePlacesAutocompleteSessionToken();
+      Alert.alert(tStr('gym_config_saved_title'), tStr('gym_config_sync_google_ok'));
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_sync_google_fail'));
+    } finally {
+      setPlaceSyncBusy(false);
+    }
+  }, [orgId, canEdit, googlePlaceId, refreshOrganization, tStr]);
 
   const ensureOrRotateInviteCode = useCallback(async () => {
     if (!orgId || !canEdit) return;
@@ -941,47 +1127,47 @@ export default function GymConfigScreen() {
       StyleSheet.create({
         screen: {
           flex: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           paddingTop: 56,
           width: '100%',
           alignSelf: 'center',
           maxWidth: isWeb ? WEB_CONTENT_MAX_WIDTH : undefined,
         },
-        header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+        header: { flexDirection: 'row', alignItems: 'center', marginBottom: MOBILE_SPACING.xxl },
         backBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
-        title: { color: t.text, fontSize: 22, fontWeight: '800', marginLeft: 8 },
-        scroll: { paddingBottom: 40 },
+        title: { color: t.text, fontSize: MOBILE_TYPE.title, fontWeight: '800', marginLeft: MOBILE_SPACING.sm },
+        scroll: { paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg },
         tabBarWrap: {
           flexDirection: 'row',
           flexWrap: 'wrap',
           alignItems: 'flex-start',
-          marginBottom: 14,
-          gap: 8,
+          marginBottom: MOBILE_SPACING.md + 2,
+          gap: MOBILE_SPACING.sm,
         },
         tabChip: {
-          paddingVertical: 8,
-          paddingHorizontal: 12,
-          borderRadius: 999,
+          paddingVertical: MOBILE_SPACING.sm,
+          paddingHorizontal: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
         },
         tabChipActive: { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.14) },
-        tabChipText: { color: t.subText, fontSize: 13, fontWeight: '700' },
+        tabChipText: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         tabChipTextActive: { color: t.brand },
-        sectionHeading: { color: t.text, fontSize: 18, fontWeight: '800', marginBottom: 8 },
-        sectionIntro: { color: t.subText, fontSize: 13, lineHeight: 19, marginBottom: 18 },
-        subHeading: { color: t.text, fontSize: 15, fontWeight: '800', marginBottom: 10 },
-        block: { marginBottom: 20 },
-        label: { color: t.subText, fontSize: 13, marginBottom: 8, fontWeight: '600' },
+        sectionHeading: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', marginBottom: MOBILE_SPACING.sm },
+        sectionIntro: { color: t.subText, fontSize: MOBILE_TYPE.caption, lineHeight: 19, marginBottom: MOBILE_SPACING.xl - 2 },
+        subHeading: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', marginBottom: MOBILE_SPACING.sm + 2 },
+        block: { marginBottom: MOBILE_SPACING.xl },
+        label: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: MOBILE_SPACING.sm, fontWeight: '600' },
         input: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
-          padding: 12,
+          borderRadius: MOBILE_RADII.sm,
+          padding: MOBILE_SPACING.md,
           color: t.text,
           backgroundColor: t.inputBg,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         logoWrap: {
           width: 100,
@@ -995,41 +1181,56 @@ export default function GymConfigScreen() {
           overflow: 'hidden',
         },
         logoImg: { width: '100%', height: '100%' },
-        logoBtn: { marginTop: 10, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: hexToRgba(t.brand, 0.2), borderRadius: 10, alignSelf: 'flex-start' },
-        logoBtnSpaced: { marginTop: 12 },
-        logoBtnText: { color: t.brand, fontSize: 14, fontWeight: '600' },
+        logoBtn: {
+          marginTop: MOBILE_SPACING.sm + 2,
+          paddingVertical: MOBILE_SPACING.sm,
+          paddingHorizontal: MOBILE_SPACING.md + 2,
+          backgroundColor: hexToRgba(t.brand, 0.2),
+          borderRadius: MOBILE_RADII.sm,
+          alignSelf: 'flex-start',
+        },
+        logoBtnSpaced: { marginTop: MOBILE_SPACING.md },
+        logoBtnText: { color: t.brand, fontSize: MOBILE_TYPE.body, fontWeight: '600' },
         onboardingCard: {
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           backgroundColor: t.boxBg,
-          padding: 12,
-          marginTop: 8,
+          padding: MOBILE_SPACING.md,
+          marginTop: MOBILE_SPACING.sm,
         },
-        onboardingTitle: { color: t.text, fontSize: 15, fontWeight: '800', marginBottom: 6 },
-        onboardingHint: { color: t.subText, fontSize: 12, lineHeight: 17, marginBottom: 10 },
-        onboardingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-        onboardingBtnRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-        saveBtn: { ...t.buttonPrimary, borderRadius: 10, paddingVertical: 14, marginTop: 18, alignItems: 'center' },
-        saveBtnText: { ...t.buttonPrimaryText, fontSize: 16 },
-        hint: { color: t.placeholder, fontSize: 12, marginTop: 6 },
+        onboardingTitle: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', marginBottom: MOBILE_SPACING.sm },
+        onboardingHint: { color: t.subText, fontSize: MOBILE_TYPE.caption, lineHeight: 17, marginBottom: MOBILE_SPACING.sm + 2 },
+        onboardingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: MOBILE_SPACING.sm + 2 },
+        onboardingBtnRow: { flexDirection: 'row', flexWrap: 'wrap', gap: MOBILE_SPACING.sm, marginTop: MOBILE_SPACING.sm + 2 },
+        saveBtn: {
+          ...t.buttonPrimary,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          paddingVertical: MOBILE_SPACING.md,
+          marginTop: MOBILE_SPACING.xl - 2,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        saveBtnText: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
+        hint: { color: t.placeholder, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.sm },
         previewCard: {
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
-          padding: 14,
-          marginTop: 6,
+          padding: MOBILE_SPACING.md + 2,
+          marginTop: MOBILE_SPACING.sm,
         },
-        previewTitle: { fontSize: 14, fontWeight: '700', marginBottom: 10 },
+        previewTitle: { fontSize: MOBILE_TYPE.body, fontWeight: '700', marginBottom: MOBILE_SPACING.sm + 2 },
         previewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-        previewBadge: { borderRadius: 8, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1 },
-        previewBadgeText: { fontSize: 13, fontWeight: '700' },
+        previewBadge: { borderRadius: MOBILE_RADII.sm, paddingVertical: 7, paddingHorizontal: MOBILE_SPACING.md, borderWidth: 1 },
+        previewBadgeText: { fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         liveSimBlock: {
-          borderRadius: 14,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
-          padding: 12,
-          marginBottom: 6,
+          padding: MOBILE_SPACING.md,
+          marginBottom: MOBILE_SPACING.sm,
         },
         liveLegendWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10, marginBottom: 8 },
         liveLegendItem: {
@@ -1050,28 +1251,28 @@ export default function GymConfigScreen() {
         paletteRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, width: '100%' },
         paletteBtn: {
           borderWidth: 1,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           paddingVertical: 9,
-          paddingHorizontal: 10,
+          paddingHorizontal: MOBILE_SPACING.sm + 2,
           minWidth: 92,
-          marginRight: 8,
-          marginBottom: 8,
+          marginRight: MOBILE_SPACING.sm,
+          marginBottom: MOBILE_SPACING.sm,
         },
         paletteSwatches: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
         paletteDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, marginRight: 6 },
-        paletteLabel: { fontSize: 12, fontWeight: '700' },
+        paletteLabel: { fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         bgPreviewWrap: {
           width: '100%',
           height: 120,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          marginTop: 10,
-          marginBottom: 6,
+          marginTop: MOBILE_SPACING.sm + 2,
+          marginBottom: MOBILE_SPACING.sm,
         },
         bgPreviewImg: { width: '100%', height: '100%' },
         colorGridScroll: { maxHeight: 280, marginTop: 8 },
@@ -1081,15 +1282,15 @@ export default function GymConfigScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 11,
-          paddingHorizontal: 12,
-          borderRadius: 10,
+          paddingHorizontal: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
-          marginTop: 8,
+          marginTop: MOBILE_SPACING.sm,
         },
-        paletteToggleLabel: { flex: 1, marginLeft: 8, color: t.text, fontSize: 14, fontWeight: '700' },
-        paletteToggleHint: { color: t.placeholder, fontSize: 12, marginRight: 8 },
+        paletteToggleLabel: { flex: 1, marginLeft: MOBILE_SPACING.sm, color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '700' },
+        paletteToggleHint: { color: t.placeholder, fontSize: MOBILE_TYPE.caption, marginRight: MOBILE_SPACING.sm },
         palettePreviewSwatch: {
           width: 22,
           height: 22,
@@ -1209,6 +1410,7 @@ export default function GymConfigScreen() {
             ['medical', 'gym_config_tab_medical'],
             ['membership', 'gym_config_tab_membership'],
             ['invites', 'gym_config_tab_invites'],
+            ['directory', 'gym_config_tab_directory'],
             ['appearance', 'gym_config_tab_appearance'],
             ['branding', 'gym_config_tab_branding'],
           ].map(([id, labelKey]) => {
@@ -1552,6 +1754,198 @@ export default function GymConfigScreen() {
             </View>
           ) : null}
         </View>
+        ) : null}
+
+        {gymConfigTab === 'directory' ? (
+          <View style={styles.block}>
+            <Text style={styles.hint}>{tStr('gym_config_directory_intro')}</Text>
+            {canEdit &&
+            publicDirectoryEnabled &&
+            organization?.features?.public_directory_terms_v1 &&
+            !directoryListingTermsComplete(organization, PUBLIC_DIRECTORY_TERMS_DOC_VERSION) ? (
+              <Text style={[styles.hint, { marginTop: 12, color: '#fbbf24', fontWeight: '700' }]}>
+                {tStr('gym_config_public_directory_reaccept_banner')}
+              </Text>
+            ) : null}
+            {canEdit ? (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 14 }}>
+                <TouchableOpacity
+                  onPress={() =>
+                    !(
+                      publicDirectoryEnabled &&
+                      directoryListingTermsComplete(organization, PUBLIC_DIRECTORY_TERMS_DOC_VERSION)
+                    ) && setPublicDirectoryTermsAck((v) => !v)
+                  }
+                  activeOpacity={0.75}
+                  disabled={
+                    !!publicDirectoryEnabled &&
+                    directoryListingTermsComplete(organization, PUBLIC_DIRECTORY_TERMS_DOC_VERSION)
+                  }
+                  style={{ marginRight: 10, marginTop: 2 }}
+                >
+                  <Ionicons
+                    name={publicDirectoryTermsAck ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={
+                      publicDirectoryEnabled &&
+                      directoryListingTermsComplete(organization, PUBLIC_DIRECTORY_TERMS_DOC_VERSION)
+                        ? t.subText
+                        : publicDirectoryTermsAck
+                          ? t.brand
+                          : t.subText
+                    }
+                  />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.hint,
+                      {
+                        opacity:
+                          publicDirectoryEnabled &&
+                          directoryListingTermsComplete(organization, PUBLIC_DIRECTORY_TERMS_DOC_VERSION)
+                            ? 0.75
+                            : 1,
+                      },
+                    ]}
+                  >
+                    {tStr('gym_config_public_directory_terms_label')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 8, gap: 4 }}>
+                    <Pressable onPress={openFitEngineTerms} hitSlop={6}>
+                      <Text style={{ color: t.brand, fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' }}>
+                        {tStr('gym_config_public_directory_link_terms')}
+                      </Text>
+                    </Pressable>
+                    <Text style={{ color: t.subText, fontSize: 13 }}>·</Text>
+                    <Pressable onPress={openFitEnginePrivacy} hitSlop={6}>
+                      <Text style={{ color: t.brand, fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' }}>
+                        {tStr('gym_config_public_directory_link_privacy')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <Text style={[styles.hint, { marginTop: 6, fontSize: 12 }]}>
+                    {tStr('gym_config_public_directory_terms_version').replace(
+                      '{{version}}',
+                      String(organization?.features?.public_directory_terms_doc_version || PUBLIC_DIRECTORY_TERMS_DOC_VERSION),
+                    )}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+            {publicDirectoryEnabled &&
+            organization?.features?.public_directory_terms_v1 &&
+            typeof organization.features.public_directory_terms_v1 === 'string' ? (
+              <Text style={[styles.hint, { marginTop: 8, fontSize: 12 }]}>
+                {tStr('gym_config_public_directory_terms_saved_hint').replace(
+                  '{{date}}',
+                  String(organization.features.public_directory_terms_v1).slice(0, 10),
+                )}
+              </Text>
+            ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+              <Text style={[styles.label, { flex: 1, marginBottom: 0 }]}>
+                {tStr('gym_config_public_listing_label')}
+              </Text>
+              <Switch
+                value={publicDirectoryEnabled}
+                onValueChange={canEdit ? onTogglePublicDirectory : undefined}
+                disabled={!canEdit}
+              />
+            </View>
+            <Text style={[styles.hint, { marginTop: 8 }]}>{tStr('gym_config_public_listing_hint')}</Text>
+
+            <Text style={[styles.label, { marginTop: 18 }]}>{tStr('gym_config_google_place_search_label')}</Text>
+            <Text style={styles.hint}>{tStr('gym_config_google_place_search_hint')}</Text>
+            <TextInput
+              style={[styles.input, { marginTop: 8 }]}
+              value={placeAutocompleteQuery}
+              onChangeText={setPlaceAutocompleteQuery}
+              placeholder={tStr('gym_config_google_place_search_placeholder')}
+              placeholderTextColor={t.placeholder}
+              editable={canEdit}
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+            {placeAutocompleteLoading ? (
+              <View style={{ marginTop: 8 }}>
+                <ActivityIndicator size="small" color={t.brand} />
+              </View>
+            ) : null}
+            {placePredictions.length > 0 ? (
+              <View
+                style={{
+                  marginTop: 8,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: t.overlayBorder,
+                  backgroundColor: t.inputBg,
+                  overflow: 'hidden',
+                }}
+              >
+                {placePredictions.map((pred, idx) => (
+                  <TouchableOpacity
+                    key={`${pred.place_id}-${idx}`}
+                    onPress={() => onPickPlacePrediction(pred)}
+                    activeOpacity={0.78}
+                    style={{
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderBottomWidth: idx === placePredictions.length - 1 ? 0 : 1,
+                      borderBottomColor: t.overlayBorder,
+                    }}
+                  >
+                    <Text style={{ color: t.text, fontSize: 14, fontWeight: '700' }} numberOfLines={2}>
+                      {pred.main_text || pred.description}
+                    </Text>
+                    {pred.secondary_text ? (
+                      <Text style={{ color: t.subText, fontSize: 12, marginTop: 2 }} numberOfLines={2}>
+                        {pred.secondary_text}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+
+            <Text style={[styles.label, { marginTop: 18 }]}>{tStr('gym_config_google_place_id_label')}</Text>
+            <Text style={styles.hint}>{tStr('gym_config_google_place_id_hint')}</Text>
+            <TextInput
+              style={[styles.input, { marginTop: 8 }]}
+              value={googlePlaceId}
+              onChangeText={setGooglePlaceId}
+              placeholder="ChIJ..."
+              placeholderTextColor={t.placeholder}
+              editable={canEdit}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {canEdit ? (
+              <TouchableOpacity
+                style={[styles.logoBtn, { marginTop: 12 }]}
+                onPress={syncGooglePlaceSummary}
+                disabled={placeSyncBusy || saving}
+                activeOpacity={0.85}
+              >
+                {placeSyncBusy ? (
+                  <ActivityIndicator size="small" color={t.brand} />
+                ) : (
+                  <Text style={styles.logoBtnText}>{tStr('gym_config_sync_google_cta')}</Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
+            {organization?.google_place_summary &&
+            typeof organization.google_place_summary === 'object' ? (
+              <View style={{ marginTop: 16 }}>
+                <Text style={styles.label}>{tStr('gym_config_google_summary_label')}</Text>
+                <Text style={[styles.hint, { marginTop: 6 }]}>
+                  {organization.google_place_summary.fetched_at
+                    ? String(organization.google_place_summary.fetched_at)
+                    : '—'}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         ) : null}
 
         {gymConfigTab === 'appearance' ? (

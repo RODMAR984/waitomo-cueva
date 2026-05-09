@@ -19,12 +19,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import LogoCompleto from '../components/LogoCompleto';
 import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function RegistroInicialScreen({ route, navigation }) {
   // Recibimos plan y abono desde Abonos/PlanDetail o desde CreaCuenta (OAuth)
@@ -224,6 +227,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
     return StyleSheet.create({
       button: {
         alignItems: 'center',
+        justifyContent: 'center',
         ...(shellFe
           ? {
               backgroundColor: fe.buttonBg,
@@ -231,56 +235,65 @@ export default function RegistroInicialScreen({ route, navigation }) {
               borderWidth: 1,
             }
           : t.buttonPrimary),
-        borderRadius: 10,
-        marginBottom: 20,
-        marginTop: 10,
-        padding: 16,
+        borderRadius: MOBILE_RADII.sm,
+        marginBottom: MOBILE_SPACING.xl,
+        marginTop: MOBILE_SPACING.sm + 2,
+        minHeight: MOBILE_SIZES.controlHeightLg,
+        paddingVertical: MOBILE_SPACING.md,
+        paddingHorizontal: MOBILE_SPACING.lg,
         opacity: submitting ? 0.7 : 1,
       },
       buttonText: {
         ...(shellFe ? { color: fe.buttonText } : t.buttonPrimaryText),
         fontWeight: 'bold',
+        fontSize: MOBILE_TYPE.bodyStrong,
         textAlign: 'center',
       },
       input: {
         backgroundColor: inputBg,
         borderColor: border,
-        borderRadius: 10,
+        borderRadius: MOBILE_RADII.sm,
         borderWidth: 1,
         color: textCol,
-        marginBottom: 15,
-        padding: 12,
+        marginBottom: MOBILE_SPACING.md + 3,
+        paddingHorizontal: MOBILE_SPACING.md,
+        paddingVertical: MOBILE_SPACING.md,
+        minHeight: MOBILE_SIZES.controlHeight,
+        fontSize: MOBILE_TYPE.body,
       },
       kav: { flex: 1 },
       panel: {
         backgroundColor: bg,
         borderColor: border,
-        borderRadius: 16,
+        borderRadius: MOBILE_RADII.lg,
         borderWidth: 1,
-        padding: 20,
+        padding: MOBILE_SPACING.xl,
       },
       scroll: {
         backgroundColor: 'transparent',
         flexGrow: 1,
-        padding: 20,
-        paddingTop: hasPlanContext ? 60 : 24,
+        padding: MOBILE_SPACING.xl,
+        paddingTop: hasPlanContext ? 60 : MOBILE_SPACING.xxl,
+        width: '100%',
+        maxWidth: WEB_CONTENT_MAX_WIDTH,
+        alignSelf: 'center',
       },
       title: {
         color: subCol,
-        fontSize: 22,
+        fontSize: MOBILE_TYPE.title,
         fontWeight: 'bold',
-        marginBottom: 20,
+        marginBottom: MOBILE_SPACING.xl,
         textAlign: 'center',
       },
       subtitle: {
         color: subCol,
-        fontSize: 14,
+        fontSize: MOBILE_TYPE.body,
         textAlign: 'center',
         opacity: 0.9,
       },
       loginLinkText: {
         color: subCol,
-        fontSize: 13,
+        fontSize: MOBILE_TYPE.caption,
         textAlign: 'center',
         textDecorationLine: 'underline',
       },
@@ -289,7 +302,9 @@ export default function RegistroInicialScreen({ route, navigation }) {
         alignItems: 'center',
         justifyContent: 'center',
       },
-      spinner: { marginLeft: 10 },
+      spinner: { marginLeft: MOBILE_SPACING.sm + 2 },
+      brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
+      brandRow: { width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.lg },
     });
   }, [t, submitting, hasPlanContext]);
 
@@ -315,17 +330,18 @@ export default function RegistroInicialScreen({ route, navigation }) {
             keyboardShouldPersistTaps="handled"
           >
             {!hasPlanContext ? (
-              <View style={{ width: '100%', alignItems: 'center', marginBottom: 16 }}>
+              <View style={styles.brandRow}>
                 <LogoCompleto height={48} />
-                <Text style={{ color: fe.subText, fontSize: 11, marginTop: 4 }}>{tStr('login_brand_powered')}</Text>
+                <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
               </View>
             ) : null}
             <View style={styles.panel}>
+              <BackNavButton onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('WelcomeGlobal'))} />
               <Text style={styles.title}>
                 {isOAuth ? tStr('registro_title_oauth') : tStr('registro_title')}
               </Text>
               {isOAuth && (
-                <Text style={[styles.subtitle, { marginBottom: 16 }]}>
+                <Text style={[styles.subtitle, { marginBottom: MOBILE_SPACING.lg }]}>
                   {tStr('registro_subtitle_oauth')}
                 </Text>
               )}
@@ -366,7 +382,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
                     placeholderTextColor={placeholderColor}
                     value={password}
                     onChangeText={setPassword}
-                    containerStyle={{ marginBottom: 15 }}
+                    containerStyle={{ marginBottom: MOBILE_SPACING.md + 3 }}
                   />
 
                   <PasswordInput
@@ -375,7 +391,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
                     placeholderTextColor={placeholderColor}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    containerStyle={{ marginBottom: 15 }}
+                    containerStyle={{ marginBottom: MOBILE_SPACING.md + 3 }}
                   />
                 </>
               )}

@@ -28,6 +28,9 @@ import { normalizePlanKey } from '../utils/planKeyNormalize';
 import { clearFreeClassGrant, saveFreeClassGrant } from '../utils/freeClassGrantStorage';
 import { insertTrialClassGrantServer } from '../utils/trialClassGrantSupabase';
 import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../utils/freeClassPolicy';
+import BackNavButton from '../components/BackNavButton';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -131,30 +134,36 @@ export default function FreeClassRequestScreen({ route, navigation }) {
       StyleSheet.create({
         cancel: {
           alignItems: 'center',
-          marginTop: 12,
+          marginTop: MOBILE_SPACING.md,
         },
         cancelText: {
           color: t.text,
+          fontSize: MOBILE_TYPE.body,
         },
         confirmButton: {
           alignItems: 'center',
+          justifyContent: 'center',
           ...t.buttonPrimary,
-          borderRadius: 10,
-          padding: 14,
+          borderRadius: MOBILE_RADII.sm,
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
         },
         confirmText: {
           ...t.buttonPrimaryText,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: 'bold',
         },
         hourButton: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
-          margin: 5,
-          paddingHorizontal: 20,
-          paddingVertical: 10,
+          margin: MOBILE_SPACING.xs,
+          paddingHorizontal: MOBILE_SPACING.xl,
+          paddingVertical: MOBILE_SPACING.sm + 2,
+          minHeight: MOBILE_SIZES.controlHeight,
+          justifyContent: 'center',
         },
         hourButtonSelected: {
           ...t.buttonPrimary,
@@ -162,21 +171,22 @@ export default function FreeClassRequestScreen({ route, navigation }) {
         hourGrid: {
           flexDirection: 'row',
           flexWrap: 'wrap',
-          gap: 10,
+          gap: MOBILE_SPACING.sm + 2,
           justifyContent: 'center',
-          marginBottom: 20,
+          marginBottom: MOBILE_SPACING.xl,
         },
         fieldLabel: {
           color: t.subText ?? t.placeholder,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '700',
-          marginBottom: 8,
+          marginBottom: MOBILE_SPACING.sm,
           textAlign: 'left',
           width: '100%',
         },
         hourText: {
           color: t.text,
           fontWeight: 'normal',
+          fontSize: MOBILE_TYPE.body,
         },
         hourTextSelected: {
           ...t.buttonPrimaryText,
@@ -185,22 +195,25 @@ export default function FreeClassRequestScreen({ route, navigation }) {
         input: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           color: t.text,
-          fontSize: 16,
-          height: 48,
-          marginBottom: 18,
-          paddingHorizontal: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          minHeight: MOBILE_SIZES.controlHeight,
+          marginBottom: MOBILE_SPACING.xl - 2,
+          paddingHorizontal: MOBILE_SPACING.md + 3,
         },
         kav: {
           flex: 1,
         },
         panel: {
-          borderRadius: 20,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1.2,
-          padding: 24,
-          marginHorizontal: 10,
+          padding: MOBILE_SPACING.xxl,
+          marginHorizontal: MOBILE_SPACING.sm + 2,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           // sombra sutil en relación a brand
@@ -213,14 +226,14 @@ export default function FreeClassRequestScreen({ route, navigation }) {
           backgroundColor: t.bg,
           flexGrow: 1,
           justifyContent: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 60,
         },
         title: {
           color: t.subText,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
-          marginBottom: 24,
+          marginBottom: MOBILE_SPACING.xxl,
           textAlign: 'center',
         },
         datePicker: {
@@ -228,12 +241,13 @@ export default function FreeClassRequestScreen({ route, navigation }) {
         },
         policyHint: {
           color: t.placeholder,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 18,
-          marginTop: 6,
-          marginBottom: 8,
+          marginTop: MOBILE_SPACING.sm,
+          marginBottom: MOBILE_SPACING.sm,
           textAlign: 'center',
         },
+        backWrap: { marginTop: MOBILE_SPACING.sm + 2, alignItems: 'center' },
       }),
     [t],
   );
@@ -338,6 +352,9 @@ export default function FreeClassRequestScreen({ route, navigation }) {
             <TouchableOpacity onPress={handleRequest} style={styles.confirmButton}>
               <Text style={styles.confirmText}>{tStr('freeclass_confirm')}</Text>
             </TouchableOpacity>
+            <View style={styles.backWrap}>
+              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} />
+            </View>
 
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancel}>
               <Text style={styles.cancelText}>{tStr('freeclass_cancel')}</Text>

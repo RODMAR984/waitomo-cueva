@@ -18,10 +18,13 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 import BackgroundWrapper from '../components/BackgroundWrapper';
+import BackNavButton from '../components/BackNavButton';
 import LogoCompleto from '../components/LogoCompleto';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function CreaCuentaScreen() {
   const { t: tStr } = useLocale();
@@ -67,8 +70,11 @@ export default function CreaCuentaScreen() {
       StyleSheet.create({
         kav: {
           flex: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           paddingTop: 48,
+          width: '100%',
+          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          alignSelf: 'center',
         },
         outer: {
           flex: 1,
@@ -77,61 +83,68 @@ export default function CreaCuentaScreen() {
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
         },
         title: {
           color: fe.subText,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
-          marginBottom: 12,
+          marginBottom: MOBILE_SPACING.md,
           textAlign: 'center',
         },
         subtitle: {
           color: fe.subText,
-          fontSize: 14,
-          marginBottom: 20,
+          fontSize: MOBILE_TYPE.body,
+          marginBottom: MOBILE_SPACING.xl,
           textAlign: 'center',
           opacity: 0.95,
         },
         buttonPrimary: {
           alignItems: 'center',
+          justifyContent: 'center',
           backgroundColor: fe.buttonBg,
           borderColor: fe.buttonBorder,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
-          padding: 14,
-          marginBottom: 12,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          marginBottom: MOBILE_SPACING.md,
         },
         buttonPrimaryText: {
           color: fe.buttonText,
           fontWeight: 'bold',
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         buttonSocial: {
           alignItems: 'center',
+          justifyContent: 'center',
           backgroundColor: fe.inputBg,
-          borderRadius: 10,
-          padding: 12,
-          marginBottom: 10,
+          borderRadius: MOBILE_RADII.sm,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.md,
+          minHeight: MOBILE_SIZES.controlHeight,
+          marginBottom: MOBILE_SPACING.sm + 2,
           borderWidth: 1,
           borderColor: fe.panelBorder,
         },
         buttonSocialText: {
           color: fe.text,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
         },
         buttonSecondary: {
-          marginTop: 12,
+          marginTop: MOBILE_SPACING.md,
           alignItems: 'center',
         },
         buttonSecondaryText: {
           color: fe.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.caption,
           textDecorationLine: 'underline',
         },
+        brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
     [],
   );
@@ -182,11 +195,12 @@ export default function CreaCuentaScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.outer}>
-            <View style={{ width: '100%', alignItems: 'center', marginBottom: 14 }}>
+            <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
               <LogoCompleto height={52} />
-              <Text style={{ color: fe.subText, fontSize: 11, marginTop: 4 }}>powered by WAITOMO</Text>
+              <Text style={styles.brandPowered}>powered by WAITOMO</Text>
             </View>
             <View style={styles.panel}>
+              <BackNavButton onPress={handleVolver} />
               <Text style={styles.title}>{tStr('creacuenta_title')}</Text>
               <Text style={styles.subtitle}>{tStr('creacuenta_subtitle')}</Text>
 
@@ -205,7 +219,7 @@ export default function CreaCuentaScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.buttonSocial, { marginTop: 10 }]}
+                style={[styles.buttonSocial, { marginTop: MOBILE_SPACING.sm + 2 }]}
                 onPress={() => handleOAuth('apple')}
               >
                 <Text style={styles.buttonSocialText}>{tStr('creacuenta_continue_apple')}</Text>
