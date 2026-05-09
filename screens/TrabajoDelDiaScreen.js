@@ -150,12 +150,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         planSubtitle: {
           color: t.subText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           marginBottom: 4,
         },
         dateText: {
           color: t.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           fontStyle: 'italic',
         },
 
@@ -172,7 +172,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         tabButton: {
           alignItems: 'center',
           flex: 1,
-          paddingHorizontal: 8,
+          paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: 8,
         },
         tabButtonActive: {
@@ -180,7 +180,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         tabText: {
           color: t.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
         },
         tabTextActive: {
@@ -190,14 +190,14 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         // Bloques
         noBlocks: {
           color: t.empty,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           fontStyle: 'italic',
           textAlign: 'center',
         },
         blockCard: {
           backgroundColor: t.inactiveTabBg,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           marginBottom: 12,
           overflow: 'hidden',
@@ -206,7 +206,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           alignItems: 'center',
           flexDirection: 'row',
           justifyContent: 'space-between',
-          paddingHorizontal: 12,
+          paddingHorizontal: MOBILE_SPACING.md,
           paddingVertical: 10,
         },
         blockTitleWrapper: {
@@ -215,7 +215,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         blockTitle: {
           color: t.text,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '700',
           textTransform: 'uppercase',
         },
@@ -225,14 +225,14 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         blockMetaText: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           marginRight: 8,
         },
         blockTypeTag: {
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
-          paddingHorizontal: 8,
+          paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: 2,
         },
         blockTypeText: {
@@ -246,12 +246,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         blockBody: {
           borderTopColor: t.overlayBorder,
           borderTopWidth: 1,
-          paddingHorizontal: 12,
+          paddingHorizontal: MOBILE_SPACING.md,
           paddingVertical: 10,
         },
         blockLine: {
           color: t.text,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           lineHeight: 22,
         },
         blockLineHighlighted: {
@@ -264,7 +264,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         blockLineRmHint: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '500',
         },
 
@@ -305,19 +305,19 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         coachNotesTitle: {
           color: t.brand2,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '600',
           marginBottom: 4,
         },
         coachNotesContent: {
           color: t.text,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
         },
 
         // Notas
         notesContainer: { marginBottom: 20 },
         sectionTitle: { color: t.brand, fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-        notesSubtitle: { color: t.subText, fontSize: 14, fontStyle: 'italic', marginBottom: 10 },
+        notesSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.body, fontStyle: 'italic', marginBottom: 10 },
         notesInput: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
@@ -338,7 +338,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           alignItems: 'center',
           borderRadius: MOBILE_RADII.pill,
           minWidth: 120,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 10,
         },
         saveButton: {
@@ -349,7 +349,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         buttonText: {
           ...t.buttonPrimaryText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '700',
         },
         notesList: {
@@ -366,7 +366,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           marginBottom: 8,
           padding: 10,
         },
-        noteItemText: { color: t.text, fontSize: 12, lineHeight: 16 },
+        noteItemText: { color: t.text, fontSize: MOBILE_TYPE.caption, lineHeight: 16 },
         noteActions: { flexDirection: 'row', justifyContent: 'flex-end' },
         noteActionBtn: { marginLeft: 16 },
         noteEditBtn: { color: t.brand, fontWeight: '600' },
@@ -393,7 +393,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           marginBottom: 8,
           padding: 12,
         },
-        accordionHeaderTxt: { color: t.brand2, fontSize: 15, fontWeight: '700' },
+        accordionHeaderTxt: { color: t.brand2, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '700' },
         existingRMsContainer: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
@@ -421,19 +421,19 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         chatMessagesContainer: { height: 300, marginBottom: 10 },
         chatScrollView: { flex: 1 },
         chatContentContainer: { flexGrow: 1, justifyContent: 'flex-end', paddingVertical: 10 },
-        chatSubtitle: { color: t.subText, fontSize: 14, fontStyle: 'italic', marginBottom: 15 },
+        chatSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.body, fontStyle: 'italic', marginBottom: 15 },
         messageBubble: { borderRadius: MOBILE_RADII.sm, marginVertical: 5, maxWidth: '80%', padding: 10 },
         userMessage: { alignSelf: 'flex-end', backgroundColor: hexToRgba(t.brand, 0.18), marginLeft: '20%' },
         adminMessage: { alignSelf: 'flex-start', backgroundColor: t.boxBg, marginRight: '20%' },
         messageText: { color: t.text, fontSize: 14 },
         messageTime: { color: t.subText, fontSize: 10, marginTop: 4, textAlign: 'right' },
-        messageUser: { color: t.brand2, fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
+        messageUser: { color: t.brand2, fontSize: MOBILE_TYPE.caption, fontWeight: 'bold', marginBottom: 4 },
         messageHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
         scopeTag: {
           borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          paddingHorizontal: 8,
+          paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: 2,
           marginLeft: 8,
           backgroundColor: t.boxBg,
@@ -459,7 +459,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           flex: 1,
           marginRight: 10,
           minHeight: 40,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 8,
         },
         chatSendButton: {
@@ -469,7 +469,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           borderColor: t.overlayBorder,
           height: 40,
           justifyContent: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
         },
         chatSendButtonText: { color: '#fff', fontWeight: '700' },
 
@@ -487,7 +487,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           paddingVertical: 6,
         },
         togglePillActive: { backgroundColor: hexToRgba(t.brand, 0.18) },
-        toggleText: { color: t.text, fontSize: 12, fontWeight: '600', marginLeft: 6 },
+        toggleText: { color: t.text, fontSize: MOBILE_TYPE.caption, fontWeight: '600', marginLeft: 6 },
 
         // Modal
         modalBackdrop: {
@@ -499,13 +499,13 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         modalContent: {
           backgroundColor: t.inactiveTabBg,
           borderColor: t.overlayBorder,
-          borderRadius: 16,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           padding: 20,
           width: '80%',
         },
         modalTitle: { color: t.brand, fontSize: 20, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
-        modalSubtitle: { color: t.subText, fontSize: 14, marginBottom: 10, textAlign: 'center' },
+        modalSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.body, marginBottom: 10, textAlign: 'center' },
         input: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
@@ -528,7 +528,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         lockScroll: { flexGrow: 1, justifyContent: 'center', paddingVertical: 40 },
         lockCta: {
           alignItems: 'center',
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           marginTop: 12,
           paddingVertical: 12,
           ...t.buttonPrimary,
