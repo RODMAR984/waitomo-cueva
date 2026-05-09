@@ -465,51 +465,51 @@ export default function ClientNovedadesSidebarWidget() {
           onPressOut={() => { novedadesTickerPausedRef.current = false; }}
           activeOpacity={0.9}
         >
-        <Text style={styles.title}>{tStr('client_novedades')}</Text>
-        {novedadesLoading && tickerItems.length <= 1 ? (
-          <View style={styles.tickerWrap}>
-            <ActivityIndicator size="small" color={t.brand} />
-          </View>
-        ) : tickerItems.length === 0 ? (
-          <Text style={styles.tickerText}>{tStr('client_sin_novedades')}</Text>
-        ) : (
-          <>
+          <Text style={styles.title}>{tStr('client_novedades')}</Text>
+          {novedadesLoading && tickerItems.length <= 1 ? (
             <View style={styles.tickerWrap}>
-              <Animated.View
-                style={[
-                  styles.marqueeRow,
-                  {
-                    transform: [
-                      {
-                        translateX: novedadesMarqueeAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0, -120],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <Text style={styles.tickerText} numberOfLines={2}>
-                  {currentNovedadTitle}
-                  {'  ·  '}
-                </Text>
-                <Text style={styles.tickerText} numberOfLines={2}>
-                  {currentNovedadTitle}
-                </Text>
-              </Animated.View>
+              <ActivityIndicator size="small" color={t.brand} />
             </View>
-            {tickerItems.length > 1 && (
-              <View style={styles.dots}>
-                {tickerItems.map((_, i) => (
-                  <View key={i} style={[styles.dot, i === novedadesTickerIndex && styles.dotActive]} />
-                ))}
+          ) : tickerItems.length === 0 ? (
+            <Text style={styles.tickerText}>{tStr('client_sin_novedades')}</Text>
+          ) : (
+            <>
+              <View style={styles.tickerWrap}>
+                <Animated.View
+                  style={[
+                    styles.marqueeRow,
+                    {
+                      transform: [
+                        {
+                          translateX: novedadesMarqueeAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, -120],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <Text style={styles.tickerText} numberOfLines={2}>
+                    {currentNovedadTitle}
+                    {'  ·  '}
+                  </Text>
+                  <Text style={styles.tickerText} numberOfLines={2}>
+                    {currentNovedadTitle}
+                  </Text>
+                </Animated.View>
               </View>
-            )}
-          </>
-        )}
-        <Text style={styles.verTodas}>{tStr('client_ver_todas')} ›</Text>
-        <Text style={styles.hint}>{tStr('client_novedades_footer_hint')}</Text>
+              {tickerItems.length > 1 && (
+                <View style={styles.dots}>
+                  {tickerItems.map((_, i) => (
+                    <View key={i} style={[styles.dot, i === novedadesTickerIndex && styles.dotActive]} />
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+          <Text style={styles.verTodas}>{tStr('client_ver_todas')} ›</Text>
+          <Text style={styles.hint}>{tStr('client_novedades_footer_hint')}</Text>
         </TouchableOpacity>
       </NeoPanel>
     </View>
