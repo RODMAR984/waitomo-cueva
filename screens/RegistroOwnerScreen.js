@@ -22,6 +22,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../theme/colors';
 import { supabase } from '../supabaseClient';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function RegistroOwnerScreen() {
   const navigation = useNavigation();
@@ -42,7 +43,7 @@ export default function RegistroOwnerScreen() {
         centerWrap: {
           flex: 1,
           justifyContent: 'center',
-          paddingHorizontal: 24,
+          paddingHorizontal: MOBILE_SPACING.xxl,
           paddingVertical: 32,
           paddingTop: 32 + insets.top,
           paddingBottom: 32 + insets.bottom,
@@ -59,37 +60,37 @@ export default function RegistroOwnerScreen() {
         },
         subtitle: {
           color: fe.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           marginBottom: 20,
           textAlign: 'center',
         },
         input: {
           backgroundColor: fe.inputBg,
           borderColor: fe.inputBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           color: fe.text,
           marginBottom: 12,
           padding: 12,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
         btn: {
           backgroundColor: fe.primary,
           borderWidth: 0,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           paddingVertical: 14,
           alignItems: 'center',
-          marginTop: 16,
+          marginTop: MOBILE_SPACING.lg,
         },
         btnText: {
           color: fe.text,
           fontWeight: '600',
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
         },
-        linkWrap: { marginTop: 16, alignItems: 'center' },
+        linkWrap: { marginTop: MOBILE_SPACING.lg, alignItems: 'center' },
         linkText: {
           color: fe.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           textDecorationLine: 'underline',
         },
       }),
