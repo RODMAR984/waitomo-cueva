@@ -25,6 +25,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const BOOKINGS_FACTS_LIMIT = 28;
 
@@ -384,7 +385,7 @@ export default function OrgMemberDetailScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: Math.max(insets.top, 12) + 8,
           paddingBottom: 12,
           width: '100%',
@@ -399,36 +400,36 @@ export default function OrgMemberDetailScreen() {
           fontWeight: '800',
         },
         body: {
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingBottom: 32,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
         name: { color: t.text, fontSize: 20, fontWeight: '800', marginBottom: 4 },
-        subId: { color: t.subText, fontSize: 12, marginBottom: 16 },
-        hint: { color: t.subText, fontSize: 13, lineHeight: 19, marginBottom: 16 },
+        subId: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: MOBILE_SPACING.lg },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.body, lineHeight: 19, marginBottom: MOBILE_SPACING.lg },
         primaryBtn: {
           backgroundColor: t.brand,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           paddingVertical: 14,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           marginBottom: 10,
           alignItems: 'center',
         },
         primaryBtnDisabled: { opacity: 0.55 },
-        primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+        primaryBtnText: { color: '#fff', fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
         secondaryBtn: {
           borderWidth: 1,
           borderColor: t.brand,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           paddingVertical: 12,
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           marginBottom: 20,
           alignItems: 'center',
         },
-        secondaryBtnText: { color: t.brand, fontSize: 15, fontWeight: '700' },
-        sectionLabel: { color: t.subText, fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' },
+        secondaryBtnText: { color: t.brand, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '700' },
+        sectionLabel: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' },
         summaryBox: {
           backgroundColor: t.boxBg,
           borderWidth: 1,
@@ -437,13 +438,13 @@ export default function OrgMemberDetailScreen() {
           padding: 14,
           marginBottom: 12,
         },
-        summaryText: { color: t.text, fontSize: 15, lineHeight: 22 },
-        emptySummary: { color: t.placeholder, fontSize: 14, fontStyle: 'italic' },
-        err: { color: t.danger, marginBottom: 12, fontSize: 14 },
+        summaryText: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, lineHeight: 22 },
+        emptySummary: { color: t.placeholder, fontSize: MOBILE_TYPE.body, fontStyle: 'italic' },
+        err: { color: t.danger, marginBottom: 12, fontSize: MOBILE_TYPE.body },
         factsPreview: {
           marginTop: 8,
           padding: 12,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           backgroundColor: t.inputBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,

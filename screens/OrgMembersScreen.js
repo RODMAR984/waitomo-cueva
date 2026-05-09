@@ -23,6 +23,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const ROLE_LABEL = {
   owner: 'Dueño',
@@ -120,7 +121,7 @@ export default function OrgMembersScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: Math.max(insets.top, 12) + 8,
           paddingBottom: 16,
           width: '100%',
@@ -134,7 +135,7 @@ export default function OrgMembersScreen() {
           fontSize: 20,
           fontWeight: '800',
         },
-        list: { flex: 1, paddingHorizontal: 20, paddingBottom: 24, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
+        list: { flex: 1, paddingHorizontal: MOBILE_SPACING.xl, paddingBottom: 24, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         card: {
           borderRadius: WEB_PANEL_RADIUS,
           paddingVertical: 12,
@@ -144,11 +145,11 @@ export default function OrgMembersScreen() {
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
         },
-        name: { color: t.text, fontSize: 16, fontWeight: '700' },
-        meta: { color: t.subText, fontSize: 13, marginTop: 4 },
+        name: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '700' },
+        meta: { color: t.subText, fontSize: MOBILE_TYPE.body, marginTop: 4 },
         rolesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
         pill: {
-          paddingHorizontal: 8,
+          paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: 4,
           borderRadius: 8,
           backgroundColor: t.overlayBg,
@@ -156,10 +157,10 @@ export default function OrgMembersScreen() {
           borderColor: t.overlayBorder,
         },
         pillText: { color: t.brand, fontSize: 11, fontWeight: '600' },
-        inactive: { color: t.danger, fontSize: 12, marginTop: 6 },
+        inactive: { color: t.danger, fontSize: MOBILE_TYPE.caption, marginTop: 6 },
         empty: { paddingVertical: 40, alignItems: 'center' },
-        emptyText: { color: t.placeholder, fontSize: 15, textAlign: 'center' },
-        err: { color: t.danger, fontSize: 14, marginBottom: 12 },
+        emptyText: { color: t.placeholder, fontSize: MOBILE_TYPE.bodyStrong, textAlign: 'center' },
+        err: { color: t.danger, fontSize: MOBILE_TYPE.body, marginBottom: 12 },
         iconBtn: { padding: 8 },
       }),
     [t, insets.top]

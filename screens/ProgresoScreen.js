@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import getRandomPlanImage from '../utils/getRandomPlanImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_SPACING } from '../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -32,7 +33,7 @@ export default function ProgresoScreen() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          paddingHorizontal: 20,
+          paddingHorizontal: MOBILE_SPACING.xl,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',

@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function PlanChatScreen({ route }) {
   const navigation = useNavigation();
@@ -79,12 +80,12 @@ export default function PlanChatScreen({ route }) {
       StyleSheet.create({
         container: {
           flex: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
-        title: { color: t.text, fontSize: 22, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
+        title: { color: t.text, fontSize: MOBILE_TYPE.title, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
         msgList: { flex: 1 },
         msg: { marginBottom: 10, backgroundColor: t.boxBg, padding: 10, borderRadius: WEB_PANEL_RADIUS },
         msgUser: { color: t.brand, fontWeight: 'bold' },
@@ -94,10 +95,10 @@ export default function PlanChatScreen({ route }) {
           flex: 1,
           backgroundColor: t.inputBg,
           padding: 12,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           color: t.text,
         },
-        btn: { padding: 10, borderRadius: 12, ...t.buttonPrimary },
+        btn: { padding: 10, borderRadius: MOBILE_RADII.md, ...t.buttonPrimary },
       }),
     [t],
   );

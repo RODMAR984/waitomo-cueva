@@ -23,6 +23,7 @@ import getRandomGeneralImage from '../utils/getRandomGeneralImage';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 export default function RegistroDesdeCiclo({ navigation, route }) {
   const { plan = { nombre: 'Ciclo Evolución' } } = route?.params || {};
@@ -48,13 +49,13 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
         button: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           marginBottom: 16,
           padding: 14,
         },
         buttonText: {
           ...t.buttonPrimaryText,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: 'bold',
         },
         container: {
@@ -62,25 +63,25 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
           borderColor: t.overlayBorder,
           borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1.5,
-          marginHorizontal: 20,
-          padding: 24,
+          marginHorizontal: MOBILE_SPACING.xl,
+          padding: MOBILE_SPACING.xxl,
         },
         input: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           marginBottom: 20,
-          paddingHorizontal: 12,
+          paddingHorizontal: MOBILE_SPACING.md,
           paddingVertical: 10,
         },
         kav: { flex: 1 },
         scroll: {
           flexGrow: 1,
           justifyContent: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 60,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
@@ -88,9 +89,9 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
         },
         title: {
           color: t.subText,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
-          marginBottom: 24,
+          marginBottom: MOBILE_SPACING.xxl,
           textAlign: 'center',
         },
         volver: {

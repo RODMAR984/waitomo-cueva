@@ -30,6 +30,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -313,7 +314,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         kav: { flex: 1 },
         scroll: {
           flexGrow: 1,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
           paddingBottom: 40,
           paddingTop: 60,
           width: '100%',
@@ -325,11 +326,11 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           borderColor: t.overlayBorder,
           borderRadius: WEB_PANEL_RADIUS,
           borderWidth: 1.2,
-          padding: 20,
+          padding: MOBILE_SPACING.xl,
         },
         title: {
           color: t.brand,
-          fontSize: 22,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: 'bold',
           marginBottom: 10,
           textAlign: 'center',
@@ -340,7 +341,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           marginBottom: 18,
           paddingVertical: 12,
           paddingHorizontal: 14,
-          borderRadius: 14,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: hexToRgba(t.brand, 0.45),
           backgroundColor: hexToRgba('#000', 0.35),
@@ -358,7 +359,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         loaderWrap: {
           width: 34,
           height: 34,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: hexToRgba(t.brand, 0.10),
@@ -394,7 +395,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         },
         placeholderText: {
           color: t.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           textAlign: 'center',
         },
         imagePreview: {
@@ -408,7 +409,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         input: {
           backgroundColor: t.inputBg,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           color: t.text,
           marginBottom: 15,
@@ -419,7 +420,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           alignItems: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
           marginBottom: 20,
           padding: 12,
@@ -432,9 +433,9 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         button: {
           alignItems: 'center',
           ...t.buttonPrimary,
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           marginTop: 4,
-          padding: 16,
+          padding: MOBILE_SPACING.lg,
           opacity: saving ? 0.75 : 1,
         },
         buttonText: {
