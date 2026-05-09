@@ -11,6 +11,7 @@ import AdminScreen from './AdminScreen';
 
 /** Re-export: misma spec de ancho web que el resto de screens; el layout efectivo está en AdminScreen + staffScreenShell. */
 export { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 
 function AdminLiteScreen(props) {
   const { currentUser, isSuperAdmin, organizationsOwnedByUser } = useAuth();

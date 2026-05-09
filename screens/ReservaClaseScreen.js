@@ -20,7 +20,7 @@ import BackNavButton from '../components/BackNavButton';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING } from '../theme/mobileSpec';
 
 // ---------- screen ----------
 export default function ReservaClaseScreen({ route, navigation }) {

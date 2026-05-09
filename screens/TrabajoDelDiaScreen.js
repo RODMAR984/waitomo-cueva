@@ -413,7 +413,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           padding: 12,
         },
         rmItemText: { color: t.brand2, fontWeight: '600' },
-        rmItemEdit: { color: t.brand, fontSize: 12 },
+        rmItemEdit: { color: t.brand, fontSize: MOBILE_TYPE.caption },
         noRMsText: { color: t.placeholder, fontStyle: 'italic', marginVertical: 10, textAlign: 'center' },
 
         // Chat
@@ -425,7 +425,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         messageBubble: { borderRadius: MOBILE_RADII.sm, marginVertical: 5, maxWidth: '80%', padding: 10 },
         userMessage: { alignSelf: 'flex-end', backgroundColor: hexToRgba(t.brand, 0.18), marginLeft: '20%' },
         adminMessage: { alignSelf: 'flex-start', backgroundColor: t.boxBg, marginRight: '20%' },
-        messageText: { color: t.text, fontSize: 14 },
+        messageText: { color: t.text, fontSize: MOBILE_TYPE.body },
         messageTime: { color: t.subText, fontSize: 10, marginTop: 4, textAlign: 'right' },
         messageUser: { color: t.brand2, fontSize: MOBILE_TYPE.caption, fontWeight: 'bold', marginBottom: 4 },
         messageHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -535,7 +535,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         lockCtaText: { ...t.buttonPrimaryText, fontWeight: '600' },
         lockBack: { alignItems: 'center', marginTop: 20, paddingVertical: 8 },
-        lockBackText: { color: t.subText, fontSize: 14 },
+        lockBackText: { color: t.subText, fontSize: MOBILE_TYPE.body },
       }),
     [t, isWebDesktop, panelMaxWidth],
   );
