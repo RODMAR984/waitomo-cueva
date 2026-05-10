@@ -1476,11 +1476,14 @@ export default function ClientScreen() {
           flex: 1,
           paddingVertical: 10,
           paddingHorizontal: 12,
+          borderRadius: 14,
+          backgroundColor: t.boxBg,
+          borderColor: t.overlayBorder,
+          borderWidth: 1,
+          marginRight: 10,
           minHeight: isWebWide ? 130 : 0,
         },
         metricBoxLast: { marginRight: 0 },
-        metricNeoShell: { flex: 1, marginRight: 10, minWidth: 0, backgroundColor: t.boxBg },
-        metricNeoShellLast: { marginRight: 0 },
         metricLabel: { color: t.metallicGrey ?? t.subText, fontSize: 11 },
         metricValue: { color: t.text, fontSize: 15, fontWeight: 'bold' },
         metricHint: { marginTop: 6, color: t.placeholder, fontSize: 10, lineHeight: 14 },
@@ -1715,8 +1718,11 @@ export default function ClientScreen() {
 
         freeClassCard: {
           marginTop: 14,
-          padding: 14,
+          borderRadius: MOBILE_RADII.lg,
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
+          padding: 14,
         },
         freeClassTitle: { color: t.text, fontSize: 15, fontWeight: '800' },
         freeClassMeta: { color: t.subText ?? t.placeholder, fontSize: 13, marginTop: 6, lineHeight: 18 },
@@ -1920,56 +1926,52 @@ export default function ClientScreen() {
           </View>
 
           <View style={styles.metricsRow}>
-            <NeoPanel spark style={styles.metricNeoShell}>
-              <TouchableOpacity
-                style={[styles.metricBox, { marginRight: 0, flex: 1 }]}
-                onPress={goPlanHub}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={`${tStr('client_plan')}: ${planLabel}. ${tStr('client_metric_plan_hint_a11y')}`}
-              >
-                <Text style={styles.metricLabel}>{tStr('client_plan')}</Text>
-                {planLoading ? (
-                  <View style={styles.metricLoadingWrap}>
-                    <ActivityIndicator color={t.brand} />
-                  </View>
-                ) : (
-                  <Text style={styles.metricValue}>{planLabel}</Text>
-                )}
-                <Text style={styles.metricHint}>{planHintLine}</Text>
-                <Text style={styles.metricPlanCue}>{tStr('client_metric_plan_open_programs')}</Text>
-              </TouchableOpacity>
-            </NeoPanel>
+            <TouchableOpacity
+              style={styles.metricBox}
+              onPress={goPlanHub}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`${tStr('client_plan')}: ${planLabel}. ${tStr('client_metric_plan_hint_a11y')}`}
+            >
+              <Text style={styles.metricLabel}>{tStr('client_plan')}</Text>
+              {planLoading ? (
+                <View style={styles.metricLoadingWrap}>
+                  <ActivityIndicator color={t.brand} />
+                </View>
+              ) : (
+                <Text style={styles.metricValue}>{planLabel}</Text>
+              )}
+              <Text style={styles.metricHint}>{planHintLine}</Text>
+              <Text style={styles.metricPlanCue}>{tStr('client_metric_plan_open_programs')}</Text>
+            </TouchableOpacity>
 
-            <NeoPanel spark style={[styles.metricNeoShell, styles.metricNeoShellLast]}>
-              <View style={[styles.metricBox, styles.metricBoxLast, { flex: 1 }]}>
-                <Text style={styles.metricLabel}>{tStr('client_my_reservations')}</Text>
-                <Text style={styles.metricValue}>
-                  {myReservations.length > 0
-                    ? tStr('client_my_reservations_count').replace('{{n}}', String(myReservations.length))
-                    : tStr('client_my_reservations_empty_short')}
-                </Text>
-                {myReservations.length > 0 ? (
-                  <View style={styles.reservationList}>
-                    {reservationItemsWithLabel.map((r) => (
-                      <TouchableOpacity
-                        key={r.id}
-                        style={styles.reservationRowTouchable}
-                        activeOpacity={0.85}
-                        onPress={() => goCalendario(r)}
-                      >
-                        <Text style={styles.reservationChipText} numberOfLines={2}>
-                          {r.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.metricHint}>{tStr('client_my_reservations_empty_hint')}</Text>
-                )}
-                <Text style={styles.reservationsMicro}>{tStr('client_metric_reservations_caption')}</Text>
-              </View>
-            </NeoPanel>
+            <View style={[styles.metricBox, styles.metricBoxLast]}>
+              <Text style={styles.metricLabel}>{tStr('client_my_reservations')}</Text>
+              <Text style={styles.metricValue}>
+                {myReservations.length > 0
+                  ? tStr('client_my_reservations_count').replace('{{n}}', String(myReservations.length))
+                  : tStr('client_my_reservations_empty_short')}
+              </Text>
+              {myReservations.length > 0 ? (
+                <View style={styles.reservationList}>
+                  {reservationItemsWithLabel.map((r) => (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={styles.reservationRowTouchable}
+                      activeOpacity={0.85}
+                      onPress={() => goCalendario(r)}
+                    >
+                      <Text style={styles.reservationChipText} numberOfLines={2}>
+                        {r.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.metricHint}>{tStr('client_my_reservations_empty_hint')}</Text>
+              )}
+              <Text style={styles.reservationsMicro}>{tStr('client_metric_reservations_caption')}</Text>
+            </View>
           </View>
           <Text style={styles.metricsRowCaption}>{tStr('client_metrics_row_caption')}</Text>
         </NeoPanel>
@@ -1981,7 +1983,7 @@ export default function ClientScreen() {
 
         <View style={styles.mainGrid}>
           <View style={styles.mainColPrimary}>
-            <NeoPanel spark style={[styles.panel, styles.panelEqualHeight]}>
+            <NeoPanel style={[styles.panel, styles.panelEqualHeight]}>
               <Text style={styles.sectionTitle}>{tStr('client_plan_activo')}</Text>
 
               <View style={styles.planBox}>
@@ -2035,7 +2037,12 @@ export default function ClientScreen() {
                 )}
 
                 <View style={styles.pillRow}>
-                  <TouchableOpacity style={styles.planPillBtn} activeOpacity={0.9} onPress={goCalendario}>
+                  <TouchableOpacity
+                    testID="client-home-cta-calendario"
+                    style={styles.planPillBtn}
+                    activeOpacity={0.9}
+                    onPress={goCalendario}
+                  >
                     <Text style={styles.planPillText}>{tStr('client_calendario')}</Text>
                   </TouchableOpacity>
 
@@ -2046,7 +2053,7 @@ export default function ClientScreen() {
                 <Text style={styles.planPillsHint}>{tStr('client_plan_pills_hint')}</Text>
 
                 {freeClassPanel ? (
-                  <NeoPanel spark style={styles.freeClassCard}>
+                  <View style={styles.freeClassCard}>
                     <Text style={styles.freeClassTitle}>{tStr('client_freeclass_card_title')}</Text>
                     <Text style={styles.freeClassMeta}>
                       {tStr('client_freeclass_card_body')
@@ -2071,7 +2078,7 @@ export default function ClientScreen() {
                         <Text style={styles.freeClassActionTextPrimary}>{tStr('client_freeclass_card_change')}</Text>
                       </TouchableOpacity>
                     </View>
-                  </NeoPanel>
+                  </View>
                 ) : null}
               </View>
 
@@ -2086,6 +2093,7 @@ export default function ClientScreen() {
 
               <View style={styles.quickRow}>
                 <TouchableOpacity
+                  testID="client-home-cta-perfil"
                   style={[
                     styles.quickBtn,
                     isWeb && !isWebWide && styles.quickBtnStacked,
@@ -2102,6 +2110,7 @@ export default function ClientScreen() {
 
                 {!isWebWide ? (
                   <TouchableOpacity
+                    testID="client-home-cta-directory"
                     style={[
                       styles.quickBtn,
                       isWeb && !isWebWide && styles.quickBtnStacked,
@@ -2156,6 +2165,7 @@ export default function ClientScreen() {
   return (
     <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
       <ScrollView
+        testID="client-home-root"
         style={isWeb ? { flex: 1, minHeight: 0 } : undefined}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}

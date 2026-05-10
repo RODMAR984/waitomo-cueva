@@ -8,14 +8,11 @@ import { MOBILE_RADII, MOBILE_SPACING } from '../theme/mobileSpec';
 export const FITENGINE_NEO_PANEL_CLASS = 'fitengine-neo-panel';
 export const FITENGINE_NEO_PANEL_SPARK_CLASS = 'fitengine-neo-panel--spark';
 
-let cssInjected = false;
-
+/** Haz que “corre” por el perímetro: sombras externas desplazadas (sin rellenos ni conic). */
 export function ensureNeoPanelWebCss() {
-  if (Platform.OS !== 'web' || typeof document === 'undefined' || cssInjected) return;
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
   const id = 'fitengine-neo-panel-css';
-  if (document.getElementById(id)) return;
-  cssInjected = true;
-  const el = document.createElement('style');
+  const el = document.getElementById(id) || document.createElement('style');
   el.id = id;
   el.textContent = `
 @keyframes fitengine-neo-sweep {
@@ -28,30 +25,41 @@ export function ensureNeoPanelWebCss() {
     border-color: rgba(0, 245, 255, 0.72) !important;
   }
 }
-@keyframes fitengine-neo-spark-spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes fitengine-neo-spark-sweep {
-  0%, 100% {
+@keyframes fitengine-neo-spark-orbit {
+  0% {
     box-shadow:
-      0 0 14px rgba(0, 245, 255, 0.35),
-      0 0 4px rgba(255, 248, 200, 0.25),
-      inset 0 0 0 1px rgba(0, 245, 255, 0.14);
-    border-color: rgba(0, 245, 255, 0.55) !important;
+      0 -10px 18px rgba(220, 255, 255, 0.85),
+      0 0 6px rgba(0, 245, 255, 0.35),
+      inset 0 0 0 1px rgba(0, 245, 255, 0.12);
+    border-color: rgba(0, 245, 255, 0.5) !important;
   }
-  45% {
+  25% {
     box-shadow:
-      0 0 32px rgba(255, 230, 120, 0.55),
-      0 0 22px rgba(0, 245, 255, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 245, 200, 0.85) !important;
+      10px 0 18px rgba(220, 255, 255, 0.85),
+      0 0 6px rgba(0, 245, 255, 0.35),
+      inset 0 0 0 1px rgba(0, 245, 255, 0.12);
+    border-color: rgba(0, 245, 255, 0.65) !important;
   }
-  55% {
+  50% {
     box-shadow:
-      0 0 38px rgba(255, 120, 60, 0.45),
-      0 0 18px rgba(0, 245, 255, 0.5),
-      inset 0 0 0 1px rgba(255, 200, 80, 0.2);
-    border-color: rgba(255, 180, 90, 0.9) !important;
+      0 10px 18px rgba(220, 255, 255, 0.85),
+      0 0 6px rgba(0, 245, 255, 0.35),
+      inset 0 0 0 1px rgba(0, 245, 255, 0.12);
+    border-color: rgba(0, 245, 255, 0.65) !important;
+  }
+  75% {
+    box-shadow:
+      -10px 0 18px rgba(220, 255, 255, 0.85),
+      0 0 6px rgba(0, 245, 255, 0.35),
+      inset 0 0 0 1px rgba(0, 245, 255, 0.12);
+    border-color: rgba(0, 245, 255, 0.65) !important;
+  }
+  100% {
+    box-shadow:
+      0 -10px 18px rgba(220, 255, 255, 0.85),
+      0 0 6px rgba(0, 245, 255, 0.35),
+      inset 0 0 0 1px rgba(0, 245, 255, 0.12);
+    border-color: rgba(0, 245, 255, 0.5) !important;
   }
 }
 .${FITENGINE_NEO_PANEL_CLASS} {
@@ -60,40 +68,10 @@ export function ensureNeoPanelWebCss() {
 .${FITENGINE_NEO_PANEL_SPARK_CLASS} {
   position: relative;
   overflow: visible;
-  isolation: isolate;
-  animation: fitengine-neo-spark-sweep 2.4s ease-in-out infinite;
-}
-.${FITENGINE_NEO_PANEL_SPARK_CLASS}::before {
-  content: '';
-  position: absolute;
-  inset: -5px;
-  border-radius: inherit;
-  padding: 3px;
-  background: conic-gradient(
-    from 210deg,
-    rgba(0,245,255,0.05),
-    rgba(0,245,255,0.25),
-    rgba(255,255,240,1),
-    rgba(255,210,80,0.98),
-    rgba(255,85,40,0.92),
-    rgba(0,245,255,0.55),
-    rgba(0,245,255,0.08),
-    rgba(0,245,255,0.05)
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: fitengine-neo-spark-spin 2.6s linear infinite;
-  will-change: transform;
-  pointer-events: none;
-  z-index: 0;
-}
-.${FITENGINE_NEO_PANEL_SPARK_CLASS} > * {
-  position: relative;
-  z-index: 1;
+  animation: fitengine-neo-spark-orbit 2.6s linear infinite;
 }
 `;
-  document.head.appendChild(el);
+  if (!el.parentNode) document.head.appendChild(el);
 }
 
 function edgeFromBrand(brand) {
@@ -106,15 +84,15 @@ function nativeHalo(brand, spark) {
   return {
     shadowColor: glow,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: spark ? 0.52 : 0.24,
-    shadowRadius: spark ? MOBILE_SPACING.xl + 4 : MOBILE_RADII.lg,
-    elevation: spark ? 11 : 7,
+    shadowOpacity: spark ? 0.34 : 0.24,
+    shadowRadius: spark ? MOBILE_RADII.lg + 2 : MOBILE_RADII.lg,
+    elevation: spark ? 8 : 7,
   };
 }
 
 /**
  * Contenedor de panel principal: borde un poco más grueso + cian neo; en web suma pulso (CSS).
- * @param {boolean} [spark] — “mecha” más viva (web: conic-gradient; nativo: halo más fuerte).
+ * @param {boolean} [spark] — Web: haz claro que orbita el borde (box-shadow). Nativo: halo un poco más marcado.
  */
 export default function NeoPanel({ style, children, spark = false, ...rest }) {
   const { t } = useThemeContext();
