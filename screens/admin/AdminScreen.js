@@ -804,7 +804,7 @@ export default function AdminScreen() {
 
         adminNavTilesFooter: {
           color: t.placeholder,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.meta,
           lineHeight: 16,
           textAlign: 'center',
           marginBottom: 12,
@@ -852,7 +852,7 @@ export default function AdminScreen() {
           paddingHorizontal: 8,
         },
 
-        fs12: { fontSize: 12 },
+        fs12: { fontSize: MOBILE_TYPE.caption },
         mb8: { marginBottom: 8 },
         mt6: { marginTop: 6 },
         mt12: { marginTop: 12 },
@@ -950,7 +950,7 @@ export default function AdminScreen() {
         },
         sectionCardTitle: {
           color: t.text,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.headline,
           fontWeight: '800',
           marginBottom: 10,
         },
@@ -1055,7 +1055,7 @@ export default function AdminScreen() {
         financeBtn: {
           alignSelf: 'flex-end',
           ...t.buttonPrimary,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           marginBottom: 10,
           paddingHorizontal: 12,
           paddingVertical: 8,
@@ -1067,7 +1067,7 @@ export default function AdminScreen() {
         },
         groupTitle: {
           color: t.subText,
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           fontWeight: '700',
           letterSpacing: 0.6,
           textTransform: 'uppercase',
@@ -1108,7 +1108,7 @@ export default function AdminScreen() {
         },
         menuTileSub: {
           color: t.subText,
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           marginTop: 2,
           lineHeight: 14,
         },
@@ -1204,7 +1204,7 @@ export default function AdminScreen() {
         dropdownItemSelected: {
           backgroundColor: hexToRgbaLocal(t.brand, 0.22),
         },
-        dropdownItemText: { color: t.text, fontSize: 16 },
+        dropdownItemText: { color: t.text, fontSize: MOBILE_TYPE.subhead },
 
         dropdownActions: {
           paddingHorizontal: 12,
@@ -1226,7 +1226,7 @@ export default function AdminScreen() {
 
         previewWrap: {
           backgroundColor: hexToRgbaLocal(t.brand, 0.14),
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           marginTop: 10,
           padding: 10,
         },
@@ -1241,7 +1241,7 @@ export default function AdminScreen() {
         rmText: {
           ...RM_PREVIEW_BASE(),
           backgroundColor: hexToRgbaLocal(RM_HIGHLIGHT_COLOR, 0.14),
-          borderRadius: 4,
+          borderRadius: MOBILE_RADII.xxs,
           color: RM_HIGHLIGHT_COLOR,
           fontWeight: '700',
           paddingHorizontal: 2,
@@ -1257,7 +1257,7 @@ export default function AdminScreen() {
         },
         bloqueTitle: { color: t.text, fontWeight: 'bold' },
         bloqueMeta: { color: t.text, fontSize: MOBILE_TYPE.caption, opacity: 0.85 },
-        bloqueCoach: { color: t.text, fontSize: 11, opacity: 0.75 },
+        bloqueCoach: { color: t.text, fontSize: MOBILE_TYPE.meta, opacity: 0.75 },
 
         iconButton: { alignItems: 'center' },
         iconText: { color: t.text, fontSize: MOBILE_TYPE.caption, marginTop: 2 },
@@ -1266,7 +1266,7 @@ export default function AdminScreen() {
           marginTop: 6,
           padding: 8,
           backgroundColor: hexToRgbaLocal(t.brand, 0.14),
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
@@ -1294,7 +1294,7 @@ export default function AdminScreen() {
         },
         videoLabel: {
           color: t.text,
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           padding: 4,
         },
 
@@ -1321,7 +1321,7 @@ export default function AdminScreen() {
         messageText: { color: t.text, fontSize: MOBILE_TYPE.body },
         messageTime: {
           color: t.text,
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           marginTop: 4,
           textAlign: 'right',
           opacity: 0.8,
@@ -1347,7 +1347,7 @@ export default function AdminScreen() {
         togglePill: {
           backgroundColor: hexToRgbaLocal(t.brand, 0.06),
           borderColor: t.brand,
-          borderRadius: 20,
+          borderRadius: MOBILE_RADII.xl,
           borderWidth: 1,
           paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 8,
@@ -1365,7 +1365,7 @@ export default function AdminScreen() {
         modalContent: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 15,
+          borderRadius: MOBILE_RADII.sheet,
           borderWidth: 1,
           padding: 20,
         },
@@ -1419,7 +1419,7 @@ export default function AdminScreen() {
         },
         modalTitle: {
           color: t.text,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.headline,
           fontWeight: 'bold',
           textAlign: 'center',
         },
@@ -1436,7 +1436,7 @@ export default function AdminScreen() {
         aiModalCloseBtn: {
           width: 36,
           height: 36,
-          borderRadius: 18,
+          borderRadius: MOBILE_RADII.controlCircle,
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.16)',
           backgroundColor: BASE_TEAL,
@@ -1727,6 +1727,7 @@ export default function AdminScreen() {
   return (
     <BackgroundWrapper screen="admin">
       <KeyboardAvoidingView
+        testID="admin-dashboard-root"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.screen}
       >

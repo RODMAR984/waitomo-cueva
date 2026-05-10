@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 
 /** Estética compartida: WelcomeGlobal + WelcomeDualChoice (logo, CTAs, locale). */
 export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}) {
@@ -22,37 +22,70 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       right: 18,
       zIndex: 20,
     },
-    localeGroup: {
+    localeDropdownTrigger: {
       flexDirection: 'row',
-      borderRadius: WEB_PANEL_RADIUS,
-      borderWidth: 1,
-      borderColor: t.overlayBorder,
-      overflow: 'hidden',
-      backgroundColor: t.inputBg,
-    },
-    localeBtn: {
-      minHeight: MOBILE_SIZES.localeControlHeight,
-      paddingVertical: MOBILE_SPACING.xs,
-      paddingHorizontal: 10,
-      minWidth: 44,
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 4,
+      borderRadius: MOBILE_RADII.lg,
+      borderWidth: 1,
+      borderColor: t.overlayBorder,
+      backgroundColor: t.inputBg,
+      paddingVertical: MOBILE_SPACING.xs,
+      paddingHorizontal: 12,
+      minHeight: MOBILE_SIZES.localeControlHeight,
+      minWidth: 76,
     },
-    localeBtnActive: {
-      backgroundColor: fe.buttonBg,
-    },
-    localeDivider: {
-      width: 1,
-      backgroundColor: t.overlayBorder,
-    },
-    localeText: {
-      color: t.subText,
+    localeDropdownTriggerText: {
+      color: t.text,
       fontSize: MOBILE_TYPE.caption,
       fontWeight: '800',
       letterSpacing: 0.3,
     },
-    localeTextActive: {
+    /** Fondo tocable para cerrar el popover de idioma (sin centrar menú). */
+    localePopoverBackdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.35)',
+    },
+    /** Caja del menú: tamaño discreto; posición top/left la fija WelcomeLocaleDropdown. */
+    localePopoverMenu: {
+      borderRadius: MOBILE_RADII.md,
+      borderWidth: 1,
+      borderColor: t.overlayBorder,
+      backgroundColor: t.inputBg,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: { boxShadow: '0 4px 14px rgba(0,0,0,0.35)' },
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.28,
+          shadowRadius: 5,
+        },
+        android: { elevation: 8 },
+        default: {},
+      }),
+    },
+    localePopoverOption: {
+      paddingVertical: 10,
+      paddingHorizontal: MOBILE_SPACING.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: t.overlayBorder,
+    },
+    localePopoverOptionLast: {
+      borderBottomWidth: 0,
+    },
+    localePopoverOptionActive: {
+      backgroundColor: fe.buttonBg,
+    },
+    localePopoverOptionText: {
+      fontSize: MOBILE_TYPE.caption,
+      color: t.text,
+      fontWeight: '600',
+    },
+    localePopoverOptionTextActive: {
       color: fe.buttonText,
+      fontWeight: '800',
     },
     content: {
       flex: 1,
@@ -70,7 +103,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
     },
     subtitle: {
       color: t.subText,
-      fontSize: 14,
+      fontSize: MOBILE_TYPE.body,
       textAlign: 'center',
       marginBottom: MOBILE_SPACING.lg,
       maxWidth: subtitleMaxWidth,
@@ -83,7 +116,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
     },
     joinHub: {
       width: '100%',
-      borderRadius: WEB_PANEL_RADIUS,
+      borderRadius: MOBILE_RADII.lg,
       borderWidth: 1,
       borderColor: t.overlayBorder,
       backgroundColor: t.inputBg,
@@ -100,7 +133,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
     },
     joinHubHint: {
       color: t.subText,
-      fontSize: 12,
+      fontSize: MOBILE_TYPE.caption,
       textAlign: 'center',
       opacity: 0.9,
       marginBottom: MOBILE_SPACING.xs,
@@ -121,7 +154,7 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       backgroundColor: fe.buttonBg,
       borderColor: fe.buttonBorder,
       borderWidth: 1,
-      borderRadius: WEB_PANEL_RADIUS,
+      borderRadius: MOBILE_RADII.lg,
       minHeight: MOBILE_SIZES.controlHeightLg,
       paddingVertical: MOBILE_SPACING.md,
       paddingHorizontal: MOBILE_SPACING.lg,
@@ -133,13 +166,142 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
       backgroundColor: fe.buttonBg,
       borderColor: fe.buttonBorder,
       borderWidth: 1,
-      borderRadius: WEB_PANEL_RADIUS,
+      borderRadius: MOBILE_RADII.lg,
       minHeight: MOBILE_SIZES.controlHeightLg,
       paddingVertical: MOBILE_SPACING.md,
       paddingHorizontal: MOBILE_SPACING.lg,
       alignItems: 'center',
       justifyContent: 'center',
       width: '100%',
+    },
+    /** Botón secundario outline (gym/coach en welcome). */
+    ctaSecondaryOutline: {
+      backgroundColor: 'transparent',
+      borderColor: t.overlayBorder,
+      borderWidth: 1,
+      borderRadius: MOBILE_RADII.lg,
+      minHeight: MOBILE_SIZES.controlHeightLg,
+      paddingVertical: MOBILE_SPACING.md,
+      paddingHorizontal: MOBILE_SPACING.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+    },
+    ctaSecondaryOutlineText: {
+      color: t.text,
+      fontSize: MOBILE_TYPE.bodyStrong,
+      fontWeight: '700',
+    },
+    /** Outline con borde cian (misma familia que CTA primario). */
+    ctaSecondaryOutlineBrand: {
+      backgroundColor: 'transparent',
+      borderColor: fe.buttonBg,
+      borderWidth: 1,
+      borderRadius: MOBILE_RADII.lg,
+      minHeight: MOBILE_SIZES.controlHeightLg,
+      paddingVertical: MOBILE_SPACING.md,
+      paddingHorizontal: MOBILE_SPACING.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+    },
+    ctaSecondaryOutlineBrandText: {
+      color: t.logoCian,
+      fontSize: MOBILE_TYPE.bodyStrong,
+      fontWeight: '700',
+    },
+    brandTitle: {
+      color: t.text,
+      fontSize: MOBILE_TYPE.title + 6,
+      fontWeight: '900',
+      textAlign: 'center',
+      letterSpacing: -0.5,
+    },
+    brandByline: {
+      color: t.subText,
+      fontSize: MOBILE_TYPE.body,
+      textAlign: 'center',
+      marginTop: 4,
+      opacity: 0.95,
+    },
+    brandTagline: {
+      color: t.subText,
+      fontSize: MOBILE_TYPE.bodyStrong,
+      textAlign: 'center',
+      marginTop: MOBILE_SPACING.sm,
+      marginBottom: MOBILE_SPACING.lg,
+      maxWidth: subtitleMaxWidth,
+    },
+    loginPromptRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: MOBILE_SPACING.lg,
+      paddingHorizontal: MOBILE_SPACING.sm,
+    },
+    loginPromptMuted: {
+      color: t.subText,
+      fontSize: MOBILE_TYPE.body,
+    },
+    loginPromptAction: {
+      color: t.logoCian,
+      fontSize: MOBILE_TYPE.bodyStrong,
+      fontWeight: '700',
+      textDecorationLine: 'underline',
+    },
+    brandPoweredWelcome: {
+      color: t.subText,
+      fontSize: MOBILE_TYPE.caption,
+      textAlign: 'center',
+      marginTop: MOBILE_SPACING.xs,
+      opacity: 0.9,
+    },
+    brandWordmark: {
+      color: t.text,
+      fontSize: MOBILE_TYPE.title,
+      fontWeight: '800',
+      textAlign: 'center',
+      marginTop: MOBILE_SPACING.sm,
+    },
+    /** Volver: mismo lenguaje que outline de código/buscar, más chico. */
+    ctaBackCompact: {
+      backgroundColor: 'transparent',
+      borderColor: t.overlayBorder,
+      borderWidth: 1,
+      borderRadius: MOBILE_RADII.lg,
+      minHeight: MOBILE_SIZES.controlHeight,
+      paddingVertical: MOBILE_SPACING.sm,
+      paddingHorizontal: MOBILE_SPACING.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+      maxWidth: 200,
+      width: '100%',
+      flexDirection: 'row',
+    },
+    ctaBackCompactText: {
+      color: t.text,
+      fontSize: MOBILE_TYPE.body,
+      fontWeight: '700',
+    },
+    footerLegalRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: MOBILE_SPACING.xl,
+      gap: 8,
+      paddingBottom: MOBILE_SPACING.lg,
+    },
+    footerLegalText: {
+      color: t.subText,
+      fontSize: MOBILE_TYPE.caption,
+      fontWeight: '600',
+    },
+    footerLegalDot: {
+      color: t.subText,
+      fontSize: MOBILE_TYPE.caption,
+      opacity: 0.6,
     },
     ctaPrimaryText: {
       color: fe.buttonText,
@@ -157,20 +319,20 @@ export function createWelcomeGlobalLayoutStyles(t, fe, topInset = 0, layout = {}
     },
     linkText: {
       color: t.subText,
-      fontSize: 13,
+      fontSize: MOBILE_TYPE.bodyStrong,
       textAlign: 'center',
       textDecorationLine: 'underline',
     },
     dualHint: {
       color: t.subText,
-      fontSize: 13,
+      fontSize: MOBILE_TYPE.bodyStrong,
       textAlign: 'center',
       marginBottom: 6,
       paddingHorizontal: 8,
     },
     sessionEmail: {
       color: t.subText,
-      fontSize: 12,
+      fontSize: MOBILE_TYPE.caption,
       textAlign: 'center',
       marginBottom: 12,
       opacity: 0.9,

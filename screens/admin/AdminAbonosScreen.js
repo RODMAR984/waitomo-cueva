@@ -26,7 +26,7 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { supabase } from '../../supabaseClient';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha) => {
@@ -256,7 +256,7 @@ export default function AdminAbonosScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: isWebDesktop ? 20 : 14,
           marginBottom: 12,
           flexDirection: 'row',
@@ -270,7 +270,7 @@ export default function AdminAbonosScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: isWebDesktop ? 20 : 16,
           marginBottom: 16,
         },

@@ -25,7 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 const fmtIsoDate = (d) => {
@@ -276,7 +276,7 @@ export default function AdminMembershipFreezeScreen() {
           alignSelf: 'center',
         },
         backBtn: { marginRight: 8, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
-        title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
+        title: { flex: 1, color: t.text, fontSize: MOBILE_TYPE.headline, fontWeight: '900' },
         scroll: { flex: 1 },
         scrollInner: {
           paddingHorizontal: MOBILE_SPACING.lg,
@@ -288,7 +288,7 @@ export default function AdminMembershipFreezeScreen() {
         hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 12, lineHeight: 18 },
         card: {
           backgroundColor: t.boxBg,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           padding: 14,
@@ -335,13 +335,13 @@ export default function AdminMembershipFreezeScreen() {
         },
         modalCard: {
           backgroundColor: t.boxBg,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: MOBILE_SPACING.lg,
           maxHeight: '88%',
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        modalTitle: { color: t.text, fontSize: 17, fontWeight: '900', marginBottom: 8 },
+        modalTitle: { color: t.text, fontSize: MOBILE_TYPE.headline, fontWeight: '900', marginBottom: 8 },
       }),
     [insets.top, t],
   );

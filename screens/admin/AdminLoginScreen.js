@@ -149,11 +149,12 @@ export default function AdminLoginScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.screen}>
             <NeoPanel style={styles.panel}>
-              <BackNavButton onPress={() => navigation.goBack()} />
+              <BackNavButton testID="admin-login-nav-back" onPress={() => navigation.goBack()} />
               <Text style={styles.title}>{tStr('admin_login_title')}</Text>
               <Text style={styles.subtitle}>{tStr('admin_login_subtitle')}</Text>
 
               <TextInput
+                testID="admin-login-email-input"
                 placeholder={tStr('login_email')}
                 placeholderTextColor={t.placeholder}
                 style={styles.input}
@@ -163,6 +164,7 @@ export default function AdminLoginScreen() {
                 onChangeText={setEmail}
               />
               <PasswordInput
+                testID="admin-login-password-input"
                 placeholder={tStr('login_password')}
                 placeholderTextColor={t.placeholder}
                 style={styles.input}
@@ -172,6 +174,7 @@ export default function AdminLoginScreen() {
               />
 
               <TouchableOpacity
+                testID="admin-login-submit"
                 style={styles.button}
                 onPress={handleEntrar}
                 disabled={submitting}

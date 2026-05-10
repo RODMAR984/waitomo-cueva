@@ -1,0 +1,11 @@
+# AdminLogin → atrás → welcome (deep link + back).
+appId: com.waitomofitengine.cueva
+---
+- runFlow: steps/wait-welcome.yaml
+- openLink: waitomo://admin
+- assertVisible:
+    id: admin-login-email-input
+- tapOn:
+    id: admin-login-nav-back
+- assertVisible:
+    id: welcome-cta-login-client

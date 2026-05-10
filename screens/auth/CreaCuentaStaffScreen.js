@@ -23,7 +23,7 @@ import PasswordInput from '../../components/PasswordInput';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -151,7 +151,7 @@ export default function CreaCuentaStaffScreen() {
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           padding: MOBILE_SPACING.xl,
         },
@@ -233,7 +233,7 @@ export default function CreaCuentaStaffScreen() {
             <View>
               <View style={{ width: '100%', alignItems: 'center', marginBottom: 14 }}>
                 <LogoCompleto height={52} />
-                <Text style={{ color: fe.subText, fontSize: 12, marginTop: 6 }}>{tStr('login_brand_powered')}</Text>
+                <Text style={{ color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: 6 }}>{tStr('login_brand_powered')}</Text>
               </View>
 
               <NeoPanel style={styles.panel}>
@@ -311,7 +311,7 @@ export default function CreaCuentaStaffScreen() {
 
               <View style={{ width: '100%', alignItems: 'center', marginTop: 22 }}>
                 <LogoCompleto height={28} style={{ marginBottom: 6, opacity: 0.85 }} />
-                <Text style={{ color: fe.subText, fontSize: 11, opacity: 0.75 }}>{tStr('gym_config_footer')}</Text>
+                <Text style={{ color: fe.subText, fontSize: MOBILE_TYPE.meta, opacity: 0.75 }}>{tStr('gym_config_footer')}</Text>
               </View>
             </View>
           </TouchableWithoutFeedback>

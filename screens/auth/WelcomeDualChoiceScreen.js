@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useLocale } from '../../contexts/LocaleContext';
 import LogoCompleto from '../../components/LogoCompleto';
+import WelcomeLocaleDropdown from '../../components/WelcomeLocaleDropdown';
 import { useAuth } from '../../contexts/AuthContext';
 import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../../theme/colors';
 import { createWelcomeGlobalLayoutStyles } from '../../styles/welcomeGlobalLayoutStyles';
@@ -65,31 +66,7 @@ export default function WelcomeDualChoiceScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <View style={styles.localeGroup}>
-          <TouchableOpacity
-            style={[styles.localeBtn, locale === 'es' && styles.localeBtnActive]}
-            onPress={() => setLocale('es')}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.localeText, locale === 'es' && styles.localeTextActive]}>ES</Text>
-          </TouchableOpacity>
-          <View style={styles.localeDivider} />
-          <TouchableOpacity
-            style={[styles.localeBtn, locale === 'en' && styles.localeBtnActive]}
-            onPress={() => setLocale('en')}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.localeText, locale === 'en' && styles.localeTextActive]}>EN</Text>
-          </TouchableOpacity>
-          <View style={styles.localeDivider} />
-          <TouchableOpacity
-            style={[styles.localeBtn, locale === 'pt' && styles.localeBtnActive]}
-            onPress={() => setLocale('pt')}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.localeText, locale === 'pt' && styles.localeTextActive]}>PT</Text>
-          </TouchableOpacity>
-        </View>
+        <WelcomeLocaleDropdown locale={locale} setLocale={setLocale} layoutStyles={styles} fitT={fitT} />
       </View>
 
       <View style={styles.content}>

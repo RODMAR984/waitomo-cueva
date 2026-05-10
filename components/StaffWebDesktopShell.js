@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import useStaffAdminNavTiles from '../hooks/useStaffAdminNavTiles';
+import { MOBILE_RADII, MOBILE_TYPE } from '../theme/mobileSpec';
 
 const STAFF_WEB_RAIL = 232;
 const STAFF_WEB_MIN_WIDTH = 1100;
@@ -103,7 +104,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         },
         staffWebRailCaption: {
           color: t.subText,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.meta,
           fontWeight: '800',
           letterSpacing: 0.5,
           textTransform: 'uppercase',
@@ -112,7 +113,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         },
         staffWebRailGroupTitle: {
           color: t.subText,
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           fontWeight: '700',
           letterSpacing: 0.5,
           textTransform: 'uppercase',
@@ -130,7 +131,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           columnGap: 10,
           paddingVertical: 8,
           paddingHorizontal: 8,
-          borderRadius: 10,
+          borderRadius: MOBILE_RADII.sm,
           marginBottom: 4,
         },
         staffWebRailItemActive: {
@@ -138,7 +139,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         },
         staffWebRailItemText: {
           color: t.text,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '600',
           flex: 1,
         },

@@ -20,8 +20,8 @@ import BackNavButton from '../../components/BackNavButton';
 import NeoPanel from '../../components/NeoPanel';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING } from '../../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 // ---------- screen ----------
 export default function ReservaClaseScreen({ route, navigation }) {
@@ -105,7 +105,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
           marginBottom: 20,
         },
         panel: {
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: MOBILE_SPACING.xxl,
           backgroundColor: t.boxBg,
         },
@@ -121,7 +121,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
         },
         title: {
           color: t.subText,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.lead,
           fontWeight: 'bold',
           marginBottom: 20,
           textAlign: 'center',

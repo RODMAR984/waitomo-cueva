@@ -19,7 +19,7 @@ import BackNavButton from '../../components/BackNavButton';
 import getRandomGeneralImage from '../../utils/getRandomGeneralImage';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -143,7 +143,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
         },
         levelSubtitle: {
           color: t.subText,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.meta,
           textAlign: 'center',
           marginTop: 2,
         },
@@ -166,7 +166,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1.5,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: MOBILE_SPACING.xxl,
           // sombra sutil ligada a la marca
           shadowColor: t.brand,

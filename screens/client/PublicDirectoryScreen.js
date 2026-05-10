@@ -12,6 +12,7 @@ import {
   RefreshControl,
   TextInput,
   Linking,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -229,6 +230,8 @@ export default function PublicDirectoryScreen() {
         filterChipText: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
         filterChipTextOn: { color: t.text },
         listFooter: { paddingVertical: MOBILE_SPACING.xl },
+        /** Web: la barra vertical del navegador queda pegada al borde de las tarjetas sin esto */
+        listContentWeb: { paddingRight: MOBILE_SPACING.xl + 14 },
         empty: { color: t.subText, textAlign: 'center', marginTop: MOBILE_SPACING.xxl, fontSize: MOBILE_TYPE.bodyStrong },
         err: { color: '#f87171', textAlign: 'center', marginTop: MOBILE_SPACING.lg, fontSize: MOBILE_TYPE.body },
         orgInitial: { color: t.subText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
@@ -324,12 +327,12 @@ export default function PublicDirectoryScreen() {
 
   return (
     <BackgroundWrapper screen="PublicDirectory" plan={plan}>
-      <View style={styles.kav}>
+      <View testID="screen-directory" style={styles.kav}>
         <View style={styles.head}>
           <LogoCompleto height={MOBILE_SIZES.localeControlHeight + MOBILE_SPACING.sm} />
-          <Text style={styles.brandPowered}>powered by WAITOMO</Text>
+          <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
         </View>
-        <BackNavButton onPress={handleBack} label={tStr('common_back')} />
+        <BackNavButton testID="directory-nav-back" onPress={handleBack} label={tStr('common_back')} />
         <Text style={styles.title}>{tStr('directory_title')}</Text>
         <Text style={styles.subtitle}>{tStr('directory_subtitle')}</Text>
         <TextInput
@@ -371,9 +374,23 @@ export default function PublicDirectoryScreen() {
             keyExtractor={(it, index) => String(it?.id || `row-${index}`)}
             renderItem={renderItem}
             numColumns={1}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={fe.subText} />}
+            style={Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : undefined}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={t.subText}
+                colors={Platform.OS === 'android' ? [t.brand] : undefined}
+              />
+            }
             ListEmptyComponent={<Text style={styles.empty}>{tStr('directory_empty')}</Text>}
-            contentContainerStyle={{ paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg, paddingTop: MOBILE_SPACING.sm }}
+            contentContainerStyle={[
+              {
+                paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg,
+                paddingTop: MOBILE_SPACING.sm,
+              },
+              Platform.OS === 'web' ? styles.listContentWeb : null,
+            ]}
             onEndReached={() => void loadMore()}
             onEndReachedThreshold={0.35}
             ListFooterComponent={

@@ -44,6 +44,8 @@ export default function ClientTabs() {
       paddingTop: MOBILE_SPACING.lg,
       paddingBottom: MOBILE_SPACING.sm,
       paddingHorizontal: MOBILE_SPACING.sm,
+      /** Evita que el highlight activo (faintStrong) + márgenes del tab sobresalgan del ancho del rail. */
+      overflow: 'hidden',
     }),
     [t],
   );
@@ -63,6 +65,7 @@ export default function ClientTabs() {
       tabBarStyle: isWebDesktop
         ? {
             width: '100%',
+            maxWidth: '100%',
             flexGrow: 0,
             flexShrink: 0,
             borderRightWidth: 0,
@@ -73,6 +76,7 @@ export default function ClientTabs() {
             paddingHorizontal: 0,
             elevation: 0,
             shadowOpacity: 0,
+            overflow: 'hidden',
           }
         : { display: 'none' },
       tabBarLabelPosition: isWebDesktop ? 'beside-icon' : 'below-icon',
@@ -83,11 +87,13 @@ export default function ClientTabs() {
       tabBarItemStyle: isWebDesktop
         ? {
             justifyContent: 'flex-start',
-            marginHorizontal: MOBILE_SPACING.sm / 2,
+            /** Sin marginHorizontal: el rail ya tiene padding; si no, el fondo activo “se sale” del ancho fijo. */
             marginVertical: MOBILE_SPACING.sm / 2,
             borderRadius: MOBILE_RADII.lg,
             minHeight: MOBILE_SIZES.controlHeight,
             paddingHorizontal: MOBILE_SPACING.sm + 2,
+            alignSelf: 'stretch',
+            maxWidth: '100%',
           }
         : undefined,
       tabBarActiveTintColor: t.text,
@@ -105,7 +111,7 @@ export default function ClientTabs() {
       }
       return (
         <View style={webRailShellStyle}>
-          <View style={{ flex: 1, minHeight: 0, width: '100%' }}>
+          <View style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
             <BottomTabBar {...props} />
           </View>
           <View

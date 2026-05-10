@@ -83,7 +83,7 @@ export default function AdminReportesScreen() {
           backgroundColor: t.boxBg,
           padding: 14,
         },
-        cardVal: { color: t.text, fontSize: 26, fontWeight: '900', marginTop: 4 },
+        cardVal: { color: t.text, fontSize: MOBILE_TYPE.kpi, fontWeight: '900', marginTop: 4 },
         cardLab: { color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700', marginTop: 6 },
       }),
     [insets.top, t],

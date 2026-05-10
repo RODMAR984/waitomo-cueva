@@ -30,7 +30,7 @@ import { resolveFreeClassGrant } from '../../services/booking/trialClassGrant';
 import { evaluateCalendarioAccess } from '../../utils/clientWorkoutEntitlement';
 import { draftChatReplyWithAi } from '../../utils/aiAssistant';
 import { trackEvent } from '../../utils/observability';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
@@ -353,14 +353,14 @@ export default function ChatScreen() {
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
-        title: { color: t.brand ?? t.text, fontSize: 20, fontWeight: '800', marginTop: 6, marginBottom: 8 },
+        title: { color: t.brand ?? t.text, fontSize: MOBILE_TYPE.title, fontWeight: '800', marginTop: 6, marginBottom: 8 },
         list: { flex: 1, paddingHorizontal: MOBILE_SPACING.lg, paddingVertical: 8, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         msgRow: { marginBottom: 12, maxWidth: '85%' },
         msgRowMe: { alignSelf: 'flex-end' },
         msgBubble: {
           paddingVertical: 10,
           paddingHorizontal: 14,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderBottomRightRadius: 4,
           backgroundColor: t.boxBg,
           borderWidth: 1,
@@ -369,7 +369,7 @@ export default function ChatScreen() {
         msgBubbleMe: {
           backgroundColor: hexToRgba(t.brand, 0.35),
           borderColor: hexToRgba(t.brand, 0.65),
-          borderBottomRightRadius: WEB_PANEL_RADIUS,
+          borderBottomRightRadius: MOBILE_RADII.lg,
           borderBottomLeftRadius: 4,
         },
         senderRow: {
@@ -379,21 +379,21 @@ export default function ChatScreen() {
           gap: 6,
           marginBottom: 2,
         },
-        msgSender: { color: t.placeholder, fontSize: 11 },
-        msgSenderMe: { color: t.onBrand, fontSize: 11 },
+        msgSender: { color: t.placeholder, fontSize: MOBILE_TYPE.caption },
+        msgSenderMe: { color: t.onBrand, fontSize: MOBILE_TYPE.caption },
         staffBadge: {
           paddingHorizontal: 6,
           paddingVertical: 2,
-          borderRadius: 6,
+          borderRadius: MOBILE_RADII.xs,
           backgroundColor: hexToRgba(t.brand, 0.2),
           borderWidth: 1,
           borderColor: hexToRgba(t.brand, 0.45),
         },
-        staffBadgeText: { color: t.brand, fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+        staffBadgeText: { color: t.brand, fontSize: MOBILE_TYPE.micro, fontWeight: '800', letterSpacing: 0.3 },
         msgBody: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong },
         msgBodyMe: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong },
-        msgTime: { color: t.placeholder, fontSize: 10, marginTop: 4 },
-        msgTimeMe: { color: t.onBrand, fontSize: 10, marginTop: 4 },
+        msgTime: { color: t.placeholder, fontSize: MOBILE_TYPE.micro, marginTop: 4 },
+        msgTimeMe: { color: t.onBrand, fontSize: MOBILE_TYPE.micro, marginTop: 4 },
         inputRow: {
           flexDirection: 'row',
           alignItems: 'flex-end',
@@ -411,7 +411,7 @@ export default function ChatScreen() {
           flex: 1,
           minHeight: 44,
           maxHeight: 100,
-          borderRadius: 22,
+          borderRadius: MOBILE_RADII.bubble,
           borderWidth: 1.5,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
@@ -423,7 +423,7 @@ export default function ChatScreen() {
         sendBtn: {
           width: 44,
           height: 44,
-          borderRadius: 22,
+          borderRadius: MOBILE_RADII.bubble,
           ...t.buttonPrimary,
           alignItems: 'center',
           justifyContent: 'center',
@@ -432,7 +432,7 @@ export default function ChatScreen() {
         aiBtn: {
           minWidth: 44,
           height: 44,
-          borderRadius: 22,
+          borderRadius: MOBILE_RADII.bubble,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           alignItems: 'center',
@@ -521,7 +521,7 @@ export default function ChatScreen() {
             </View>
           ) : !accessOk ? (
             <View style={[styles.empty, { flex: 1, justifyContent: 'center', paddingHorizontal: 22 }]}>
-              <Text style={[styles.emptyText, { textAlign: 'center', fontSize: 16, fontWeight: '800', color: t.text }]}>
+              <Text style={[styles.emptyText, { textAlign: 'center', fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', color: t.text }]}>
                 {tStr('client_community_locked_title')}
               </Text>
               <Text style={[styles.emptyText, { textAlign: 'center', marginTop: 10, lineHeight: 20 }]}>

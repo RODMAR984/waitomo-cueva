@@ -22,7 +22,7 @@ import BackNavButton from '../../components/BackNavButton';
 import getRandomGeneralImage from '../../utils/getRandomGeneralImage';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 export default function RegistroDesdeCiclo({ navigation, route }) {
@@ -61,7 +61,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
         container: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1.5,
           marginHorizontal: MOBILE_SPACING.xl,
           padding: MOBILE_SPACING.xxl,

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { navigationRef } from '../navigationRef';
+import { navigationRef, resetNavigationRoot } from '../navigationRef';
 
 /** Debounce para no resetear por un null transitorio (p. ej. durante callback de Google OAuth). */
 const AUTHGATE_NULL_DEBOUNCE_MS = 500;
@@ -38,6 +38,7 @@ export default function AuthGate({ children }) {
         const isEntryScreen =
           routeName === 'Splash' ||
           routeName === 'WelcomeGlobal' ||
+          routeName === 'WelcomeClientJoin' ||
           routeName === 'Welcome' ||
           routeName === 'WelcomeScreen' ||
           routeName === 'Login' ||
@@ -48,11 +49,7 @@ export default function AuthGate({ children }) {
           routeName === 'RegistroOwner' ||
           routeName === 'ConfiguraTuEspacio';
         if (isEntryScreen) return;
-        try {
-          navigationRef.resetRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
-        } catch (e) {
-          // no romper
-        }
+        resetNavigationRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
       }, AUTHGATE_NULL_DEBOUNCE_MS);
     }
 

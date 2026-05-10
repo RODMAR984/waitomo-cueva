@@ -19,7 +19,7 @@ import AdminCommissionsScreen from '../screens/admin/AdminCommissionsScreen';
 import AdminStripeSettingsScreen from '../screens/admin/AdminStripeSettingsScreen';
 import AdminMercadoPagoSettingsScreen from '../screens/admin/AdminMercadoPagoSettingsScreen';
 import AdminBadgesScreen from '../screens/admin/AdminBadgesScreen';
-import { MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
 import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
 
 /** Staff envuelto en rail web: en iOS/Android nativo no se ofrece (solo fitengine.app en navegador). */
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: MOBILE_SPACING.sm,
     paddingHorizontal: MOBILE_SPACING.lg,
-    borderRadius: 12,
+    borderRadius: MOBILE_RADII.md,
     borderWidth: 1,
   },
   gateBtnText: { fontWeight: '800', fontSize: MOBILE_TYPE.bodyStrong },

@@ -19,7 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
@@ -124,7 +124,7 @@ export default function NovedadesScreen() {
           alignSelf: 'center',
         },
         card: {
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           paddingVertical: MOBILE_SPACING.lg,
           paddingHorizontal: MOBILE_SPACING.lg,
           marginBottom: 12,
@@ -147,10 +147,10 @@ export default function NovedadesScreen() {
         tag: {
           paddingHorizontal: MOBILE_SPACING.sm,
           paddingVertical: 4,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           backgroundColor: hexToRgba(t.brand, 0.2),
         },
-        tagText: { color: t.brandText ?? t.brand, fontSize: 11, fontWeight: '600' },
+        tagText: { color: t.brandText ?? t.brand, fontSize: MOBILE_TYPE.meta, fontWeight: '600' },
         dateText: { color: t.placeholder, fontSize: MOBILE_TYPE.caption },
         pinnedBadge: { color: t.brandText ?? t.brand, marginLeft: 4 },
         bodyWrap: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: t.overlayBorder },

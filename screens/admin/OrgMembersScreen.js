@@ -236,7 +236,7 @@ export default function OrgMembersScreen() {
           keyExtractor={(item) => item.user_id}
           ListHeaderComponent={
             rows.length ? (
-              <Text style={{ color: t.subText, fontSize: 13, lineHeight: 18, marginBottom: 12 }}>
+              <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.label, lineHeight: 18, marginBottom: 12 }}>
                 {tStr('org_member_list_hint')}
               </Text>
             ) : null

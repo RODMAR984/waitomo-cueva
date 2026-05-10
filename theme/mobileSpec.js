@@ -8,9 +8,25 @@ export const MOBILE_SPACING = {
 };
 
 export const MOBILE_RADII = {
+  /** Esquinas muy marcadas (p. ej. previews RM). */
+  xxs: 4,
+  /** Chips, badges y toques compactos. */
+  xs: 6,
+  /** Tarjetas / bloques densos (8px; alinea con `MOBILE_SPACING.sm`). */
+  compact: 8,
   sm: 10,
   md: 12,
   lg: 16,
+  /** Modales y contenedores muy redondeados (20px). */
+  xl: 20,
+  /** Burbujas de chat tipo “pill” ancho. */
+  bubble: 22,
+  /** Chips / filas con esquina intermedia (14px). */
+  chipMd: 14,
+  /** Modales compactos (15px). */
+  sheet: 15,
+  /** Botón circular estándar (36×36). */
+  controlCircle: 18,
   pill: 999,
 };
 
@@ -25,4 +41,22 @@ export const MOBILE_TYPE = {
   bodyStrong: 15,
   title: 22,
   caption: 12,
+  /** Meta densa entre micro y caption (p. ej. ~11px). */
+  meta: 11,
+  /** Etiquetas de fila / UI compacta (p. ej. ~13px). */
+  label: 13,
+  /** Subcabeceras y títulos de bloque (p. ej. ~16px). */
+  subhead: 16,
+  /** Titular de card o nombre entre headline y title (p. ej. ~20px). */
+  lead: 20,
+  /** Subtítulos / secciones secundarias (antes ~18px). */
+  headline: 18,
+  /** Titulares de marketing o cabeceras compactas (antes ~28px). */
+  hero: 28,
+  /** Splash / marca grande (antes ~36px). */
+  display: 36,
+  /** Meta muy pequeña (chips, timestamps); mínimo legible en UI densa. */
+  micro: 10,
+  /** KPIs numéricos en tableros (antes ~26px). */
+  kpi: 26,
 };

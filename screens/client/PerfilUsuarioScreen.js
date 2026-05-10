@@ -32,8 +32,8 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { navigationRef } from '../../navigationRef';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { navigationRef, resetNavigationRoot } from '../../navigationRef';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -251,29 +251,11 @@ const PerfilUsuarioScreen = () => {
   // Logout + reset robusto al Welcome
   // ---------------------------------------------
   const resetToWelcome = () => {
-    // 1) Intentar reset global desde la ref del NavigationContainer
-    // eslint-disable-next-line no-console
-    console.log('🔁 Perfil.resetToWelcome: start', {
-      navReady: navigationRef.isReady?.() || false,
-    });
-
-    if (navigationRef.isReady()) {
-      try {
-        // eslint-disable-next-line no-console
-        console.log('🔁 Perfil.resetToWelcome: usando navigationRef.resetRoot');
-        navigationRef.resetRoot({
-          index: 0,
-          routes: [{ name: 'WelcomeGlobal' }],
-        });
-        return true;
-      } catch {
-        // seguir probando con navegadores locales
-        // eslint-disable-next-line no-console
-        console.log('⚠️ Perfil.resetToWelcome: fallo resetRoot, probando navegadores locales');
-      }
+    if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] })) {
+      return true;
     }
 
-    // 2) Fallback: recorrer padres (tabs -> stack)
+    // Fallback: recorrer padres (tabs -> stack)
     const navs = [navigation?.getParent?.()?.getParent?.(), navigation?.getParent?.(), navigation].filter(
       Boolean
     );
@@ -306,28 +288,28 @@ const PerfilUsuarioScreen = () => {
     }
   };
 
+  const runLogoutAndWelcome = async () => {
+    try {
+      if (logout) await logout();
+    } catch (error) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('perfil_logout_error'));
+      return;
+    }
+    resetToWelcome();
+  };
+
   const handleLogout = () => {
-    // eslint-disable-next-line no-console
-    console.log('🟡 Perfil.handleLogout: Alert de confirmación');
+    const proceed = () => void runLogoutAndWelcome();
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      if (window.confirm(`${tStr('perfil_logout_title')}\n\n${tStr('perfil_logout_message')}`)) proceed();
+      return;
+    }
     Alert.alert(tStr('perfil_logout_title'), tStr('perfil_logout_message'), [
       { text: tStr('common_cancel'), style: 'cancel' },
       {
         text: tStr('perfil_logout_confirm'),
         style: 'destructive',
-        onPress: () => {
-          // ⚠️ Igual que en ClientScreen: no esperamos a que termine logout(), navegamos ya.
-          // eslint-disable-next-line no-console
-          console.log('▶️ Perfil.handleLogout: onPress -> logout() (fire-and-forget)');
-          try {
-            logout?.();
-          } catch (error) {
-            console.log('Error al cerrar sesión desde PerfilUsuarioScreen:', error);
-            Alert.alert(tStr('gym_config_alert_title_error'), tStr('perfil_logout_error'));
-          }
-          // eslint-disable-next-line no-console
-          console.log('✅ Perfil.handleLogout: llamando resetToWelcome() inmediatamente');
-          resetToWelcome();
-        },
+        onPress: proceed,
       },
     ]);
   };
@@ -372,7 +354,7 @@ const PerfilUsuarioScreen = () => {
           alignSelf: 'center',
         },
         panel: {
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: isWebDesktop ? 20 : 18,
           backgroundColor: t.boxBg,
           borderWidth: 1,
@@ -381,9 +363,9 @@ const PerfilUsuarioScreen = () => {
         titulo: { fontSize: MOBILE_TYPE.title, fontWeight: '700', color: t.text, marginBottom: 4 },
         subtitulo: { fontSize: MOBILE_TYPE.body, color: t.subText, marginBottom: 16 },
         gymRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
-        gymLogo: { width: 40, height: 40, borderRadius: 8 },
+        gymLogo: { width: 40, height: 40, borderRadius: MOBILE_RADII.sm },
         gymLogoPlaceholder: { backgroundColor: t.faintStrong, justifyContent: 'center', alignItems: 'center' },
-        gymName: { fontSize: 16, fontWeight: '600', color: t.text, flex: 1 },
+        gymName: { fontSize: MOBILE_TYPE.subhead, fontWeight: '600', color: t.text, flex: 1 },
         avatarContainer: { alignItems: 'center', marginBottom: 16 },
         avatarCircle: {
           width: 96,
@@ -397,20 +379,20 @@ const PerfilUsuarioScreen = () => {
           marginBottom: 8,
         },
         avatarImage: { width: 80, height: 80, borderRadius: 40, resizeMode: 'cover' },
-        avatarText: { fontSize: 12, color: t.subText, textAlign: 'center' },
+        avatarText: { fontSize: MOBILE_TYPE.caption, color: t.subText, textAlign: 'center' },
         section: { marginTop: 12, marginBottom: 8 },
-        sectionTitle: { fontSize: 16, fontWeight: '600', color: t.text, marginBottom: 6 },
+        sectionTitle: { fontSize: MOBILE_TYPE.subhead, fontWeight: '600', color: t.text, marginBottom: 6 },
         aptoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
         aptoBadge: {
           paddingHorizontal: 10,
           paddingVertical: 6,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
         },
-        aptoBadgeText: { color: t.primaryText, fontWeight: '700', fontSize: 12 },
-        aptoHint: { flex: 1, color: t.subText, fontSize: 12 },
+        aptoBadgeText: { color: t.primaryText, fontWeight: '700', fontSize: MOBILE_TYPE.caption },
+        aptoHint: { flex: 1, color: t.subText, fontSize: MOBILE_TYPE.caption },
         aptoButton: {
           borderRadius: MOBILE_RADII.md,
           minHeight: MOBILE_SIZES.controlHeight,
@@ -420,9 +402,9 @@ const PerfilUsuarioScreen = () => {
           justifyContent: 'center',
           ...t.buttonPrimary,
         },
-        aptoButtonText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: 14 },
+        aptoButtonText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: MOBILE_TYPE.body },
         field: { marginBottom: 10 },
-        label: { fontSize: 13, color: t.subText, marginBottom: 4 },
+        label: { fontSize: MOBILE_TYPE.label, color: t.subText, marginBottom: 4 },
         input: {
           borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
@@ -437,7 +419,7 @@ const PerfilUsuarioScreen = () => {
         textArea: { minHeight: 60, textAlignVertical: 'top' },
         row: { flexDirection: 'row', justifyContent: 'space-between' },
         fieldHalf: { flex: 1 },
-        smallHint: { marginTop: 3, fontSize: 11, color: t.subText },
+        smallHint: { marginTop: 3, fontSize: MOBILE_TYPE.caption, color: t.subText },
         buttonsRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'center' },
         saveButton: {
           flexGrow: 1,
@@ -449,7 +431,7 @@ const PerfilUsuarioScreen = () => {
           justifyContent: 'center',
           ...t.buttonPrimary,
         },
-        saveButtonText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: 15 },
+        saveButtonText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: MOBILE_TYPE.bodyStrong },
         securityButton: {
           flexGrow: 1,
           borderRadius: MOBILE_RADII.md,
@@ -462,7 +444,7 @@ const PerfilUsuarioScreen = () => {
           gap: 6,
           ...t.buttonPrimary,
         },
-        securityButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: 14 },
+        securityButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: MOBILE_TYPE.body },
         logoutButton: {
           flexGrow: 1,
           borderRadius: MOBILE_RADII.md,
@@ -475,11 +457,11 @@ const PerfilUsuarioScreen = () => {
           gap: 6,
           ...t.buttonPrimary,
         },
-        logoutButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: 14 },
+        logoutButtonText: { ...t.buttonPrimaryText, fontWeight: '500', fontSize: MOBILE_TYPE.body },
         backButton: {
           marginTop: 6,
         },
-        backButtonText: { ...t.buttonPrimaryText, fontSize: 14 },
+        backButtonText: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.body },
       }),
     [t, isWebDesktop],
   );
@@ -494,7 +476,11 @@ const PerfilUsuarioScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          testID="screen-perfil"
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
           <NeoPanel style={styles.panel}>
             <Text style={styles.titulo}>{tStr('perfil_title')}</Text>
             <Text style={styles.subtitulo}>{tStr('perfil_subtitle')}</Text>
@@ -718,7 +704,12 @@ const PerfilUsuarioScreen = () => {
             </View>
 
             <View style={styles.buttonsRow}>
-              <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
+              <BackNavButton
+                testID="perfil-nav-back"
+                onPress={() => navigation.goBack()}
+                label={tStr('config_back')}
+                style={styles.backButton}
+              />
             </View>
           </NeoPanel>
         </ScrollView>

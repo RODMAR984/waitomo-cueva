@@ -12,6 +12,8 @@ import {
 } from '../utils/imagenesFijas';
 
 const IMAGEN_PLAN_SELECTOR = require('../assets/plan_image/bg_plan_selector.jpg');
+/** Directorio público “buscar gym”: fondo fijo marca (cueva digital / triángulo). */
+const BG_PUBLIC_DIRECTORY = require('../assets/plan_image/bg_public_directory_cave.png');
 
 // LISTA DE TODAS LAS IMÁGENES PARA TRABAJO DEL DIA - NOMBRES EXACTOS
 const TRABAJO_DIA_BACKGROUNDS = [
@@ -42,6 +44,8 @@ function isFitEnginePlatformBackgroundScreen(sl) {
   if (s === 'neutral' || s === 'fitengine' || s === 'fitengineglobal' || s === 'splash') return true;
   // CreateAccount / AdminLogin / CreaCuentaStaff (screen="Welcome") — stock app, no white-label org
   if (s === 'welcome') return true;
+  // Listado global de gims (marketing): mismo criterio que neutral, sin fondo org del tenant.
+  if (s === 'publicdirectory') return true;
   return false;
 }
 
@@ -100,8 +104,7 @@ export default function BackgroundWrapper({
     screenLower.includes('trabajodeldia') ||
     screenLower.includes('admin') ||
     screenLower.includes('clientscreen') ||
-    screenLower.includes('clienttabs') ||
-    screenLower.includes('publicdirectory');
+    screenLower.includes('clienttabs');
 
   const useOrgBackground =
     orgForBackground &&
@@ -196,6 +199,20 @@ export default function BackgroundWrapper({
       <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
         {children}
       </View>
+    );
+  }
+
+  // Directorio público (onboarding FitEngine): imagen fija + velo para legibilidad (sin rotación Waitomo).
+  if (screenLower === 'publicdirectory') {
+    return (
+      <ImageBackground
+        source={BG_PUBLIC_DIRECTORY}
+        style={[styles.flex, style]}
+        resizeMode="cover"
+      >
+        <View style={overlayStyle} />
+        {children}
+      </ImageBackground>
     );
   }
 

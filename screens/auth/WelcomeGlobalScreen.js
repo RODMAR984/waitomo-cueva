@@ -1,5 +1,4 @@
-// WelcomeGlobalScreen — Tras Splash: acciones claras (crear cuenta / iniciar sesión).
-// Cuenta dual: se redirige a WelcomeDualChoice (misma estética, flujo aparte).
+// WelcomeGlobalScreen — Logo + marca, Empezar / gym-coach, iniciar sesión, idioma, pie legal.
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
@@ -14,13 +13,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useLocale } from '../../contexts/LocaleContext';
 import LogoCompleto from '../../components/LogoCompleto';
+import WelcomeLocaleDropdown from '../../components/WelcomeLocaleDropdown';
 import { useAuth } from '../../contexts/AuthContext';
 import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../../theme/colors';
 import { createWelcomeGlobalLayoutStyles } from '../../styles/welcomeGlobalLayoutStyles';
 import { useWelcomeRouting } from '../../hooks/useWelcomeRouting';
 import { WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
-/** Misma escala que `createWelcomeGlobalLayoutStyles` → `theme/mobileSpec` */
-export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+
+export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE };
 
 export default function WelcomeGlobalScreen() {
   const navigation = useNavigation();
@@ -41,7 +42,6 @@ export default function WelcomeGlobalScreen() {
 
   const { navigateToDestination, onContinue, isDualByMemberships } = useWelcomeRouting();
 
-  /** Sin esto, "Continuar" puede dispararse con profile=null (OAuth) y el routing manda a Registro o no-op. */
   const sessionRoutingReady =
     !!session?.user?.id &&
     authNavigationReady &&
@@ -49,7 +49,6 @@ export default function WelcomeGlobalScreen() {
 
   const isDualSession = sessionRoutingReady && (isDualByMemberships || isDualHatUser);
 
-  // Dual solo si aún no hay modo guardado (ej. login staff ya persistió "staff" → no mostrar elección).
   const needsDualRedirect =
     sessionRoutingReady && (isDualByMemberships || isDualHatUser) && activeAppMode == null;
 
@@ -58,8 +57,6 @@ export default function WelcomeGlobalScreen() {
     navigation.replace('WelcomeDualChoice');
   }, [needsDualRedirect, navigation]);
 
-  // En web: al volver de OAuth deberíamos caer directo al panel (no depender del botón).
-  // En móvil lo dejamos intacto (ya funciona).
   const lastAutoNavUserIdRef = useRef(null);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -85,16 +82,13 @@ export default function WelcomeGlobalScreen() {
   };
 
   const showContinueSession = sessionRoutingReady && !needsDualRedirect;
-
   const showGuestActions = !session?.user?.id;
 
-  const welcomeHeadlineKey = showGuestActions
-    ? 'welcome_global_subtitle'
-    : showContinueSession
-      ? isDualSession
-        ? 'welcome_dual_resume_subtitle'
-        : 'welcome_session_resume_subtitle'
-      : 'welcome_global_subtitle';
+  const resumeSubtitleKey = showContinueSession
+    ? isDualSession
+      ? 'welcome_dual_resume_subtitle'
+      : 'welcome_session_resume_subtitle'
+    : 'welcome_global_subtitle';
 
   const isWideWeb = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
   const layoutStyles = useMemo(
@@ -128,124 +122,137 @@ export default function WelcomeGlobalScreen() {
   return (
     <View style={layoutStyles.container}>
       <View style={layoutStyles.topBar}>
-        <View style={layoutStyles.localeGroup}>
-          <TouchableOpacity
-            testID="locale-es"
-            style={[layoutStyles.localeBtn, locale === 'es' && layoutStyles.localeBtnActive]}
-            onPress={() => setLocale('es')}
-            activeOpacity={0.85}
-          >
-            <Text style={[layoutStyles.localeText, locale === 'es' && layoutStyles.localeTextActive]}>
-              ES
-            </Text>
-          </TouchableOpacity>
-          <View style={layoutStyles.localeDivider} />
-          <TouchableOpacity
-            testID="locale-en"
-            style={[layoutStyles.localeBtn, locale === 'en' && layoutStyles.localeBtnActive]}
-            onPress={() => setLocale('en')}
-            activeOpacity={0.85}
-          >
-            <Text style={[layoutStyles.localeText, locale === 'en' && layoutStyles.localeTextActive]}>
-              EN
-            </Text>
-          </TouchableOpacity>
-          <View style={layoutStyles.localeDivider} />
-          <TouchableOpacity
-            testID="locale-pt"
-            style={[layoutStyles.localeBtn, locale === 'pt' && layoutStyles.localeBtnActive]}
-            onPress={() => setLocale('pt')}
-            activeOpacity={0.85}
-          >
-            <Text style={[layoutStyles.localeText, locale === 'pt' && layoutStyles.localeTextActive]}>
-              PT
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <WelcomeLocaleDropdown
+          locale={locale}
+          setLocale={setLocale}
+          layoutStyles={layoutStyles}
+          fitT={fitT}
+        />
       </View>
 
-      <View style={layoutStyles.content}>
-        <View style={layoutStyles.logoWrap}>
-          <LogoCompleto height={160} />
-        </View>
-
-        <Text style={layoutStyles.subtitle}>{tStr(welcomeHeadlineKey)}</Text>
-
-        {showGuestActions && (
-          <View style={layoutStyles.ctaWrap}>
-            <View style={layoutStyles.joinHub}>
-              <Text style={layoutStyles.joinHubTitle}>{tStr('welcome_join_hub_title')}</Text>
-              <Text style={layoutStyles.joinHubHint}>{tStr('welcome_join_hub_hint')}</Text>
-              <View style={layoutStyles.joinSubRow}>
-                <TouchableOpacity
-                  style={[
-                    layoutStyles.ctaPrimary,
-                    isWideWeb ? layoutStyles.joinSubBtnWide : layoutStyles.joinSubBtnStack,
-                  ]}
-                  onPress={() => navigation.navigate('JoinWithInvite')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_join_code_cta')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    layoutStyles.ctaSecondary,
-                    isWideWeb ? layoutStyles.joinSubBtnWide : layoutStyles.joinSubBtnStack,
-                  ]}
-                  onPress={() => navigation.navigate('PublicDirectory')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={layoutStyles.ctaSecondaryText}>{tStr('welcome_find_gym_cta')}</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={layoutStyles.joinHubHint}>{tStr('welcome_find_gym_soon_body')}</Text>
+      <View style={[layoutStyles.content, showGuestActions ? { justifyContent: 'center' } : null]}>
+        {showGuestActions ? (
+          <>
+            <View style={[layoutStyles.logoWrap, { marginBottom: MOBILE_SPACING.lg }]}>
+              <LogoCompleto height={152} />
             </View>
 
-            <TouchableOpacity
-              style={layoutStyles.ctaPrimary}
-              onPress={() => navigation.navigate('Login', { forStaff: false })}
-              activeOpacity={0.85}
-            >
-              <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_action_login')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={layoutStyles.ctaSecondary}
-              onPress={() => navigation.navigate('CreateAccount')}
-              activeOpacity={0.85}
-            >
-              <Text style={layoutStyles.ctaSecondaryText}>{tStr('welcome_action_create_account')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={layoutStyles.linkRow}
-              onPress={() => navigation.navigate('Login', { forStaff: true })}
-              activeOpacity={0.8}
-            >
-              <Text style={layoutStyles.linkText}>{tStr('welcome_login_staff_short')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={layoutStyles.linkRow}
-              onPress={() => navigation.navigate('RegistroOwner')}
-              activeOpacity={0.8}
-            >
-              <Text style={layoutStyles.linkText}>{tStr('welcome_create_gym_coach_short')}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+            <View style={[layoutStyles.ctaWrap, { marginTop: MOBILE_SPACING.sm }]}>
+              <TouchableOpacity
+                style={layoutStyles.ctaPrimary}
+                onPress={() => navigation.navigate('WelcomeClientJoin')}
+                activeOpacity={0.85}
+                testID="welcome-cta-start"
+              >
+                <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_cta_start')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={layoutStyles.ctaSecondaryOutlineBrand}
+                onPress={() => navigation.navigate('RegistroOwner')}
+                activeOpacity={0.85}
+                testID="welcome-cta-gym-or-coach"
+              >
+                <Text style={layoutStyles.ctaSecondaryOutlineBrandText}>{tStr('welcome_cta_gym_or_coach')}</Text>
+              </TouchableOpacity>
 
-        {showContinueSession && (
-          <View style={layoutStyles.ctaWrap}>
-            {session?.user?.email ? (
-              <Text style={layoutStyles.sessionEmail} numberOfLines={1}>
-                {session.user.email}
-              </Text>
-            ) : null}
-            <View style={layoutStyles.sessionActionsRow}>
-              {(() => {
-                const mode = activeAppMode;
-                const dualUnknownMode =
-                  isDualSession && mode !== 'staff' && mode !== 'client';
+              <View style={layoutStyles.loginPromptRow}>
+                <Text style={layoutStyles.loginPromptMuted}>{tStr('welcome_login_prompt_lead')} </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Login')}
+                  activeOpacity={0.75}
+                  testID="welcome-cta-login-client"
+                >
+                  <Text style={layoutStyles.loginPromptAction}>{tStr('welcome_login_prompt_action')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-                if (!isDualSession || dualUnknownMode) {
+            <View style={[layoutStyles.footerLegalRow, { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.lg) }]}>
+              <TouchableOpacity onPress={() => navigation.navigate('TermsOfUse')} activeOpacity={0.75}>
+                <Text style={layoutStyles.footerLegalText}>{tStr('welcome_footer_terms')}</Text>
+              </TouchableOpacity>
+              <Text style={layoutStyles.footerLegalDot}>·</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')} activeOpacity={0.75}>
+                <Text style={layoutStyles.footerLegalText}>{tStr('welcome_footer_privacy')}</Text>
+              </TouchableOpacity>
+            </View>
+
+          </>
+        ) : (
+          <>
+            <View style={layoutStyles.logoWrap}>
+              <LogoCompleto height={160} />
+            </View>
+            <Text style={layoutStyles.subtitle}>{tStr(resumeSubtitleKey)}</Text>
+
+            <View style={layoutStyles.ctaWrap}>
+              {session?.user?.email ? (
+                <Text style={layoutStyles.sessionEmail} numberOfLines={1}>
+                  {session.user.email}
+                </Text>
+              ) : null}
+              <View style={layoutStyles.sessionActionsRow}>
+                {(() => {
+                  const mode = activeAppMode;
+                  const dualUnknownMode = isDualSession && mode !== 'staff' && mode !== 'client';
+
+                  if (!isDualSession || dualUnknownMode) {
+                    return (
+                      <>
+                        <TouchableOpacity
+                          style={layoutStyles.ctaPrimary}
+                          onPress={onContinue}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_action_continue')}</Text>
+                        </TouchableOpacity>
+                        {dualUnknownMode ? (
+                          <>
+                            {hasStaffMembership ? (
+                              <TouchableOpacity
+                                style={layoutStyles.ctaSecondary}
+                                onPress={async () => {
+                                  if (persistActiveAppMode && session?.user?.id) {
+                                    await persistActiveAppMode('staff', session.user.id);
+                                  }
+                                  navigateToDestination('staff');
+                                }}
+                                activeOpacity={0.85}
+                              >
+                                <Text style={layoutStyles.ctaSecondaryText}>
+                                  {tStr('welcome_dual_as_staff')}
+                                </Text>
+                              </TouchableOpacity>
+                            ) : null}
+                            {hasClientMembership ? (
+                              <TouchableOpacity
+                                style={layoutStyles.ctaSecondary}
+                                onPress={async () => {
+                                  if (persistActiveAppMode && session?.user?.id) {
+                                    await persistActiveAppMode('client', session.user.id);
+                                  }
+                                  navigateToDestination('client');
+                                }}
+                                activeOpacity={0.85}
+                              >
+                                <Text style={layoutStyles.ctaSecondaryText}>
+                                  {tStr('welcome_dual_as_client')}
+                                </Text>
+                              </TouchableOpacity>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </>
+                    );
+                  }
+
+                  const primaryLabel =
+                    mode === 'staff'
+                      ? tStr('welcome_continue_as_staff_last')
+                      : tStr('welcome_continue_as_client_last');
+                  const showSwitchToStaff = hasStaffMembership && mode !== 'staff';
+                  const showSwitchToClient = hasClientMembership && mode !== 'client';
+
                   return (
                     <>
                       <TouchableOpacity
@@ -253,104 +260,49 @@ export default function WelcomeGlobalScreen() {
                         onPress={onContinue}
                         activeOpacity={0.85}
                       >
-                        <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_action_continue')}</Text>
+                        <Text style={layoutStyles.ctaPrimaryText}>{primaryLabel}</Text>
                       </TouchableOpacity>
-                      {dualUnknownMode ? (
-                        <>
-                          {hasStaffMembership ? (
-                            <TouchableOpacity
-                              style={layoutStyles.ctaSecondary}
-                              onPress={async () => {
-                                if (persistActiveAppMode && session?.user?.id) {
-                                  await persistActiveAppMode('staff', session.user.id);
-                                }
-                                navigateToDestination('staff');
-                              }}
-                              activeOpacity={0.85}
-                            >
-                              <Text style={layoutStyles.ctaSecondaryText}>
-                                {tStr('welcome_dual_as_staff')}
-                              </Text>
-                            </TouchableOpacity>
-                          ) : null}
-                          {hasClientMembership ? (
-                            <TouchableOpacity
-                              style={layoutStyles.ctaSecondary}
-                              onPress={async () => {
-                                if (persistActiveAppMode && session?.user?.id) {
-                                  await persistActiveAppMode('client', session.user.id);
-                                }
-                                navigateToDestination('client');
-                              }}
-                              activeOpacity={0.85}
-                            >
-                              <Text style={layoutStyles.ctaSecondaryText}>
-                                {tStr('welcome_dual_as_client')}
-                              </Text>
-                            </TouchableOpacity>
-                          ) : null}
-                        </>
+                      {showSwitchToStaff ? (
+                        <TouchableOpacity
+                          style={layoutStyles.ctaSecondary}
+                          onPress={async () => {
+                            if (persistActiveAppMode && session?.user?.id) {
+                              await persistActiveAppMode('staff', session.user.id);
+                            }
+                            navigateToDestination('staff');
+                          }}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={layoutStyles.ctaSecondaryText}>
+                            {tStr('welcome_switch_role_staff')}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {showSwitchToClient ? (
+                        <TouchableOpacity
+                          style={layoutStyles.ctaSecondary}
+                          onPress={async () => {
+                            if (persistActiveAppMode && session?.user?.id) {
+                              await persistActiveAppMode('client', session.user.id);
+                            }
+                            navigateToDestination('client');
+                          }}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={layoutStyles.ctaSecondaryText}>
+                            {tStr('welcome_switch_role_client')}
+                          </Text>
+                        </TouchableOpacity>
                       ) : null}
                     </>
                   );
-                }
-
-                const primaryLabel =
-                  mode === 'staff'
-                    ? tStr('welcome_continue_as_staff_last')
-                    : tStr('welcome_continue_as_client_last');
-                const showSwitchToStaff = hasStaffMembership && mode !== 'staff';
-                const showSwitchToClient = hasClientMembership && mode !== 'client';
-
-                return (
-                  <>
-                    <TouchableOpacity
-                      style={layoutStyles.ctaPrimary}
-                      onPress={onContinue}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={layoutStyles.ctaPrimaryText}>{primaryLabel}</Text>
-                    </TouchableOpacity>
-                    {showSwitchToStaff ? (
-                      <TouchableOpacity
-                        style={layoutStyles.ctaSecondary}
-                        onPress={async () => {
-                          if (persistActiveAppMode && session?.user?.id) {
-                            await persistActiveAppMode('staff', session.user.id);
-                          }
-                          navigateToDestination('staff');
-                        }}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={layoutStyles.ctaSecondaryText}>
-                          {tStr('welcome_switch_role_staff')}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    {showSwitchToClient ? (
-                      <TouchableOpacity
-                        style={layoutStyles.ctaSecondary}
-                        onPress={async () => {
-                          if (persistActiveAppMode && session?.user?.id) {
-                            await persistActiveAppMode('client', session.user.id);
-                          }
-                          navigateToDestination('client');
-                        }}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={layoutStyles.ctaSecondaryText}>
-                          {tStr('welcome_switch_role_client')}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </>
-                );
-              })()}
+                })()}
+              </View>
+              <TouchableOpacity style={layoutStyles.linkRow} onPress={onLogout} activeOpacity={0.8}>
+                <Text style={layoutStyles.linkText}>{tStr('welcome_logout_use_other')}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={layoutStyles.linkRow} onPress={onLogout} activeOpacity={0.8}>
-              <Text style={layoutStyles.linkText}>{tStr('welcome_logout_use_other')}</Text>
-            </TouchableOpacity>
-          </View>
+          </>
         )}
       </View>
     </View>

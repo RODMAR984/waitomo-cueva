@@ -1,0 +1,22 @@
+# Login cliente (email + password). Requiere -e MAESTRO_CLIENT_EMAIL y -e MAESTRO_CLIENT_PASSWORD
+appId: com.waitomofitengine.cueva
+---
+- tapOn:
+    id: welcome-cta-login-client
+- assertVisible:
+    id: login-email-input
+- tapOn:
+    id: login-email-input
+- eraseText
+- inputText: ${MAESTRO_CLIENT_EMAIL}
+- tapOn:
+    id: login-password-input
+- eraseText
+- inputText: ${MAESTRO_CLIENT_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: login-submit
+- extendedWaitUntil:
+    visible:
+      id: client-home-root
+    timeout: 120000

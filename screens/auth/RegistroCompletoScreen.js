@@ -29,7 +29,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -325,7 +325,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         panel: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1.2,
           padding: MOBILE_SPACING.xl,
         },
@@ -369,13 +369,13 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
         },
         bannerText: {
           color: t.text,
-          fontSize: 13.5,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '800',
         },
         bannerSub: {
           marginTop: 2,
           color: t.subText,
-          fontSize: 12.5,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '600',
           opacity: 0.9,
         },

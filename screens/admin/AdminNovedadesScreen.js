@@ -221,7 +221,7 @@ export default function AdminNovedadesScreen() {
         cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
         cardTitle: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '600', flex: 1 },
         cardMeta: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
-        badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 6 },
+        badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: MOBILE_RADII.xs, marginLeft: 6 },
         badgePinned: { backgroundColor: hexToRgba(t.brand, 0.25) },
         badgeInactive: { backgroundColor: 'rgba(128,128,128,0.3)' },
         formWrap: {

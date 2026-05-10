@@ -1,0 +1,6 @@
+# Superadmin: login admin y panel; requiere MAESTRO_ADMIN_EMAIL / MAESTRO_ADMIN_PASSWORD
+appId: com.waitomofitengine.cueva
+---
+- launchApp:
+    clearState: true
+- runFlow: steps/admin-sign-in.yaml

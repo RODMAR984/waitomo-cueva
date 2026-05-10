@@ -23,7 +23,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import { abonoCoversUserPlan, isUserAbonoActive } from '../../utils/clientWorkoutEntitlement';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -194,23 +194,23 @@ export default function DetalleAbonoScreen({ navigation, route }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: 18,
           marginBottom: MOBILE_SPACING.lg,
         },
-        title: { color: t.text, fontSize: 20, fontWeight: '900', textAlign: 'center' },
+        title: { color: t.text, fontSize: MOBILE_TYPE.lead, fontWeight: '900', textAlign: 'center' },
         subtitle: { color: t.subText, fontSize: MOBILE_TYPE.caption, textAlign: 'center', marginTop: 6 },
         row: {
           marginTop: 14,
           backgroundColor: t.boxBg,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: 14,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        rowLabel: { color: t.subText, fontSize: 11 },
+        rowLabel: { color: t.subText, fontSize: MOBILE_TYPE.meta },
         rowValue: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', marginTop: 4 },
-        hint: { color: t.subText, fontSize: 11, marginTop: 6 },
+        hint: { color: t.subText, fontSize: MOBILE_TYPE.meta, marginTop: 6 },
         btn: {
           marginTop: 14,
           alignSelf: 'center',

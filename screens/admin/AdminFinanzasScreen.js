@@ -289,7 +289,7 @@ export default function AdminFinanzasScreen({ route }) {
         smallBtn: {
           backgroundColor: t.faintStrong,
           borderColor: t.brand,
-          borderRadius: 6,
+          borderRadius: MOBILE_RADII.xs,
           borderWidth: 1,
           paddingHorizontal: 10,
           paddingVertical: 6,
@@ -297,7 +297,7 @@ export default function AdminFinanzasScreen({ route }) {
         smallBtnDanger: {
           backgroundColor: t.faintStrong,
           borderColor: t.danger,
-          borderRadius: 6,
+          borderRadius: MOBILE_RADII.xs,
           borderWidth: 1,
           paddingHorizontal: 10,
           paddingVertical: 6,
@@ -308,7 +308,7 @@ export default function AdminFinanzasScreen({ route }) {
         pillRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
         pill: {
           borderColor: t.overlayBorder,
-          borderRadius: 20,
+          borderRadius: MOBILE_RADII.xl,
           borderWidth: 1,
           marginRight: 8,
           marginBottom: 4,
@@ -806,7 +806,7 @@ export default function AdminFinanzasScreen({ route }) {
                       {formatMonto(p.monto, p.moneda)} · {p.metodo ? payLabel(p.metodo) : '—'}
                     </Text>
                     {p.paidAt ? (
-                      <Text style={[styles.cardLine, { fontSize: 12, color: t.subText }]}>
+                      <Text style={[styles.cardLine, { fontSize: MOBILE_TYPE.caption, color: t.subText }]}>
                         {tStr('fin_collected')} {formatDateTime(p.paidAt)}
                       </Text>
                     ) : null}

@@ -21,7 +21,7 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { IMAGENES_POR_PLAN } from '../../utils/imagenesFijas';
 import { normalizePlanKey } from '../../utils/planKeyNormalize';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -124,7 +124,7 @@ export default function PlanDetailScreen({ route, navigation }) {
         },
         emptyTitle: {
           color: t.text,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.headline,
           fontWeight: '700',
           marginBottom: 12,
           textAlign: 'center',
@@ -139,7 +139,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,   // unificado
           borderWidth: 1,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           marginHorizontal: 20,
           paddingTop: 30,
           paddingBottom: 10,
@@ -154,7 +154,7 @@ export default function PlanDetailScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,   // unificado
           borderWidth: 1,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           margin: 20,
           padding: 16,
           // sombra sutil
@@ -184,7 +184,7 @@ export default function PlanDetailScreen({ route, navigation }) {
         },
         helperLine: {
           color: t.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.label,
           textAlign: 'center',
           lineHeight: 20,
           marginTop: 14,
@@ -193,7 +193,7 @@ export default function PlanDetailScreen({ route, navigation }) {
         },
         featureLine: {
           color: t.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.label,
           lineHeight: 20,
           marginTop: 10,
           paddingHorizontal: 4,
@@ -201,7 +201,7 @@ export default function PlanDetailScreen({ route, navigation }) {
         /** Título del plan: tipografía principal de la org (features.text_color → t.text), no solo acento/borde. */
         title: {
           color: t.text,
-          fontSize: 24,
+          fontSize: MOBILE_TYPE.kpi,
           fontWeight: 'bold',
           textAlign: 'center',
         },

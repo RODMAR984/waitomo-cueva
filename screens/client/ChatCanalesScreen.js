@@ -23,7 +23,7 @@ import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../../services/booking/trialClassGrant';
 import { evaluateCalendarioAccess, evaluateClientCommunityAccess } from '../../utils/clientWorkoutEntitlement';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
@@ -209,7 +209,7 @@ export default function ChatCanalesScreen() {
         card: {
           flexDirection: 'row',
           alignItems: 'center',
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           paddingVertical: 18,
           paddingHorizontal: MOBILE_SPACING.lg,
           marginBottom: 12,
@@ -226,7 +226,7 @@ export default function ChatCanalesScreen() {
           justifyContent: 'center',
           marginRight: 14,
         },
-        cardName: { color: t.text, fontSize: 17, fontWeight: '700' },
+        cardName: { color: t.text, fontSize: MOBILE_TYPE.headline, fontWeight: '700' },
         cardPlan: { color: t.placeholder, fontSize: MOBILE_TYPE.caption, marginTop: 2 },
         empty: {
           paddingVertical: 32,

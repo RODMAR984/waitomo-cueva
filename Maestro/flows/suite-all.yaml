@@ -1,0 +1,15 @@
+# Smoke móvil completo: cliente (credenciales) + admin (credenciales) en segunda corrida con app limpia.
+appId: com.waitomofitengine.cueva
+---
+- launchApp:
+    clearState: true
+- runFlow: steps/wait-welcome.yaml
+- runFlow: steps/client-login-back-only.yaml
+- runFlow: steps/client-sign-in.yaml
+- runFlow: steps/client-home-tabs-and-back.yaml
+- stopApp
+- launchApp:
+    clearState: true
+- runFlow: steps/wait-welcome.yaml
+- runFlow: steps/admin-login-back.yaml
+- runFlow: steps/admin-sign-in.yaml

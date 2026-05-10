@@ -1,0 +1,7 @@
+# Cliente: splash → login (env) → home → secciones y atrás.
+appId: com.waitomofitengine.cueva
+---
+- launchApp
+- runFlow: steps/wait-welcome.yaml
+- runFlow: steps/client-sign-in.yaml
+- runFlow: steps/client-home-tabs-and-back.yaml

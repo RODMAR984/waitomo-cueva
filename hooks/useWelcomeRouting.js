@@ -1,22 +1,21 @@
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import { navigationRef } from '../navigationRef';
+import { navigationRef, resetNavigationRoot } from '../navigationRef';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 import { resolveStaffDestination } from '../utils/authRoutingGuard';
 
 function resetStackTo(navigation, routes) {
   const state = { index: 0, routes };
+  if (navigationRef.isReady() && resetNavigationRoot(state)) {
+    return;
+  }
   try {
-    if (navigationRef.isReady()) {
-      navigationRef.resetRoot(state);
-      return;
-    }
+    navigation.reset(state);
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.log('ROUTING_DEBUG resetRoot failed', e?.message || e);
+    console.log('ROUTING_DEBUG resetStackTo failed', e?.message || e);
   }
-  navigation.reset(state);
 }
 
 /**

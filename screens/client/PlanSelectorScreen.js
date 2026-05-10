@@ -250,7 +250,7 @@ export default function PlanSelectorScreen({ navigation, route }) {
         },
         planBullet: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 17,
           marginTop: 6,
           textAlign: 'left',

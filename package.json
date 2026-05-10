@@ -38,7 +38,10 @@
     "i18n:check": "node scripts/i18n-check.cjs",
     "i18n:scan": "node scripts/i18n-scan-literals.cjs",
     "preflight": "node scripts/preflight.cjs",
-    "supabase:auth-config": "node scripts/supabase-mgmt-auth-config.cjs"
+    "supabase:auth-config": "node scripts/supabase-mgmt-auth-config.cjs",
+    "test:mobile": "node scripts/maestro-run.cjs maestro/flows/suite-all.yaml",
+    "test:mobile:client": "node scripts/maestro-run.cjs maestro/flows/run-client.yaml",
+    "test:mobile:admin": "node scripts/maestro-run.cjs maestro/flows/run-admin.yaml"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

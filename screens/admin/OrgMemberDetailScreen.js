@@ -24,7 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 const BOOKINGS_FACTS_LIMIT = 28;
@@ -396,7 +396,7 @@ export default function OrgMemberDetailScreen() {
         title: {
           flex: 1,
           color: t.brandText ?? t.brand,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.headline,
           fontWeight: '800',
         },
         body: {
@@ -406,7 +406,7 @@ export default function OrgMemberDetailScreen() {
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
-        name: { color: t.text, fontSize: 20, fontWeight: '800', marginBottom: 4 },
+        name: { color: t.text, fontSize: MOBILE_TYPE.lead, fontWeight: '800', marginBottom: 4 },
         subId: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: MOBILE_SPACING.lg },
         hint: { color: t.subText, fontSize: MOBILE_TYPE.body, lineHeight: 19, marginBottom: MOBILE_SPACING.lg },
         primaryBtn: {
@@ -434,7 +434,7 @@ export default function OrgMemberDetailScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: 14,
           marginBottom: 12,
         },
@@ -449,7 +449,7 @@ export default function OrgMemberDetailScreen() {
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
-        factsPreviewText: { color: t.placeholder, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+        factsPreviewText: { color: t.placeholder, fontSize: MOBILE_TYPE.meta, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
       }),
     [t, insets.top],
   );
@@ -469,7 +469,7 @@ export default function OrgMemberDetailScreen() {
           {!hideInlineBack ? (
             <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={{ marginBottom: 16 }} />
           ) : null}
-          <Text style={{ color: t.subText, fontSize: 15 }}>{tStr('org_member_missing')}</Text>
+          <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.bodyStrong }}>{tStr('org_member_missing')}</Text>
         </View>
       </BackgroundWrapper>
     );

@@ -142,7 +142,7 @@ export default function AdminStripeSettingsScreen() {
           alignSelf: 'center',
         },
         backBtn: { marginRight: 8, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
-        title: { flex: 1, color: t.text, fontSize: 18, fontWeight: '900' },
+        title: { flex: 1, color: t.text, fontSize: MOBILE_TYPE.headline, fontWeight: '900' },
         body: { paddingHorizontal: MOBILE_SPACING.lg, paddingBottom: 32, width: '100%', maxWidth: WEB_CONTENT_MAX_WIDTH, alignSelf: 'center' },
         hint: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginBottom: 12, lineHeight: 18 },
         label: { color: t.text, fontWeight: '700', marginTop: 12 },
@@ -185,7 +185,7 @@ export default function AdminStripeSettingsScreen() {
         },
         connectedTitle: { color: t.text, fontWeight: '900', fontSize: MOBILE_TYPE.bodyStrong },
         connectedBody: { color: t.subText, fontSize: MOBILE_TYPE.body, marginTop: 6, lineHeight: 19 },
-        fieldCaption: { color: t.subText, fontSize: 11, marginTop: 4, lineHeight: 16 },
+        fieldCaption: { color: t.subText, fontSize: MOBILE_TYPE.meta, marginTop: 4, lineHeight: 16 },
       }),
     [insets.top, t],
   );

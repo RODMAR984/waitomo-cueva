@@ -14,15 +14,17 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import BackNavButton from '../../components/BackNavButton';
+import { Ionicons } from '@expo/vector-icons';
 import PasswordInput from '../../components/PasswordInput';
 import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
 import { supabase } from '../../supabaseClient';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+
+/** Ancho máximo del formulario gym/coach (no usar WEB_CONTENT_MAX_WIDTH de dashboard). */
+const REGISTRO_OWNER_FORM_MAX_WIDTH = 400;
 
 export default function RegistroOwnerScreen() {
   const navigation = useNavigation();
@@ -43,17 +45,17 @@ export default function RegistroOwnerScreen() {
         centerWrap: {
           flex: 1,
           justifyContent: 'center',
-          paddingHorizontal: MOBILE_SPACING.xxl,
+          paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 32,
           paddingTop: 32 + insets.top,
           paddingBottom: 32 + insets.bottom,
           width: '100%',
-          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          maxWidth: REGISTRO_OWNER_FORM_MAX_WIDTH,
           alignSelf: 'center',
         },
         title: {
           color: fe.text,
-          fontSize: 20,
+          fontSize: MOBILE_TYPE.title,
           fontWeight: '700',
           marginBottom: 6,
           textAlign: 'center',
@@ -87,11 +89,27 @@ export default function RegistroOwnerScreen() {
           fontWeight: '600',
           fontSize: MOBILE_TYPE.bodyStrong,
         },
-        linkWrap: { marginTop: MOBILE_SPACING.lg, alignItems: 'center' },
-        linkText: {
-          color: fe.subText,
+        backFooter: {
+          alignSelf: 'center',
+          marginTop: MOBILE_SPACING.xl,
+          minHeight: 44,
+          maxWidth: 200,
+          width: '100%',
+          paddingVertical: MOBILE_SPACING.sm,
+          paddingHorizontal: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.md,
+          borderWidth: 1,
+          borderColor: fe.inputBorder,
+          backgroundColor: 'transparent',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        backFooterText: {
+          color: fe.text,
           fontSize: MOBILE_TYPE.body,
-          textDecorationLine: 'underline',
+          fontWeight: '700',
+          marginLeft: 6,
         },
       }),
     [t, insets.top, insets.bottom],
@@ -169,7 +187,6 @@ export default function RegistroOwnerScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.centerWrap}>
-            <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('registro_owner_titulo')}</Text>
             <Text style={styles.subtitle}>{tStr('registro_owner_subtitle')}</Text>
 
@@ -204,8 +221,13 @@ export default function RegistroOwnerScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.linkWrap} onPress={() => navigation.navigate('WelcomeGlobal')}>
-              <Text style={styles.linkText}>{tStr('welcome_soy_cliente')}</Text>
+            <TouchableOpacity
+              style={styles.backFooter}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="chevron-back" size={18} color={fe.text} />
+              <Text style={styles.backFooterText}>{tStr('common_back')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableWithoutFeedback>

@@ -1,0 +1,7 @@
+# Espera a salir del splash y ver CTAs del welcome global (FitEngine).
+appId: com.waitomofitengine.cueva
+---
+- extendedWaitUntil:
+    visible:
+      id: welcome-cta-login-client
+    timeout: 35000

@@ -40,7 +40,7 @@ import { buildClientInvitePublicLink, getFitEngineUrls } from '../../utils/fiten
 import { FULL_HEX_CHOICE_GYM } from '../../utils/gymColorPalette';
 import { DEFAULT_CLIENT_PAYMENT_COPY } from '../../utils/clientPaymentMethods';
 import { draftMessageWithAi } from '../../utils/aiAssistant';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 const hexToRgba = (hex, alpha) => {
@@ -1172,7 +1172,7 @@ export default function GymConfigScreen() {
         logoWrap: {
           width: 100,
           height: 100,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
@@ -1240,14 +1240,14 @@ export default function GymConfigScreen() {
           marginBottom: 8,
           paddingVertical: 4,
           paddingHorizontal: 8,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           backgroundColor: hexToRgba(t.brand, 0.06),
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
         liveLegendDot: { width: 14, height: 14, borderRadius: 7, marginRight: 6, borderWidth: 1, borderColor: 'rgba(148,163,184,0.5)' },
-        liveLegendLabel: { color: t.subText, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
-        liveLegendPreset: { color: t.text, fontSize: 11, fontWeight: '700', maxWidth: 100 },
+        liveLegendLabel: { color: t.subText, fontSize: MOBILE_TYPE.micro, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+        liveLegendPreset: { color: t.text, fontSize: MOBILE_TYPE.meta, fontWeight: '700', maxWidth: 100 },
         paletteRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, width: '100%' },
         paletteBtn: {
           borderWidth: 1,
@@ -1277,7 +1277,7 @@ export default function GymConfigScreen() {
         bgPreviewImg: { width: '100%', height: '100%' },
         colorGridScroll: { maxHeight: 280, marginTop: 8 },
         colorGridWrap: { flexDirection: 'row', flexWrap: 'wrap', alignContent: 'flex-start', paddingBottom: 8 },
-        colorGridChip: { width: 28, height: 28, borderRadius: 6, margin: 3, borderWidth: 1 },
+        colorGridChip: { width: 28, height: 28, borderRadius: MOBILE_RADII.xs, margin: 3, borderWidth: 1 },
         paletteToggleRow: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -1294,7 +1294,7 @@ export default function GymConfigScreen() {
         palettePreviewSwatch: {
           width: 22,
           height: 22,
-          borderRadius: 6,
+          borderRadius: MOBILE_RADII.xs,
           borderWidth: 1,
           borderColor: t.overlayBorder,
         },
@@ -1632,7 +1632,7 @@ export default function GymConfigScreen() {
                     {
                       paddingVertical: 8,
                       paddingHorizontal: 12,
-                      borderRadius: 10,
+                      borderRadius: MOBILE_RADII.sm,
                       borderWidth: 1,
                       borderColor: t.overlayBorder,
                       backgroundColor: t.inputBg,
@@ -1640,7 +1640,7 @@ export default function GymConfigScreen() {
                     on ? { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.12) } : null,
                   ]}
                 >
-                  <Text style={{ color: on ? t.brand : t.subText, fontSize: 12, fontWeight: '700' }}>
+                  <Text style={{ color: on ? t.brand : t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' }}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -1675,7 +1675,7 @@ export default function GymConfigScreen() {
           <Text style={styles.label}>{tStr('gym_config_membership_freeze_title')}</Text>
           <Text style={styles.hint}>{tStr('gym_config_membership_freeze_hint')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
-            <Text style={{ color: t.text, fontSize: 14, fontWeight: '700', flex: 1, paddingRight: 12 }}>
+            <Text style={{ color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '700', flex: 1, paddingRight: 12 }}>
               {tStr('gym_config_membership_freeze_toggle')}
             </Text>
             <Switch
@@ -1813,18 +1813,18 @@ export default function GymConfigScreen() {
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 8, gap: 4 }}>
                     <Pressable onPress={openFitEngineTerms} hitSlop={6}>
-                      <Text style={{ color: t.brand, fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' }}>
+                      <Text style={{ color: t.brand, fontSize: MOBILE_TYPE.label, fontWeight: '700', textDecorationLine: 'underline' }}>
                         {tStr('gym_config_public_directory_link_terms')}
                       </Text>
                     </Pressable>
-                    <Text style={{ color: t.subText, fontSize: 13 }}>·</Text>
+                    <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.label }}>·</Text>
                     <Pressable onPress={openFitEnginePrivacy} hitSlop={6}>
-                      <Text style={{ color: t.brand, fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' }}>
+                      <Text style={{ color: t.brand, fontSize: MOBILE_TYPE.label, fontWeight: '700', textDecorationLine: 'underline' }}>
                         {tStr('gym_config_public_directory_link_privacy')}
                       </Text>
                     </Pressable>
                   </View>
-                  <Text style={[styles.hint, { marginTop: 6, fontSize: 12 }]}>
+                  <Text style={[styles.hint, { marginTop: 6, fontSize: MOBILE_TYPE.caption }]}>
                     {tStr('gym_config_public_directory_terms_version').replace(
                       '{{version}}',
                       String(organization?.features?.public_directory_terms_doc_version || PUBLIC_DIRECTORY_TERMS_DOC_VERSION),
@@ -1836,7 +1836,7 @@ export default function GymConfigScreen() {
             {publicDirectoryEnabled &&
             organization?.features?.public_directory_terms_v1 &&
             typeof organization.features.public_directory_terms_v1 === 'string' ? (
-              <Text style={[styles.hint, { marginTop: 8, fontSize: 12 }]}>
+              <Text style={[styles.hint, { marginTop: 8, fontSize: MOBILE_TYPE.caption }]}>
                 {tStr('gym_config_public_directory_terms_saved_hint').replace(
                   '{{date}}',
                   String(organization.features.public_directory_terms_v1).slice(0, 10),
@@ -1876,7 +1876,7 @@ export default function GymConfigScreen() {
               <View
                 style={{
                   marginTop: 8,
-                  borderRadius: 10,
+                  borderRadius: MOBILE_RADII.sm,
                   borderWidth: 1,
                   borderColor: t.overlayBorder,
                   backgroundColor: t.inputBg,
@@ -1895,11 +1895,11 @@ export default function GymConfigScreen() {
                       borderBottomColor: t.overlayBorder,
                     }}
                   >
-                    <Text style={{ color: t.text, fontSize: 14, fontWeight: '700' }} numberOfLines={2}>
+                    <Text style={{ color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '700' }} numberOfLines={2}>
                       {pred.main_text || pred.description}
                     </Text>
                     {pred.secondary_text ? (
-                      <Text style={{ color: t.subText, fontSize: 12, marginTop: 2 }} numberOfLines={2}>
+                      <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 2 }} numberOfLines={2}>
                         {pred.secondary_text}
                       </Text>
                     ) : null}
@@ -1968,11 +1968,11 @@ export default function GymConfigScreen() {
                 key={preset}
                 onPress={() => canEdit && setThemePreset(preset)}
                 style={[
-                  { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: t.overlayBorder, marginRight: 8, marginBottom: 8 },
+                  { paddingVertical: 10, paddingHorizontal: 12, borderRadius: MOBILE_RADII.compact, borderWidth: 1, borderColor: t.overlayBorder, marginRight: 8, marginBottom: 8 },
                   themePreset === preset && { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.15) },
                 ]}
               >
-                <Text style={{ color: themePreset === preset ? t.brand : t.subText, fontSize: 13, fontWeight: '700' }}>
+                <Text style={{ color: themePreset === preset ? t.brand : t.subText, fontSize: MOBILE_TYPE.label, fontWeight: '700' }}>
                   {tStr(`gym_preset_${preset}`) || preset}
                 </Text>
               </TouchableOpacity>
@@ -2085,7 +2085,7 @@ export default function GymConfigScreen() {
                   styles.liveLegendDot,
                   {
                     width: 22,
-                    borderRadius: 4,
+                    borderRadius: MOBILE_RADII.xxs,
                     backgroundColor: previewTokensCurrent.screenOverlay,
                     borderWidth: 1,
                     borderColor: 'rgba(148,163,184,0.4)',
@@ -2108,10 +2108,10 @@ export default function GymConfigScreen() {
               ]}
             >
               <Text style={[styles.previewTitle, { color: token.text }]}>{tStr(labelKey)}</Text>
-              <Text style={{ color: token.text, fontSize: 16, fontWeight: '800', marginBottom: 3 }}>
+              <Text style={{ color: token.text, fontSize: MOBILE_TYPE.subhead, fontWeight: '800', marginBottom: 3 }}>
                 {tStr('gym_preview_main_title')}
               </Text>
-              <Text style={{ color: token.subText, fontSize: 13, marginBottom: 10 }}>
+              <Text style={{ color: token.subText, fontSize: MOBILE_TYPE.label, marginBottom: 10 }}>
                 {tStr('gym_preview_secondary_line')}
               </Text>
               <View style={styles.previewRow}>
@@ -2128,13 +2128,13 @@ export default function GymConfigScreen() {
                     flex: 1,
                     marginLeft: 10,
                     padding: 10,
-                    borderRadius: 8,
+                    borderRadius: MOBILE_RADII.compact,
                     borderWidth: 1,
                     borderColor: token.overlayBorder,
                     backgroundColor: token.inactiveTabBg,
                   }}
                 >
-                  <Text style={{ color: token.subText, fontSize: 11 }}>{tStr('gym_preview_card')}</Text>
+                  <Text style={{ color: token.subText, fontSize: MOBILE_TYPE.meta }}>{tStr('gym_preview_card')}</Text>
                 </View>
               </View>
             </View>
@@ -2353,11 +2353,11 @@ export default function GymConfigScreen() {
                 key={bt}
                 onPress={() => canEdit && setBackgroundType(bt)}
                 style={[
-                  { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: t.overlayBorder },
+                  { paddingVertical: 8, paddingHorizontal: 12, borderRadius: MOBILE_RADII.compact, borderWidth: 1, borderColor: t.overlayBorder },
                   backgroundType === bt && { borderColor: t.brand, backgroundColor: hexToRgba(t.brand, 0.15) },
                 ]}
               >
-                <Text style={{ color: backgroundType === bt ? t.brand : t.subText, fontSize: 13 }}>{tStr(`gym_bg_type_${bt}`)}</Text>
+                <Text style={{ color: backgroundType === bt ? t.brand : t.subText, fontSize: MOBILE_TYPE.label }}>{tStr(`gym_bg_type_${bt}`)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -2415,7 +2415,7 @@ export default function GymConfigScreen() {
         {/* Footer atribución: logo completo (triangulo + texto) */}
         <View style={{ width: '100%', alignItems: 'center', marginTop: 32, paddingVertical: 20 }}>
           <LogoCompleto height={30} style={{ marginBottom: 6 }} />
-          <Text style={[styles.hint, { fontSize: 11, opacity: 0.8 }]}>{tStr('gym_config_footer')}</Text>
+          <Text style={[styles.hint, { fontSize: MOBILE_TYPE.meta, opacity: 0.8 }]}>{tStr('gym_config_footer')}</Text>
         </View>
       </ScrollView>
     </BackgroundWrapper>

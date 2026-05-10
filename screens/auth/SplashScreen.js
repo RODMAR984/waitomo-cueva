@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     marginBottom: MOBILE_SPACING.xs,
   },
   fitEngine: {
-    fontSize: 36,
+    fontSize: MOBILE_TYPE.display,
     fontWeight: '800',
     letterSpacing: 0.5,
   },

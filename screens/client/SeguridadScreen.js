@@ -26,7 +26,7 @@ import PasswordInput from '../../components/PasswordInput';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
-import { navigationRef } from '../../navigationRef';
+import { navigationRef, resetNavigationRoot } from '../../navigationRef';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
@@ -154,11 +154,10 @@ const handleChangePassword = async () => {
   };
 
   const resetToWelcome = () => {
+    if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] })) {
+      return;
+    }
     try {
-      if (typeof navigationRef?.resetRoot === 'function') {
-        navigationRef.resetRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
-        return;
-      }
       const nav = navigation.getParent?.() ?? navigation;
       if (nav?.reset) {
         nav.reset({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });

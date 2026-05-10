@@ -29,7 +29,6 @@ import { normalizeSlotLabel } from '../../utils/freeClassGrantStorage';
 import {
   WEB_CONTENT_MAX_WIDTH,
   WEB_DESKTOP_BREAKPOINT,
-  WEB_PANEL_RADIUS,
 } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
@@ -400,7 +399,7 @@ export default function AdminPlanesScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: 14,
           marginBottom: 12,
           flexDirection: 'row',
@@ -415,7 +414,7 @@ export default function AdminPlanesScreen() {
           backgroundColor: t.boxBg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: MOBILE_SPACING.lg,
           marginBottom: 16,
         },
@@ -473,7 +472,7 @@ export default function AdminPlanesScreen() {
         dowChip: {
           paddingVertical: 6,
           paddingHorizontal: 8,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
@@ -658,7 +657,7 @@ export default function AdminPlanesScreen() {
                   {formLocalSlots.map((slotRow) => (
                     <View key={slotRow.id || slotRow.tempKey} style={styles.slotCard}>
                       <View style={styles.slotRowHead}>
-                        <Text style={{ color: t.subText, fontSize: 12, fontWeight: '700' }}>
+                        <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' }}>
                           {tStr('admin_plans_slot_row_day')}
                         </Text>
                         <TouchableOpacity style={styles.smallBtn} onPress={() => removeLocalSlot(slotRow)}>

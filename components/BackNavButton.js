@@ -2,8 +2,9 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { MOBILE_RADII, MOBILE_TYPE } from '../theme/mobileSpec';
 
-export default function BackNavButton({ onPress, label, style }) {
+export default function BackNavButton({ onPress, label, style, testID }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
 
@@ -11,6 +12,7 @@ export default function BackNavButton({ onPress, label, style }) {
 
   return (
     <TouchableOpacity
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={resolvedLabel}
       onPress={onPress}
@@ -35,7 +37,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     alignSelf: 'center',
     minHeight: 44,
-    borderRadius: 12,
+    borderRadius: MOBILE_RADII.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -43,7 +45,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   text: {
-    fontSize: 14,
+    fontSize: MOBILE_TYPE.body,
     fontWeight: '700',
     letterSpacing: 0.2,
     textAlign: 'center',

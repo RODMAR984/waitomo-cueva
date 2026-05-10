@@ -25,6 +25,7 @@ export function applyWebDocumentTitle(navigationState, tStr) {
     Admin: 'web_doc_title_admin',
     AdminLite: 'web_doc_title_admin',
     WelcomeGlobal: 'web_doc_title_welcome',
+    WelcomeClientJoin: 'web_doc_title_welcome',
     Splash: 'web_doc_title_welcome',
     Login: 'web_doc_title_login',
     Novedades: 'web_doc_title_novedades',

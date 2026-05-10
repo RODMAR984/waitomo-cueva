@@ -21,7 +21,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { supabase } from '../../supabaseClient';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import {
   clearObservabilityEvents,
@@ -207,12 +207,12 @@ export default function AdminObservabilityScreen({ navigation }) {
           minWidth: 120,
           borderWidth: 1,
           borderColor: t.overlayBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: 10,
           backgroundColor: t.boxBg,
         },
         statLabel: { color: t.subText, fontSize: MOBILE_TYPE.caption },
-        statValue: { color: t.text, fontSize: 18, fontWeight: '800' },
+        statValue: { color: t.text, fontSize: MOBILE_TYPE.headline, fontWeight: '800' },
         perfWrap: {
           marginBottom: 14,
           borderWidth: 1,
@@ -233,7 +233,7 @@ export default function AdminObservabilityScreen({ navigation }) {
           backgroundColor: t.inputBg,
         },
         perfName: { color: t.text, fontSize: MOBILE_TYPE.caption, fontWeight: '700', marginBottom: 4 },
-        perfMeta: { color: t.subText, fontSize: 11 },
+        perfMeta: { color: t.subText, fontSize: MOBILE_TYPE.meta },
         slowWrap: {
           marginBottom: 14,
           borderWidth: 1,
@@ -250,7 +250,7 @@ export default function AdminObservabilityScreen({ navigation }) {
         },
         slowRowFirst: { borderTopWidth: 0, paddingTop: 2 },
         slowName: { color: t.text, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
-        slowMeta: { color: t.subText, fontSize: 11, marginTop: 2 },
+        slowMeta: { color: t.subText, fontSize: MOBILE_TYPE.meta, marginTop: 2 },
         actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
         actionBtn: {
           borderWidth: 1,
@@ -299,7 +299,7 @@ export default function AdminObservabilityScreen({ navigation }) {
         },
         rowTitle: { color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '700' },
         rowSub: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 2 },
-        rowPayload: { color: t.placeholder, fontSize: 11, marginTop: 4, lineHeight: 16 },
+        rowPayload: { color: t.placeholder, fontSize: MOBILE_TYPE.meta, marginTop: 4, lineHeight: 16 },
       }),
     [t, maxWidth],
   );

@@ -28,14 +28,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { supabase } from '../../supabaseClient';
-import { navigationRef } from '../../navigationRef';
+import { navigationRef, resetNavigationRoot } from '../../navigationRef';
 import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import { formatYmdLocal } from '../../utils/formatYmdLocal';
 import { normalizeSlotLabel } from '../../utils/freeClassGrantStorage';
 import {
   WEB_CONTENT_MAX_WIDTH,
   WEB_DESKTOP_BREAKPOINT,
-  WEB_PANEL_RADIUS,
 } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import {
@@ -1190,7 +1189,7 @@ export default function ClientScreen() {
     if (initialProfileSyncDone === false) return;
     if (profile?.id) return;
     if (!navigationRef.isReady()) return;
-    navigationRef.resetRoot({ index: 0, routes: [{ name: 'RegistroInicial' }] });
+    resetNavigationRoot({ index: 0, routes: [{ name: 'RegistroInicial' }] });
   }, [user?.id, profile?.id, initialProfileSyncDone]);
 
   // Guardia anti-ruta equivocada: no quedarse en panel cliente si la cuenta es gym/staff.
@@ -1251,11 +1250,10 @@ export default function ClientScreen() {
         const staffRoute = needsFitEngineSpaceSetup
           ? { name: 'ConfiguraTuEspacio', params: { email: user?.email } }
           : { name: 'AdminLite' };
-        if (navigationRef.isReady()) {
-          navigationRef.resetRoot({ index: 0, routes: [staffRoute] });
-        } else {
-          navigation.reset({ index: 0, routes: [staffRoute] });
+        if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [staffRoute] })) {
+          return;
         }
+        navigation.reset({ index: 0, routes: [staffRoute] });
       })();
       return;
     }
@@ -1264,11 +1262,10 @@ export default function ClientScreen() {
       const staffRoute = needsFitEngineSpaceSetup
         ? { name: 'ConfiguraTuEspacio', params: { email: user?.email } }
         : { name: 'AdminLite' };
-      if (navigationRef.isReady()) {
-        navigationRef.resetRoot({ index: 0, routes: [staffRoute] });
-      } else {
-        navigation.reset({ index: 0, routes: [staffRoute] });
+      if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [staffRoute] })) {
+        return;
       }
+      navigation.reset({ index: 0, routes: [staffRoute] });
     }
   }, [
     user?.id,
@@ -1287,27 +1284,11 @@ export default function ClientScreen() {
   ]);
 
   const resetToWelcome = () => {
-    // DEBUG logout: ver qué rama se ejecuta
-    // eslint-disable-next-line no-console
-    console.log('🔁 ClientScreen.resetToWelcome: start', {
-      navReady: navigationRef.isReady?.() || false,
-    });
-
-    // 1) Intentar reset global usando la ref del NavigationContainer
-    if (navigationRef.isReady()) {
-      try {
-        // eslint-disable-next-line no-console
-        console.log('🔁 ClientScreen.resetToWelcome: usando navigationRef.resetRoot');
-        navigationRef.resetRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
-        return true;
-      } catch {
-        // seguir con los navegadores locales
-        // eslint-disable-next-line no-console
-        console.log('⚠️ ClientScreen.resetToWelcome: fallo resetRoot, probando navegadores locales');
-      }
+    if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] })) {
+      return true;
     }
 
-    // 2) Fallback: recorrer padres (tabs -> stack)
+    // Fallback: recorrer padres (tabs -> stack)
     const navs = [navigation?.getParent?.()?.getParent?.(), navigation?.getParent?.(), navigation].filter(
       Boolean,
     );
@@ -1334,31 +1315,28 @@ export default function ClientScreen() {
     }
   };
 
+  const runLogoutAndWelcome = async () => {
+    try {
+      if (logout) await logout();
+      trackEvent('auth_logout_requested', { source: 'client_screen' });
+    } catch (e) {
+      reportError('auth_logout_request_failed', e, { source: 'client_screen' });
+    }
+    resetToWelcome();
+  };
+
   const handleLogout = () => {
-    // eslint-disable-next-line no-console
-    console.log('🟡 ClientScreen.handleLogout: Alert de confirmación');
+    const proceed = () => {
+      void runLogoutAndWelcome();
+    };
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      const msg = `${tStr('client_logout')}\n\n${tStr('client_logout_confirm')}`;
+      if (window.confirm(msg)) proceed();
+      return;
+    }
     Alert.alert(tStr('client_logout'), tStr('client_logout_confirm'), [
       { text: tStr('common_cancel'), style: 'cancel' },
-      {
-        text: tStr('common_exit'),
-        style: 'destructive',
-        onPress: () => {
-          // ⚠️ No esperamos a que termine logout(): lo disparamos en background y forzamos navegación.
-          // eslint-disable-next-line no-console
-          console.log('▶️ ClientScreen.handleLogout: onPress -> logout() (fire-and-forget)');
-          try {
-            logout?.();
-            trackEvent('auth_logout_requested', { source: 'client_screen' });
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.log('⚠️ ClientScreen.handleLogout: error al lanzar logout()', e?.message || e);
-            reportError('auth_logout_request_failed', e, { source: 'client_screen' });
-          }
-          // eslint-disable-next-line no-console
-          console.log('✅ ClientScreen.handleLogout: llamando resetToWelcome() inmediatamente');
-          resetToWelcome();
-        },
-      },
+      { text: tStr('common_exit'), style: 'destructive', onPress: proceed },
     ]);
   };
 
@@ -1395,7 +1373,7 @@ export default function ClientScreen() {
         },
         panel: {
           backgroundColor: t.boxBg,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: isWebWide ? MOBILE_SPACING.xl : 18,
           marginBottom: 0,
         },
@@ -1415,15 +1393,15 @@ export default function ClientScreen() {
         avatarImg: { width: 52, height: 52, borderRadius: 26 },
         logoWrap: { marginBottom: 12, alignItems: 'flex-start' },
         logoImg: { width: 120, height: 36 },
-        headerGreeting: { fontSize: 13, color: t.metallicGrey ?? t.subText, marginBottom: 4 },
+        headerGreeting: { fontSize: MOBILE_TYPE.body, color: t.metallicGrey ?? t.subText, marginBottom: 4 },
         headerName: { fontSize: MOBILE_TYPE.title, fontWeight: '800', color: t.text },
-        headerSub: { marginTop: 8, fontSize: 13, color: t.metallicGrey ?? t.subText },
+        headerSub: { marginTop: 8, fontSize: MOBILE_TYPE.body, color: t.metallicGrey ?? t.subText },
         headerTextCol: { flex: 1 },
-        headerOrgName: { marginTop: 2, fontSize: 13, color: t.metallicGrey ?? t.subText, opacity: 0.9 },
+        headerOrgName: { marginTop: 2, fontSize: MOBILE_TYPE.body, color: t.metallicGrey ?? t.subText, opacity: 0.9 },
 
         metricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 18 },
         metricsRowCaption: {
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.caption,
           color: t.placeholder,
           lineHeight: 16,
           marginTop: 10,
@@ -1431,7 +1409,7 @@ export default function ClientScreen() {
         },
         crossSectionTitle: {
           color: t.text,
-          fontSize: 17,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           marginTop: 4,
           marginBottom: 6,
@@ -1439,34 +1417,34 @@ export default function ClientScreen() {
         },
         crossSectionSub: {
           color: t.placeholder,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 17,
           marginBottom: 12,
           alignSelf: 'stretch',
         },
         crossSectionWrap: { width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: 12 },
         reservationsMicro: {
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           color: t.placeholder,
           marginTop: 8,
           textAlign: 'center',
           lineHeight: 14,
         },
         planPillsHint: {
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           color: t.placeholder,
           marginTop: 8,
           textAlign: 'center',
           lineHeight: 14,
         },
         novedadesFooterHint: {
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           color: t.placeholder,
           marginTop: 10,
           lineHeight: 14,
         },
         quickSectionFooter: {
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           color: t.placeholder,
           marginTop: 12,
           lineHeight: 15,
@@ -1476,7 +1454,7 @@ export default function ClientScreen() {
           flex: 1,
           paddingVertical: 10,
           paddingHorizontal: 12,
-          borderRadius: 14,
+          borderRadius: MOBILE_RADII.chipMd,
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1,
@@ -1484,18 +1462,18 @@ export default function ClientScreen() {
           minHeight: isWebWide ? 130 : 0,
         },
         metricBoxLast: { marginRight: 0 },
-        metricLabel: { color: t.metallicGrey ?? t.subText, fontSize: 11 },
-        metricValue: { color: t.text, fontSize: 15, fontWeight: 'bold' },
-        metricHint: { marginTop: 6, color: t.placeholder, fontSize: 10, lineHeight: 14 },
+        metricLabel: { color: t.metallicGrey ?? t.subText, fontSize: MOBILE_TYPE.caption },
+        metricValue: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: 'bold' },
+        metricHint: { marginTop: 6, color: t.placeholder, fontSize: MOBILE_TYPE.micro, lineHeight: 14 },
         metricPlanLink: {
           marginTop: 8,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '700',
           color: t.brand,
         },
         metricPlanCue: {
           marginTop: 10,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '800',
           color: t.brand,
         },
@@ -1519,9 +1497,9 @@ export default function ClientScreen() {
           marginBottom: 12,
           ...(t.buttonGlow ? { shadowColor: t.logoCian ?? t.brand, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 } : {}),
         },
-        planTitle: { color: t.text, fontSize: 17, fontWeight: '800' },
-        planSubtitle: { color: t.subText, fontSize: 12, marginTop: 6, textAlign: 'center' },
-        planDates: { marginTop: 10, color: t.placeholder, fontSize: 11, textAlign: 'center' },
+        planTitle: { color: t.text, fontSize: MOBILE_TYPE.title, fontWeight: '800' },
+        planSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: 6, textAlign: 'center' },
+        planDates: { marginTop: 10, color: t.placeholder, fontSize: MOBILE_TYPE.caption, textAlign: 'center' },
 
         activityNavOuter: {
           alignSelf: 'stretch',
@@ -1552,18 +1530,18 @@ export default function ClientScreen() {
         },
         activityNavTitle: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '800',
           textAlign: 'center',
         },
         activityNavHint: {
           marginTop: 4,
           color: t.placeholder,
-          fontSize: 10,
+          fontSize: MOBILE_TYPE.micro,
           textAlign: 'center',
         },
         activityAddLink: { marginTop: 8, alignSelf: 'center' },
-        activityAddLinkText: { color: t.brand, fontSize: 12, fontWeight: '700' },
+        activityAddLinkText: { color: t.brand, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
 
         pillRow: { flexDirection: 'row', marginTop: 12 },
         planPillBtn: {
@@ -1580,7 +1558,7 @@ export default function ClientScreen() {
           justifyContent: 'center',
           ...(t.buttonGlow || {}),
         },
-        planPillText: { color: t.primaryText, fontSize: 11, fontWeight: '700' },
+        planPillText: { color: t.primaryText, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
 
         novedadesCaja: {
           borderRadius: MOBILE_RADII.lg,
@@ -1603,7 +1581,7 @@ export default function ClientScreen() {
         },
         novedadesTitle: {
           color: t.brandText ?? t.brand,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           fontWeight: '800',
           marginBottom: 6,
           letterSpacing: 0.8,
@@ -1615,7 +1593,7 @@ export default function ClientScreen() {
         novedadesMarqueeRow: { flexDirection: 'row' },
         novedadesTickerText: {
           color: t.brandText ?? t.brand,
-          fontSize: 15,
+          fontSize: MOBILE_TYPE.bodyStrong,
           fontWeight: '700',
           letterSpacing: 0.5,
           textShadowColor: t.brandTextShadow ?? hexToRgba(t.brand, 0.7),
@@ -1632,7 +1610,7 @@ export default function ClientScreen() {
         novedadesDotActive: { backgroundColor: t.brandText ?? t.brand },
         novedadesVerTodas: {
           color: t.brandText ?? t.brand,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           fontWeight: '700',
           marginTop: 8,
           textAlign: 'right',
@@ -1645,7 +1623,7 @@ export default function ClientScreen() {
           right: -4,
           minWidth: 18,
           height: 18,
-          borderRadius: 9,
+          borderRadius: MOBILE_RADII.sm,
           backgroundColor: hexToRgba(t.brand, 0.9),
           borderWidth: 1,
           borderColor: t.boxBg,
@@ -1653,19 +1631,19 @@ export default function ClientScreen() {
           justifyContent: 'center',
           paddingHorizontal: 5,
         },
-        chatBadgeText: { color: t.buttonPrimaryText?.color || colors.dark.textPrimary, fontSize: 11, fontWeight: '800' },
+        chatBadgeText: { color: t.buttonPrimaryText?.color || colors.dark.textPrimary, fontSize: MOBILE_TYPE.caption, fontWeight: '800' },
         reservationList: { marginTop: 8, alignSelf: 'stretch', width: '100%' },
         reservationRowTouchable: {
           alignSelf: 'stretch',
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: hexToRgba(t.brand, 0.08),
-          borderRadius: 12,
+          borderRadius: MOBILE_RADII.md,
           paddingVertical: 8,
           paddingHorizontal: 10,
           marginBottom: 6,
         },
-        reservationChipText: { color: t.text, fontSize: 11, fontWeight: '700' },
+        reservationChipText: { color: t.text, fontSize: MOBILE_TYPE.caption, fontWeight: '700' },
 
         quickRow: {
           flexDirection: isWeb && !isWebWide ? 'column' : 'row',
@@ -1692,7 +1670,7 @@ export default function ClientScreen() {
         quickIconWrap: {
           width: 36,
           height: 36,
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: hexToRgba(t.brand, 0.6),
           alignItems: 'center',
@@ -1700,8 +1678,8 @@ export default function ClientScreen() {
           marginBottom: 8,
           overflow: 'visible',
         },
-        quickLabel: { color: t.text, fontWeight: '600', fontSize: 13, textAlign: 'center' },
-        quickHint: { color: t.placeholder, fontSize: 11, marginTop: 4, textAlign: 'center' },
+        quickLabel: { color: t.text, fontWeight: '600', fontSize: MOBILE_TYPE.body, textAlign: 'center' },
+        quickHint: { color: t.placeholder, fontSize: MOBILE_TYPE.caption, marginTop: 4, textAlign: 'center' },
 
         secondaryBtn: {
           marginTop: 14,
@@ -1714,7 +1692,7 @@ export default function ClientScreen() {
           ...(t.buttonGlow || {}),
         },
         secondaryBtnLogout: { marginTop: 18 },
-        secondaryBtnText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: 14 },
+        secondaryBtnText: { ...t.buttonPrimaryText, fontWeight: '600', fontSize: MOBILE_TYPE.body },
 
         freeClassCard: {
           marginTop: 14,
@@ -1724,9 +1702,9 @@ export default function ClientScreen() {
           backgroundColor: t.boxBg,
           padding: 14,
         },
-        freeClassTitle: { color: t.text, fontSize: 15, fontWeight: '800' },
-        freeClassMeta: { color: t.subText ?? t.placeholder, fontSize: 13, marginTop: 6, lineHeight: 18 },
-        freeClassPolicyLine: { color: t.subText ?? t.placeholder, fontSize: 13, marginTop: 8, lineHeight: 18 },
+        freeClassTitle: { color: t.text, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
+        freeClassMeta: { color: t.subText ?? t.placeholder, fontSize: MOBILE_TYPE.body, marginTop: 6, lineHeight: 18 },
+        freeClassPolicyLine: { color: t.subText ?? t.placeholder, fontSize: MOBILE_TYPE.body, marginTop: 8, lineHeight: 18 },
         freeClassActions: { flexDirection: 'row', marginTop: 12, gap: 10 },
         freeClassAction: {
           flex: 1,
@@ -1743,23 +1721,23 @@ export default function ClientScreen() {
           ...t.buttonPrimary,
           borderColor: colors.transparent,
         },
-        freeClassActionText: { color: t.text, fontWeight: '700', fontSize: 13 },
-        freeClassActionTextPrimary: { ...t.buttonPrimaryText, fontWeight: '800', fontSize: 13 },
+        freeClassActionText: { color: t.text, fontWeight: '700', fontSize: MOBILE_TYPE.body },
+        freeClassActionTextPrimary: { ...t.buttonPrimaryText, fontWeight: '800', fontSize: MOBILE_TYPE.body },
 
-        footerInfo: { marginTop: 4, fontSize: 11, color: t.placeholder, textAlign: 'center' },
+        footerInfo: { marginTop: 4, fontSize: MOBILE_TYPE.caption, color: t.placeholder, textAlign: 'center' },
 
         nudgeWrap: {
           marginBottom: 14,
           padding: 12,
-          borderRadius: 14,
+          borderRadius: MOBILE_RADII.chipMd,
           borderWidth: 1,
           borderColor: t.brand,
           backgroundColor: hexToRgba(t.brand, 0.12),
         },
-        nudgeTitle: { color: t.text, fontSize: 13, fontWeight: '900' },
-        nudgeBody: { color: t.text, fontSize: 13, marginTop: 6, lineHeight: 18 },
+        nudgeTitle: { color: t.text, fontSize: MOBILE_TYPE.body, fontWeight: '900' },
+        nudgeBody: { color: t.text, fontSize: MOBILE_TYPE.body, marginTop: 6, lineHeight: 18 },
         nudgeDismiss: { marginTop: 10, alignSelf: 'flex-end', paddingVertical: 6, paddingHorizontal: 12 },
-        nudgeDismissText: { color: t.brand, fontWeight: '800', fontSize: 13 },
+        nudgeDismissText: { color: t.brand, fontWeight: '800', fontSize: MOBILE_TYPE.body },
       }),
     [t, contentMaxWidth, isWebWide]
   );

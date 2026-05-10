@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import WelcomeGlobalScreen from '../screens/auth/WelcomeGlobalScreen';
+import WelcomeClientJoinScreen from '../screens/auth/WelcomeClientJoinScreen';
 import WelcomeOrganizationScreen from '../screens/auth/WelcomeOrganizationScreen';
 import WelcomeDualChoiceScreen from '../screens/auth/WelcomeDualChoiceScreen';
 import HomeScreen from '../screens/client/HomeScreen';
@@ -90,6 +91,7 @@ export default function AppRootStack({ screenOptions, registroOwnerBackgroundCol
       <Stack.Group>
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="WelcomeGlobal" component={WelcomeGlobalScreen} />
+        <Stack.Screen name="WelcomeClientJoin" component={WelcomeClientJoinScreen} />
         <Stack.Screen name="WelcomeOrganization" component={WelcomeOrganizationScreen} />
         <Stack.Screen name="WelcomeOrganizationScreen" component={WelcomeOrganizationScreen} />
         <Stack.Screen name="WelcomeDualChoice" component={WelcomeDualChoiceScreen} />

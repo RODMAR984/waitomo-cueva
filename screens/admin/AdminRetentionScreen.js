@@ -24,7 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { ADMIN_PANEL_GUTTER } from '../../theme/adminSpec';
 
@@ -146,7 +146,7 @@ export default function AdminRetentionScreen() {
           maxWidth: 120,
         },
         card: {
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: MOBILE_SPACING.md + 2,
           marginBottom: ADMIN_PANEL_GUTTER,
           borderWidth: 1,

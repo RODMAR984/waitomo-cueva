@@ -1,0 +1,29 @@
+# Home cliente → Calendario / Directorio / Perfil y volver con atrás (testIDs estables).
+appId: com.waitomofitengine.cueva
+---
+- assertVisible:
+    id: client-home-root
+- tapOn:
+    id: client-home-cta-calendario
+- assertVisible:
+    id: screen-calendario
+- tapOn:
+    id: calendario-nav-back
+- assertVisible:
+    id: client-home-root
+- tapOn:
+    id: client-home-cta-directory
+- assertVisible:
+    id: screen-directory
+- tapOn:
+    id: directory-nav-back
+- assertVisible:
+    id: client-home-root
+- tapOn:
+    id: client-home-cta-perfil
+- assertVisible:
+    id: screen-perfil
+- tapOn:
+    id: perfil-nav-back
+- assertVisible:
+    id: client-home-root

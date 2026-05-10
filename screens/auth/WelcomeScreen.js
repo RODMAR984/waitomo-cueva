@@ -75,7 +75,7 @@ export default function WelcomeScreen() {
         heroTextBlock: { marginTop: 72 },
         titleTop: {
           color: t.brand,
-          fontSize: 36,
+          fontSize: MOBILE_TYPE.display,
           fontWeight: '800',
           letterSpacing: 6,
           textAlign: 'center',
@@ -85,7 +85,7 @@ export default function WelcomeScreen() {
         },
         titleBottom: {
           color: t.brand,
-          fontSize: 28,
+          fontSize: MOBILE_TYPE.hero,
           fontWeight: '800',
           letterSpacing: 8,
           marginTop: 6,
@@ -96,7 +96,7 @@ export default function WelcomeScreen() {
         },
         subtitle: {
           color: t.subText,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.headline,
           fontWeight: '600',
           marginTop: 10,
           letterSpacing: 2,

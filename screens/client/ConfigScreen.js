@@ -23,7 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { LOCALE_ES, LOCALE_EN, LOCALE_PT } from '../../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -126,7 +126,7 @@ const ConfigScreen = () => {
           alignSelf: 'center',
         },
         panel: {
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: 18,
           backgroundColor: t.boxBg,
           borderWidth: 1,
@@ -143,7 +143,7 @@ const ConfigScreen = () => {
         },
         sectionFirst: { marginTop: 0, paddingTop: 0, borderTopWidth: 0 },
         sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-        sectionTitle: { fontSize: 16, fontWeight: '600', color: t.text, letterSpacing: 0.5, textTransform: 'uppercase' },
+        sectionTitle: { fontSize: MOBILE_TYPE.subhead, fontWeight: '600', color: t.text, letterSpacing: 0.5, textTransform: 'uppercase' },
         modeRow: {
           flexDirection: 'row',
           gap: 10,
@@ -161,7 +161,7 @@ const ConfigScreen = () => {
           borderWidth: 1,
         },
         modeBtnActive: {},
-        modeBtnText: { fontSize: 14, fontWeight: '500', color: t.text },
+        modeBtnText: { fontSize: MOBILE_TYPE.body, fontWeight: '500', color: t.text },
         row: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -172,8 +172,8 @@ const ConfigScreen = () => {
           borderBottomColor: t.overlayBorder,
         },
         rowLast: { borderBottomWidth: 0 },
-        rowLabel: { fontSize: 14, color: t.text, flex: 1 },
-        rowHint: { fontSize: 12, color: t.subText, marginTop: 2 },
+        rowLabel: { fontSize: MOBILE_TYPE.body, color: t.text, flex: 1 },
+        rowHint: { fontSize: MOBILE_TYPE.caption, color: t.subText, marginTop: 2 },
         backButton: {
           marginTop: 16,
           alignSelf: 'center',
@@ -186,7 +186,7 @@ const ConfigScreen = () => {
           gap: 6,
           ...t.buttonPrimary,
         },
-        backButtonText: { ...t.buttonPrimaryText, fontSize: 14 },
+        backButtonText: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.body },
       }),
     [t],
   );

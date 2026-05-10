@@ -251,7 +251,7 @@ export default function ConfiguraTuEspacioScreen() {
         hueChip: {
           width: 26,
           height: 26,
-          borderRadius: 13,
+          borderRadius: MOBILE_RADII.chipMd,
           marginRight: MOBILE_SPACING.sm,
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.2)',
@@ -737,13 +737,13 @@ export default function ConfiguraTuEspacioScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={[styles.subtitle, { marginTop: 8, marginBottom: 0, fontSize: 12 }]}>
+            <Text style={[styles.subtitle, { marginTop: 8, marginBottom: 0, fontSize: MOBILE_TYPE.caption }]}>
               {presetHint(themePreset)}
             </Text>
           </View>
 
           <Text style={styles.label}>{tStr('fe_setup_text_primary_label')}</Text>
-          <Text style={[styles.subtitle, { marginBottom: 8, fontSize: 12 }]}>{tStr('fe_setup_text_primary_hint')}</Text>
+          <Text style={[styles.subtitle, { marginBottom: 8, fontSize: MOBILE_TYPE.caption }]}>{tStr('fe_setup_text_primary_hint')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hueScroller}>
             {TEXT_QUICK.map((c) => (
               <TouchableOpacity
@@ -768,7 +768,7 @@ export default function ConfiguraTuEspacioScreen() {
           />
 
           <Text style={styles.label}>{tStr('fe_setup_text_secondary_label')}</Text>
-          <Text style={[styles.subtitle, { marginBottom: 8, fontSize: 12 }]}>
+          <Text style={[styles.subtitle, { marginBottom: 8, fontSize: MOBILE_TYPE.caption }]}>
             {tStr('fe_setup_text_secondary_hint')}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hueScroller}>
@@ -811,7 +811,7 @@ export default function ConfiguraTuEspacioScreen() {
             </View>
             {backgroundType === 'image' && (
               <>
-                <Text style={[styles.subtitle, { marginBottom: 8, fontSize: 12 }]}>
+                <Text style={[styles.subtitle, { marginBottom: 8, fontSize: MOBILE_TYPE.caption }]}>
                   {tStr('fe_setup_bg_image_hint')}
                 </Text>
                 <View style={styles.bgPreviewWrap}>

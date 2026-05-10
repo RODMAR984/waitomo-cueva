@@ -724,7 +724,7 @@ export default function AdminResumenScreen() {
         },
         heroTitle: {
           color: t.text,
-          fontSize: 28,
+          fontSize: MOBILE_TYPE.hero,
           fontWeight: '800',
           letterSpacing: -0.3,
           marginBottom: 12,
@@ -741,7 +741,7 @@ export default function AdminResumenScreen() {
         },
         screenTitle: {
           color: t.text,
-          fontSize: 28,
+          fontSize: MOBILE_TYPE.hero,
           fontWeight: '800',
           paddingHorizontal: MOBILE_SPACING.xl,
           marginBottom: 8,
@@ -749,7 +749,7 @@ export default function AdminResumenScreen() {
         mainSheet: {
           marginHorizontal: 12,
           marginBottom: 8,
-          borderRadius: 20,
+          borderRadius: MOBILE_SPACING.xl,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,

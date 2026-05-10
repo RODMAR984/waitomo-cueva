@@ -85,7 +85,7 @@ export default function AboutFitEngineScreen() {
         versionValue: { fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '700', color: t.text },
         hint: { fontSize: MOBILE_TYPE.caption, color: t.subText, textAlign: 'center', marginBottom: MOBILE_SPACING.lg, lineHeight: 18 },
         supportFootnote: {
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.meta,
           color: t.subText,
           textAlign: 'center',
           lineHeight: 16,

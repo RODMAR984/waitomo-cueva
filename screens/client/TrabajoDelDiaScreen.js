@@ -137,6 +137,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           shadowOpacity: 0.35,
           shadowRadius: MOBILE_RADII.lg,
         },
+        /** Pantalla de bloqueo: no estirar al ancho del viewport en web */
+        lockPanel: {
+          alignSelf: 'center',
+          width: '100%',
+          maxWidth: isWebDesktop ? 520 : 440,
+        },
         panelHeader: {
           borderBottomColor: t.overlayBorder,
           borderBottomWidth: 1,
@@ -362,14 +368,14 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         notesList: {
           borderColor: t.overlayBorder,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           borderWidth: 1,
           padding: 10,
         },
         noteLine: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           borderWidth: 1,
           marginBottom: 8,
           padding: 10,
@@ -383,7 +389,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         noteCancelBtn: { color: t.subText, fontWeight: '600' },
         noteEditInput: {
           borderColor: t.overlayBorder,
-          borderRadius: 6,
+          borderRadius: MOBILE_RADII.xs,
           borderWidth: 1,
           color: t.text,
           padding: 8,
@@ -413,7 +419,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         rmItem: {
           alignItems: 'center',
           borderColor: t.overlayBorder,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           borderWidth: 1,
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -487,7 +493,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           alignItems: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 20,
+          borderRadius: MOBILE_RADII.xl,
           borderWidth: 1,
           flexDirection: 'row',
           marginHorizontal: 8,
@@ -517,14 +523,14 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         input: {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
-          borderRadius: 8,
+          borderRadius: MOBILE_RADII.compact,
           borderWidth: 1,
           color: t.text,
           marginBottom: 12,
           padding: 12,
         },
         modalButtons: { flexDirection: 'row', justifyContent: 'space-between' },
-        modalButton: { alignItems: 'center', borderRadius: 8, minWidth: 100, padding: 12 },
+        modalButton: { alignItems: 'center', borderRadius: MOBILE_RADII.compact, minWidth: 100, padding: 12 },
         cancelButton: { backgroundColor: t.boxBg },
         saveButtonModal: { ...t.buttonPrimary },
 
@@ -533,17 +539,29 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           marginBottom: 10,
         },
 
-        lockScroll: { flexGrow: 1, justifyContent: 'center', paddingVertical: 40 },
+        lockScroll: {
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingVertical: 40,
+          paddingHorizontal: 16,
+          width: '100%',
+          maxWidth: panelMaxWidth,
+          alignSelf: 'center',
+        },
         lockCta: {
           alignItems: 'center',
           borderRadius: MOBILE_RADII.md,
           marginTop: 12,
+          marginBottom: 6,
           paddingVertical: 12,
           ...t.buttonPrimary,
         },
         lockCtaText: { ...t.buttonPrimaryText, fontWeight: '600' },
         lockBack: { alignItems: 'center', marginTop: 20, paddingVertical: 8 },
         lockBackText: { color: t.subText, fontSize: MOBILE_TYPE.body },
+        lockBackBtn: {
+          marginTop: 20,
+        },
       }),
     [t, isWebDesktop, panelMaxWidth],
   );
@@ -961,7 +979,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       <BackgroundWrapper screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.lockScroll} keyboardShouldPersistTaps="handled">
-            <NeoPanel style={styles.panel}>
+            <NeoPanel style={[styles.panel, styles.lockPanel]}>
               <View style={styles.panelHeader}>
                 <Text style={styles.planTitle}>{tStr('client_trabajo_locked_title')}</Text>
                 <Text style={styles.planSubtitle}>{tStr('client_trabajo_locked_body')}</Text>
@@ -980,7 +998,11 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               >
                 <Text style={styles.lockCtaText}>{tStr('client_entitlement_go_pay')}</Text>
               </TouchableOpacity>
-              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+              <BackNavButton
+                onPress={() => navigation.goBack()}
+                label={tStr('common_back')}
+                style={[styles.backBtn, styles.lockBackBtn]}
+              />
             </NeoPanel>
           </ScrollView>
         </View>

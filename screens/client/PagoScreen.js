@@ -34,7 +34,7 @@ import { createCheckoutPreference } from '../../services/billing/mercadoPagoChec
 import { createStripeCheckoutSession } from '../../services/billing/stripeCheckout';
 import { resolveClientPaymentMethods } from '../../utils/clientPaymentMethods';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import NeoPanel from '../../components/NeoPanel';
 import { reportError, trackEvent } from '../../utils/observability';
 
@@ -338,7 +338,7 @@ export default function PagoScreen({ navigation, route }) {
           alignSelf: 'center',
         },
         panel: {
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1.2,
           padding: MOBILE_SPACING.xxl,
           backgroundColor: t.boxBg,
@@ -357,7 +357,7 @@ export default function PagoScreen({ navigation, route }) {
         },
         mpHint: {
           color: t.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.label,
           lineHeight: 18,
           marginBottom: 16,
           textAlign: 'center',
@@ -365,7 +365,7 @@ export default function PagoScreen({ navigation, route }) {
         },
         intlNote: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           lineHeight: 17,
           marginBottom: 18,
           textAlign: 'center',
@@ -398,7 +398,7 @@ export default function PagoScreen({ navigation, route }) {
         btnText: { color: t.text, fontWeight: 'bold', fontSize: MOBILE_TYPE.bodyStrong },
 
         volverWrap: { alignItems: 'center', marginTop: 6 },
-        volverText: { color: t.text, fontSize: 16 },
+        volverText: { color: t.text, fontSize: MOBILE_TYPE.subhead },
       }),
     [t],
   );

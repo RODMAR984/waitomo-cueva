@@ -1,0 +1,11 @@
+# Abre login desde welcome y vuelve atrás (smoke sin credenciales).
+appId: com.waitomofitengine.cueva
+---
+- tapOn:
+    id: welcome-cta-login-client
+- assertVisible:
+    id: login-email-input
+- tapOn:
+    id: login-nav-back
+- assertVisible:
+    id: welcome-cta-login-client

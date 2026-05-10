@@ -19,15 +19,17 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { Ionicons } from '@expo/vector-icons';
 import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
+import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import PasswordInput from '../../components/PasswordInput';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
+import { useThemeContext } from '../../contexts/ThemeContext';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { supabase } from '../../supabaseClient';
 import { resolvePostAuthDestination } from '../../utils/authRoutingGuard';
 import { reportError, trackEvent } from '../../utils/observability';
@@ -38,6 +40,7 @@ const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 const normalizeEmail = (s) => String(s || '').trim().toLowerCase();
 
 export default function LoginScreen() {
+  const { isDark } = useThemeContext();
   const { t: tStr } = useLocale();
   const { width: winW } = useWindowDimensions();
   const navigation = useNavigation();
@@ -150,7 +153,7 @@ export default function LoginScreen() {
         panel: {
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           padding: MOBILE_SPACING.xl,
           width: '100%',
@@ -196,13 +199,13 @@ export default function LoginScreen() {
           marginTop: 16,
           textAlign: 'center',
           textDecorationLine: 'underline',
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
         },
         smallLink: {
           color: fe.subText,
           marginTop: 10,
           textAlign: 'center',
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           textDecorationLine: 'underline',
         },
         separatorText: {
@@ -210,7 +213,7 @@ export default function LoginScreen() {
           marginTop: 20,
           marginBottom: 6,
           textAlign: 'center',
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
         },
         socialButton: {
           alignItems: 'center',
@@ -236,7 +239,7 @@ export default function LoginScreen() {
         buttonSpaced: { marginBottom: 10 },
         staffSessionHint: {
           color: fe.subText,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.body,
           textAlign: 'center',
           marginBottom: 10,
         },
@@ -244,7 +247,30 @@ export default function LoginScreen() {
         socialButtonStack: { marginTop: 10 },
         linkRowSpaced: { marginTop: 10 },
         brandBottom: { width: '100%', alignItems: 'center', marginTop: 24, paddingBottom: 16 },
-        brandFooter: { color: fe.subText, fontSize: 11, opacity: 0.8 },
+        brandFooter: { color: fe.subText, fontSize: MOBILE_TYPE.caption, opacity: 0.8 },
+        backFooter: {
+          alignSelf: 'center',
+          marginTop: MOBILE_SPACING.md,
+          marginBottom: MOBILE_SPACING.sm,
+          minHeight: MOBILE_SIZES.controlHeight,
+          maxWidth: 200,
+          width: '100%',
+          paddingVertical: MOBILE_SPACING.sm,
+          paddingHorizontal: MOBILE_SPACING.md,
+          borderRadius: MOBILE_RADII.lg,
+          borderWidth: 1,
+          borderColor: fe.panelBorder,
+          backgroundColor: 'transparent',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        backFooterText: {
+          color: fe.text,
+          fontSize: MOBILE_TYPE.body,
+          fontWeight: '700',
+          marginLeft: 6,
+        },
       }),
     [winW],
   );
@@ -506,10 +532,17 @@ export default function LoginScreen() {
   const disabledReset = isSendingReset || disabled;
 
   return (
-    <BackgroundWrapper screen="neutral">
+    <View style={{ flex: 1, backgroundColor: '#050a0d', overflow: 'hidden' }}>
+      <LogoTriangleBackground
+        isDark={isDark}
+        variant="registro"
+        blendMode="lighten"
+        sizeScale={2.8}
+        opacityOverride={isDark ? 0.42 : 0.28}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.kav}
+        style={[styles.kav, { zIndex: 1 }]}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
@@ -519,11 +552,13 @@ export default function LoginScreen() {
         >
           <View style={styles.pageColumn}>
             <View style={styles.brandTop}>
-              <LogoCompleto height={50} />
+              <LogoCompleto height={72} />
               <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
             </View>
             <NeoPanel style={styles.panel}>
-              <BackNavButton onPress={() => navigation.goBack()} />
+              {showStaffAccessChoice ? (
+                <BackNavButton testID="login-nav-back" onPress={() => navigation.goBack()} />
+              ) : null}
               {showStaffAccessChoice ? (
                 <>
                   <Text style={styles.title}>{tStr('login_not_staff_title')}</Text>
@@ -571,6 +606,7 @@ export default function LoginScreen() {
                 )}
 
               <TextInput
+                testID="login-email-input"
                 placeholder={tStr('login_email')}
                 placeholderTextColor={fe.placeholder}
                 style={styles.input}
@@ -581,6 +617,7 @@ export default function LoginScreen() {
               />
 
               <PasswordInput
+                testID="login-password-input"
                 placeholder={tStr('login_password')}
                 placeholderTextColor={fe.placeholder}
                 style={styles.input}
@@ -590,6 +627,7 @@ export default function LoginScreen() {
               />
 
               <TouchableOpacity
+                testID="login-submit"
                 style={styles.button}
                 onPress={handleLogin}
                 disabled={disabled}
@@ -635,18 +673,20 @@ export default function LoginScreen() {
                   <Text style={styles.linkText}>{tStr('login_no_account_staff')}</Text>
                 </TouchableOpacity>
               )}
-              {!fromRegistro && !forStaff && (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('JoinWithInvite')}
-                  disabled={disabled}
-                  style={styles.linkRowSpaced}
-                >
-                  <Text style={styles.linkText}>{tStr('welcome_join_with_code')}</Text>
-                </TouchableOpacity>
-              )}
                 </>
               )}
             </NeoPanel>
+            {!showStaffAccessChoice ? (
+              <TouchableOpacity
+                style={styles.backFooter}
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.85}
+                testID="login-nav-back"
+              >
+                <Ionicons name="chevron-back" size={18} color={fe.text} />
+                <Text style={styles.backFooterText}>{tStr('common_back')}</Text>
+              </TouchableOpacity>
+            ) : null}
             <View style={styles.brandBottom}>
               <LogoCompleto height={30} style={{ marginBottom: 6 }} />
               <Text style={styles.brandFooter}>{tStr('gym_config_footer')}</Text>
@@ -654,6 +694,6 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </View>
   );
 }

@@ -21,7 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
 export default function PlanChatScreen({ route }) {
@@ -87,7 +87,7 @@ export default function PlanChatScreen({ route }) {
         },
         title: { color: t.text, fontSize: MOBILE_TYPE.title, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
         msgList: { flex: 1 },
-        msg: { marginBottom: 10, backgroundColor: t.boxBg, padding: 10, borderRadius: WEB_PANEL_RADIUS },
+        msg: { marginBottom: 10, backgroundColor: t.boxBg, padding: 10, borderRadius: MOBILE_RADII.lg },
         msgUser: { color: t.brand, fontWeight: 'bold' },
         msgText: { color: t.text },
         row: { flexDirection: 'row', alignItems: 'center' },

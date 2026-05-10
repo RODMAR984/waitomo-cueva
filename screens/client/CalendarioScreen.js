@@ -30,7 +30,7 @@ import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../../utils/userAbonoFetch';
 import { normalizeSlotLabel } from '../../utils/freeClassGrantStorage';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { resolveFreeClassGrant } from '../../services/booking/trialClassGrant';
 import {
   bookClassSlotServer,
@@ -721,7 +721,7 @@ export default function CalendarioScreen({ route, navigation }) {
       StyleSheet.create({
         panel: {
           alignItems: 'center',
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           marginBottom: 40,
           marginHorizontal: 16,
           marginTop: isWebDesktop ? 34 : height * 0.18,
@@ -747,16 +747,16 @@ export default function CalendarioScreen({ route, navigation }) {
         },
         contentGrid: {
           width: '100%',
-          flexDirection: isWebDesktop ? 'row' : 'column',
+          flexDirection: isWebDesktop && isBookingRequired ? 'row' : 'column',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
           gap: 16,
         },
         leftCol: {
-          width: isWebDesktop ? '36%' : '100%',
+          width: isWebDesktop && isBookingRequired ? '36%' : '100%',
         },
         rightCol: {
-          width: isWebDesktop ? '62%' : '100%',
+          width: isWebDesktop && isBookingRequired ? '62%' : '100%',
         },
 
         // alerta apto médico
@@ -771,21 +771,26 @@ export default function CalendarioScreen({ route, navigation }) {
         },
         textoAlerta: {
           color: t.text,
-          fontSize: 13,
+          fontSize: MOBILE_TYPE.label,
           fontWeight: '600',
         },
 
-        // tira de días
+        weekStrip: {
+          width: '100%',
+          marginBottom: 8,
+        },
+        // tira de días (ancho completo del panel; antes vivía en leftCol 36% y se veía aplastada)
         weekRow: {
           alignItems: 'center',
           flexDirection: 'row',
-          gap: 6,
-          marginBottom: 24,
-          paddingHorizontal: 10,
+          flexGrow: 1,
+          gap: isWebDesktop ? 4 : 6,
+          paddingHorizontal: 4,
+          paddingVertical: 4,
         },
         diaContainer: {
           alignItems: 'center',
-          marginHorizontal: 4,
+          marginHorizontal: isWebDesktop ? 2 : 4,
         },
         diaContainerOff: { opacity: 0.45 },
         diaContainerHas: {
@@ -795,7 +800,7 @@ export default function CalendarioScreen({ route, navigation }) {
         diaSeleccionado: {},
         diaLabel: {
           color: t.subText,
-          fontSize: 11,
+          fontSize: MOBILE_TYPE.meta,
           fontWeight: 'bold',
           marginBottom: 2,
           textAlign: 'center',
@@ -811,7 +816,7 @@ export default function CalendarioScreen({ route, navigation }) {
           alignItems: 'center',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder, // unificado
-          borderRadius: 20,
+          borderRadius: MOBILE_RADII.xl,
           borderWidth: 1,
           height: 40,
           justifyContent: 'center',
@@ -826,7 +831,7 @@ export default function CalendarioScreen({ route, navigation }) {
         },
         diaNumero: {
           color: t.text,
-          fontSize: 16,
+          fontSize: MOBILE_TYPE.subhead,
           fontWeight: 'bold',
         },
         diaNumeroActivo: {
@@ -841,7 +846,7 @@ export default function CalendarioScreen({ route, navigation }) {
         },
         bookingLegend: {
           color: t.subText,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           marginTop: -6,
           marginBottom: 10,
           textAlign: 'center',
@@ -885,13 +890,13 @@ export default function CalendarioScreen({ route, navigation }) {
         horarioMeta: {
           color: t.subText,
           marginTop: 4,
-          fontSize: 12,
+          fontSize: MOBILE_TYPE.caption,
           textAlign: 'center',
         },
         slotStateTag: {
           marginTop: 6,
           alignSelf: 'center',
-          borderRadius: 999,
+          borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           paddingHorizontal: 8,
@@ -913,7 +918,7 @@ export default function CalendarioScreen({ route, navigation }) {
           backgroundColor: hexToRgba('#f59e0b', 0.16),
           borderColor: hexToRgba('#d97706', 0.3),
         },
-        slotStateTxt: { fontSize: 10, fontWeight: '800', color: t.text, letterSpacing: 0.2 },
+        slotStateTxt: { fontSize: MOBILE_TYPE.micro, fontWeight: '800', color: t.text, letterSpacing: 0.2 },
         slotStateTxtReserved: { color: '#166534' },
         slotStateTxtWaiting: { color: '#92400e' },
         slotStateTxtOpen: { color: t.brand },
@@ -933,7 +938,7 @@ export default function CalendarioScreen({ route, navigation }) {
         volverTxt: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
         lockText: {
           color: t.subText,
-          fontSize: 14,
+          fontSize: MOBILE_TYPE.body,
           lineHeight: 20,
           marginBottom: 16,
           textAlign: 'center',
@@ -943,7 +948,8 @@ export default function CalendarioScreen({ route, navigation }) {
           ...t.buttonPrimary,
           borderRadius: MOBILE_RADII.sm,
           minHeight: MOBILE_SIZES.controlHeight,
-          marginTop: 10,
+          marginTop: 12,
+          marginBottom: 4,
           paddingVertical: MOBILE_SPACING.md,
           paddingHorizontal: MOBILE_SPACING.lg,
           justifyContent: 'center',
@@ -951,7 +957,7 @@ export default function CalendarioScreen({ route, navigation }) {
         },
         lockCtaTxt: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
       }),
-    [t, isWebDesktop, panelMaxWidth],
+    [t, isWebDesktop, panelMaxWidth, isBookingRequired],
   );
 
   if (user?.id && abonoLoading) {
@@ -968,6 +974,7 @@ export default function CalendarioScreen({ route, navigation }) {
 
   return (
     <BackgroundWrapper plan={plan}>
+      <View testID="screen-calendario" style={{ flex: 1 }}>
       <NeoPanel style={styles.panel}>
         <Text style={styles.mes}>{mes.toUpperCase()}</Text>
 
@@ -998,43 +1005,45 @@ export default function CalendarioScreen({ route, navigation }) {
           </>
         ) : (
           <>
+            <View style={styles.weekStrip}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator
+                contentContainerStyle={styles.weekRow}
+              >
+                {days.map((d) => {
+                  const weekday = getIsoWeekdayFromYmd(d.full);
+                  const tieneContenido = offeredWeekdays.has(weekday);
+
+                  const seleccionado = diaSeleccionado === d.full;
+
+                  return (
+                    <TouchableOpacity
+                      key={d.full}
+                      onPress={() => setDiaSeleccionado(d.full)}
+                      style={[
+                        styles.diaContainer,
+                        tieneContenido && styles.diaContainerHas,
+                        !tieneContenido && styles.diaContainerOff,
+                        seleccionado && styles.diaSeleccionado,
+                      ]}
+                    >
+                      <Text style={[styles.diaLabel, tieneContenido && styles.diaLabelHas, seleccionado && styles.diaLabelActivo]}>
+                        {d.label.toUpperCase()}
+                      </Text>
+                      <View style={[styles.circuloNumero, tieneContenido && styles.circuloHas, seleccionado && styles.circuloActivo]}>
+                        <Text style={[styles.diaNumero, seleccionado && styles.diaNumeroActivo]}>
+                          {d.number}
+                        </Text>
+                      </View>
+                      {tieneContenido && <View style={styles.punto} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
             <View style={styles.contentGrid}>
               <View style={styles.leftCol}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.weekRow}
-                >
-                  {days.map((d) => {
-                    const weekday = getIsoWeekdayFromYmd(d.full);
-                    const tieneContenido = offeredWeekdays.has(weekday);
-
-                    const seleccionado = diaSeleccionado === d.full;
-
-                    return (
-                      <TouchableOpacity
-                        key={d.full}
-                        onPress={() => setDiaSeleccionado(d.full)}
-                        style={[
-                          styles.diaContainer,
-                          tieneContenido && styles.diaContainerHas,
-                          !tieneContenido && styles.diaContainerOff,
-                          seleccionado && styles.diaSeleccionado,
-                        ]}
-                      >
-                        <Text style={[styles.diaLabel, tieneContenido && styles.diaLabelHas, seleccionado && styles.diaLabelActivo]}>
-                          {d.label.toUpperCase()}
-                        </Text>
-                        <View style={[styles.circuloNumero, tieneContenido && styles.circuloHas, seleccionado && styles.circuloActivo]}>
-                          <Text style={[styles.diaNumero, seleccionado && styles.diaNumeroActivo]}>
-                            {d.number}
-                          </Text>
-                        </View>
-                        {tieneContenido && <View style={styles.punto} />}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
                 {isBookingRequired ? (
                   <Text style={styles.lockText}>
                     {offeredWeekdays.size
@@ -1139,8 +1148,14 @@ export default function CalendarioScreen({ route, navigation }) {
           </>
         )}
 
-        <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.volver} />
+        <BackNavButton
+          testID="calendario-nav-back"
+          onPress={() => navigation.goBack()}
+          label={tStr('config_back')}
+          style={styles.volver}
+        />
       </NeoPanel>
+      </View>
     </BackgroundWrapper>
   );
 }

@@ -13,30 +13,35 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
 import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { fitengineLogoColors as fe } from '../../theme/colors';
+import { useThemeContext } from '../../contexts/ThemeContext';
+import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../../theme/colors';
+import { createWelcomeGlobalLayoutStyles } from '../../styles/welcomeGlobalLayoutStyles';
 import {
   setPendingClientInviteCode,
   getPendingClientInviteCode,
 } from '../../utils/pendingClientInviteStorage';
 import { supabase } from '../../supabaseClient';
 import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
 export default function JoinWithInviteCodeScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const { isDark } = useThemeContext();
   const { t: tStr } = useLocale();
   const { session, joinOrganizationWithInviteCode } = useAuth() || {};
 
@@ -55,6 +60,12 @@ export default function JoinWithInviteCodeScreen() {
     };
   }, []);
 
+  const isWideWeb = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
+  const layoutStyles = useMemo(
+    () => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top, { isWide: isWideWeb }),
+    [insets.top, isWideWeb],
+  );
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -66,11 +77,17 @@ export default function JoinWithInviteCodeScreen() {
           maxWidth: WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
-        outer: { flex: 1, justifyContent: 'center' },
+        innerColumn: {
+          flex: 1,
+          width: '100%',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
         panel: {
+          width: '100%',
           backgroundColor: fe.panelBg,
           borderColor: fe.panelBorder,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           padding: MOBILE_SPACING.xl,
         },
@@ -115,8 +132,6 @@ export default function JoinWithInviteCodeScreen() {
           borderColor: fe.buttonBorder,
         },
         primaryText: { color: fe.buttonText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
-        link: { marginTop: MOBILE_SPACING.xl - 2, alignItems: 'center' },
-        linkText: { color: fe.subText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '600', textDecorationLine: 'underline' },
         brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
     [insets.top]
@@ -176,7 +191,7 @@ export default function JoinWithInviteCodeScreen() {
     <BackgroundWrapper screen="neutral">
       <View style={{ flex: 1 }}>
         <LogoTriangleBackground
-          isDark
+          isDark={isDark}
           sizeScale={2.4}
           opacityOverride={0.2}
           blendMode="screen"
@@ -187,13 +202,12 @@ export default function JoinWithInviteCodeScreen() {
         >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.kav}>
-            <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
-              <LogoCompleto height={52} />
-              <Text style={styles.brandPowered}>powered by WAITOMO</Text>
-            </View>
-            <View style={styles.outer}>
+            <View style={styles.innerColumn}>
+              <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
+                <LogoCompleto height={52} />
+                <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
+              </View>
               <NeoPanel style={styles.panel}>
-                <BackNavButton onPress={() => navigation.goBack()} />
                 <Text style={styles.title}>{tStr('invite_title')}</Text>
                 <Text style={styles.hint}>{tStr('invite_hint')}</Text>
                 <TextInput
@@ -219,10 +233,16 @@ export default function JoinWithInviteCodeScreen() {
                     <Text style={styles.primaryText}>{tStr('invite_cta')}</Text>
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.link} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-                  <Text style={styles.linkText}>{tStr('invite_back')}</Text>
-                </TouchableOpacity>
               </NeoPanel>
+              <TouchableOpacity
+                style={[layoutStyles.ctaBackCompact, { marginTop: MOBILE_SPACING.md }]}
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.85}
+                testID="invite-nav-back"
+              >
+                <Ionicons name="chevron-back" size={18} color={fitT.text} />
+                <Text style={[layoutStyles.ctaBackCompactText, { marginLeft: 6 }]}>{tStr('common_back')}</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </TouchableWithoutFeedback>

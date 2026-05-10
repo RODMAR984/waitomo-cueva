@@ -11,8 +11,8 @@ import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { WEB_CONTENT_MAX_WIDTH, WEB_PANEL_RADIUS } from '../../theme/webSpec';
-import { MOBILE_SPACING } from '../../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
 export default function HistorialScreen({ route, navigation }) {
@@ -33,7 +33,7 @@ export default function HistorialScreen({ route, navigation }) {
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderWidth: 1,
-          borderRadius: WEB_PANEL_RADIUS,
+          borderRadius: MOBILE_RADII.lg,
           padding: MOBILE_SPACING.xxl,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
@@ -41,11 +41,11 @@ export default function HistorialScreen({ route, navigation }) {
           shadowColor: t.brand,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
-          shadowRadius: 10,
+          shadowRadius: MOBILE_RADII.sm,
         },
         text: {
           color: t.subText,
-          fontSize: 18,
+          fontSize: MOBILE_TYPE.headline,
           textAlign: 'center',
         },
         backWrap: { marginTop: 14, alignItems: 'center' },
