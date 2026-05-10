@@ -84,6 +84,8 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  console.log(JSON.stringify({ source: "mp_webhook", phase: "received", has_payment_id: true }));
+
   const supabase = createClient(supabaseUrl, serviceKey);
 
   let payment: Record<string, unknown> | null = null;
@@ -171,6 +173,15 @@ Deno.serve(async (req: Request) => {
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  console.log(
+    JSON.stringify({
+      source: "mp_webhook",
+      phase: "ledger_insert_ok",
+      has_org: Boolean(resolvedOrgId),
+      amount_bucket: amount >= 1000 ? "1000plus" : amount >= 100 ? "100_999" : "under100",
+    }),
+  );
 
   return new Response(
     JSON.stringify({ ok: true, payment_id: paymentId, amount, organization_id: resolvedOrgId }),

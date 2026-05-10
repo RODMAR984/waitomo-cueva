@@ -30,6 +30,7 @@ import {
   clearPendingClientInviteCode,
 } from '../utils/pendingClientInviteStorage';
 import { getOAuthRedirectUriForSupabase } from '../utils/fitengineUrls';
+import { trackEvent } from '../utils/observability';
 
 /** Dónde se inició OAuth en web: si Google vuelve a otro origen, redirigimos acá con el mismo ?code=. */
 const WEB_OAUTH_START_REDIRECT_KEY = 'waitomo_oauth_web_redirect';
@@ -789,6 +790,7 @@ export const AuthProvider = ({ children }) => {
     if (mode !== 'client' && mode !== 'staff') return;
 
     // Canonizar contexto en BD (multi-dispositivo): set_default_membership(...)
+    let membershipOrgIdForTrack = null;
     try {
       const active = (organizationMemberships || []).filter((m) => !!m?.active);
       let candidate = null;
@@ -801,6 +803,7 @@ export const AuthProvider = ({ children }) => {
           active.find((m) => m?.is_default && m?.role === 'cliente') ||
           active.find((m) => m?.role === 'cliente');
       }
+      membershipOrgIdForTrack = candidate?.organization_id || null;
 
       if (candidate?.id) {
         const { error: rpcError } = await supabase.rpc('set_default_membership', {
@@ -823,6 +826,10 @@ export const AuthProvider = ({ children }) => {
 
     await writeActiveAppMode(uid, mode);
     setActiveAppModeState(mode);
+    trackEvent('auth_app_mode_changed', {
+      mode: String(mode),
+      organization_id: membershipOrgIdForTrack,
+    });
   }, [session?.user?.id, organizationMemberships, staffRoles]);
 
   /** WelcomeGlobal / login: no navegar hasta tener orgs propias + modo guardado leído (evita carrera a ClientTabs). */

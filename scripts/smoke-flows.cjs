@@ -13,21 +13,34 @@ function assertIncludes(source, token, message) {
 
 function run() {
   const app = read('App.js');
-  const login = read('screens/LoginScreen.js');
-  const client = read('screens/ClientScreen.js');
-  const admin = read('screens/AdminScreen.js');
+  const stack = read('navigation/AppRootStack.js');
+  const login = read('screens/auth/LoginScreen.js');
+  const client = read('screens/client/ClientScreen.js');
+  const admin = read('screens/admin/AdminScreen.js');
   const staffNav = read('hooks/useStaffAdminNavTiles.js');
+
+  assertIncludes(app, 'runAppBootstrapOnce', 'App.js debe llamar bootstrap al inicio');
+  assertIncludes(app, 'AppShellContent', 'App.js debe montar shell de navegación');
+  assertIncludes(app, '<AuthProvider>', 'App.js debe envolver con AuthProvider');
 
   // Rutas críticas de flujo
   ['WelcomeGlobal', 'Login', 'PlanSelector', 'Calendario', 'TrabajoDelDia', 'AdminLite', 'AdminObservability'].forEach(
     (route) => {
-      assertIncludes(app, `name="${route}"`, `Falta ruta crítica: ${route}`);
+      assertIncludes(stack, `name="${route}"`, `Falta ruta crítica: ${route}`);
     },
   );
 
   // Flujo auth
   assertIncludes(login, 'resolvePostAuthDestination', 'Login no usa guard central');
   assertIncludes(login, "trackEvent('auth_login_success'", 'Login no instrumenta auth_login_success');
+
+  const authCtx = read('contexts/AuthContext.js');
+  assertIncludes(authCtx, "trackEvent('auth_app_mode_changed'", 'AuthContext no instrumenta cambio de modo app');
+  assertIncludes(authCtx, 'organization_id: membershipOrgIdForTrack', 'AuthContext no adjunta organization_id al evento de modo');
+
+  const staffShell = read('navigation/staffScreenShell.js');
+  assertIncludes(staffShell, "Platform.OS !== 'web'", 'Staff shell no bloquea admin en nativo');
+  assertIncludes(staffShell, 'staff_web_only_title', 'Staff shell no usa copy i18n staff_web_only');
 
   // Flujo cliente
   assertIncludes(client, "trackEvent('client_open_calendario'", 'Client no instrumenta apertura de calendario');

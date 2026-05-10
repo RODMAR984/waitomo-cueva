@@ -63,6 +63,8 @@ export const translations = {
 
     // Welcome
     welcome_subtitle: 'Activa tu energía',
+    welcome_brand_top: 'FIT',
+    welcome_brand_bottom: 'ENGINE',
     welcome_client: 'Cliente',
     welcome_staff: 'Staff',
     welcome_admin: 'Admin',
@@ -423,7 +425,7 @@ export const translations = {
     gym_config_tab_appearance: 'Apariencia',
     gym_config_tab_branding: 'Logo y fondo',
     gym_config_org_name: 'Nombre de la organización',
-    gym_config_org_name_ph: 'Ej. Waitomo Training',
+    gym_config_org_name_ph: 'Ej. Mi gimnasio',
     gym_config_currency_label: 'Moneda principal (ISO)',
     gym_config_currency_ph: 'Ej: ARS, USD, EUR',
     gym_config_currency_invalid: 'La moneda debe tener 3 letras (ISO), por ejemplo ARS o USD.',
@@ -728,6 +730,10 @@ export const translations = {
     admin_retention_send_ok_body: 'El socio verá el mensaje en su inicio.',
     admin_retention_send_fail: 'No se pudo enviar',
     admin_retention_default_body: 'Te extrañamos en el gym. Reservá tu próxima clase desde la app.',
+    staff_web_only_title: 'Panel staff solo en la web',
+    staff_web_only_body:
+      'Para administrar tu gym usá FitEngine en el navegador (fitengine.app). En la app móvil nativa el panel staff no está disponible por seguridad y usabilidad.',
+    staff_web_only_cta: 'Volver',
     admin_commissions_title: 'Comisiones',
     admin_commissions_hint: 'Porcentaje en puntos base (100 = 1%). Ej. 1500 = 15%.',
     admin_commissions_coach: 'Coach / staff',
@@ -1050,7 +1056,7 @@ export const translations = {
 
     fe_setup_title: 'Configurá tu espacio',
     fe_setup_subtitle:
-      'Los cambios se ven al instante en la vista previa. El acento y el tema no usan la paleta Waitomo.',
+      'Los cambios se ven al instante en la vista previa. El acento y el tema siguen la paleta de marca de FitEngine (neutra en este paso).',
     fe_setup_preview: 'Vista previa',
     fe_preview_org_name: 'Preview',
     fe_setup_name_placeholder: 'Nombre del espacio',
@@ -1445,7 +1451,7 @@ export const translations = {
     detalle_abono_days_left: 'Quedan {{n}} días',
 
     // Home
-    home_title: 'Bienvenida a Waitomo Training',
+    home_title: 'Bienvenida a FitEngine',
     home_admin: 'Entrar como Admin',
 
     // Client / Panel
@@ -1574,7 +1580,7 @@ export const translations = {
       'Con plan asignado no hay canales visibles para esta sede. Si sos coach o administración, deberías ver todos los canales de tu gym; si no, contactá soporte. Los socios solo ven el chat de su plan.',
     chat_hint_no_org: 'Tu perfil no tiene gimnasio (organización) asociado; el chat es por sede. Revisá la invitación o contactá al staff.',
     chat_btn_choose_plan: 'Elegir plan',
-    splash_by_waitomo: 'by WAITOMO',
+    splash_by_waitomo: 'FitEngine',
     chat_you: 'Vos',
     chat_member: 'Miembro',
     chat_empty_thread: 'Nadie escribió aún. ¡Escribí el primer mensaje!',
@@ -1922,6 +1928,8 @@ export const translations = {
     nav_unsaved_discard: 'Leave without saving',
 
     welcome_subtitle: 'Activate your energy',
+    welcome_brand_top: 'FIT',
+    welcome_brand_bottom: 'ENGINE',
     welcome_client: 'Client',
     welcome_staff: 'Staff',
     welcome_admin: 'Admin',
@@ -2272,7 +2280,7 @@ export const translations = {
     gym_config_tab_appearance: 'Appearance',
     gym_config_tab_branding: 'Logo & background',
     gym_config_org_name: 'Organization name',
-    gym_config_org_name_ph: 'e.g. Waitomo Training',
+    gym_config_org_name_ph: 'e.g. My gym',
     gym_config_currency_label: 'Primary currency (ISO)',
     gym_config_currency_ph: 'e.g. ARS, USD, EUR',
     gym_config_currency_invalid: 'Currency must be a 3-letter ISO code, e.g. ARS or USD.',
@@ -2578,6 +2586,10 @@ export const translations = {
     admin_retention_send_ok_body: 'The member will see this on their home screen.',
     admin_retention_send_fail: 'Could not send',
     admin_retention_default_body: 'We miss you at the gym. Book your next class from the app.',
+    staff_web_only_title: 'Staff panel is web-only',
+    staff_web_only_body:
+      'To manage your gym, use FitEngine in the browser (fitengine.app). The native mobile app does not include the staff panel for security and usability.',
+    staff_web_only_cta: 'Go back',
     admin_commissions_title: 'Commissions',
     admin_commissions_hint: 'Percentage in basis points (100 = 1%). e.g. 1500 = 15%.',
     admin_commissions_coach: 'Coach / staff',
@@ -2902,7 +2914,7 @@ export const translations = {
 
     fe_setup_title: 'Set up your space',
     fe_setup_subtitle:
-      'Changes show instantly in the preview. Accent and theme do not use the Waitomo palette.',
+      'Changes show instantly in the preview. Accent and theme follow FitEngine’s neutral brand palette in this step.',
     fe_setup_preview: 'Preview',
     fe_preview_org_name: 'Preview',
     fe_setup_name_placeholder: 'Space name',
@@ -3290,7 +3302,7 @@ export const translations = {
     detalle_abono_dash: '—',
     detalle_abono_days_left: '{{n}} days left',
 
-    home_title: 'Welcome to Waitomo Training',
+    home_title: 'Welcome to FitEngine',
     home_admin: 'Sign in as Admin',
 
     client_greeting_morning: 'Good morning',
@@ -3419,7 +3431,7 @@ export const translations = {
     chat_hint_no_org:
       'Your profile has no gym (organization) linked; chat is per location. Check your invite or contact staff.',
     chat_btn_choose_plan: 'Choose plan',
-    splash_by_waitomo: 'by WAITOMO',
+    splash_by_waitomo: 'FitEngine',
     chat_you: 'You',
     chat_member: 'Member',
     chat_empty_thread: 'No messages yet. Send the first one!',

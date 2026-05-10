@@ -31,6 +31,8 @@
     "release:verify": "npm run qa:web:release && playwright test",
     "test:e2e:web": "npm run perf:web:export && playwright test",
     "test:e2e:web:headed": "npm run perf:web:export && playwright test --headed",
+    "test:e2e:web:journey": "npm run perf:web:export && playwright test tests/e2e/web/full-web-journey.spec.js",
+    "test:e2e:web:journey-headed": "npm run perf:web:export && playwright test tests/e2e/web/full-web-journey.spec.js --headed",
     "test:e2e:web:debug": "npm run perf:web:export && playwright test --debug",
     "icons:build": "node scripts/build-app-icon-composite.cjs",
     "i18n:check": "node scripts/i18n-check.cjs",

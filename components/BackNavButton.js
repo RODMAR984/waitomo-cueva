@@ -7,8 +7,12 @@ export default function BackNavButton({ onPress, label, style }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
 
+  const resolvedLabel = label || tStr('common_back');
+
   return (
     <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={resolvedLabel}
       onPress={onPress}
       activeOpacity={0.88}
       style={[
@@ -20,7 +24,7 @@ export default function BackNavButton({ onPress, label, style }) {
         style,
       ]}
     >
-      <Text style={[styles.text, { color: t.text }]}>{label || tStr('common_back')}</Text>
+      <Text style={[styles.text, { color: t.text }]}>{resolvedLabel}</Text>
     </TouchableOpacity>
   );
 }

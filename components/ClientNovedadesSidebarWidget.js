@@ -17,7 +17,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { supabase } from '../supabaseClient';
 import { normalizePlanKey } from '../utils/planKeyNormalize';
-import { resolveFreeClassGrant } from '../utils/trialClassGrantSupabase';
+import { resolveFreeClassGrant } from '../services/booking/trialClassGrant';
 import { evaluateClientCommunityAccess, isUserAbonoActive, abonoCoversUserPlan } from '../utils/clientWorkoutEntitlement';
 import { trackEvent, reportError } from '../utils/observability';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';

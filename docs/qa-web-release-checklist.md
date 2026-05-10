@@ -54,7 +54,27 @@ Checklist operativo para validar release web con foco en estabilidad, i18n, tema
 - El mensaje **“This browser or app may not be secure”** en automatización **no implica** que usuarios con Chrome/Edge/Safari normales no puedan usar “Continuar con Google”.
 - Validación: **smoke manual** en la sección 3 (Welcome → Login → Continuar con Google en navegador real).
 
-- Ejecutar:
+- **Un solo programa para ver casi todo el flujo web en pantalla (recomendado):**
+  - `npm run test:e2e:web:journey-headed`
+  - Archivo único: `tests/e2e/web/full-web-journey.spec.js` (Welcome → público → login → cliente opcional → staff en segunda pestaña opcional).
+  - Credenciales opcionales (misma ventana PowerShell): `E2E_CLIENT_*`, `E2E_ADMIN_*` (sin ellas solo corre la parte pública + pantallas de login).
+- **Primera vez:** `npx playwright install chromium` (una sola vez por máquina).
+- **Variables (PowerShell en Windows):** en la misma ventana donde corrés los tests (no las pegues en el chat):
+
+```powershell
+cd C:\Users\marla\waitomo-cueva
+$env:E2E_CLIENT_EMAIL = "cliente@tu-staging.com"
+$env:E2E_CLIENT_PASSWORD = "tu_password"
+$env:E2E_ADMIN_EMAIL = "staff@tu-staging.com"
+$env:E2E_ADMIN_PASSWORD = "tu_password"
+npm run test:e2e:web
+```
+
+- **Solo tests públicos / sin credenciales:** omití las líneas `$env:E2E_*`; las suites cliente y admin se marcan como *skipped*.
+- **Ver el navegador:** `npm run test:e2e:web:headed`
+- **Saltar re-export si `dist/` ya está fresco:** `$env:PLAYWRIGHT_SKIP_EXPORT = "1"` antes de `npx playwright test …`.
+
+- Ejecutar (equivale a export web + Playwright):
   - `npm run test:e2e:web`
 - Incluye:
   - smoke público (welcome/login/registro).

@@ -15,6 +15,10 @@ test.describe('Web smoke: cliente autenticado', () => {
     await expect(page.getByText('Bienvenido a tu panel de entrenamiento.', { exact: true })).toBeVisible();
   });
 
+  test('home usa marca FitEngine', async ({ page }) => {
+    await expect(page.getByText('Bienvenida a FitEngine', { exact: true })).toBeVisible();
+  });
+
   test('abre calendario desde tabs', async ({ page }) => {
     await page.getByText('Calendario', { exact: true }).first().click();
     await expect(

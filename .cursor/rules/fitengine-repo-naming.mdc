@@ -1,0 +1,12 @@
+---
+description: Nombres FitEngine vs repo waitomo-cueva
+alwaysApply: true
+---
+
+# Nombres y marcas
+
+- **Producto / marca en UI y dominios de producción:** FitEngine (`fitengine.app`, etc.).
+- **Repositorio local / histórico:** puede llamarse `waitomo-cueva`; no confundir nombre de carpeta con la marca visible al usuario.
+- **Código:** preferir strings de usuario y claves i18n que digan FitEngine donde corresponda al producto; comentarios internos pueden mencionar Waitomo solo como referencia de negocio o datos seed.
+- **Copy nuevo:** no introducir “Waitomo” como marca visible en pantallas de producto salvo criterio explícito de negocio (powered-by / legal / seed); la app vende FitEngine al usuario final.
+- **Nuevos módulos:** nombres de archivo y rutas en inglés o convención existente del repo; evitar mezclar marca en nombres de carpetas (`services/billing`, no `services/waitomoBilling`).

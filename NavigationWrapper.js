@@ -2,8 +2,8 @@
 import React from 'react';
 import { useAuth } from './contexts/AuthContext';
 
-import WelcomeScreen from './screens/WelcomeScreen';
-import ClientTabs from './screens/ClientTabs';
+import WelcomeScreen from './screens/auth/WelcomeScreen';
+import ClientTabs from './screens/client/ClientTabs';
 
 export default function NavigationWrapper() {
   const { session, loading } = useAuth();

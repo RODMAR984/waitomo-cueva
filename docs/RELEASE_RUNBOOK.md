@@ -61,6 +61,27 @@ El artefacto queda en `dist/`. Subí ese directorio al hosting que uses (mismo p
 - Migraciones: `npx supabase db push` (solo desde entorno conectado al proyecto correcto).
 - Funciones: `npx supabase functions deploy <nombre>`.
 
+### 4.1) Migraciones que suelen quedar “solo en repo” (directorio + UI de planes)
+
+Después de `git pull`, conviene comparar la carpeta `supabase/migrations/` con el historial del proyecto en el **dashboard de Supabase** (o `npx supabase migration list` si está linkado). Si faltan en remoto, el cliente web no verá el comportamiento aunque el código ya esté desplegado.
+
+Archivos a vigilar en releases recientes:
+
+- `20260209120000_plan_abono_card_highlights.sql` — columnas `card_highlights` en `plans` y `abonos`.
+- `20260210120000_public_directory_flagship_orgs.sql` — activa `public_directory_enabled` y términos del directorio para orgs vitrina (Waitomo / Marti tu coach / variantes con “marti” + “coach”).
+
+**Nota:** el MCP de Supabase en Cursor puede estar en **solo lectura**; en ese caso las migraciones se aplican igual con `npx supabase db push` desde tu máquina o con el SQL Editor pegando el contenido del archivo (solo si sabés qué hace el script).
+
+**Comprobación rápida en SQL** (opcional): `select count(*) from organizations where coalesce(public_directory_enabled,false);` — si es `0` y ya deberían listarse gims, falta la migración flagship o el toggle en Gym Config.
+
+Si `npx supabase db push` avisa que hay migraciones locales con **timestamp anterior** a la última migración remota, el CLI pide explícitamente:
+
+```bash
+npx supabase db push --include-all
+```
+
+Revisá el listado que imprime antes de confirmar (staging primero).
+
 **Alertas de observabilidad** (cron en GitHub → edge `observability-alerts`):
 
 ```bash

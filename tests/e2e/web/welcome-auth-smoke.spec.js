@@ -12,11 +12,12 @@ test.describe('Web smoke: welcome y auth base', () => {
   test('permite cambiar idioma ES/EN desde welcome', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByText('EN').first().click();
-    await expect(page.getByText('Sign in', { exact: true })).toBeVisible();
+    // RN Web: clic en el texto no siempre dispara el TouchableOpacity; testID en el control.
+    await page.getByTestId('locale-en').click();
+    await expect(page.getByText('Sign in', { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Create account', { exact: true })).toBeVisible();
 
-    await page.getByText('ES').first().click();
+    await page.getByTestId('locale-es').click();
     await expect(page.getByText('Iniciar sesión', { exact: true })).toBeVisible();
   });
 

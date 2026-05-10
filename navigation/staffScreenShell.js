@@ -1,23 +1,78 @@
 import React from 'react';
+import { Platform, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import StaffWebDesktopShell from '../components/StaffWebDesktopShell';
-import AdminLiteScreen from '../screens/AdminLiteScreen';
-import AdminFinanzasScreen from '../screens/AdminFinanzasScreen';
-import GymConfigScreen from '../screens/GymConfigScreen';
-import AdminAbonosScreen from '../screens/AdminAbonosScreen';
-import AsignarCoachesScreen from '../screens/AsignarCoachesScreen';
-import OrgMembersScreen from '../screens/OrgMembersScreen';
-import OrgMemberDetailScreen from '../screens/OrgMemberDetailScreen';
-import AdminObservabilityScreen from '../screens/AdminObservabilityScreen';
-import AdminMembershipFreezeScreen from '../screens/AdminMembershipFreezeScreen';
-import AdminReportesScreen from '../screens/AdminReportesScreen';
-import AdminRetentionScreen from '../screens/AdminRetentionScreen';
-import AdminCommissionsScreen from '../screens/AdminCommissionsScreen';
-import AdminStripeSettingsScreen from '../screens/AdminStripeSettingsScreen';
-import AdminMercadoPagoSettingsScreen from '../screens/AdminMercadoPagoSettingsScreen';
-import AdminBadgesScreen from '../screens/AdminBadgesScreen';
+import BackgroundWrapper from '../components/BackgroundWrapper';
+import { useLocale } from '../contexts/LocaleContext';
+import { useThemeContext } from '../contexts/ThemeContext';
+import AdminLiteScreen from '../screens/admin/AdminLiteScreen';
+import AdminFinanzasScreen from '../screens/admin/AdminFinanzasScreen';
+import GymConfigScreen from '../screens/admin/GymConfigScreen';
+import AdminAbonosScreen from '../screens/admin/AdminAbonosScreen';
+import AsignarCoachesScreen from '../screens/admin/AsignarCoachesScreen';
+import OrgMembersScreen from '../screens/admin/OrgMembersScreen';
+import OrgMemberDetailScreen from '../screens/admin/OrgMemberDetailScreen';
+import AdminObservabilityScreen from '../screens/admin/AdminObservabilityScreen';
+import AdminMembershipFreezeScreen from '../screens/admin/AdminMembershipFreezeScreen';
+import AdminReportesScreen from '../screens/admin/AdminReportesScreen';
+import AdminRetentionScreen from '../screens/admin/AdminRetentionScreen';
+import AdminCommissionsScreen from '../screens/admin/AdminCommissionsScreen';
+import AdminStripeSettingsScreen from '../screens/admin/AdminStripeSettingsScreen';
+import AdminMercadoPagoSettingsScreen from '../screens/admin/AdminMercadoPagoSettingsScreen';
+import AdminBadgesScreen from '../screens/admin/AdminBadgesScreen';
+import { MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+
+/** Staff envuelto en rail web: en iOS/Android nativo no se ofrece (solo fitengine.app en navegador). */
+function StaffAdminNativePlaceholder({ navigation }) {
+  const { t: tStr } = useLocale();
+  const { t } = useThemeContext();
+  return (
+    <BackgroundWrapper screen="Admin">
+      <View style={styles.gateWrap}>
+        <Text style={[styles.gateTitle, { color: t.text }]}>{tStr('staff_web_only_title')}</Text>
+        <Text style={[styles.gateBody, { color: t.subText }]}>{tStr('staff_web_only_body')}</Text>
+        <TouchableOpacity
+          style={[styles.gateBtn, { borderColor: t.overlayBorder, backgroundColor: t.boxBg }]}
+          onPress={() => navigation?.goBack?.()}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.gateBtnText, { color: t.brand }]}>{tStr('staff_web_only_cta')}</Text>
+        </TouchableOpacity>
+      </View>
+    </BackgroundWrapper>
+  );
+}
+
+const styles = StyleSheet.create({
+  gateWrap: {
+    flex: 1,
+    paddingHorizontal: MOBILE_SPACING.lg,
+    paddingTop: MOBILE_SPACING.xl,
+    width: '100%',
+    maxWidth: WEB_CONTENT_MAX_WIDTH,
+    alignSelf: 'center',
+  },
+  gateTitle: { fontSize: MOBILE_TYPE.title, fontWeight: '900', marginBottom: MOBILE_SPACING.md },
+  gateBody: { fontSize: MOBILE_TYPE.body, lineHeight: 22, marginBottom: MOBILE_SPACING.lg },
+  gateBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: MOBILE_SPACING.sm,
+    paddingHorizontal: MOBILE_SPACING.lg,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  gateBtnText: { fontWeight: '800', fontSize: MOBILE_TYPE.bodyStrong },
+});
 
 export function wrapStaffScreen(Component) {
   function StaffScreenWithShell(props) {
+    if (Platform.OS !== 'web') {
+      return (
+        <StaffAdminNativePlaceholder
+          navigation={props.navigation}
+        />
+      );
+    }
     return (
       <StaffWebDesktopShell navigation={props.navigation} route={props.route}>
         <Component {...props} />
@@ -35,7 +90,7 @@ let _AdminPlanes;
 
 export function getAdminScreenWithShell() {
   if (!_Admin) {
-    const Comp = require('../screens/AdminScreen').default;
+    const Comp = require('../screens/admin/AdminScreen').default;
     _Admin = wrapStaffScreen(Comp);
   }
   return _Admin;
@@ -43,7 +98,7 @@ export function getAdminScreenWithShell() {
 
 export function getAdminResumenScreenWithShell() {
   if (!_AdminResumen) {
-    const Comp = require('../screens/AdminResumenScreen').default;
+    const Comp = require('../screens/admin/AdminResumenScreen').default;
     _AdminResumen = wrapStaffScreen(Comp);
   }
   return _AdminResumen;
@@ -51,7 +106,7 @@ export function getAdminResumenScreenWithShell() {
 
 export function getAdminNovedadesScreenWithShell() {
   if (!_AdminNovedades) {
-    const Comp = require('../screens/AdminNovedadesScreen').default;
+    const Comp = require('../screens/admin/AdminNovedadesScreen').default;
     _AdminNovedades = wrapStaffScreen(Comp);
   }
   return _AdminNovedades;
@@ -59,7 +114,7 @@ export function getAdminNovedadesScreenWithShell() {
 
 export function getAdminPlanesScreenWithShell() {
   if (!_AdminPlanes) {
-    const Comp = require('../screens/AdminPlanesScreen').default;
+    const Comp = require('../screens/admin/AdminPlanesScreen').default;
     _AdminPlanes = wrapStaffScreen(Comp);
   }
   return _AdminPlanes;

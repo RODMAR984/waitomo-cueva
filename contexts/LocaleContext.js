@@ -1,5 +1,5 @@
 // contexts/LocaleContext.js — Idioma (es / en), persistido en AsyncStorage y opcionalmente en profile
-import React, { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations, SUPPORTED_LOCALES } from '../locales/translations';
 
@@ -18,11 +18,14 @@ const LocaleContext = createContext({
 
 export function LocaleProvider({ children }) {
   const [locale, setLocaleState] = useState('es');
+  /** Evita que la hidratación async desde AsyncStorage pise un cambio de idioma ya elegido en pantalla (web / E2E). */
+  const userChangedLocaleRef = useRef(false);
 
   useEffect(() => {
     (async () => {
       try {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (userChangedLocaleRef.current) return;
         if (saved === 'es' || saved === 'en' || saved === 'pt') setLocaleState(saved);
       } catch {
         // ignore
@@ -32,6 +35,7 @@ export function LocaleProvider({ children }) {
 
   const setLocale = useCallback(async (newLocale) => {
     if (newLocale !== 'es' && newLocale !== 'en' && newLocale !== 'pt') return;
+    userChangedLocaleRef.current = true;
     setLocaleState(newLocale);
     try {
       await AsyncStorage.setItem(STORAGE_KEY, newLocale);

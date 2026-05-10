@@ -4,6 +4,7 @@ const { defineConfig, devices } = require('@playwright/test');
 const isHeadedRun = process.argv.some((a) => a === '--headed' || a.startsWith('--headed='));
 
 module.exports = defineConfig({
+  globalSetup: require.resolve('./playwright.global-setup.cjs'),
   testDir: './tests/e2e/web',
   timeout: 30_000,
   fullyParallel: !isHeadedRun,

@@ -25,6 +25,9 @@ Deno.serve(async (req: Request) => {
     return new Response("invalid_signature", { status: 400 });
   }
 
+  // Observabilidad sin PII: tipo de evento únicamente (logs de función en Supabase).
+  console.log(JSON.stringify({ source: "stripe_webhook", event_type: event.type }));
+
   const markCheckoutPaid = async (session: any) => {
     const paymentId = String(session.id || "");
     const paidAt = session.created ? new Date(session.created * 1000).toISOString() : new Date().toISOString();
@@ -37,6 +40,9 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
     if (organizationId) {
+      console.log(
+        JSON.stringify({ source: "stripe_webhook", action: "billing_upsert", has_org: true }),
+      );
       await supabase
         .from("billing_payments")
         .upsert({
@@ -52,6 +58,9 @@ Deno.serve(async (req: Request) => {
           metodo: "stripe",
         }, { onConflict: "organization_id,client_id" });
     } else {
+      console.log(
+        JSON.stringify({ source: "stripe_webhook", action: "billing_update_by_session", has_org: false }),
+      );
       await supabase
         .from("billing_payments")
         .update({

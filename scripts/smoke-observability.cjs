@@ -12,11 +12,11 @@ function assertIncludes(source, token, message) {
 }
 
 function run() {
-  const app = read('App.js');
-  const login = read('screens/LoginScreen.js');
-  const client = read('screens/ClientScreen.js');
-  const adminResumen = read('screens/AdminResumenScreen.js');
-  const adminObservability = read('screens/AdminObservabilityScreen.js');
+  const appShell = read('navigation/AppShellContent.js');
+  const login = read('screens/auth/LoginScreen.js');
+  const client = read('screens/client/ClientScreen.js');
+  const adminResumen = read('screens/admin/AdminResumenScreen.js');
+  const adminObservability = read('screens/admin/AdminObservabilityScreen.js');
   const ingestFn = read('supabase/functions/ingest-observability/index.ts');
   const alertsFn = read('supabase/functions/observability-alerts/index.ts');
   const alertsMigration = read('supabase/migrations/20260424093000_observability_alerts.sql');
@@ -28,9 +28,9 @@ function run() {
   assertIncludes(observability, 'export function getUnsyncedObservabilityEvents', 'Falta getUnsyncedObservabilityEvents');
   assertIncludes(observability, 'export function markObservabilityEventsSynced', 'Falta markObservabilityEventsSynced');
 
-  assertIncludes(app, 'setObservabilityContext(', 'App.js no setea contexto de observabilidad');
-  assertIncludes(app, "trackEvent('navigation_route_change'", 'App.js no trackea cambios de ruta');
-  assertIncludes(app, "reportError('global_js_error'", 'App.js no reporta errores globales');
+  assertIncludes(appShell, 'setObservabilityContext(', 'AppShellContent no setea contexto de observabilidad');
+  assertIncludes(appShell, "trackEvent('navigation_route_change'", 'AppShellContent no trackea cambios de ruta');
+  assertIncludes(appShell, "reportError('global_js_error'", 'AppShellContent no reporta errores globales');
 
   assertIncludes(login, "trackEvent('auth_login_success'", 'Login no trackea login success');
   assertIncludes(login, "reportError('auth_login_failed'", 'Login no reporta login failed');

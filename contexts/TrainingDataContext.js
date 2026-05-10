@@ -28,7 +28,7 @@ import {
   fetchBillingSubscriptionsForOrg,
   paymentRowToLocal,
   subscriptionRowToLocal,
-} from '../utils/billingSupabase';
+} from '../services/billing/billingRecords';
 
 const TrainingDataContext = createContext(null);
 

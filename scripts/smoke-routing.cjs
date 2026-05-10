@@ -15,21 +15,24 @@ function assertIncludes(source, token, message) {
 
 function run() {
   const app = read('App.js');
-  const login = read('screens/LoginScreen.js');
+  const stack = read('navigation/AppRootStack.js');
+  const login = read('screens/auth/LoginScreen.js');
   const welcomeRouting = read('hooks/useWelcomeRouting.js');
   const guard = read('utils/authRoutingGuard.js');
 
-  assertIncludes(app, '/* Entrada pública */', 'Falta grupo de rutas públicas en App.js');
-  assertIncludes(app, '/* Cliente */', 'Falta grupo de rutas de cliente en App.js');
-  assertIncludes(app, '/* Admin */', 'Falta grupo de rutas de admin en App.js');
-  assertIncludes(app, '<Stack.Group>', 'App.js no está modularizado con Stack.Group');
+  assertIncludes(app, 'AppShellContent', 'App.js debe montar navigation/AppShellContent');
+  assertIncludes(read('navigation/AppShellContent.js'), 'AppRootStack', 'AppShellContent debe montar AppRootStack');
+  assertIncludes(stack, '/* Entrada pública */', 'Falta grupo de rutas públicas en navigation/AppRootStack.js');
+  assertIncludes(stack, '/* Cliente */', 'Falta grupo de rutas de cliente en navigation/AppRootStack.js');
+  assertIncludes(stack, '/* Admin */', 'Falta grupo de rutas de admin en navigation/AppRootStack.js');
+  assertIncludes(stack, '<Stack.Group>', 'AppRootStack.js no está modularizado con Stack.Group');
 
   assertIncludes(guard, 'export function resolveStaffDestination', 'Falta resolveStaffDestination');
   assertIncludes(guard, 'export function resolvePostAuthDestination', 'Falta resolvePostAuthDestination');
 
   assertIncludes(
     login,
-    "from '../utils/authRoutingGuard'",
+    'utils/authRoutingGuard',
     'LoginScreen no usa guard centralizado'
   );
   assertIncludes(
@@ -50,7 +53,7 @@ function run() {
     'RegistroInicial',
   ];
   for (const route of criticalRoutes) {
-    assertIncludes(app, `name="${route}"`, `Ruta crítica faltante: ${route}`);
+    assertIncludes(stack, `name="${route}"`, `Ruta crítica faltante: ${route}`);
   }
 
   console.log('smoke:routing OK');
