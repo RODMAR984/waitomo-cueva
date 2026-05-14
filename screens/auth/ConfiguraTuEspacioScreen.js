@@ -1,5 +1,5 @@
 // ConfiguraTuEspacioScreen — FitEngine: preview en vivo (acento, preset, fondo, logo). Sin colores Waitomo en este panel.
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Alert,
   ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
   Platform,
   Dimensions,
 } from 'react-native';
@@ -20,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackNavButton from '../../components/BackNavButton';
+import { AuthKeyboardAvoidingView, authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { supabase } from '../../supabaseClient';
@@ -27,6 +27,7 @@ import { getThemeTokens, hexToRgba } from '../../theme/colors';
 import { imageUriToArrayBuffer } from '../../utils/imageUriToArrayBuffer';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import BackgroundWrapper from '../../components/BackgroundWrapper';
 
 const BUCKET_ORG_LOGOS = 'org-logos';
 const BUCKET_ORG_BACKGROUNDS = 'org-backgrounds';
@@ -97,7 +98,59 @@ function isStorageBucketMissingError(err) {
 export default function ConfiguraTuEspacioScreen() {
   const navigation = useNavigation();
   const { t: tStr } = useLocale();
-  const { user, refreshOrganization, refreshProfile } = useAuth() || {};
+  const {
+    user,
+    profile,
+    role,
+    needsFitEngineSpaceSetup,
+    hasStaffMembership,
+    ownedOrganizations,
+    authNavigationReady,
+    isPlatformAdmin,
+    refreshOrganization,
+    refreshProfile,
+  } = useAuth() || {};
+  /** Evita bucle reset ↔ remount si algo vuelve a apilar esta ruta. */
+  const staffRedirectDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (!user?.id) {
+      staffRedirectDoneRef.current = false;
+      return;
+    }
+    if (!authNavigationReady) return;
+    if (staffRedirectDoneRef.current) return;
+    const r = String(role || profile?.role || '').toLowerCase();
+    const orgHint = !!(profile?.organization_id && String(profile.organization_id).trim());
+    const ownedCount = Array.isArray(ownedOrganizations) ? ownedOrganizations.length : 0;
+    const pa = typeof isPlatformAdmin === 'function' && isPlatformAdmin();
+
+    const alreadyStaffReady =
+      r === 'superadmin' ||
+      pa ||
+      (r === 'owner' && (hasStaffMembership || ownedCount > 0 || orgHint)) ||
+      ((r === 'coach' || r === 'admin') &&
+        (!needsFitEngineSpaceSetup || hasStaffMembership || ownedCount > 0 || orgHint));
+
+    if (!alreadyStaffReady) return;
+    staffRedirectDoneRef.current = true;
+    if (r === 'superadmin' || pa) {
+      navigation.reset({ index: 0, routes: [{ name: 'Superadmin' }] });
+      return;
+    }
+    navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
+  }, [
+    user?.id,
+    authNavigationReady,
+    role,
+    profile?.role,
+    profile?.organization_id,
+    needsFitEngineSpaceSetup,
+    hasStaffMembership,
+    ownedOrganizations,
+    isPlatformAdmin,
+    navigation,
+  ]);
 
   const presetLabel = (k) => tStr(`fe_preset_${k}`);
   const presetHint = (k) => tStr(`fe_preset_hint_${k}`);
@@ -152,7 +205,7 @@ export default function ConfiguraTuEspacioScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        safe: { flex: 1, backgroundColor: FE.bg },
+        safe: { flex: 1, backgroundColor: 'transparent' },
         kav: { flex: 1 },
         scrollContent: {
           paddingHorizontal: MOBILE_SPACING.xl,
@@ -594,14 +647,12 @@ export default function ConfiguraTuEspacioScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
-      >
+    <BackgroundWrapper screen="configuratuespacio" style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <AuthKeyboardAvoidingView style={styles.kav}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={authScrollKeyboardDismissMode}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           nestedScrollEnabled
@@ -876,7 +927,8 @@ export default function ConfiguraTuEspacioScreen() {
           </TouchableOpacity>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </AuthKeyboardAvoidingView>
     </SafeAreaView>
+    </BackgroundWrapper>
   );
 }

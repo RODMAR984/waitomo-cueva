@@ -10,7 +10,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert,
@@ -27,6 +26,7 @@ import PasswordInput from '../../components/PasswordInput';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
+import { FITENGINE_APP_CANVAS_BG, authSoftPanelStyle } from '../../theme/appVisualCohesion';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
@@ -34,6 +34,10 @@ import { supabase } from '../../supabaseClient';
 import { resolvePostAuthDestination } from '../../utils/authRoutingGuard';
 import { reportError, trackEvent } from '../../utils/observability';
 import NeoPanel from '../../components/NeoPanel';
+import {
+  AuthKeyboardAvoidingView,
+  authScrollKeyboardDismissMode,
+} from '../../components/AuthWebFormShell';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -61,6 +65,10 @@ export default function LoginScreen() {
     needsFitEngineSpaceSetup,
     authNavigationReady,
     hasClientMembership,
+    isPlatformAdmin,
+    platformAdminActive,
+    hasStaffMembership,
+    ownedOrganizations,
   } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -74,19 +82,36 @@ export default function LoginScreen() {
   // Solo navegar cuando el usuario eligió OAuth, "Continuar al panel" o handleLogin (contraseña).
   const [allowStaffAutoNav, setAllowStaffAutoNav] = useState(false);
 
+  /** Evita carrera: `login()` ya devolvió perfil pero el estado de AuthContext aún no re-renderizó → ir a RegistroInicial por error. */
+  const loginSyncReturnedProfileRef = useRef(null);
+  /** Evita que el efecto de “sync email desde sesión” pise el texto mientras el usuario escribe (web: foco/cursor “rebota”). */
+  const userEditedEmailRef = useRef(false);
+  const lastSessionUserIdRef = useRef(null);
+
   useEffect(() => {
     if (!session?.user?.id) setAllowStaffAutoNav(false);
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (prefillEmail) setEmail(String(prefillEmail).trim());
+    if (!session?.user?.id) userEditedEmailRef.current = false;
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    userEditedEmailRef.current = false;
+  }, [forStaff, prefillEmail, fromRegistro]);
+
+  useEffect(() => {
+    if (prefillEmail) {
+      userEditedEmailRef.current = false;
+      setEmail(String(prefillEmail).trim());
+    }
   }, [prefillEmail]);
 
   // Cuando cambia el usuario de la sesión (login nuevo / restaurado), alinear el campo email con esa sesión.
-  // No tocar si viene prefillEmail por ruta. Así sessionMatchesInputEmail puede ser true y el flujo normal sigue.
-  const lastSessionUserIdRef = useRef(null);
+  // No tocar si viene prefillEmail por ruta. No pisar si el usuario ya editó el campo (deps sin user.email: menos re-ejecuciones).
   useEffect(() => {
     if (prefillEmail) return;
+    if (userEditedEmailRef.current) return;
     const uid = session?.user?.id;
     if (!uid) {
       lastSessionUserIdRef.current = null;
@@ -96,7 +121,7 @@ export default function LoginScreen() {
     lastSessionUserIdRef.current = uid;
     const s = session?.user?.email;
     if (s) setEmail(s);
-  }, [session?.user?.id, session?.user?.email, prefillEmail]);
+  }, [session?.user?.id, prefillEmail]);
 
   // Si el usuario escribe otro correo que el de la sesión activa, NO auto-navegar al panel de esa sesión
   // (evita: login falla con "Invalid credentials" pero seguís con token viejo y te manda a ClientTabs del usuario anterior).
@@ -139,7 +164,8 @@ export default function LoginScreen() {
         kav: { flex: 1 },
         scrollContent: {
           flexGrow: 1,
-          justifyContent: 'center',
+          // Web: centrar verticalmente con flex suele recalcular layout al escribir y pelear con el foco del input.
+          justifyContent: Platform.OS === 'web' ? 'flex-start' : 'center',
           padding: MOBILE_SPACING.xl,
           paddingTop: 60,
           paddingBottom: MOBILE_SPACING.sm,
@@ -151,12 +177,7 @@ export default function LoginScreen() {
           alignSelf: 'center',
         },
         panel: {
-          backgroundColor: fe.panelBg,
-          borderColor: fe.panelBorder,
-          borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          padding: MOBILE_SPACING.xl,
-          width: '100%',
+          ...authSoftPanelStyle,
         },
         title: {
           color: fe.subText,
@@ -234,7 +255,6 @@ export default function LoginScreen() {
           fontSize: MOBILE_TYPE.bodyStrong,
         },
         brandTop: { width: '100%', alignItems: 'center', marginBottom: 12 },
-        brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: 4 },
         notStaffText: { marginTop: 0, marginBottom: 16 },
         buttonSpaced: { marginBottom: 10 },
         staffSessionHint: {
@@ -246,7 +266,7 @@ export default function LoginScreen() {
         buttonStaffContinue: { marginBottom: 14 },
         socialButtonStack: { marginTop: 10 },
         linkRowSpaced: { marginTop: 10 },
-        brandBottom: { width: '100%', alignItems: 'center', marginTop: 24, paddingBottom: 16 },
+        brandBottom: { width: '100%', alignItems: 'center', marginTop: 20, paddingBottom: 8 },
         brandFooter: { color: fe.subText, fontSize: MOBILE_TYPE.caption, opacity: 0.8 },
         backFooter: {
           alignSelf: 'center',
@@ -289,11 +309,14 @@ export default function LoginScreen() {
         needsFitEngineSpaceSetup,
         authNavigationReady,
         hasClientMembership: !!hasClientMembership,
+        isPlatformAdmin: typeof isPlatformAdmin === 'function' && isPlatformAdmin(),
+        hasStaffMembership: !!hasStaffMembership,
+        ownedOrganizationsCount: ownedOrganizations?.length || 0,
       });
       if (!destination) return;
 
       const params =
-        destination === 'ConfiguraTuEspacio'
+        destination === 'ConfiguraTuEspacio' || destination === 'FitEngineSpaceIntro'
           ? { email }
           : undefined;
 
@@ -308,10 +331,29 @@ export default function LoginScreen() {
       needsFitEngineSpaceSetup,
       authNavigationReady,
       hasClientMembership,
+      isPlatformAdmin,
+      platformAdminActive,
+      hasStaffMembership,
+      ownedOrganizations?.length,
     ],
   );
 
   const isStaffRole = (r) => r === 'superadmin' || r === 'coach' || r === 'admin';
+
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) {
+      loginSyncReturnedProfileRef.current = null;
+      return;
+    }
+    const held = loginSyncReturnedProfileRef.current;
+    if (held?.id && held.id !== uid) {
+      loginSyncReturnedProfileRef.current = null;
+    }
+    if (profile?.id === uid) {
+      loginSyncReturnedProfileRef.current = null;
+    }
+  }, [session?.user?.id, profile?.id]);
 
   // OAuth / sesión sin fila en profiles → RegistroInicial. NO disparar mientras el sync post-login
   // aún trae profile=null (carrera: iba a RegistroInicial antes de que llegue el perfil existente).
@@ -320,6 +362,8 @@ export default function LoginScreen() {
     if (forStaff) return;
     if (initialProfileSyncDone === false) return;
     if (!authNavigationReady) return;
+    const uid = session.user.id;
+    if (loginSyncReturnedProfileRef.current?.id === uid) return;
     navigation.reset({
       index: 0,
       routes: [{ name: 'RegistroInicial', params: { fromOAuth: true } }],
@@ -370,6 +414,7 @@ export default function LoginScreen() {
     authNavigationReady,
     needsFitEngineSpaceSetup,
     allowStaffAutoNav,
+    platformAdminActive,
   ]);
 
   const handleLogin = async () => {
@@ -380,10 +425,12 @@ export default function LoginScreen() {
 
     try {
       setSubmitting(true);
+      loginSyncReturnedProfileRef.current = null;
       const { user: loggedUser, profile: loggedProfile } = await login({
         email,
         password,
       });
+      loginSyncReturnedProfileRef.current = loggedProfile ?? null;
       trackEvent('auth_login_success', {
         forStaff: !!forStaff,
         role: loggedProfile?.role || null,
@@ -404,6 +451,7 @@ export default function LoginScreen() {
       }
       navigateByRole(effectiveRole, loggedProfile);
     } catch (error) {
+      loginSyncReturnedProfileRef.current = null;
       reportError('auth_login_failed', error, {
         forStaff: !!forStaff,
       });
@@ -528,11 +576,16 @@ export default function LoginScreen() {
     navigateByRole('cliente');
   };
 
+  const handleEmailFieldChange = useCallback((t) => {
+    userEditedEmailRef.current = true;
+    setEmail(t);
+  }, []);
+
   const disabled = submitting || oauthSubmitting;
   const disabledReset = isSendingReset || disabled;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#050a0d', overflow: 'hidden' }}>
+    <View style={{ flex: 1, backgroundColor: FITENGINE_APP_CANVAS_BG, overflow: 'hidden' }}>
       <LogoTriangleBackground
         isDark={isDark}
         variant="registro"
@@ -540,25 +593,18 @@ export default function LoginScreen() {
         sizeScale={2.8}
         opacityOverride={isDark ? 0.42 : 0.28}
       />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.kav, { zIndex: 1 }]}
-      >
+      <AuthKeyboardAvoidingView style={[styles.kav, { zIndex: 1 }]}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode={authScrollKeyboardDismissMode}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.pageColumn}>
             <View style={styles.brandTop}>
               <LogoCompleto height={72} />
-              <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
             </View>
-            <NeoPanel style={styles.panel}>
-              {showStaffAccessChoice ? (
-                <BackNavButton testID="login-nav-back" onPress={() => navigation.goBack()} />
-              ) : null}
+            <NeoPanel edge={false} style={styles.panel}>
               {showStaffAccessChoice ? (
                 <>
                   <Text style={styles.title}>{tStr('login_not_staff_title')}</Text>
@@ -577,102 +623,109 @@ export default function LoginScreen() {
                   >
                     <Text style={styles.socialButtonText}>{tStr('login_enter_as_client')}</Text>
                   </TouchableOpacity>
+                  <BackNavButton
+                    testID="login-nav-back"
+                    onPress={() => navigation.goBack()}
+                    style={{ marginTop: MOBILE_SPACING.md }}
+                  />
                 </>
               ) : (
                 <>
-              <Text style={styles.title}>
-                {forStaff ? tStr('login_title_staff') : tStr('login_title')}
-              </Text>
+                  <Text style={styles.title}>
+                    {forStaff ? tStr('login_title_staff') : tStr('login_title')}
+                  </Text>
 
-              {forStaff &&
-                session?.user?.id &&
-                isStaffRole(contextRole) &&
-                !allowStaffAutoNav &&
-                (profile || postAuthGateOpen) && (
-                  <>
-                    <Text style={styles.staffSessionHint}>
-                      {tStr('login_session_active_staff')}
+                  {forStaff &&
+                    session?.user?.id &&
+                    isStaffRole(contextRole) &&
+                    !allowStaffAutoNav &&
+                    (profile || postAuthGateOpen) && (
+                      <>
+                        <Text style={styles.staffSessionHint}>
+                          {tStr('login_session_active_staff')}
+                        </Text>
+                        <TouchableOpacity
+                          style={[styles.button, styles.buttonStaffContinue]}
+                          onPress={() => setAllowStaffAutoNav(true)}
+                          disabled={disabled}
+                        >
+                          <Text style={styles.buttonText}>
+                            {tStr('login_continue_staff_panel')}
+                          </Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+
+                  <TextInput
+                    testID="login-email-input"
+                    placeholder={tStr('login_email')}
+                    placeholderTextColor={fe.placeholder}
+                    style={styles.input}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={Platform.OS === 'web' ? false : undefined}
+                    value={email}
+                    onChangeText={handleEmailFieldChange}
+                  />
+
+                  <PasswordInput
+                    testID="login-password-input"
+                    placeholder={tStr('login_password')}
+                    placeholderTextColor={fe.placeholder}
+                    style={styles.input}
+                    containerStyle={{ marginBottom: 15 }}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+
+                  <TouchableOpacity
+                    testID="login-submit"
+                    style={styles.button}
+                    onPress={handleLogin}
+                    disabled={disabled}
+                  >
+                    <Text style={styles.buttonText}>
+                      {submitting ? tStr('login_entering') : tStr('login_enter')}
                     </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={handleForgotPassword} disabled={disabledReset}>
+                    <Text style={styles.smallLink}>
+                      {isSendingReset ? tStr('login_sending_link') : tStr('login_forgot_password')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.separatorText}>{tStr('login_or_continue')}</Text>
+
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => handleOAuthLogin('google')}
+                    disabled={disabled}
+                  >
+                    <Text style={styles.socialButtonText}>
+                      {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_google')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.socialButton, styles.socialButtonStack]}
+                    onPress={() => handleOAuthLogin('apple')}
+                    disabled={disabled}
+                  >
+                    <Text style={styles.socialButtonText}>
+                      {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_apple')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {!fromRegistro && forStaff && (
                     <TouchableOpacity
-                      style={[styles.button, styles.buttonStaffContinue]}
-                      onPress={() => setAllowStaffAutoNav(true)}
+                      onPress={() => navigation.navigate('CreaCuentaStaff')}
                       disabled={disabled}
                     >
-                      <Text style={styles.buttonText}>
-                        {tStr('login_continue_staff_panel')}
-                      </Text>
+                      <Text style={styles.linkText}>{tStr('login_no_account_staff')}</Text>
                     </TouchableOpacity>
-                  </>
-                )}
-
-              <TextInput
-                testID="login-email-input"
-                placeholder={tStr('login_email')}
-                placeholderTextColor={fe.placeholder}
-                style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-
-              <PasswordInput
-                testID="login-password-input"
-                placeholder={tStr('login_password')}
-                placeholderTextColor={fe.placeholder}
-                style={styles.input}
-                containerStyle={{ marginBottom: 15 }}
-                value={password}
-                onChangeText={setPassword}
-              />
-
-              <TouchableOpacity
-                testID="login-submit"
-                style={styles.button}
-                onPress={handleLogin}
-                disabled={disabled}
-              >
-                <Text style={styles.buttonText}>
-                  {submitting ? tStr('login_entering') : tStr('login_enter')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={handleForgotPassword} disabled={disabledReset}>
-                <Text style={styles.smallLink}>
-                  {isSendingReset ? tStr('login_sending_link') : tStr('login_forgot_password')}
-                </Text>
-              </TouchableOpacity>
-
-              <Text style={styles.separatorText}>{tStr('login_or_continue')}</Text>
-
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => handleOAuthLogin('google')}
-                disabled={disabled}
-              >
-                <Text style={styles.socialButtonText}>
-                  {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_google')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.socialButton, styles.socialButtonStack]}
-                onPress={() => handleOAuthLogin('apple')}
-                disabled={disabled}
-              >
-                <Text style={styles.socialButtonText}>
-                  {oauthSubmitting ? tStr('login_entering') : tStr('login_continue_apple')}
-                </Text>
-              </TouchableOpacity>
-
-              {!fromRegistro && forStaff && (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('CreaCuentaStaff')}
-                  disabled={disabled}
-                >
-                  <Text style={styles.linkText}>{tStr('login_no_account_staff')}</Text>
-                </TouchableOpacity>
-              )}
+                  )}
                 </>
               )}
             </NeoPanel>
@@ -688,12 +741,11 @@ export default function LoginScreen() {
               </TouchableOpacity>
             ) : null}
             <View style={styles.brandBottom}>
-              <LogoCompleto height={30} style={{ marginBottom: 6 }} />
               <Text style={styles.brandFooter}>{tStr('gym_config_footer')}</Text>
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </AuthKeyboardAvoidingView>
     </View>
   );
 }

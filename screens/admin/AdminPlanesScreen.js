@@ -499,11 +499,20 @@ export default function AdminPlanesScreen() {
 
   return (
     <BackgroundWrapper screen="admin">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        testID="screen-admin-planes"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             {!hideInlineBack ? (
-              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+              <BackNavButton
+                testID="admin-planes-nav-back"
+                onPress={() => navigation.goBack()}
+                label={tStr('common_back')}
+                style={styles.backBtn}
+              />
             ) : null}
             <Text style={styles.title}>{tStr('admin_plans_screen_title')}</Text>
             {isOwner && (

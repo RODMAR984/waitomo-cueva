@@ -10,16 +10,17 @@ function getFocusedRouteName(state) {
 }
 
 /**
- * Misma navegación lateral que el panel Admin (bloques / menú).
+ * Misma navegación lateral que el panel Admin (panel del día / menú).
  * Usada en web escritorio por StaffWebDesktopShell y por AdminScreen (grid móvil / compacto).
  */
 export default function useStaffAdminNavTiles(navigation, tStr) {
-  const { currentUser, isSuperAdmin, profile, organization, organizationsOwnedByUser } = useAuth();
+  const { currentUser, isSuperAdmin, isPlatformAdmin, profile, organization, organizationsOwnedByUser } = useAuth();
 
   const myId = currentUser?.id || null;
   const isSA = !!(myId && isSuperAdmin(myId));
   const isOrgOwner = (organizationsOwnedByUser?.length ?? 0) > 0;
   const isLite = !(isSA || isOrgOwner);
+  const hasPlatformPanel = typeof isPlatformAdmin === 'function' && isPlatformAdmin();
 
   const canEditGymConfig = useMemo(() => {
     if (!profile?.id) return false;
@@ -35,7 +36,23 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
         focused === 'AdminLite' ||
         focused === 'AdminLiteScreen' ||
         focused === 'Admin' ||
-        focused === 'AdminScreen';
+        focused === 'AdminScreen' ||
+        focused === 'Superadmin' ||
+        focused === 'SuperadminScreen' ||
+        focused === 'SuperadminObservability' ||
+        focused === 'SuperadminObservabilityScreen' ||
+        focused === 'SuperadminTopic' ||
+        focused === 'SuperadminTopicScreen' ||
+        focused === 'SuperadminOrgs' ||
+        focused === 'SuperadminOrgsScreen' ||
+        focused === 'SuperadminAuditLog' ||
+        focused === 'SuperadminAuditLogScreen' ||
+        focused === 'SuperadminFeatureFlags' ||
+        focused === 'SuperadminFeatureFlagsScreen' ||
+        focused === 'SuperadminTickets' ||
+        focused === 'SuperadminTicketsScreen' ||
+        focused === 'SuperadminTicketDetail' ||
+        focused === 'SuperadminTicketDetailScreen';
       if (onBloquesScreen) {
         emitAdminScrollToLists();
         return;
@@ -44,6 +61,24 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
     };
 
     const groups = [
+      ...(hasPlatformPanel
+        ? [
+            {
+              key: 'plataforma',
+              title: tStr('admin_group_plataforma'),
+              tiles: [
+                {
+                  key: 'platform',
+                  ion: 'earth-outline',
+                  title: tStr('admin_nav_superadmin_title'),
+                  sub: tStr('admin_nav_superadmin_sub'),
+                  onPress: () => navigation.navigate('Superadmin'),
+                  show: true,
+                },
+              ],
+            },
+          ]
+        : []),
       {
         key: 'operacion',
         title: tStr('admin_group_operacion'),
@@ -83,7 +118,6 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
         tiles: [
           { key: 'marca', ion: 'color-wand-outline', title: tStr('admin_menu_marca_title'), sub: tStr('admin_menu_marca_sub'), onPress: () => navigation.navigate('GymConfig'), show: !!canEditGymConfig },
           { key: 'perfil', ion: 'person-outline', title: tStr('admin_mi_perfil'), sub: tStr('admin_menu_perfil_sub'), onPress: () => navigation.navigate('Perfil'), show: true },
-          { key: 'observ', ion: 'pulse-outline', title: tStr('admin_menu_diagnostico_title'), sub: tStr('admin_menu_diagnostico_sub'), onPress: () => navigation.navigate('AdminObservability'), show: !isLite },
         ],
       },
     ]
@@ -92,5 +126,5 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
 
     const tiles = groups.flatMap((g) => g.tiles);
     return { tiles, groups };
-  }, [navigation, tStr, canEditGymConfig, isLite]);
+  }, [navigation, tStr, canEditGymConfig, isLite, hasPlatformPanel]);
 }

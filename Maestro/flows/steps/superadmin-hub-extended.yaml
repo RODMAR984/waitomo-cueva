@@ -1,0 +1,89 @@
+# Tras `superadmin-open-diagnostics`: vuelve al hub y recorre Orgs → Tickets → Flags → Audit (sin MRR ni cobros).
+appId: com.waitomofitengine.cueva
+---
+- tapOn:
+    id: admin-observability-nav-back
+- extendedWaitUntil:
+    visible:
+      id: superadmin-hub-root
+    timeout: 60000
+# Orgs
+- scrollUntilVisible:
+    element:
+      id: superadmin-hub-tile-orgs
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: superadmin-hub-tile-orgs
+- extendedWaitUntil:
+    visible:
+      id: screen-superadmin-orgs
+    timeout: 60000
+- tapOn:
+    id: superadmin-nav-to-hub
+- extendedWaitUntil:
+    visible:
+      id: superadmin-hub-root
+    timeout: 30000
+# Tickets
+- scrollUntilVisible:
+    element:
+      id: superadmin-hub-tile-tickets
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: superadmin-hub-tile-tickets
+- extendedWaitUntil:
+    visible:
+      id: screen-superadmin-tickets
+    timeout: 60000
+- tapOn:
+    id: superadmin-nav-to-hub
+- extendedWaitUntil:
+    visible:
+      id: superadmin-hub-root
+    timeout: 30000
+# Feature flags
+- scrollUntilVisible:
+    element:
+      id: superadmin-hub-tile-flags
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: superadmin-hub-tile-flags
+- extendedWaitUntil:
+    visible:
+      id: screen-superadmin-flags
+    timeout: 60000
+- tapOn:
+    id: superadmin-nav-to-hub
+- extendedWaitUntil:
+    visible:
+      id: superadmin-hub-root
+    timeout: 30000
+# Audit log
+- scrollUntilVisible:
+    element:
+      id: superadmin-hub-tile-audit
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: superadmin-hub-tile-audit
+- extendedWaitUntil:
+    visible:
+      id: screen-superadmin-audit
+    timeout: 60000
+- tapOn:
+    id: superadmin-nav-to-hub
+- extendedWaitUntil:
+    visible:
+      id: superadmin-hub-root
+    timeout: 30000

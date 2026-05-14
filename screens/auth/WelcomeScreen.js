@@ -1,198 +1,62 @@
-// WelcomeScreen — Hero FitEngine (marca i18n). Cliente / Staff / Admin.
-// NO modificar: es el destino de "Soy cliente" desde WelcomeGlobalScreen. En Fase 6b cada org tendrá su WelcomeGymScreen.
+// WelcomeScreen — Punto de compatibilidad: todo el arranque vive en WelcomeGlobal.
+// Si alguien aterriza aquí (ruta histórica / fallback), se redirige al inicio global o al destino según sesión.
 
-import React, { useMemo, useEffect, useRef } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Platform,
-  Animated,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useEffect, useRef } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLocale } from '../../contexts/LocaleContext';
-import { useThemeContext } from '../../contexts/ThemeContext';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
-import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-
-const hexToRgba = (hex, alpha = 1) => {
-  const clean = String(hex).replace('#', '');
-  const full =
-    clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
-  const r = parseInt(full.slice(0, 2), 16) || 0;
-  const g = parseInt(full.slice(2, 4), 16) || 0;
-  const b = parseInt(full.slice(4, 6), 16) || 0;
-  return `rgba(${r},${g},${b},${alpha})`;
-};
+import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../../theme/colors';
+import LogoCompleto from '../../components/LogoCompleto';
 
 export default function WelcomeScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
-  const { user, role, profile } = useAuth();
-  const { t: tStr } = useLocale();
-  const { t } = useThemeContext();
-
-  const bottomInset = Math.max(insets.bottom || 0, Platform.OS === 'android' ? 28 : 0);
-  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const { session, loading, profile, role, isPlatformAdmin } = useAuth() || {};
+  const doneRef = useRef(false);
 
   useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacityAnim, {
-          toValue: 0.5,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [opacityAnim]);
+    if (doneRef.current) return;
+    if (loading) return;
 
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        fullScreen: { flex: 1 },
-        heroTouchable: {
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: MOBILE_SPACING.xxl,
-          width: '100%',
-          maxWidth: WEB_CONTENT_MAX_WIDTH,
-          alignSelf: 'center',
-        },
-        heroTextBlock: { marginTop: 72 },
-        titleTop: {
-          color: t.brand,
-          fontSize: MOBILE_TYPE.display,
-          fontWeight: '800',
-          letterSpacing: 6,
-          textAlign: 'center',
-          textShadowColor: hexToRgba(t.brand, 0.5),
-          textShadowOffset: { width: 0, height: 0 },
-          textShadowRadius: 14,
-        },
-        titleBottom: {
-          color: t.brand,
-          fontSize: MOBILE_TYPE.hero,
-          fontWeight: '800',
-          letterSpacing: 8,
-          marginTop: 6,
-          textAlign: 'center',
-          textShadowColor: hexToRgba(t.brand, 0.45),
-          textShadowOffset: { width: 0, height: 0 },
-          textShadowRadius: 12,
-        },
-        subtitle: {
-          color: t.subText,
-          fontSize: MOBILE_TYPE.headline,
-          fontWeight: '600',
-          marginTop: 10,
-          letterSpacing: 2,
-          textAlign: 'center',
-        },
-        objectsRow: {
-          position: 'absolute',
-          bottom: bottomInset + MOBILE_SPACING.xl,
-          left: 0,
-          right: 0,
-          flexDirection: 'row',
-          justifyContent: 'space-evenly',
-          alignItems: 'center',
-          paddingHorizontal: MOBILE_SPACING.lg,
-        },
-        objectButton: {
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 72,
-          height: 72,
-          borderRadius: MOBILE_RADII.lg,
-          backgroundColor: hexToRgba(t.brand, 0.25),
-          borderWidth: 1.5,
-          borderColor: hexToRgba(t.brand, 0.5),
-        },
-        objectIcon: { marginBottom: MOBILE_SPACING.xs },
-        objectLabel: {
-          color: t.subText,
-          fontSize: MOBILE_TYPE.caption - 2,
-          fontWeight: '600',
-          textAlign: 'center',
-        },
-      }),
-    [t, bottomInset],
-  );
-
-  const handlePressHero = () => {
-    if (user) {
-      if (!profile) {
-        navigation.navigate('RegistroInicial', { plan: null, abono: null });
-        return;
-      }
-      if (role === 'superadmin') {
-        navigation.navigate('Admin');
-      } else if (role === 'coach') {
-        navigation.navigate('AdminLite');
-      } else {
-        navigation.navigate('ClientTabs');
-      }
+    if (!session?.user?.id) {
+      doneRef.current = true;
+      navigation.replace('WelcomeGlobal');
       return;
     }
-    navigation.navigate('WelcomeGlobal');
-  };
+
+    if (!profile?.id) {
+      doneRef.current = true;
+      navigation.replace('RegistroInicial', { plan: null, abono: null });
+      return;
+    }
+
+    const platformOk =
+      role === 'superadmin' || (typeof isPlatformAdmin === 'function' && isPlatformAdmin());
+    if (platformOk) {
+      doneRef.current = true;
+      navigation.replace('Superadmin');
+      return;
+    }
+    if (role === 'coach') {
+      doneRef.current = true;
+      navigation.replace('AdminLite');
+      return;
+    }
+    doneRef.current = true;
+    navigation.replace('ClientTabs');
+  }, [loading, session?.user?.id, profile?.id, role, navigation, isPlatformAdmin]);
 
   return (
-    <BackgroundWrapper screen="Welcome" forceDarkOverlay>
-      <View style={styles.fullScreen}>
-        <TouchableOpacity
-          onPress={handlePressHero}
-          activeOpacity={0.85}
-          style={styles.heroTouchable}
-        >
-          <Animated.View style={[styles.heroTextBlock, { opacity: opacityAnim }]}>
-            <Text style={styles.titleTop}>{tStr('welcome_brand_top')}</Text>
-            <Text style={styles.titleBottom}>{tStr('welcome_brand_bottom')}</Text>
-            <Text style={styles.subtitle}>{tStr('welcome_subtitle')}</Text>
-          </Animated.View>
-        </TouchableOpacity>
-
-        <View style={styles.objectsRow}>
-          <TouchableOpacity
-            style={styles.objectButton}
-            onPress={() => navigation.navigate('Login', { forStaff: false })}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="disc" size={28} color={t.brand} style={styles.objectIcon} />
-            <Text style={styles.objectLabel}>{tStr('welcome_client')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.objectButton}
-            onPress={() => navigation.navigate('Login', { forStaff: true })}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="brush" size={28} color={t.brand} style={styles.objectIcon} />
-            <Text style={styles.objectLabel}>{tStr('welcome_staff')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.objectButton}
-            onPress={() => navigation.navigate('AdminLogin')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="school" size={28} color={t.brand} style={styles.objectIcon} />
-            <Text style={styles.objectLabel}>{tStr('welcome_admin')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </BackgroundWrapper>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: fe.background,
+        padding: 24,
+      }}
+    >
+      <LogoCompleto height={100} />
+      <ActivityIndicator size="large" color={fitT.logoCian} style={{ marginTop: 24 }} />
+    </View>
   );
 }

@@ -47,6 +47,8 @@ export default function LogoTriangleBackground({
   opacityOverride,
   variant = 'default',
   blendMode = 'screen',
+  /** Desplaza el arte del fondo en px (negativo = más arriba). Útil para alinear con formularios centrados. */
+  offsetY = 0,
 }) {
   const opacity = opacityOverride != null ? opacityOverride : (isDark ? OPACITY_DARK : OPACITY_LIGHT);
   const fill = isDark ? logoColors.cian : '#050a0d';
@@ -64,7 +66,13 @@ export default function LogoTriangleBackground({
 
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 0 }]} pointerEvents="none">
-      <View style={[styles.centered, { width: '100%', height: '100%' }]}>
+      <View
+        style={[
+          styles.centered,
+          { width: '100%', height: '100%' },
+          offsetY ? { transform: [{ translateY: offsetY }] } : null,
+        ]}
+      >
         <View style={{ opacity, mixBlendMode: blendMode, alignSelf: 'center', justifyContent: 'center' }}>
           {registroPng ? (
             <Image

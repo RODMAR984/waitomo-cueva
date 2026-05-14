@@ -1,0 +1,25 @@
+# Tras estar en home cliente: abre «Trabajo hoy» y vuelve.
+# Requiere cuenta con plan + permiso de entreno (si no, puede quedar en alerta o pantalla bloqueada con screen-trabajo-dia + trabajo-nav-back).
+appId: com.waitomofitengine.cueva
+---
+- assertVisible:
+    id: client-home-root
+- scrollUntilVisible:
+    element:
+      id: client-home-cta-trabajo-hoy
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: client-home-cta-trabajo-hoy
+- extendedWaitUntil:
+    visible:
+      id: screen-trabajo-dia
+    timeout: 45000
+- tapOn:
+    id: trabajo-nav-back
+- extendedWaitUntil:
+    visible:
+      id: client-home-root
+    timeout: 30000

@@ -9,10 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -26,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../../theme/colors';
+import { authMarketingChromeRoot, authSoftPanelStyle } from '../../theme/appVisualCohesion';
 import { createWelcomeGlobalLayoutStyles } from '../../styles/welcomeGlobalLayoutStyles';
 import {
   setPendingClientInviteCode,
@@ -36,6 +34,11 @@ import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import {
+  AuthKeyboardAvoidingView,
+  AuthDismissKeyboardOutside,
+  authScrollContentJustify,
+} from '../../components/AuthWebFormShell';
 
 export default function JoinWithInviteCodeScreen() {
   const navigation = useNavigation();
@@ -43,7 +46,7 @@ export default function JoinWithInviteCodeScreen() {
   const { width } = useWindowDimensions();
   const { isDark } = useThemeContext();
   const { t: tStr } = useLocale();
-  const { session, joinOrganizationWithInviteCode } = useAuth() || {};
+  const { session, joinOrganizationWithInviteCode, hasClientMembership } = useAuth() || {};
 
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -80,16 +83,11 @@ export default function JoinWithInviteCodeScreen() {
         innerColumn: {
           flex: 1,
           width: '100%',
-          justifyContent: 'center',
+          justifyContent: authScrollContentJustify(),
           alignItems: 'center',
         },
         panel: {
-          width: '100%',
-          backgroundColor: fe.panelBg,
-          borderColor: fe.panelBorder,
-          borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          padding: MOBILE_SPACING.xl,
+          ...authSoftPanelStyle,
         },
         title: {
           color: fe.subText,
@@ -132,7 +130,6 @@ export default function JoinWithInviteCodeScreen() {
           borderColor: fe.buttonBorder,
         },
         primaryText: { color: fe.buttonText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
-        brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
     [insets.top]
   );
@@ -151,10 +148,12 @@ export default function JoinWithInviteCodeScreen() {
     if (!uid) return;
     const { data: p } = await supabase
       .from('profiles')
-      .select('plan_actual')
+      .select('plan_actual, organization_id')
       .eq('id', uid)
       .maybeSingle();
-    const route = getClientPostAuthRouteName(p || {});
+    const route = getClientPostAuthRouteName(p || {}, {
+      hasClientMembership: !!hasClientMembership,
+    });
     navigation.reset({ index: 0, routes: [{ name: route }] });
   };
 
@@ -166,12 +165,8 @@ export default function JoinWithInviteCodeScreen() {
     }
     if (!session?.user?.id) {
       await setPendingClientInviteCode(c);
-      Alert.alert(tStr('invite_pending_title'), tStr('invite_pending_body'), [
-        {
-          text: tStr('invite_go_login'),
-          onPress: () => navigation.navigate('Login', { forStaff: false }),
-        },
-      ]);
+      // Flujo correcto: invitación → crear cuenta (email / redes); el login unificado ya deriva staff/cliente por perfil.
+      navigation.navigate('CreateAccount', { fromInvite: true });
       return;
     }
     setBusy(true);
@@ -189,64 +184,61 @@ export default function JoinWithInviteCodeScreen() {
 
   return (
     <BackgroundWrapper screen="neutral">
-      <View style={{ flex: 1 }}>
+      <View style={authMarketingChromeRoot}>
         <LogoTriangleBackground
           isDark={isDark}
-          sizeScale={2.4}
-          opacityOverride={0.2}
-          blendMode="screen"
+          variant="registro"
+          blendMode="lighten"
+          sizeScale={2.8}
+          opacityOverride={isDark ? 0.42 : 0.28}
         />
-        <KeyboardAvoidingView
-          style={{ flex: 1, zIndex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.kav}>
-            <View style={styles.innerColumn}>
-              <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
-                <LogoCompleto height={52} />
-                <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
-              </View>
-              <NeoPanel style={styles.panel}>
-                <Text style={styles.title}>{tStr('invite_title')}</Text>
-                <Text style={styles.hint}>{tStr('invite_hint')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={code}
-                  onChangeText={(s) => setCode(s.toUpperCase())}
-                  placeholder={tStr('invite_placeholder')}
-                  placeholderTextColor={fe.placeholder}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  maxLength={16}
-                  editable={!busy}
-                />
+        <AuthKeyboardAvoidingView style={{ flex: 1, zIndex: 1 }}>
+          <AuthDismissKeyboardOutside>
+            <View style={styles.kav}>
+              <View style={styles.innerColumn}>
+                <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
+                  <LogoCompleto height={52} />
+                </View>
+                <NeoPanel edge={false} style={styles.panel}>
+                  <Text style={styles.title}>{tStr('invite_title')}</Text>
+                  <Text style={styles.hint}>{tStr('invite_hint')}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={code}
+                    onChangeText={(s) => setCode(s.toUpperCase())}
+                    placeholder={tStr('invite_placeholder')}
+                    placeholderTextColor={fe.placeholder}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    maxLength={16}
+                    editable={!busy}
+                  />
+                  <TouchableOpacity
+                    style={[styles.primary, busy && { opacity: 0.65 }]}
+                    onPress={onSubmit}
+                    disabled={busy}
+                    activeOpacity={0.9}
+                  >
+                    {busy ? (
+                      <ActivityIndicator color={fe.buttonText} />
+                    ) : (
+                      <Text style={styles.primaryText}>{tStr('invite_cta')}</Text>
+                    )}
+                  </TouchableOpacity>
+                </NeoPanel>
                 <TouchableOpacity
-                  style={[styles.primary, busy && { opacity: 0.65 }]}
-                  onPress={onSubmit}
-                  disabled={busy}
-                  activeOpacity={0.9}
+                  style={[layoutStyles.ctaBackCompact, { marginTop: MOBILE_SPACING.md }]}
+                  onPress={() => navigation.goBack()}
+                  activeOpacity={0.85}
+                  testID="invite-nav-back"
                 >
-                  {busy ? (
-                    <ActivityIndicator color={fe.buttonText} />
-                  ) : (
-                    <Text style={styles.primaryText}>{tStr('invite_cta')}</Text>
-                  )}
+                  <Ionicons name="chevron-back" size={18} color={fitT.text} />
+                  <Text style={[layoutStyles.ctaBackCompactText, { marginLeft: 6 }]}>{tStr('common_back')}</Text>
                 </TouchableOpacity>
-              </NeoPanel>
-              <TouchableOpacity
-                style={[layoutStyles.ctaBackCompact, { marginTop: MOBILE_SPACING.md }]}
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.85}
-                testID="invite-nav-back"
-              >
-                <Ionicons name="chevron-back" size={18} color={fitT.text} />
-                <Text style={[layoutStyles.ctaBackCompactText, { marginLeft: 6 }]}>{tStr('common_back')}</Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+          </AuthDismissKeyboardOutside>
+        </AuthKeyboardAvoidingView>
       </View>
     </BackgroundWrapper>
   );

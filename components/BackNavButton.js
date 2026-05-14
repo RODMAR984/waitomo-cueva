@@ -1,9 +1,14 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Pressable, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { MOBILE_RADII, MOBILE_TYPE } from '../theme/mobileSpec';
 
+/**
+ * Volver compacto (chevron + texto), no barra a ancho completo tipo encabezado.
+ * Estilos extra vía `style` (p. ej. margin) se fusionan al final.
+ */
 export default function BackNavButton({ onPress, label, style, testID }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
@@ -11,43 +16,45 @@ export default function BackNavButton({ onPress, label, style, testID }) {
   const resolvedLabel = label || tStr('common_back');
 
   return (
-    <TouchableOpacity
+    <Pressable
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={resolvedLabel}
       onPress={onPress}
-      activeOpacity={0.88}
-      style={[
-        styles.button,
-        {
-          borderColor: t.overlayBorder,
-          backgroundColor: t.boxBg,
-        },
+      hitSlop={12}
+      style={({ pressed }) => [
+        styles.row,
+        { opacity: pressed ? 0.72 : 1 },
         style,
       ]}
     >
-      <Text style={[styles.text, { color: t.text }]}>{resolvedLabel}</Text>
-    </TouchableOpacity>
+      <Ionicons name="chevron-back" size={20} color={t.text} style={styles.icon} />
+      <Text style={[styles.text, { color: t.text }]} numberOfLines={1}>
+        {resolvedLabel}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    width: '100%',
-    maxWidth: 360,
-    alignSelf: 'center',
-    minHeight: 44,
-    borderRadius: MOBILE_RADII.md,
-    borderWidth: 1,
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    flexShrink: 1,
+    paddingVertical: 6,
+    paddingRight: 8,
+    paddingLeft: 2,
+    borderRadius: MOBILE_RADII.md,
+    backgroundColor: 'transparent',
+  },
+  icon: {
+    marginRight: 2,
   },
   text: {
     fontSize: MOBILE_TYPE.body,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.15,
   },
 });

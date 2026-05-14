@@ -24,7 +24,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 
 const ROLE_LABEL = {
   owner: 'Dueño',
@@ -123,7 +123,7 @@ export default function OrgMembersScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: MOBILE_SPACING.xl,
-          paddingTop: Math.max(insets.top, 12) + 8,
+          paddingTop: screenHeaderTopPadding(insets.top),
           paddingBottom: 16,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
@@ -203,9 +203,15 @@ export default function OrgMembersScreen() {
 
   return (
     <BackgroundWrapper screen="admin">
+      <View style={{ flex: 1 }} testID="screen-org-members">
       <View style={styles.header}>
         {!hideInlineBack ? (
-          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+          <BackNavButton
+            testID="org-members-nav-back"
+            onPress={() => navigation.goBack()}
+            label={tStr('common_back')}
+            style={styles.backBtn}
+          />
         ) : null}
         <Text style={styles.title} numberOfLines={1}>
           {tStr('admin_miembros')}
@@ -273,6 +279,7 @@ export default function OrgMembersScreen() {
           )}
         />
       )}
+      </View>
     </BackgroundWrapper>
   );
 }

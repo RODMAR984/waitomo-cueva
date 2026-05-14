@@ -127,6 +127,40 @@ export function resolveOrgUiOverlayColor(org) {
 }
 
 /**
+ * Org/coach sin identidad visual propia: sin logo, sin foto/gradiente de fondo, sin acento propio
+ * (hex de fábrica / legacy), sin tipografía ni overrides UI en features.
+ * → tema y acento = identidad FitEngine (`fitengineLogoColors`), no Waitomo ni cian `#00ffff`.
+ */
+export function usesFitEnginePlatformShell(org) {
+  if (!org?.id || isWaitomoOrg(org)) return false;
+  if (resolveOrgTextColor(org) || resolveOrgSecondaryTextColor(org)) return false;
+  if (resolveOrgUiSurfaceColor(org) || resolveOrgUiBorderColor(org) || resolveOrgUiOverlayColor(org)) return false;
+
+  const raw = String(org.accent_color || '').trim().toLowerCase();
+  const accent = raw.startsWith('#') ? raw : raw ? `#${raw}` : '';
+  const defaultAccents = new Set([
+    '',
+    '#00dddd',
+    '#00d4d4',
+    '#818cf8',
+    '#00ffff',
+    '#0ff',
+    '#00fafa',
+    '#90abb5',
+    '#86c4c7',
+    '#a2c6ca',
+  ]);
+  const isDefaultAccent = !accent || defaultAccents.has(accent);
+
+  const bgType = String(org.background_type || 'solid').toLowerCase();
+  const hasImageBg = bgType === 'image' && !!String(org.background_url || '').trim();
+  const hasGradient = bgType === 'gradient';
+  const hasLogo = !!String(org.logo_url || '').trim();
+
+  return isDefaultAccent && !hasLogo && !hasImageBg && !hasGradient;
+}
+
+/**
  * Aplica overrides de superficie/borde/overlay sin mezclar con acento ni tipografía.
  */
 function applySurfaceBorderUiOverride(base, isDark, org) {
@@ -574,12 +608,12 @@ function getThemeTokensWithBranding(mode, org) {
       screenOverlay: 'rgba(0,0,0,0.42)',
       segmentInactiveBg: hexToRgba(colors.dark.textPrimary, 0.12),
       segmentInactiveText: colors.dark.textPrimary,
-      brandText: colors.brand.primary,
-      brandTextShadow: 'rgba(0,255,252,0.5)',
+      brandText: accent,
+      brandTextShadow: 'rgba(0,0,0,0.48)',
       metallicGrey: logoColors.metallicGrey,
       logoCian: accent,
       buttonGlow: {
-        shadowColor: logoColors.cian,
+        shadowColor: accent,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.35,
         shadowRadius: 10,
@@ -739,12 +773,42 @@ function getThemeTokensWithBranding(mode, org) {
 }
 
 /**
- * Tokens del modo efectivo. Si no hay org o es Waitomo → tokens fijos Waitomo.
- * Si hay otra org → preset + accent_color (#20b).
+ * Identidad FitEngine coherente (acento marca + presets) sin datos de gym.
+ * `org` opcional: si viene de `usesFitEnginePlatformShell`, respeta `theme_preset` (vivid/minimal, clean/warm).
+ */
+function getThemeTokensFitEnginePlatform(mode, org = null) {
+  const isDark = mode !== 'light';
+  const presetRaw = String(org?.theme_preset || '').toLowerCase();
+  const darkKey = presetRaw === 'dark_minimal' ? 'dark_minimal' : 'dark_vivid';
+  const lightKey = presetRaw === 'light_warm' ? 'light_warm' : 'light_clean';
+  const theme_preset = isDark ? darkKey : lightKey;
+  const stub = {
+    accent_color: fitengineLogoColors.primary,
+    theme_preset,
+    features: {},
+  };
+  return getThemeTokensWithBranding(mode, stub);
+}
+
+/**
+ * Tokens del modo efectivo.
+ * - Sin org (`null`/`undefined`): shell FitEngine de plataforma (mismo acento que splash/login).
+ * - Org Waitomo (`isWaitomoOrg`): tokens fijos Waitomo (`getThemeTokensBase`).
+ * - Otra org sin branding: shell FitEngine respetando `theme_preset` de la org.
+ * - Otra org con branding: `accent_color` + preset + overrides en `features`.
  */
 function getThemeTokens(mode, orgBranding = null) {
-  if (!orgBranding || isWaitomoOrg(orgBranding)) return getThemeTokensBase(mode);
+  if (!orgBranding) return getThemeTokensFitEnginePlatform(mode, null);
+  if (isWaitomoOrg(orgBranding)) return getThemeTokensBase(mode);
+  if (usesFitEnginePlatformShell(orgBranding)) return getThemeTokensFitEnginePlatform(mode, orgBranding);
   return getThemeTokensWithBranding(mode, orgBranding);
 }
 
-export { hexToRgba, getThemeTokens, getThemeTokensBase, getThemeTokensNeutralShell, isWaitomoOrg };
+export {
+  hexToRgba,
+  getThemeTokens,
+  getThemeTokensBase,
+  getThemeTokensNeutralShell,
+  getThemeTokensFitEnginePlatform,
+  isWaitomoOrg,
+};

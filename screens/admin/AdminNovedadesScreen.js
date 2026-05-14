@@ -258,13 +258,19 @@ export default function AdminNovedadesScreen() {
   return (
     <BackgroundWrapper screen="admin">
       <KeyboardAvoidingView
+        testID="screen-admin-novedades"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             {!hideInlineBack ? (
-              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+              <BackNavButton
+                testID="admin-novedades-nav-back"
+                onPress={() => navigation.goBack()}
+                label={tStr('common_back')}
+                style={styles.backBtn}
+              />
             ) : null}
             <Text style={styles.title}>{tStr('admin_news_screen_title')}</Text>
             <TouchableOpacity style={styles.btn} onPress={openNew} activeOpacity={0.9}>

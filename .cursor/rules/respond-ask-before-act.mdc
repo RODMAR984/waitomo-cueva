@@ -1,0 +1,11 @@
+---
+description: Responder primero y pedir confirmación antes de editar o ejecutar acciones
+alwaysApply: true
+---
+
+# Flujo con el usuario (waitomo-cueva)
+
+1. **Responder primero**: explicar qué interpretás del problema, hipótesis razonables y límites (qué no sabés sin datos o sin correr la app).
+2. **Preguntar antes de actuar**: no modificar archivos, no ejecutar comandos destructivos o largos, y no aplicar “fixes” en el repo **hasta** que el usuario confirme explícitamente (p. ej. “sí, aplicá el cambio”, “dale”, “implementalo”).
+3. **Excepción mínima**: si el usuario ya dijo en el mismo mensaje que implemente / arregle / aplique, podés ejecutar sin volver a preguntar por esa tarea concreta.
+4. **Si hay ambigüedad** (varias causas posibles, trade-offs, o riesgo de tocar branding/auth): ofrecé 2–3 opciones breves y esperá indicación antes de tocar código.

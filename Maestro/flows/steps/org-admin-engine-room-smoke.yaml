@@ -1,0 +1,66 @@
+# Engine room (grid staff): resumen, bloques, perfil. Tiles siempre visibles (incl. coach «lite» sin miembros/novedades/planes).
+appId: com.waitomofitengine.cueva
+---
+- assertVisible:
+    id: admin-dashboard-root
+# Resumen del día
+- scrollUntilVisible:
+    element:
+      id: staff-hub-tile-resumen
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: staff-hub-tile-resumen
+- extendedWaitUntil:
+    visible:
+      id: screen-admin-resumen
+    timeout: 60000
+- tapOn:
+    id: admin-resumen-nav-back
+- extendedWaitUntil:
+    visible:
+      id: admin-dashboard-root
+    timeout: 30000
+# Panel / listas (misma pantalla Engine room)
+- scrollUntilVisible:
+    element:
+      id: staff-hub-tile-bloques
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: staff-hub-tile-bloques
+- extendedWaitUntil:
+    visible:
+      id: admin-dashboard-root
+    timeout: 20000
+# Perfil (misma ruta que cliente, testID screen-perfil)
+- scrollUntilVisible:
+    element:
+      id: staff-hub-tile-perfil
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: staff-hub-tile-perfil
+- extendedWaitUntil:
+    visible:
+      id: screen-perfil
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: perfil-nav-back
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: perfil-nav-back
+- extendedWaitUntil:
+    visible:
+      id: admin-dashboard-root
+    timeout: 30000

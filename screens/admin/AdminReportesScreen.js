@@ -1,7 +1,7 @@
 // 5.3 — Cuatro métricas operativas (RPC staff_org_dashboard_metrics).
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import { ADMIN_PANEL_GUTTER, ADMIN_SECTION_GAP } from '../../theme/adminSpec';
 
 export default function AdminReportesScreen() {
@@ -61,7 +61,7 @@ export default function AdminReportesScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingTop: screenHeaderTopPadding(insets.top),
           paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
           width: '100%',

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const MOBILE_SPACING = {
   xs: 6,
   sm: 8,
@@ -60,3 +62,17 @@ export const MOBILE_TYPE = {
   /** KPIs numéricos en tableros (antes ~26px). */
   kpi: 26,
 };
+
+/**
+ * Padding superior estándar para filas con “Volver” bajo status bar / notch (staff, superadmin, Engine room, etc.).
+ * Nativo: safe area + aire generoso (xxl+md); web: aire fijo (xxl+sm), sin depender del notch.
+ */
+export function screenHeaderTopPadding(safeAreaTop) {
+  const top =
+    typeof safeAreaTop === 'number' && !Number.isNaN(safeAreaTop) ? Math.max(0, safeAreaTop) : 0;
+  /** Aire bajo status bar / notch: nativo más generoso (Engine room, staff, superadmin). */
+  const belowSafeWeb = MOBILE_SPACING.xxl + MOBILE_SPACING.sm;
+  const belowSafeNative = MOBILE_SPACING.xxl + MOBILE_SPACING.md;
+  if (Platform.OS === 'web') return belowSafeWeb;
+  return top + belowSafeNative;
+}

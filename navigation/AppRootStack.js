@@ -1,5 +1,6 @@
 // navigation/AppRootStack.js — Stack raíz (rutas y nombres iguales que antes en App.js)
 import React from 'react';
+import { Platform } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
@@ -65,14 +66,22 @@ import {
   AdminStripeSettingsScreenWithShell,
   AdminMercadoPagoSettingsScreenWithShell,
   AdminBadgesScreenWithShell,
+  SuperadminScreenWithShell,
+  SuperadminObservabilityScreenWithShell,
+  SuperadminTopicScreenWithShell,
+  SuperadminOrgsScreenWithShell,
+  SuperadminAuditLogScreenWithShell,
+  SuperadminFeatureFlagsScreenWithShell,
+  SuperadminTicketsScreenWithShell,
+  SuperadminTicketDetailScreenWithShell,
 } from './staffScreenShell';
 
 import SplashScreen from '../screens/auth/SplashScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import CreaCuentaStaffScreen from '../screens/auth/CreaCuentaStaffScreen';
-import AdminLoginScreen from '../screens/admin/AdminLoginScreen';
 import RegistroOwnerScreen from '../screens/auth/RegistroOwnerScreen';
 import ConfiguraTuEspacioScreen from '../screens/auth/ConfiguraTuEspacioScreen';
+import FitEngineSpaceIntroScreen from '../screens/auth/FitEngineSpaceIntroScreen';
 import JoinWithInviteCodeScreen from '../screens/auth/JoinWithInviteCodeScreen';
 import PublicDirectoryScreen from '../screens/client/PublicDirectoryScreen';
 
@@ -85,8 +94,9 @@ const Stack = createNativeStackNavigator();
  * }} props
  */
 export default function AppRootStack({ screenOptions, registroOwnerBackgroundColor }) {
+  const initialRouteName = Platform.OS === 'web' ? 'WelcomeGlobal' : 'Splash';
   return (
-    <Stack.Navigator initialRouteName="Splash" screenOptions={screenOptions}>
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={screenOptions}>
       {/* Entrada pública */}
       <Stack.Group>
         <Stack.Screen name="Splash" component={SplashScreen} />
@@ -110,8 +120,6 @@ export default function AppRootStack({ screenOptions, registroOwnerBackgroundCol
         <Stack.Screen name="CreaCuentaStaff" component={CreaCuentaStaffScreen} />
         <Stack.Screen name="CreaCuentaStaffScreen" component={CreaCuentaStaffScreen} />
 
-        <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
-        <Stack.Screen name="AdminLoginScreen" component={AdminLoginScreen} />
         <Stack.Screen
           name="RegistroOwner"
           component={RegistroOwnerScreen}
@@ -123,6 +131,7 @@ export default function AppRootStack({ screenOptions, registroOwnerBackgroundCol
             },
           }}
         />
+        <Stack.Screen name="FitEngineSpaceIntro" component={FitEngineSpaceIntroScreen} />
         <Stack.Screen name="ConfiguraTuEspacio" component={ConfiguraTuEspacioScreen} />
       </Stack.Group>
 
@@ -257,6 +266,22 @@ export default function AppRootStack({ screenOptions, registroOwnerBackgroundCol
         <Stack.Screen name="AdminMercadoPagoSettingsScreen" component={AdminMercadoPagoSettingsScreenWithShell} />
         <Stack.Screen name="AdminBadges" component={AdminBadgesScreenWithShell} />
         <Stack.Screen name="AdminBadgesScreen" component={AdminBadgesScreenWithShell} />
+        <Stack.Screen name="Superadmin" component={SuperadminScreenWithShell} />
+        <Stack.Screen name="SuperadminScreen" component={SuperadminScreenWithShell} />
+        <Stack.Screen name="SuperadminObservability" component={SuperadminObservabilityScreenWithShell} />
+        <Stack.Screen name="SuperadminObservabilityScreen" component={SuperadminObservabilityScreenWithShell} />
+        <Stack.Screen name="SuperadminTopic" component={SuperadminTopicScreenWithShell} />
+        <Stack.Screen name="SuperadminTopicScreen" component={SuperadminTopicScreenWithShell} />
+        <Stack.Screen name="SuperadminOrgs" component={SuperadminOrgsScreenWithShell} />
+        <Stack.Screen name="SuperadminOrgsScreen" component={SuperadminOrgsScreenWithShell} />
+        <Stack.Screen name="SuperadminAuditLog" component={SuperadminAuditLogScreenWithShell} />
+        <Stack.Screen name="SuperadminAuditLogScreen" component={SuperadminAuditLogScreenWithShell} />
+        <Stack.Screen name="SuperadminFeatureFlags" component={SuperadminFeatureFlagsScreenWithShell} />
+        <Stack.Screen name="SuperadminFeatureFlagsScreen" component={SuperadminFeatureFlagsScreenWithShell} />
+        <Stack.Screen name="SuperadminTickets" component={SuperadminTicketsScreenWithShell} />
+        <Stack.Screen name="SuperadminTicketsScreen" component={SuperadminTicketsScreenWithShell} />
+        <Stack.Screen name="SuperadminTicketDetail" component={SuperadminTicketDetailScreenWithShell} />
+        <Stack.Screen name="SuperadminTicketDetailScreen" component={SuperadminTicketDetailScreenWithShell} />
       </Stack.Group>
     </Stack.Navigator>
   );

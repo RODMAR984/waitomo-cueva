@@ -1,7 +1,8 @@
-# Espera a salir del splash y ver CTAs del welcome global (FitEngine).
+# Espera WelcomeGlobal (cualquier fase: splash→welcome, bootstrap, carga de sesión o CTAs).
+# Mismo testID en todas las ramas de WelcomeGlobal + timeout generoso por cold start / red.
 appId: com.waitomofitengine.cueva
 ---
 - extendedWaitUntil:
     visible:
-      id: welcome-cta-login-client
-    timeout: 35000
+      id: welcome-global-content
+    timeout: 120000

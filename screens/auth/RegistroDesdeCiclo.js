@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
   ScrollView,
 } from 'react-native';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -24,6 +23,11 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import {
+  AuthKeyboardAvoidingView,
+  authScrollKeyboardDismissMode,
+  authScrollContentJustify,
+} from '../../components/AuthWebFormShell';
 
 export default function RegistroDesdeCiclo({ navigation, route }) {
   const { plan = { nombre: 'Ciclo Evolución' } } = route?.params || {};
@@ -80,7 +84,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
         kav: { flex: 1 },
         scroll: {
           flexGrow: 1,
-          justifyContent: 'center',
+          justifyContent: authScrollContentJustify(),
           paddingHorizontal: MOBILE_SPACING.lg,
           paddingVertical: 60,
           width: '100%',
@@ -107,12 +111,12 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
 
   return (
     <BackgroundWrapper fondo={getRandomGeneralImage()}>
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 20}
-      >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <AuthKeyboardAvoidingView style={styles.kav}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={authScrollKeyboardDismissMode}
+        >
           <View style={styles.container}>
             <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('reg_ciclo_title')}</Text>
@@ -153,7 +157,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
             ) : null}
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </AuthKeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }

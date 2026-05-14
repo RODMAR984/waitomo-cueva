@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Text, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import * as Linking from 'expo-linking';
 
 import { PlanProvider } from '../contexts/PlanContext';
 import { TrainingDataProvider } from '../contexts/TrainingDataContext';
@@ -72,22 +71,10 @@ export default function AppShellContent() {
     [t],
   );
 
-  /** E2E / acceso directo: `waitomo://admin` → pantalla AdminLogin (sin enlace público en Login). */
-  const linking = useMemo(
-    () => ({
-      prefixes: [Linking.createURL('/'), 'waitomo://'],
-      config: {
-        screens: {
-          AdminLogin: 'admin',
-        },
-      },
-    }),
-    [],
-  );
-
   const defaultScreenOptions = useMemo(
     () => ({
       headerShown: false,
+      contentStyle: { backgroundColor: 'transparent' },
       headerStyle: {
         backgroundColor: t.overlayBg,
         borderBottomColor: t.overlayBorder,
@@ -104,7 +91,7 @@ export default function AppShellContent() {
         <NavigationContainer
           ref={navigationRef}
           theme={theme}
-          linking={Platform.OS === 'web' ? undefined : linking}
+          linking={undefined}
           onReady={() => {
             const r = navigationRef.getCurrentRoute?.();
             routeNameRef.current = r?.name || null;

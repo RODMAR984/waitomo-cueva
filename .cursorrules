@@ -419,7 +419,7 @@ REGLAS (resumen)
 - Reservas: validar membership activa + remaining_classes > 0 o null.
 
 RUTAS CANÓNICAS (usar estos nombres en navigation.navigate / reset)
-Entrada: Splash | Welcome | Login | AdminLogin | CreaCuentaStaff
+Entrada: Splash | WelcomeGlobal | Welcome | Login | CreaCuentaStaff
 Cliente: Client | ClientTabs | Perfil | Config | Seguridad
 Planes: PlanSelector | PlanDetail
 Registro/Pago: RegistroInicial | RegistroCompleto | AbonosPases | Pago | DetalleAbono

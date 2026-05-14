@@ -1,0 +1,10 @@
+# Requiere estar ya en el hub plataforma (`superadmin-hub-root`).
+# Abre la ficha Diagnóstico (tile `obs`) y valida la pantalla de observabilidad.
+appId: com.waitomofitengine.cueva
+---
+- tapOn:
+    id: superadmin-hub-tile-obs
+- extendedWaitUntil:
+    visible:
+      id: admin-observability-root
+    timeout: 60000

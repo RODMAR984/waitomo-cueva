@@ -38,7 +38,7 @@ import { staffCancelClassBookingServer, staffMoveClassBookingServer } from '../.
 import { reportError, trackEvent } from '../../utils/observability';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 
 function hexToRgbaLocal(hex, alpha = 1) {
   const clean = String(hex || '').replace('#', '');
@@ -269,9 +269,29 @@ export default function AdminResumenScreen() {
     }
     setError(null);
     try {
+      const { data: orgAbonoIdRows, error: orgAbonoIdsErr } = await supabase
+        .from('abonos')
+        .select('id')
+        .eq('organization_id', orgId)
+        .limit(4000);
+      if (orgAbonoIdsErr) throw orgAbonoIdsErr;
+      const orgAbonoIds = (orgAbonoIdRows || []).map((r) => r?.id).filter(Boolean);
+
       const wd = getIsoWeekdayFromYmd(ymd);
       const { monthStart, monthEnd } = monthBoundsFromYmd(ymd);
       const plus7 = shiftYmd(ymd, 7);
+      const dueAbonosVencerPromise =
+        orgAbonoIds.length > 0
+          ? supabase
+              .from('user_abonos')
+              .select('id, end_date, status')
+              .in('abono_id', orgAbonoIds)
+              .gte('end_date', ymd)
+              .lte('end_date', plus7)
+              .in('status', ['active', 'vigente'])
+              .limit(1500)
+          : Promise.resolve({ data: [], error: null });
+
       const [blocksRes, grantsRes, classRes, plansRes, payRes, weekSlotsRes, alertsRes, membersRes, dueRes] = await Promise.all([
         supabase
           .from('training_daily_blocks')
@@ -320,14 +340,7 @@ export default function AdminResumenScreen() {
           .gte('created_at', `${monthStart}T00:00:00.000Z`)
           .lte('created_at', `${monthEnd}T23:59:59.999Z`)
           .limit(1500),
-        supabase
-          .from('user_abonos')
-          .select('id, end_date, status')
-          .eq('organization_id', orgId)
-          .gte('end_date', ymd)
-          .lte('end_date', plus7)
-          .in('status', ['active', 'vigente'])
-          .limit(1500),
+        dueAbonosVencerPromise,
       ]);
 
       if (blocksRes.error) throw blocksRes.error;
@@ -696,8 +709,9 @@ export default function AdminResumenScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: MOBILE_SPACING.md,
-          paddingTop: Math.max(insets.top, 10) + 4,
+          paddingTop: screenHeaderTopPadding(insets.top),
           paddingBottom: 4,
+          backgroundColor: 'transparent',
         },
         backBtn: { marginLeft: 0, width: 'auto', maxWidth: 180, alignSelf: 'flex-start' },
         iconBtn: { padding: 10 },
@@ -1128,7 +1142,12 @@ export default function AdminResumenScreen() {
         <View style={styles.root}>
           <View style={styles.topBar}>
             {!hideInlineBack ? (
-              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+              <BackNavButton
+                testID="admin-resumen-nav-back"
+                onPress={() => navigation.goBack()}
+                label={tStr('common_back')}
+                style={styles.backBtn}
+              />
             ) : null}
             <View style={{ flex: 1 }} />
           </View>
@@ -1250,10 +1269,15 @@ export default function AdminResumenScreen() {
   return (
     <BackgroundWrapper screen="admin">
       <View style={styles.root}>
-        <View style={styles.contentMax}>
+        <View style={styles.contentMax} testID="screen-admin-resumen">
         <View style={styles.topBar}>
           {!hideInlineBack ? (
-            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+            <BackNavButton
+              testID="admin-resumen-nav-back"
+              onPress={() => navigation.goBack()}
+              label={tStr('common_back')}
+              style={styles.backBtn}
+            />
           ) : null}
           <View style={{ flex: 1 }} />
           <TouchableOpacity

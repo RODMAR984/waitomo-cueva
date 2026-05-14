@@ -1,4 +1,4 @@
-// Segundo nivel: cliente elige código o directorio. Volver abajo, estilo outline compacto.
+// Segundo nivel: cliente elige código o directorio. Mismo ancho y ritmo que WelcomeGlobal.
 
 import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View, Platform, useWindowDimensions } from 'react-native';
@@ -25,16 +25,25 @@ export default function WelcomeClientJoinScreen() {
 
   return (
     <View style={[layoutStyles.container, { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.md) }]}>
-      <View style={{ flex: 1, width: '100%', maxWidth: 440, alignSelf: 'center', paddingHorizontal: 20, paddingTop: Math.max(insets.top, 8) }}>
-        <View style={{ flex: 1, justifyContent: 'center' }}>
-          <View style={[layoutStyles.logoWrap, { marginBottom: 16 }]}>
+      <View style={[layoutStyles.content, { flex: 1, justifyContent: 'space-between', minHeight: 0 }]} collapsable={false}>
+        <View
+          style={{
+            flex: 1,
+            width: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 0,
+          }}
+        >
+          <View style={[layoutStyles.logoWrap, { marginBottom: MOBILE_SPACING.md }]}>
             <LogoCompleto height={72} />
           </View>
           <Text style={[layoutStyles.subtitle, { fontWeight: '800', color: fitT.text, marginBottom: 6 }]}>
             {tStr('welcome_client_join_title')}
           </Text>
-          <Text style={[layoutStyles.subtitle, { marginBottom: MOBILE_SPACING.lg }]}>{tStr('welcome_client_join_hint')}</Text>
-
+          <Text style={[layoutStyles.subtitle, { marginBottom: MOBILE_SPACING.lg }]}>
+            {tStr('welcome_client_join_hint')}
+          </Text>
           <View style={layoutStyles.ctaWrap}>
             <TouchableOpacity
               style={layoutStyles.ctaPrimary}
@@ -56,7 +65,7 @@ export default function WelcomeClientJoinScreen() {
         </View>
 
         <TouchableOpacity
-          style={layoutStyles.ctaBackCompact}
+          style={[layoutStyles.ctaBackCompact, { alignSelf: 'center', marginTop: MOBILE_SPACING.lg }]}
           onPress={() => navigation.goBack()}
           activeOpacity={0.85}
           testID="welcome-client-join-back"

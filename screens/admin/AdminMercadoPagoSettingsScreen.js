@@ -27,7 +27,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 
 export default function AdminMercadoPagoSettingsScreen() {
   const navigation = useNavigation();
@@ -223,7 +223,7 @@ export default function AdminMercadoPagoSettingsScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingTop: screenHeaderTopPadding(insets.top),
           paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
           width: '100%',

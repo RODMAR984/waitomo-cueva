@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { navigationRef, resetNavigationRoot } from '../navigationRef';
+import { navigationRef, resetNavigationRootToWelcome } from '../navigationRef';
 
 /** Debounce para no resetear por un null transitorio (p. ej. durante callback de Google OAuth). */
 const AUTHGATE_NULL_DEBOUNCE_MS = 500;
@@ -33,7 +33,10 @@ export default function AuthGate({ children }) {
       pendingResetRef.current = setTimeout(() => {
         pendingResetRef.current = null;
         if (lastUserIdRef.current !== null) return;
-        if (!navigationRef.isReady()) return;
+        if (!navigationRef.isReady()) {
+          void resetNavigationRootToWelcome({ maxWaitMs: 8000 });
+          return;
+        }
         const routeName = navigationRef.getCurrentRoute()?.name || '';
         const isEntryScreen =
           routeName === 'Splash' ||
@@ -47,9 +50,10 @@ export default function AuthGate({ children }) {
           routeName === 'PublicDirectory' ||
           routeName === 'Directory' ||
           routeName === 'RegistroOwner' ||
-          routeName === 'ConfiguraTuEspacio';
+          routeName === 'ConfiguraTuEspacio' ||
+          routeName === 'FitEngineSpaceIntro';
         if (isEntryScreen) return;
-        resetNavigationRoot({ index: 0, routes: [{ name: 'WelcomeGlobal' }] });
+        void resetNavigationRootToWelcome({ maxWaitMs: 8000 });
       }, AUTHGATE_NULL_DEBOUNCE_MS);
     }
 

@@ -3,10 +3,12 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { View, Platform, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useThemeContext } from '../contexts/ThemeContext';
-import { hexToRgba } from '../theme/colors';
-import { MOBILE_RADII, MOBILE_SPACING } from '../theme/mobileSpec';
+import { hexToRgba, fitengineLogoColors } from '../theme/colors';
+import { MOBILE_RADII } from '../theme/mobileSpec';
 
 export const FITENGINE_NEO_PANEL_CLASS = 'fitengine-neo-panel';
+/** Solo paneles con `spark`: animación CSS infinita en web (en formularios sin spark provoca repaints y el cursor “rebota”). */
+export const FITENGINE_NEO_PANEL_SWEEP_CLASS = 'fitengine-neo-panel--sweep';
 /** Reservado por si algo en web lo referencia; el destello va por SVG, no por esta clase. */
 export const FITENGINE_NEO_PANEL_SPARK_CLASS = 'fitengine-neo-panel--spark';
 
@@ -29,15 +31,15 @@ export function ensureNeoPanelWebCss() {
   el.textContent = `
 @keyframes fitengine-neo-sweep {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(0, 245, 255, 0.12), inset 0 0 0 1px rgba(0, 245, 255, 0.1);
-    border-color: rgba(0, 245, 255, 0.38) !important;
+    box-shadow: 0 0 10px rgba(134, 196, 199, 0.14), inset 0 0 0 1px rgba(134, 196, 199, 0.12);
+    border-color: rgba(134, 196, 199, 0.42) !important;
   }
   50% {
-    box-shadow: 0 0 28px rgba(0, 245, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    border-color: rgba(0, 245, 255, 0.72) !important;
+    box-shadow: 0 0 28px rgba(134, 196, 199, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border-color: rgba(134, 196, 199, 0.72) !important;
   }
 }
-.${FITENGINE_NEO_PANEL_CLASS} {
+.${FITENGINE_NEO_PANEL_SWEEP_CLASS} {
   animation: fitengine-neo-sweep 3.5s ease-in-out infinite;
 }
 `;
@@ -45,12 +47,14 @@ export function ensureNeoPanelWebCss() {
 }
 
 function edgeFromBrand(brand) {
-  const b = typeof brand === 'string' && brand.startsWith('#') ? brand : '#00ffff';
+  const b =
+    typeof brand === 'string' && brand.startsWith('#') ? brand : fitengineLogoColors.primary;
   return hexToRgba(b, 0.52);
 }
 
 function nativeHalo(brand, spark) {
-  const glow = typeof brand === 'string' && brand.startsWith('#') ? brand : '#00ffff';
+  const glow =
+    typeof brand === 'string' && brand.startsWith('#') ? brand : fitengineLogoColors.primary;
   return {
     shadowColor: glow,
     shadowOffset: { width: 0, height: 0 },
@@ -62,8 +66,9 @@ function nativeHalo(brand, spark) {
 
 /**
  * Panel con borde neo. `spark`: segmento luminoso que recorre el borde (SVG stroke-dashoffset).
+ * `edge={false}`: solo aplica `style` (p. ej. formularios auth con borde suave, sin halo grueso).
  */
-export default function NeoPanel({ style, children, spark = false, ...rest }) {
+export default function NeoPanel({ style, children, spark = false, edge = true, ...rest }) {
   const { onLayout: onLayoutOuter, ...restPass } = rest;
   const { t } = useThemeContext();
   const [layout, setLayout] = useState({ w: 0, h: 0 });
@@ -113,18 +118,26 @@ export default function NeoPanel({ style, children, spark = false, ...rest }) {
   }, [spark, layout.w, layout.h, flatStyle.borderRadius, dashOffset]);
 
   const edgeStyle = useMemo(() => {
+    if (!edge) return null;
     const borderColor = edgeFromBrand(t.brand);
     if (Platform.OS === 'web') {
       return { borderWidth: spark ? 2.5 : 2, borderColor };
+    }
+    // Android: `elevation` + panel ancho a veces dibuja manchas/bandas en el interior; sin spark el halo no aporta mucho.
+    if (Platform.OS === 'android' && !spark) {
+      return { borderWidth: 2, borderColor, elevation: 0 };
     }
     return {
       borderWidth: spark ? 2.5 : 2,
       borderColor,
       ...nativeHalo(t.brand, spark),
     };
-  }, [t.brand, spark]);
+  }, [edge, t.brand, spark]);
 
-  const webProps = Platform.OS === 'web' ? { className: FITENGINE_NEO_PANEL_CLASS } : {};
+  const webProps =
+    Platform.OS === 'web' && spark
+      ? { className: `${FITENGINE_NEO_PANEL_CLASS} ${FITENGINE_NEO_PANEL_SWEEP_CLASS}` }
+      : {};
 
   const sw = 2.5;
   const inset = sw;
@@ -149,7 +162,13 @@ export default function NeoPanel({ style, children, spark = false, ...rest }) {
         <Defs>
           <LinearGradient id={gradIdRef.current} x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <Stop offset="50%" stopColor={typeof t.brand === 'string' ? t.brand : '#00ffff'} stopOpacity="1" />
+            <Stop
+              offset="50%"
+              stopColor={
+                typeof t.brand === 'string' ? t.brand : fitengineLogoColors.primary
+              }
+              stopOpacity="1"
+            />
             <Stop offset="100%" stopColor="#ffffff" stopOpacity="0.8" />
           </LinearGradient>
         </Defs>
@@ -173,7 +192,7 @@ export default function NeoPanel({ style, children, spark = false, ...rest }) {
 
   return (
     <View
-      style={[style, edgeStyle, spark && { position: 'relative', overflow: 'hidden' }]}
+      style={[style, edge ? edgeStyle : null, spark && { position: 'relative', overflow: 'hidden' }]}
       onLayout={onLayout}
       {...webProps}
       {...restPass}

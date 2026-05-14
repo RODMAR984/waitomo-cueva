@@ -1,10 +1,15 @@
 const { expect } = require('@playwright/test');
 
-async function loginAsStaff(page, { email, password }) {
-  await page.goto('/');
-  await page.getByText('Iniciar sesión como gym / coach', { exact: true }).click();
+/**
+ * @param {{ email: string, password: string, startUrl?: string }} creds
+ * `startUrl`: URL absoluta del shell (p. ej. contexto nuevo con `baseURL` dudoso → `http://127.0.0.1:4173/`).
+ */
+async function loginAsStaff(page, { email, password, startUrl }) {
+  await page.goto(startUrl || '/');
+  await expect(page.getByTestId('welcome-cta-login-client')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('welcome-cta-login-client').click();
 
-  await expect(page.getByText('Iniciar sesión (staff)', { exact: true })).toBeVisible();
+  await expect(page.getByPlaceholder('Email')).toBeVisible();
   await page.getByPlaceholder('Email').fill(email);
   await page.getByPlaceholder('Contraseña').fill(password);
   await page.getByText('Entrar', { exact: true }).click();
@@ -14,14 +19,15 @@ async function loginAsStaff(page, { email, password }) {
     await continueBtn.click();
   }
 
-  await expect(page.getByText('ADMIN — Crear / editar bloques', { exact: true })).toBeVisible({
-    timeout: 15_000,
-  });
+  // Org staff → AdminScreen (`admin-main-title`). Plataforma → Superadmin (`superadmin-hub-root`).
+  await expect(
+    page.getByTestId('admin-main-title').or(page.getByTestId('superadmin-hub-root')),
+  ).toBeVisible({ timeout: 15_000 });
 }
 
 async function loginAsClient(page, { email, password }) {
   await page.goto('/');
-  await page.getByText('Iniciar sesión', { exact: true }).click();
+  await page.getByTestId('welcome-cta-login-client').click();
 
   await expect(page.getByPlaceholder('Email')).toBeVisible();
   await page.getByPlaceholder('Email').fill(email);

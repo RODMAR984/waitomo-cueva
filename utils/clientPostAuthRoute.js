@@ -1,8 +1,13 @@
 /**
  * Destino por defecto para clientes con perfil ya cargado.
- * Con plan → panel. Sin plan pero con organización en perfil → selector de planes del gym.
- * Sin plan y sin organización: si ya hay membresía cliente (p. ej. desfase de sync), seguimos al selector;
- * si no, pantalla de código para no quedar en un PlanSelector vacío (flujo global FitEngine).
+ *
+ * Regla de producto (invitación / org): si el perfil ya tiene `organization_id`, el usuario ya
+ * pertenece a un centro (p. ej. entró con código). No lo mandamos a PlanSelector al iniciar sesión:
+ * eso duplicaba el flujo (elegir centro vs código) y retrasaba el ingreso. Elegir programa/abono
+ * sigue disponible desde el panel (links a PlanSelector).
+ *
+ * Con `plan_actual` → panel. Con org en perfil → panel. Sin org: si hay membresía cliente (desfase
+ * de sync) → panel; si no → **WelcomeClientJoin** (código o buscar centro en directorio).
  *
  * @param {object} profile
  * @param {{ hasClientMembership?: boolean }} [opts]
@@ -12,9 +17,10 @@ export function getClientPostAuthRouteName(profile, opts = {}) {
   if (hasPlan) return 'ClientTabs';
 
   const hasOrg = !!(profile?.organization_id && String(profile.organization_id).trim());
-  if (!hasOrg) {
-    const hasClientMembership = opts.hasClientMembership === true;
-    if (!hasClientMembership) return 'JoinWithInvite';
-  }
-  return 'PlanSelector';
+  if (hasOrg) return 'ClientTabs';
+
+  const hasClientMembership = opts.hasClientMembership === true;
+  if (!hasClientMembership) return 'WelcomeClientJoin';
+
+  return 'ClientTabs';
 }

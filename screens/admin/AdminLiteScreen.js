@@ -3,7 +3,7 @@
 // - Wrapper sobre AdminScreen
 // - Superadmin usa modo "full"
 // - Coach/otros usan modo "lite"
-// - El botón "Salir" y los permisos ya se manejan dentro de AdminScreen
+// - El botón "Salir" en web ancho vive en la barra lateral (`StaffWebDesktopShell`); en vista estrecha sigue en `AdminScreen`.
 
 import React, { memo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';

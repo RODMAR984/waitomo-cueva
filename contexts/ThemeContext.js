@@ -1,7 +1,7 @@
 // contexts/ThemeContext.js — Waitomo Claro / Oscuro / Automático (#20b)
 // - mode: 'light' | 'dark' | 'auto' (auto = claro 6–22h, oscuro resto)
 // - Persiste en AsyncStorage y en Supabase (profiles.theme_mode)
-// - t = getThemeTokens(effectiveMode, organization) — Waitomo fijo, otras orgs con accent_color + preset
+// - t = getThemeTokens(effectiveMode, organization) — Waitomo fijo; org “sin marca” → shell FitEngine (#86C4C7); resto branding org
 
 import React, {
   createContext,
@@ -14,7 +14,7 @@ import React, {
 } from 'react';
 import { DarkTheme as NavDarkTheme, DefaultTheme as NavLightTheme } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getThemeTokens, getThemeTokensNeutralShell } from '../theme/colors';
+import { getThemeTokens, getThemeTokensFitEnginePlatform } from '../theme/colors';
 import { useAuth } from './AuthContext';
 import { supabase } from '../supabaseClient';
 
@@ -31,7 +31,7 @@ const ThemeContext = createContext({
   mode: 'dark',
   setMode: () => {},
   isDark: true,
-  t: getThemeTokensNeutralShell('dark'),
+  t: getThemeTokensFitEnginePlatform('dark', null),
   clientThemeLocked: false,
 });
 
@@ -88,13 +88,15 @@ export const ThemeProvider = ({ children }) => {
   const isDark = effectiveMode === 'dark';
   const t = useMemo(() => {
     const resolvedOrg =
-      organization?.id != null
-        ? organization
-        : user?.id && lastOrgForThemeRef.current?.id
-          ? lastOrgForThemeRef.current
-          : null;
+      !user?.id
+        ? null
+        : organization?.id != null
+          ? organization
+          : lastOrgForThemeRef.current?.id
+            ? lastOrgForThemeRef.current
+            : null;
     if (!resolvedOrg?.id) {
-      return getThemeTokensNeutralShell(effectiveMode);
+      return getThemeTokensFitEnginePlatform(effectiveMode, null);
     }
     return getThemeTokens(effectiveMode, resolvedOrg);
   }, [effectiveMode, organization, user?.id]);
@@ -146,9 +148,11 @@ export const ThemeProvider = ({ children }) => {
   }, [profile?.id]);
 
   const theme = useMemo(() => {
+    // Contenedor de escenas del Stack: transparente para no tapar `BackgroundWrapper`.
+    // Con `t.bg` / `t.boxBg` React Navigation pinta un rectángulo más oscuro sobre el fondo con foto.
     const colorsNav = {
-      background: t.bg,
-      card: t.boxBg,
+      background: 'transparent',
+      card: 'transparent',
       border: t.overlayBorder,
       text: t.text,
       primary: t.brand,

@@ -13,7 +13,7 @@ concurrency:
 jobs:
   qa-web-and-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -54,14 +54,24 @@ jobs:
       - name: Install Playwright (Chromium)
         run: npx playwright install --with-deps chromium
 
+      # `qa:web:release` ya dejó `dist/` listo → globalSetup no vuelve a exportar (ahorra minutos en CI).
       - name: E2E web (Playwright)
         run: npx playwright test
         env:
           CI: true
+          PLAYWRIGHT_SKIP_EXPORT: '1'
+          # Cliente + (opc.) admin org legacy — igual que antes.
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_CLIENT_EMAIL: ${{ secrets.E2E_CLIENT_EMAIL }}
           E2E_CLIENT_PASSWORD: ${{ secrets.E2E_CLIENT_PASSWORD }}
+          # Si las cargás en GitHub Secrets, el journey también cubre staff org + plataforma (como en local con Maestro).
+          E2E_ORG_ADMIN_EMAIL: ${{ secrets.E2E_ORG_ADMIN_EMAIL }}
+          E2E_ORG_ADMIN_PASSWORD: ${{ secrets.E2E_ORG_ADMIN_PASSWORD }}
+          E2E_PLATFORM_ADMIN_EMAIL: ${{ secrets.E2E_PLATFORM_ADMIN_EMAIL }}
+          E2E_PLATFORM_ADMIN_PASSWORD: ${{ secrets.E2E_PLATFORM_ADMIN_PASSWORD }}
+          # Exige cliente + staff org + plataforma en `full-web-journey` (falla al inicio si falta algún E2E_*).
+          E2E_JOURNEY_STRICT: '1'
 
       - name: Upload Playwright report
         if: always()

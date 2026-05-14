@@ -7,10 +7,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
   Alert,
   ScrollView,
 } from 'react-native';
@@ -19,18 +16,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
+import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import PasswordInput from '../../components/PasswordInput';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useThemeContext } from '../../contexts/ThemeContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
+import { authMarketingChromeRoot, authSoftPanelStyle } from '../../theme/appVisualCohesion';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import {
+  AuthKeyboardAvoidingView,
+  AuthDismissKeyboardOutside,
+  authScrollKeyboardDismissMode,
+  authScrollContentJustify,
+} from '../../components/AuthWebFormShell';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
 export default function CreaCuentaStaffScreen() {
   const { t: tStr } = useLocale();
+  const { isDark } = useThemeContext();
   const navigation = useNavigation();
   const { register, signInWithProvider, session, profile, loading, needsFitEngineSpaceSetup, authNavigationReady } =
     useAuth();
@@ -57,7 +64,7 @@ export default function CreaCuentaStaffScreen() {
     if (role === 'coach' || role === 'admin' || role === 'superadmin') {
       if (oauthSubmitting && mountedRef.current) setOauthSubmitting(false);
       const route = needsFitEngineSpaceSetup
-        ? { name: 'ConfiguraTuEspacio', params: { email: session.user.email } }
+        ? { name: 'FitEngineSpaceIntro', params: { email: session.user.email } }
         : { name: 'AdminLite' };
       navigation.reset({ index: 0, routes: [route] });
     }
@@ -140,7 +147,7 @@ export default function CreaCuentaStaffScreen() {
         kav: { flex: 1 },
         scrollContent: {
           flexGrow: 1,
-          justifyContent: 'center',
+          justifyContent: authScrollContentJustify(),
           padding: MOBILE_SPACING.xl,
           paddingTop: 52,
           paddingBottom: 24,
@@ -149,11 +156,7 @@ export default function CreaCuentaStaffScreen() {
           alignSelf: 'center',
         },
         panel: {
-          backgroundColor: fe.panelBg,
-          borderColor: fe.panelBorder,
-          borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          padding: MOBILE_SPACING.xl,
+          ...authSoftPanelStyle,
         },
         title: {
           color: fe.text,
@@ -217,27 +220,13 @@ export default function CreaCuentaStaffScreen() {
 
   const disabled = submitting || oauthSubmitting;
 
-  return (
-    <BackgroundWrapper screen="neutral">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.kav}
-      >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+  const formInner = (
             <View>
               <View style={{ width: '100%', alignItems: 'center', marginBottom: 14 }}>
                 <LogoCompleto height={52} />
-                <Text style={{ color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: 6 }}>{tStr('login_brand_powered')}</Text>
               </View>
 
-              <NeoPanel style={styles.panel}>
-                <BackNavButton onPress={() => navigation.goBack()} />
+              <NeoPanel edge={false} style={styles.panel}>
                 <Text style={styles.title}>{tStr('creacuenta_staff_title')}</Text>
                 <Text style={styles.subtitle}>{tStr('creacuenta_staff_subtitle')}</Text>
 
@@ -307,16 +296,36 @@ export default function CreaCuentaStaffScreen() {
                 >
                   <Text style={styles.linkText}>{tStr('creacuenta_staff_has_account')}</Text>
                 </TouchableOpacity>
+                <BackNavButton onPress={() => navigation.goBack()} style={{ marginTop: 16 }} />
               </NeoPanel>
 
               <View style={{ width: '100%', alignItems: 'center', marginTop: 22 }}>
-                <LogoCompleto height={28} style={{ marginBottom: 6, opacity: 0.85 }} />
                 <Text style={{ color: fe.subText, fontSize: MOBILE_TYPE.meta, opacity: 0.75 }}>{tStr('gym_config_footer')}</Text>
               </View>
             </View>
-          </TouchableWithoutFeedback>
-        </ScrollView>
-      </KeyboardAvoidingView>
+  );
+
+  return (
+    <BackgroundWrapper screen="neutral">
+      <View style={authMarketingChromeRoot}>
+        <LogoTriangleBackground
+          isDark={isDark}
+          variant="registro"
+          blendMode="lighten"
+          sizeScale={2.8}
+          opacityOverride={isDark ? 0.42 : 0.28}
+        />
+        <AuthKeyboardAvoidingView style={[styles.kav, { flex: 1, zIndex: 1 }]}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={authScrollKeyboardDismissMode}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <AuthDismissKeyboardOutside>{formInner}</AuthDismissKeyboardOutside>
+          </ScrollView>
+        </AuthKeyboardAvoidingView>
+      </View>
     </BackgroundWrapper>
   );
 }

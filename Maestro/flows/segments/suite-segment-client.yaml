@@ -1,0 +1,10 @@
+# Segmento cliente (suite / smart-suite). Requiere MAESTRO_CLIENT_EMAIL + MAESTRO_CLIENT_PASSWORD.
+appId: com.waitomofitengine.cueva
+---
+- launchApp:
+    clearState: true
+- runFlow: ../steps/wait-welcome.yaml
+- runFlow: ../steps/client-login-back-only.yaml
+- runFlow: ../steps/client-sign-in.yaml
+- runFlow: ../steps/client-home-tabs-and-back.yaml
+- runFlow: ../steps/client-trabajo-hoy-smoke.yaml

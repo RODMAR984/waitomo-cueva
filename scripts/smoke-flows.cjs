@@ -39,18 +39,21 @@ function run() {
   assertIncludes(authCtx, 'organization_id: membershipOrgIdForTrack', 'AuthContext no adjunta organization_id al evento de modo');
 
   const staffShell = read('navigation/staffScreenShell.js');
-  assertIncludes(staffShell, "Platform.OS !== 'web'", 'Staff shell no bloquea admin en nativo');
-  assertIncludes(staffShell, 'staff_web_only_title', 'Staff shell no usa copy i18n staff_web_only');
+  assertIncludes(staffShell, 'StaffWebDesktopShell', 'Staff shell debe usar StaffWebDesktopShell');
+  assertIncludes(staffShell, '<Component {...props} />', 'wrapStaffScreen debe renderizar la pantalla staff');
+  if (staffShell.includes('StaffAdminNativePlaceholder') || staffShell.includes('staff_web_only_title')) {
+    throw new Error('Staff shell no debe bloquear panel staff en nativo (placeholder web-only eliminado)');
+  }
 
   // Flujo cliente
   assertIncludes(client, "trackEvent('client_open_calendario'", 'Client no instrumenta apertura de calendario');
   assertIncludes(client, "trackEvent('client_open_trabajo_hoy'", 'Client no instrumenta trabajo del día');
 
-  // Flujo admin
+  // Flujo admin (ruta AdminObservability sigue en AppRootStack; el menú lateral usa tiles actuales)
   assertIncludes(
     staffNav,
-    "navigation.navigate('AdminObservability')",
-    'Nav staff no incluye enlace a observabilidad',
+    "navigation.navigate('AdminFinanzas'",
+    'Nav staff no incluye enlace a finanzas',
   );
 
   console.log('smoke:flows OK');

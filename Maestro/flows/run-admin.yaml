@@ -1,6 +1,9 @@
-# Superadmin: login admin y panel; requiere MAESTRO_ADMIN_EMAIL / MAESTRO_ADMIN_PASSWORD
+# Superadmin: login → hub plataforma → Diagnóstico (observabilidad).
+# Requiere MAESTRO_ADMIN_EMAIL / MAESTRO_ADMIN_PASSWORD (cuenta con `isPlatformAdmin`, p. ej. superadmin o `platform_admins`).
 appId: com.waitomofitengine.cueva
 ---
 - launchApp:
     clearState: true
 - runFlow: steps/admin-sign-in.yaml
+- runFlow: steps/superadmin-open-diagnostics.yaml
+- runFlow: steps/superadmin-hub-extended.yaml

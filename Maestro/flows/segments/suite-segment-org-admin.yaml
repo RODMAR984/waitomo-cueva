@@ -1,0 +1,9 @@
+# Segmento admin de organización. Requiere MAESTRO_ORG_ADMIN_EMAIL + MAESTRO_ORG_ADMIN_PASSWORD.
+appId: com.waitomofitengine.cueva
+---
+- launchApp:
+    clearState: true
+- runFlow: ../steps/wait-welcome.yaml
+- runFlow: ../steps/org-admin-login-back.yaml
+- runFlow: ../steps/org-admin-sign-in.yaml
+- runFlow: ../steps/org-admin-engine-room-smoke.yaml

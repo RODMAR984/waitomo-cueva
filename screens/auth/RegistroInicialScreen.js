@@ -3,7 +3,7 @@
 // — Si el usuario YA tiene cuenta, puede ir a Login y seguir el flujo con el plan/abono elegido
 // — Si viene de OAuth (Google/Facebook/Apple), NO vuelve a crear auth: completa datos mínimos y sigue a Pago
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
@@ -26,9 +23,27 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
-import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH, WEB_AUTH_SIGNUP_MAX_WIDTH } from '../../theme/webSpec';
+import { supabase } from '../../supabaseClient';
+import { getPendingClientInviteCode, clearPendingClientInviteCode } from '../../utils/pendingClientInviteStorage';
+import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import {
+  AuthKeyboardAvoidingView,
+  AuthDismissKeyboardOutside,
+  authScrollKeyboardDismissMode,
+  authScrollContentJustify,
+} from '../../components/AuthWebFormShell';
+
+function mapJoinInviteErrorToMessage(res, tStr) {
+  const e = res?.error;
+  if (e === 'invalid_code') return tStr('invite_error_invalid');
+  if (e === 'role_not_client') return tStr('invite_error_not_client');
+  if (e === 'empty_code') return tStr('invite_error_empty');
+  if (e === 'not_authenticated') return tStr('invite_error_auth');
+  return res?.message || tStr('invite_error_generic');
+}
 
 export default function RegistroInicialScreen({ route, navigation }) {
   // Recibimos plan y abono desde Abonos/PlanDetail o desde CreaCuenta (OAuth)
@@ -49,6 +64,8 @@ export default function RegistroInicialScreen({ route, navigation }) {
     upsertProfile,
     ensureProfile,
     updateProfile,
+    joinOrganizationWithInviteCode,
+    refreshProfile,
   } = useAuth();
 
   // ✅ OAuth real: por flag o por provider != email
@@ -77,6 +94,58 @@ export default function RegistroInicialScreen({ route, navigation }) {
     if (!nombre && oauthName) setNombre(oauthName);
   }, [isOAuth, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** Alta global sin plan/abono: no ir a Pago; aplicar código pendiente y entrar al flujo cliente. */
+  const finishSignupWithoutPaidPlan = useCallback(
+    async (userId) => {
+      const { data: sessionWrap } = await supabase.auth.getSession();
+      if (!sessionWrap?.session) {
+        Alert.alert(tStr('signup_email_confirm_title'), tStr('signup_email_confirm_body'));
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login', params: { email: String(email || '').trim().toLowerCase() } }],
+        });
+        return;
+      }
+
+      const code = await getPendingClientInviteCode();
+      if (code) {
+        const res = await joinOrganizationWithInviteCode(code);
+        if (!res?.ok) {
+          const fatal =
+            res?.error === 'invalid_code' ||
+            res?.error === 'role_not_client' ||
+            res?.error === 'empty_code';
+          if (fatal) await clearPendingClientInviteCode();
+          Alert.alert(tStr('gym_config_alert_title_error'), mapJoinInviteErrorToMessage(res, tStr));
+          navigation.reset({ index: 0, routes: [{ name: 'WelcomeClientJoin' }] });
+          return;
+        }
+        await clearPendingClientInviteCode();
+      }
+
+      await refreshProfile();
+
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('plan_actual, organization_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const { data: mems } = await supabase
+        .from('organization_memberships')
+        .select('role, active')
+        .eq('user_id', userId);
+
+      const clientMem = (mems || []).some(
+        (m) => m.active !== false && String(m.role || '').toLowerCase() === 'cliente',
+      );
+
+      const routeName = getClientPostAuthRouteName(prof || {}, { hasClientMembership: clientMem });
+      navigation.reset({ index: 0, routes: [{ name: routeName }] });
+    },
+    [email, joinOrganizationWithInviteCode, navigation, refreshProfile, tStr],
+  );
+
   const handleSubmit = async () => {
     if (submitting) return;
 
@@ -102,7 +171,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
     try {
       setSubmitting(true);
 
-      console.log('🟣 RegistroInicial: click Continuar a pago');
+      console.log('🟣 RegistroInicial: submit', { hasPlanContext });
       console.log('isOAuth:', isOAuth, '| fromOAuth:', !!fromOAuth, '| provider:', provider);
       console.log('user?.id:', user?.id || null);
       console.log('route params:', route?.params);
@@ -135,6 +204,14 @@ export default function RegistroInicialScreen({ route, navigation }) {
           ...(abono?.precio != null ? { precio: abono.precio } : {}),
         };
 
+        if (!hasPlanContext) {
+          console.log('✅ RegistroInicial (EMAIL) -> flujo global / invitación (sin Pago)', {
+            userId: createdUser.id,
+          });
+          await finishSignupWithoutPaidPlan(createdUser.id);
+          return;
+        }
+
         console.log('✅ RegistroInicial (EMAIL) -> navigate Pago', {
           plan,
           userData,
@@ -163,17 +240,30 @@ export default function RegistroInicialScreen({ route, navigation }) {
         plan_actual: planActual || null,
       };
 
-      // 🔥 FIX CLAVE:
-      // - NO usamos Promise.race ni timeouts fake
-      // - NO frenamos el flujo a Pago
-      // - Disparamos guardado del profile "fire-and-forget"
-      try {
-        const fn =
-          (typeof ensureProfile === 'function' && ensureProfile) ||
-          (typeof upsertProfile === 'function' && upsertProfile) ||
-          (typeof updateProfile === 'function' && updateProfile) ||
-          null;
+      const fn =
+        (typeof ensureProfile === 'function' && ensureProfile) ||
+        (typeof upsertProfile === 'function' && upsertProfile) ||
+        (typeof updateProfile === 'function' && updateProfile) ||
+        null;
 
+      if (!hasPlanContext) {
+        if (fn) {
+          console.log('🧩 RegistroInicial OAuth: guardando profile antes de unir a org…');
+          try {
+            await Promise.resolve(fn(profilePayload));
+            console.log('✅ RegistroInicial OAuth: profile guardado');
+          } catch (e) {
+            console.log('🟠 RegistroInicial OAuth: error guardando profile =>', e?.message || e);
+            Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('reg_ini_error_generic'));
+            return;
+          }
+        }
+        console.log('✅ RegistroInicial (OAUTH) -> flujo global / invitación (sin Pago)', { userId: user.id });
+        await finishSignupWithoutPaidPlan(user.id);
+        return;
+      }
+
+      try {
         if (fn) {
           console.log('🧩 RegistroInicial OAuth: disparando guardado profile (NO bloquea flujo)...');
           Promise.resolve(fn(profilePayload))
@@ -207,7 +297,6 @@ export default function RegistroInicialScreen({ route, navigation }) {
         abono,
       });
 
-      // ✅ SIEMPRE navega a Pago aunque el profile falle/tarde
       navigation.navigate('Pago', { plan, userData, abono });
     } catch (error) {
       console.log('❌ Error en registro inicial:', error);
@@ -273,10 +362,14 @@ export default function RegistroInicialScreen({ route, navigation }) {
       scroll: {
         backgroundColor: 'transparent',
         flexGrow: 1,
+        justifyContent: authScrollContentJustify(),
         padding: MOBILE_SPACING.xl,
         paddingTop: hasPlanContext ? 60 : MOBILE_SPACING.xxl,
         width: '100%',
-        maxWidth: WEB_CONTENT_MAX_WIDTH,
+        maxWidth:
+          !hasPlanContext && Platform.OS === 'web'
+            ? Math.min(WEB_CONTENT_MAX_WIDTH, WEB_AUTH_SIGNUP_MAX_WIDTH)
+            : WEB_CONTENT_MAX_WIDTH,
         alignSelf: 'center',
       },
       title: {
@@ -321,14 +414,12 @@ export default function RegistroInicialScreen({ route, navigation }) {
 
   return (
     <BackgroundWrapper screen={hasPlanContext ? undefined : 'neutral'} plan={plan}>
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <AuthKeyboardAvoidingView style={styles.kav}>
+        <AuthDismissKeyboardOutside>
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={authScrollKeyboardDismissMode}
           >
             {!hasPlanContext ? (
               <View style={styles.brandRow}>
@@ -337,7 +428,6 @@ export default function RegistroInicialScreen({ route, navigation }) {
               </View>
             ) : null}
             <NeoPanel style={styles.panel}>
-              <BackNavButton onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('WelcomeGlobal'))} />
               <Text style={styles.title}>
                 {isOAuth ? tStr('registro_title_oauth') : tStr('registro_title')}
               </Text>
@@ -405,7 +495,9 @@ export default function RegistroInicialScreen({ route, navigation }) {
               >
                 <View style={styles.inlineRow}>
                   <Text style={styles.buttonText}>
-                    {submitting ? tStr('registro_continuing') : tStr('registro_continue_pago')}
+                    {submitting
+                      ? tStr('registro_continuing')
+                      : tStr(hasPlanContext ? 'registro_continue_pago' : 'registro_continue_fin')}
                   </Text>
                   {submitting ? (
                     <ActivityIndicator size="small" style={styles.spinner} />
@@ -418,10 +510,14 @@ export default function RegistroInicialScreen({ route, navigation }) {
                   {tStr('registro_has_account')}
                 </Text>
               </TouchableOpacity>
+              <BackNavButton
+                onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('WelcomeGlobal'))}
+                style={{ marginTop: MOBILE_SPACING.lg }}
+              />
             </NeoPanel>
           </ScrollView>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+        </AuthDismissKeyboardOutside>
+      </AuthKeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }

@@ -21,6 +21,7 @@ import {
   Pressable,
   DeviceEventEmitter,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, usePreventRemove } from '@react-navigation/native';
@@ -51,7 +52,7 @@ import {
   emitAdminScrollToEditor,
 } from '../../utils/adminScrollBus';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
@@ -284,6 +285,7 @@ const MultiHorarioDropdown = memo(function MultiHorarioDropdown({
 export default function AdminScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
@@ -313,6 +315,7 @@ export default function AdminScreen() {
     logout,
     profile,
     organization,
+    organizationsOwnedByUser,
   } = useAuth();
   const myId = currentUser?.id || null;
   const myRole = rolesByUser?.[myId];
@@ -320,7 +323,11 @@ export default function AdminScreen() {
   const isCoach = myRole === 'coach';
   const coachPlanActual = profile?.plan_actual ? String(profile.plan_actual) : null;
 
-  const orgIdForPlans = organization?.id || profile?.organization_id || null;
+  const orgIdForPlans = useMemo(() => {
+    const owned = organizationsOwnedByUser || [];
+    if (owned.length === 1) return owned[0].id;
+    return organization?.id || profile?.organization_id || null;
+  }, [organizationsOwnedByUser, organization?.id, profile?.organization_id]);
   const [orgPlansRows, setOrgPlansRows] = useState([]);
 
   useEffect(() => {
@@ -759,7 +766,10 @@ export default function AdminScreen() {
     () =>
       StyleSheet.create({
         screen: { flex: 1, backgroundColor: 'transparent' },
-        scrollContainer: { paddingVertical: 40 },
+        scrollContainer: {
+          paddingTop: Platform.OS === 'web' ? 40 : 56,
+          paddingBottom: 40,
+        },
 
         panel: {
           alignSelf: 'center',
@@ -772,11 +782,18 @@ export default function AdminScreen() {
           width: panelWidth,
         },
 
+        chromeHeader: {
+          alignSelf: 'center',
+          width: panelWidth,
+          paddingHorizontal: 20,
+          marginBottom: 8,
+          backgroundColor: 'transparent',
+        },
         headerRow: {
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 8,
+          marginBottom: 0,
         },
         headerTitle: {
           color: t.text,
@@ -1079,7 +1096,8 @@ export default function AdminScreen() {
           flexWrap: 'wrap',
           columnGap: menuGap,
           rowGap: menuGap,
-          justifyContent: menuColumns === 1 ? 'flex-start' : 'space-between',
+          // `space-between` con 2 columnas en Android a veces deja una franja vertical más oscura (hueco + fondo del panel).
+          justifyContent: 'flex-start',
           marginBottom: 6,
           marginTop: 2,
         },
@@ -1729,7 +1747,12 @@ export default function AdminScreen() {
       <KeyboardAvoidingView
         testID="admin-dashboard-root"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.screen}
+        style={[
+          styles.screen,
+          Platform.OS !== 'web'
+            ? { paddingTop: screenHeaderTopPadding(insets.top), paddingBottom: insets.bottom }
+            : null,
+        ]}
       >
         <ScrollView
               ref={scrollViewRef}
@@ -1738,15 +1761,20 @@ export default function AdminScreen() {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              <NeoPanel style={styles.panel}>
+              <View style={styles.chromeHeader}>
                 <View style={styles.headerRow}>
                   <Text style={styles.headerTitle}>{tStr('admin_panel')}</Text>
-                  <TouchableOpacity style={styles.headerLogoutBtn} onPress={handleLogout}>
-                    <Text style={styles.headerLogout}>{tStr('admin_salir')}</Text>
-                  </TouchableOpacity>
+                  {!isStaffWebDesktop ? (
+                    <TouchableOpacity style={styles.headerLogoutBtn} onPress={handleLogout}>
+                      <Text style={styles.headerLogout}>{tStr('admin_salir')}</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
-
-                <Text style={styles.title}>{tStr('admin_title')}</Text>
+              </View>
+              <NeoPanel style={styles.panel}>
+                <Text style={styles.title} testID="admin-main-title">
+                  {tStr('admin_title')}
+                </Text>
 
                 {!isStaffWebDesktop ? (
                   <>
@@ -1757,6 +1785,7 @@ export default function AdminScreen() {
                           {group.tiles.map((tile) => (
                             <TouchableOpacity
                               key={tile.key}
+                              testID={`staff-hub-tile-${tile.key}`}
                               style={styles.menuTile}
                               onPress={tile.onPress}
                               activeOpacity={0.88}

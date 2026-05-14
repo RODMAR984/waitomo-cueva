@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { loginAsStaff } = require('./helpers/auth');
+const { openObservabilityFromStaff } = require('./helpers/openObservabilityFromStaff');
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || '';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || '';
@@ -12,18 +13,18 @@ test.describe('Web smoke: admin autenticado', () => {
   });
 
   test('abre pantalla de resumen de reservas', async ({ page }) => {
-    await page.getByText('Reservas del día', { exact: true }).first().click();
+    await page.getByTestId('staff-hub-tile-resumen').last().click();
     await expect(page.getByText('La pastilla muestra inscriptos / 10', { exact: false })).toBeVisible();
   });
 
   test('abre pantalla de planes', async ({ page }) => {
-    await page.getByText('Planes', { exact: true }).first().click();
+    await page.getByTestId('staff-hub-tile-planes').last().click();
+    await expect(page.getByTestId('screen-admin-planes')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Nuevo', { exact: true })).toBeVisible();
   });
 
   test('abre pantalla de observabilidad', async ({ page }) => {
-    await page.getByText(/Observabilidad|Diagn[oó]stico/i).first().click();
-    await expect(page.getByText('Sincronizar backend', { exact: true })).toBeVisible();
+    await openObservabilityFromStaff(page);
   });
 });
 

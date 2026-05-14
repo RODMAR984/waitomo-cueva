@@ -1,0 +1,4 @@
+# Mismo smoke que cliente: abrir login desde welcome y volver (sin credenciales).
+appId: com.waitomofitengine.cueva
+---
+- runFlow: client-login-back-only.yaml

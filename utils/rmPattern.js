@@ -6,10 +6,10 @@
  * - Variante: @cc%1rmSnatch (porcentaje en letras → sin kg hasta tener RM guardado)
  */
 
-import { colors } from '../theme/colors';
+import { fitengineLogoColors } from '../theme/colors';
 
-/** Cian FitEngine fijo para tokens RM (independiente del accent del gym). */
-export const RM_HIGHLIGHT_COLOR = colors.brand.primary;
+/** Teal logo FitEngine para tokens RM (independiente del acento del gym / Waitomo). */
+export const RM_HIGHLIGHT_COLOR = fitengineLogoColors.primary;
 
 /**
  * Regex global: grupo 1 = parte antes de %, 2 = tipo RM (1–99: 1rm, 7rm, 10rm…), 3 = ejercicio.

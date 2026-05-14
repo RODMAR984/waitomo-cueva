@@ -1,0 +1,10 @@
+# Segmento plataforma (superadmin / platform admin). Requiere MAESTRO_ADMIN_EMAIL + MAESTRO_ADMIN_PASSWORD.
+appId: com.waitomofitengine.cueva
+---
+- launchApp:
+    clearState: true
+- runFlow: ../steps/wait-welcome.yaml
+- runFlow: ../steps/admin-login-back.yaml
+- runFlow: ../steps/admin-sign-in.yaml
+- runFlow: ../steps/superadmin-open-diagnostics.yaml
+- runFlow: ../steps/superadmin-hub-extended.yaml

@@ -22,6 +22,7 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import { authScrollKeyboardDismissMode, authScrollContentJustify } from '../../components/AuthWebFormShell';
 
 const { height } = Dimensions.get('window');
 
@@ -176,7 +177,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
         },
         scroll: {
           flexGrow: 1,
-          justifyContent: 'center',
+          justifyContent: authScrollContentJustify(),
           marginTop: height * 0.15,
           padding: MOBILE_SPACING.xl,
           width: '100%',
@@ -203,7 +204,11 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
 
   return (
     <BackgroundWrapper plan={plan}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={authScrollKeyboardDismissMode}
+      >
         <NeoPanel style={styles.panel}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{tStr('registro_evolucion_title')}</Text>

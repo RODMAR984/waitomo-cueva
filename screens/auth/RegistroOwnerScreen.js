@@ -1,4 +1,4 @@
-// RegistroOwnerScreen — Crear cuenta gym/coach. Fondo t.bg + triángulo más notorio y algo más grande. SIN logo completo. Campos/botones/texto un poco más chicos.
+// RegistroOwnerScreen — Crear cuenta gym/coach. Fondo t.bg + triángulo registro. Pie de marca como Login/CreaCuenta staff.
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -6,22 +6,20 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
-  TouchableWithoutFeedback,
-  Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import PasswordInput from '../../components/PasswordInput';
+import LogoCompleto from '../../components/LogoCompleto';
 import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
 import { supabase } from '../../supabaseClient';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { AuthKeyboardAvoidingView, AuthDismissKeyboardOutside } from '../../components/AuthWebFormShell';
 
 /** Ancho máximo del formulario gym/coach (no usar WEB_CONTENT_MAX_WIDTH de dashboard). */
 const REGISTRO_OWNER_FORM_MAX_WIDTH = 400;
@@ -42,13 +40,13 @@ export default function RegistroOwnerScreen() {
         // Fondo a borde completo (sin insets) para que no se vean líneas de transición
         container: { flex: 1, backgroundColor: t.bg, overflow: 'hidden' },
         kav: { flex: 1 },
+        // Formulario corto: centrado vertical (web + nativo). Sin ScrollView, no compite con foco/teclado como en pantallas largas.
         centerWrap: {
           flex: 1,
           justifyContent: 'center',
           paddingHorizontal: MOBILE_SPACING.lg,
-          paddingVertical: 32,
-          paddingTop: 32 + insets.top,
-          paddingBottom: 32 + insets.bottom,
+          paddingTop: MOBILE_SPACING.md + insets.top,
+          paddingBottom: MOBILE_SPACING.xxl + insets.bottom,
           width: '100%',
           maxWidth: REGISTRO_OWNER_FORM_MAX_WIDTH,
           alignSelf: 'center',
@@ -111,6 +109,20 @@ export default function RegistroOwnerScreen() {
           fontWeight: '700',
           marginLeft: 6,
         },
+        formNudge: {
+          marginTop: 38,
+        },
+        brandBottom: {
+          width: '100%',
+          alignItems: 'center',
+          paddingTop: MOBILE_SPACING.sm,
+          paddingBottom: MOBILE_SPACING.md,
+        },
+        brandFooter: {
+          color: fe.subText,
+          fontSize: MOBILE_TYPE.meta,
+          opacity: 0.75,
+        },
       }),
     [t, insets.top, insets.bottom],
   );
@@ -144,7 +156,7 @@ export default function RegistroOwnerScreen() {
       });
       if (authError) throw authError;
       if (!authData?.user) throw new Error(tStr('registro_owner_error_no_user'));
-      navigation.replace('ConfiguraTuEspacio', { email: e, fullName: n });
+      navigation.replace('FitEngineSpaceIntro', { email: e, fullName: n });
     } catch (err) {
       const msg = String(err?.message || '');
       const alreadyExists =
@@ -172,66 +184,70 @@ export default function RegistroOwnerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      {/* Fondo (triángulo + partículas) como background real */}
       <LogoTriangleBackground
         isDark={isDark}
         variant="registro"
         blendMode="lighten"
         sizeScale={2.8}
         opacityOverride={isDark ? 0.42 : 0.28}
+        offsetY={-36}
       />
-      <KeyboardAvoidingView
-        style={[styles.kav, { zIndex: 1 }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.centerWrap}>
-            <Text style={styles.title}>{tStr('registro_owner_titulo')}</Text>
-            <Text style={styles.subtitle}>{tStr('registro_owner_subtitle')}</Text>
+      <View style={{ flex: 1, zIndex: 1 }}>
+        <AuthKeyboardAvoidingView style={styles.kav}>
+          <AuthDismissKeyboardOutside>
+            <View style={styles.centerWrap}>
+              <View style={styles.formNudge}>
+                <Text style={styles.title}>{tStr('registro_owner_titulo')}</Text>
+                <Text style={styles.subtitle}>{tStr('registro_owner_subtitle')}</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder={tStr('login_email')}
-              placeholderTextColor={fe.placeholder}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <PasswordInput
-              placeholder={tStr('login_password')}
-              placeholderTextColor={fe.placeholder}
-              style={styles.input}
-              containerStyle={{ marginBottom: 10 }}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder={tStr('perfil_nombre')}
-              placeholderTextColor={fe.placeholder}
-              value={nombre}
-              onChangeText={setNombre}
-            />
+                <TextInput
+                  style={styles.input}
+                  placeholder={tStr('login_email')}
+                  placeholderTextColor={fe.placeholder}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <PasswordInput
+                  placeholder={tStr('login_password')}
+                  placeholderTextColor={fe.placeholder}
+                  style={styles.input}
+                  containerStyle={{ marginBottom: 10 }}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder={tStr('perfil_nombre')}
+                  placeholderTextColor={fe.placeholder}
+                  value={nombre}
+                  onChangeText={setNombre}
+                />
 
-            <TouchableOpacity style={styles.btn} onPress={handleRegistro} disabled={loading}>
-              <Text style={styles.btnText}>
-                {loading ? tStr('login_entering') : tStr('registro_owner_siguiente')}
-              </Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.btn} onPress={handleRegistro} disabled={loading}>
+                  <Text style={styles.btnText}>
+                    {loading ? tStr('login_entering') : tStr('registro_owner_siguiente')}
+                  </Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.backFooter}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="chevron-back" size={18} color={fe.text} />
-              <Text style={styles.backFooterText}>{tStr('common_back')}</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+                <TouchableOpacity
+                  style={styles.backFooter}
+                  onPress={() => navigation.goBack()}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="chevron-back" size={18} color={fe.text} />
+                  <Text style={styles.backFooterText}>{tStr('common_back')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </AuthDismissKeyboardOutside>
+        </AuthKeyboardAvoidingView>
+        <View style={[styles.brandBottom, { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.md) }]}>
+          <LogoCompleto height={28} style={{ marginBottom: 6, opacity: 0.85 }} />
+          <Text style={styles.brandFooter}>{tStr('gym_config_footer')}</Text>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }

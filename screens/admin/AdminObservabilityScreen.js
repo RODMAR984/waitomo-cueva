@@ -30,7 +30,7 @@ import {
   markObservabilityEventsSynced,
 } from '../../utils/observability';
 
-export default function AdminObservabilityScreen({ navigation }) {
+export default function AdminObservabilityScreen({ navigation, observabilityBackTarget = null }) {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const hideInlineBack = useStaffWebHideInlineBack();
@@ -317,11 +317,18 @@ export default function AdminObservabilityScreen({ navigation }) {
 
   return (
     <BackgroundWrapper screen="admin">
-      <View style={styles.root}>
+      <View style={styles.root} testID="admin-observability-root">
         <View style={styles.contentMax}>
         <View style={styles.header}>
           {!hideInlineBack ? (
-            <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.iconBtn} />
+            <BackNavButton
+              testID="admin-observability-nav-back"
+              onPress={() =>
+                observabilityBackTarget ? navigation.navigate(observabilityBackTarget) : navigation.goBack()
+              }
+              label={tStr('common_back')}
+              style={styles.iconBtn}
+            />
           ) : null}
           <Text style={styles.title}>{tStr('admin_observ_title')}</Text>
           <View style={{ width: 20 }} />

@@ -8,6 +8,9 @@ export const WEB_RAIL_NOVEDADES_MAX_HEIGHT_CAP = 328;
 
 export const WEB_CONTENT_MAX_WIDTH = 1040;
 
+/** Formularios de alta global (crear cuenta / datos iniciales): más anchos que el login compacto en web. */
+export const WEB_AUTH_SIGNUP_MAX_WIDTH = 528;
+
 /** Radio de paneles/tarjetas: mismo valor que `MOBILE_RADII.lg` (única fuente de verdad). */
 export const WEB_PANEL_RADIUS = MOBILE_RADII.lg;
 export const WEB_PANEL_PADDING_DESKTOP = 20;

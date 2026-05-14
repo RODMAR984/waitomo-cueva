@@ -5,15 +5,52 @@ import { ImageBackground, View, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { isWaitomoOrg, hexToRgba } from '../theme/colors';
+import { isWaitomoOrg, hexToRgba, usesFitEnginePlatformShell } from '../theme/colors';
+import { FITENGINE_APP_CANVAS_BG } from '../theme/appVisualCohesion';
+import LogoTriangleBackground from './LogoTriangleBackground';
 import {
   IMAGENES_POR_PLAN as planImages,
   IMAGEN_WELCOME as welcomeImage,
 } from '../utils/imagenesFijas';
 
 const IMAGEN_PLAN_SELECTOR = require('../assets/plan_image/bg_plan_selector.jpg');
-/** Directorio público “buscar gym”: fondo fijo marca (cueva digital / triángulo). */
-const BG_PUBLIC_DIRECTORY = require('../assets/plan_image/bg_public_directory_cave.png');
+/** Directorio público “buscar gym”: misma referencia visual que PublicDirectoryScreen. */
+const BG_PUBLIC_DIRECTORY = require('../assets/plan_image/bg_fitengine_public_directory.jpg');
+
+/**
+ * Fondos para orgs en shell FitEngine (sin branding propio): siempre incluye la imagen de “buscar tu centro”
+ * más fotos neutras (sin nombres Waitomo). Rotan según pantalla/usuario/org para variar en el flujo.
+ */
+const FITENGINE_PLATFORM_SHELL_BACKGROUNDS = [
+  BG_PUBLIC_DIRECTORY,
+  require('../assets/plan_image/bg_plan_selector.jpg'),
+  require('../assets/plan_image/bg_kettlebell_logo.jpg'),
+  require('../assets/plan_image/bg_fallback.jpg'),
+  require('../assets/plan_image/bg_welcome_glow.jpg'),
+  require('../assets/plan_image/bg2.jpg'),
+  require('../assets/plan_image/bg3.jpg'),
+  require('../assets/plan_image/bg4.jpg'),
+  require('../assets/plan_image/bg5.jpg'),
+  require('../assets/plan_image/bg6.jpg'),
+  require('../assets/plan_image/plan_openbox.jpg'),
+  require('../assets/plan_image/plan_cross.jpg'),
+  require('../assets/plan_image/plan_evolucion.jpg'),
+  require('../assets/plan_image/plan_stretching.jpg'),
+  require('../assets/plan_image/plan_yoga.jpg'),
+  require('../assets/plan_image/plan_oly.jpg'),
+  require('../assets/plan_image/plan_hyrox_1.jpg'),
+].filter(img => img);
+
+function pickFitEngineShellBackgroundSource({ screenLower, userId, orgId }) {
+  const arr = FITENGINE_PLATFORM_SHELL_BACKGROUNDS;
+  if (!arr.length) return BG_PUBLIC_DIRECTORY;
+  const s = `${String(screenLower || '')}|${String(userId || '')}|${String(orgId || '')}`;
+  let h = 5381;
+  for (let i = 0; i < s.length; i += 1) {
+    h = (h * 33) ^ s.charCodeAt(i);
+  }
+  return arr[Math.abs(h) % arr.length];
+}
 
 // LISTA DE TODAS LAS IMÁGENES PARA TRABAJO DEL DIA - NOMBRES EXACTOS
 const TRABAJO_DIA_BACKGROUNDS = [
@@ -42,7 +79,7 @@ function isFitEnginePlatformBackgroundScreen(sl) {
   const s = String(sl || '').toLowerCase().trim();
   if (!s) return false;
   if (s === 'neutral' || s === 'fitengine' || s === 'fitengineglobal' || s === 'splash') return true;
-  // CreateAccount / AdminLogin / CreaCuentaStaff (screen="Welcome") — stock app, no white-label org
+  // CreateAccount / CreaCuentaStaff (screen="Welcome") — stock app, no white-label org.
   if (s === 'welcome') return true;
   // Listado global de gims (marketing): mismo criterio que neutral, sin fondo org del tenant.
   if (s === 'publicdirectory') return true;
@@ -80,7 +117,7 @@ export default function BackgroundWrapper({
   seed = Date.now(),
   forceDarkOverlay = false,
 }) {
-  const { t } = useThemeContext();
+  const { t, isDark } = useThemeContext();
   const { organization, user } = useAuth() || {};
   /**
    * Mientras `organization` es null (fetch async o setOrganization(null) entre pasos),
@@ -97,6 +134,18 @@ export default function BackgroundWrapper({
     user?.id && (organization?.id ? organization : lastOrgForBackgroundRef.current);
 
   const screenLower = String(screen).toLowerCase().trim();
+  /**
+   * Triángulo centrado detrás del velo: con paneles neo semitransparentes (Engine room, config gym, etc.)
+   * se percibe como columna oscura vertical. Ocultarlo en back-office staff; en cliente in-app se mantiene.
+   */
+  const hideFitEngineTriangleForStaffBackdrop =
+    screenLower.includes('admin') || screenLower === 'gymconfig';
+  const showFitEngineTriangleWatermark = !hideFitEngineTriangleForStaffBackdrop;
+  const showFitEngineShellWatermark =
+    !!user?.id &&
+    !!orgForBackground?.id &&
+    usesFitEnginePlatformShell(orgForBackground) &&
+    !isFitEnginePlatformBackgroundScreen(screenLower);
   const isWelcome = screenLower.includes('welcome');
   const overlayColor = forceDarkOverlay ? 'rgba(0,0,0,0.24)' : t.screenOverlay;
   const overlayStyle = { ...StyleSheet.absoluteFillObject, backgroundColor: overlayColor };
@@ -125,7 +174,7 @@ export default function BackgroundWrapper({
     screenLower === 'neutral' || screenLower === 'fitengine' || screenLower === 'fitengineglobal';
   if (isNeutralFitEngine) {
     return (
-      <View style={[styles.flex, style, { backgroundColor: '#050a0d' }]}>
+      <View style={[styles.flex, style, { backgroundColor: FITENGINE_APP_CANVAS_BG }]}>
         {children}
       </View>
     );
@@ -148,8 +197,35 @@ export default function BackgroundWrapper({
 
   // #20b: org no-Waitomo con fondo custom — solid o image
   if (useOrgBackground && orgBgType === 'solid') {
+    if (usesFitEnginePlatformShell(orgForBackground)) {
+      const feSolidShellSource = pickFitEngineShellBackgroundSource({
+        screenLower,
+        userId: user?.id,
+        orgId: orgForBackground?.id,
+      });
+      return (
+        <ImageBackground
+          source={feSolidShellSource}
+          style={[styles.flex, style]}
+          imageStyle={imageStyle}
+          resizeMode="cover"
+        >
+          {showFitEngineTriangleWatermark ? (
+            <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
+          ) : null}
+          <View style={overlayStyle} />
+          {children}
+        </ImageBackground>
+      );
+    }
     return (
       <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
+        {showFitEngineShellWatermark && showFitEngineTriangleWatermark ? (
+          <LogoTriangleBackground
+            isDark={isDark}
+            blendMode={isDark ? 'screen' : 'multiply'}
+          />
+        ) : null}
         {children}
       </View>
     );
@@ -202,14 +278,43 @@ export default function BackgroundWrapper({
     );
   }
 
-  // Directorio público (onboarding FitEngine): imagen fija + velo para legibilidad (sin rotación Waitomo).
+  const feShellSourcePublic = pickFitEngineShellBackgroundSource({
+    screenLower: 'publicdirectory',
+    userId: user?.id,
+    orgId: orgForBackground?.id,
+  });
+
+  // Directorio público (onboarding FitEngine): pool marca + triángulo + velo (sin rotación Waitomo).
   if (screenLower === 'publicdirectory') {
     return (
       <ImageBackground
-        source={BG_PUBLIC_DIRECTORY}
+        source={feShellSourcePublic}
         style={[styles.flex, style]}
         resizeMode="cover"
       >
+        <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
+        <View style={overlayStyle} />
+        {children}
+      </ImageBackground>
+    );
+  }
+
+  const feShellSourceAuth = pickFitEngineShellBackgroundSource({
+    screenLower,
+    userId: user?.id,
+    orgId: orgForBackground?.id,
+  });
+
+  // Intro “configurá tu espacio” y el asistente de branding: pool FitEngine + triángulo (cambia entre pantallas).
+  if (screenLower === 'fitenginespaceintro' || screenLower === 'configuratuespacio') {
+    return (
+      <ImageBackground
+        source={feShellSourceAuth}
+        style={[styles.flex, style]}
+        imageStyle={imageStyle}
+        resizeMode="cover"
+      >
+        <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
         <View style={overlayStyle} />
         {children}
       </ImageBackground>
@@ -224,6 +329,29 @@ export default function BackgroundWrapper({
         <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
           {children}
         </View>
+      );
+    }
+    const useFeDirectoryShell =
+      !!orgForBackground?.id && usesFitEnginePlatformShell(orgForBackground);
+    if (useFeDirectoryShell) {
+      const feShellSource = pickFitEngineShellBackgroundSource({
+        screenLower,
+        userId: user?.id,
+        orgId: orgForBackground?.id,
+      });
+      return (
+        <ImageBackground
+          source={feShellSource}
+          style={[styles.flex, style]}
+          imageStyle={imageStyle}
+          resizeMode="cover"
+        >
+          {showFitEngineTriangleWatermark ? (
+            <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
+          ) : null}
+          <View style={overlayStyle} />
+          {children}
+        </ImageBackground>
       );
     }
     const source = TRABAJO_DIA_BACKGROUNDS[randomIndex];

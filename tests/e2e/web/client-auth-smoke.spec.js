@@ -15,19 +15,17 @@ test.describe('Web smoke: cliente autenticado', () => {
     await expect(page.getByText('Bienvenido a tu panel de entrenamiento.', { exact: true })).toBeVisible();
   });
 
-  test('home usa marca FitEngine', async ({ page }) => {
-    await expect(page.getByText('Bienvenida a FitEngine', { exact: true })).toBeVisible();
+  test('home cliente (ClientScreen) montado', async ({ page }) => {
+    await expect(page.getByTestId('client-home-root')).toBeVisible({ timeout: 15_000 });
   });
 
   test('abre calendario desde tabs', async ({ page }) => {
-    await page.getByText('Calendario', { exact: true }).first().click();
-    await expect(
-      page.getByText(/Horarios disponibles|Horarios con reserva|Calendario/),
-    ).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('client-home-cta-calendario').click();
+    await expect(page.getByTestId('screen-calendario')).toBeVisible({ timeout: 15_000 });
   });
 
   test('abre perfil desde tabs', async ({ page }) => {
-    await page.getByText('Mi perfil', { exact: true }).first().click();
-    await expect(page.getByText('Mi perfil', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('tab', { name: /Mi perfil/ }).click();
+    await expect(page.getByTestId('screen-perfil')).toBeVisible({ timeout: 15_000 });
   });
 });

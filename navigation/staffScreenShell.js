@@ -1,9 +1,5 @@
 import React from 'react';
-import { Platform, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import StaffWebDesktopShell from '../components/StaffWebDesktopShell';
-import BackgroundWrapper from '../components/BackgroundWrapper';
-import { useLocale } from '../contexts/LocaleContext';
-import { useThemeContext } from '../contexts/ThemeContext';
 import AdminLiteScreen from '../screens/admin/AdminLiteScreen';
 import AdminFinanzasScreen from '../screens/admin/AdminFinanzasScreen';
 import GymConfigScreen from '../screens/admin/GymConfigScreen';
@@ -19,60 +15,21 @@ import AdminCommissionsScreen from '../screens/admin/AdminCommissionsScreen';
 import AdminStripeSettingsScreen from '../screens/admin/AdminStripeSettingsScreen';
 import AdminMercadoPagoSettingsScreen from '../screens/admin/AdminMercadoPagoSettingsScreen';
 import AdminBadgesScreen from '../screens/admin/AdminBadgesScreen';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../theme/mobileSpec';
-import { WEB_CONTENT_MAX_WIDTH } from '../theme/webSpec';
+import SuperadminScreen from '../screens/admin/SuperadminScreen';
+import SuperadminObservabilityScreen from '../screens/admin/SuperadminObservabilityScreen';
+import SuperadminTopicScreen from '../screens/admin/SuperadminTopicScreen';
+import SuperadminOrgsScreen from '../screens/admin/SuperadminOrgsScreen';
+import SuperadminAuditLogScreen from '../screens/admin/SuperadminAuditLogScreen';
+import SuperadminFeatureFlagsScreen from '../screens/admin/SuperadminFeatureFlagsScreen';
+import SuperadminTicketsScreen from '../screens/admin/SuperadminTicketsScreen';
+import SuperadminTicketDetailScreen from '../screens/admin/SuperadminTicketDetailScreen';
 
-/** Staff envuelto en rail web: en iOS/Android nativo no se ofrece (solo fitengine.app en navegador). */
-function StaffAdminNativePlaceholder({ navigation }) {
-  const { t: tStr } = useLocale();
-  const { t } = useThemeContext();
-  return (
-    <BackgroundWrapper screen="Admin">
-      <View style={styles.gateWrap}>
-        <Text style={[styles.gateTitle, { color: t.text }]}>{tStr('staff_web_only_title')}</Text>
-        <Text style={[styles.gateBody, { color: t.subText }]}>{tStr('staff_web_only_body')}</Text>
-        <TouchableOpacity
-          style={[styles.gateBtn, { borderColor: t.overlayBorder, backgroundColor: t.boxBg }]}
-          onPress={() => navigation?.goBack?.()}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.gateBtnText, { color: t.brand }]}>{tStr('staff_web_only_cta')}</Text>
-        </TouchableOpacity>
-      </View>
-    </BackgroundWrapper>
-  );
-}
-
-const styles = StyleSheet.create({
-  gateWrap: {
-    flex: 1,
-    paddingHorizontal: MOBILE_SPACING.lg,
-    paddingTop: MOBILE_SPACING.xl,
-    width: '100%',
-    maxWidth: WEB_CONTENT_MAX_WIDTH,
-    alignSelf: 'center',
-  },
-  gateTitle: { fontSize: MOBILE_TYPE.title, fontWeight: '900', marginBottom: MOBILE_SPACING.md },
-  gateBody: { fontSize: MOBILE_TYPE.body, lineHeight: 22, marginBottom: MOBILE_SPACING.lg },
-  gateBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: MOBILE_SPACING.sm,
-    paddingHorizontal: MOBILE_SPACING.lg,
-    borderRadius: MOBILE_RADII.md,
-    borderWidth: 1,
-  },
-  gateBtnText: { fontWeight: '800', fontSize: MOBILE_TYPE.bodyStrong },
-});
-
+/**
+ * Misma envoltura en web y en app nativa: `StaffWebDesktopShell` solo muestra el rail lateral
+ * en web con ventana ancha; en móvil / nativo renderiza solo children (panel completo).
+ */
 export function wrapStaffScreen(Component) {
   function StaffScreenWithShell(props) {
-    if (Platform.OS !== 'web') {
-      return (
-        <StaffAdminNativePlaceholder
-          navigation={props.navigation}
-        />
-      );
-    }
     return (
       <StaffWebDesktopShell navigation={props.navigation} route={props.route}>
         <Component {...props} />
@@ -135,3 +92,11 @@ export const AdminCommissionsScreenWithShell = wrapStaffScreen(AdminCommissionsS
 export const AdminStripeSettingsScreenWithShell = wrapStaffScreen(AdminStripeSettingsScreen);
 export const AdminMercadoPagoSettingsScreenWithShell = wrapStaffScreen(AdminMercadoPagoSettingsScreen);
 export const AdminBadgesScreenWithShell = wrapStaffScreen(AdminBadgesScreen);
+export const SuperadminScreenWithShell = wrapStaffScreen(SuperadminScreen);
+export const SuperadminObservabilityScreenWithShell = wrapStaffScreen(SuperadminObservabilityScreen);
+export const SuperadminTopicScreenWithShell = wrapStaffScreen(SuperadminTopicScreen);
+export const SuperadminOrgsScreenWithShell = wrapStaffScreen(SuperadminOrgsScreen);
+export const SuperadminAuditLogScreenWithShell = wrapStaffScreen(SuperadminAuditLogScreen);
+export const SuperadminFeatureFlagsScreenWithShell = wrapStaffScreen(SuperadminFeatureFlagsScreen);
+export const SuperadminTicketsScreenWithShell = wrapStaffScreen(SuperadminTicketsScreen);
+export const SuperadminTicketDetailScreenWithShell = wrapStaffScreen(SuperadminTicketDetailScreen);

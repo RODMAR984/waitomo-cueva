@@ -25,7 +25,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 
 const BOOKINGS_FACTS_LIMIT = 28;
 
@@ -386,7 +386,7 @@ export default function OrgMemberDetailScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: MOBILE_SPACING.xl,
-          paddingTop: Math.max(insets.top, 12) + 8,
+          paddingTop: screenHeaderTopPadding(insets.top),
           paddingBottom: 12,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,
@@ -460,7 +460,7 @@ export default function OrgMemberDetailScreen() {
         <View
           style={{
             padding: 24,
-            paddingTop: Math.max(insets.top, 12) + 20,
+            paddingTop: screenHeaderTopPadding(insets.top) + MOBILE_SPACING.md,
             width: '100%',
             maxWidth: WEB_CONTENT_MAX_WIDTH,
             alignSelf: 'center',

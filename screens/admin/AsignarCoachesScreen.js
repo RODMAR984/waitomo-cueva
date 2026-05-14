@@ -27,7 +27,7 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 
 // ---------- fallback de planes (si navegación no provee) ----------
 const DEFAULT_PLANS = [
@@ -122,7 +122,7 @@ export default function AsignarCoachesScreen({ route }) {
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: MOBILE_SPACING.xl,
-          paddingTop: Math.max(insets.top, 12) + 8,
+          paddingTop: screenHeaderTopPadding(insets.top),
           paddingBottom: 12,
           width: '100%',
           maxWidth: WEB_CONTENT_MAX_WIDTH,

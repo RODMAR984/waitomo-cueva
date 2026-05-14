@@ -1,0 +1,39 @@
+---
+description: Cambios en auth, splash, welcome, post-login y migraciones Supabase que tocan perfiles / invitaciones — operación quirúrgica y sin regresiones.
+alwaysApply: false
+---
+
+# Auth, splash, welcome y routing (FitEngine / waitomo-cueva)
+
+## Antes de tocar código
+
+1. **Leer** (no asumir) los archivos que participan en el flujo:
+   - `screens/auth/SplashScreen.js` — única salida programada: `replace('WelcomeGlobal')` tras timer (u tap).
+   - `screens/auth/WelcomeGlobalScreen.js` — gates: `authSessionRestored`, `authNavigationReady`, `initialProfileSyncDone` (web).
+   - `hooks/useWelcomeRouting.js` — `navigateToDestination` / `onContinue`; decide `resetStackTo` hacia `RegistroInicial`, `ClientTabs`, `WelcomeClientJoin`, staff, etc.
+   - `utils/clientPostAuthRoute.js` — reglas de producto cliente post-auth (plan, org, membresía).
+   - `utils/authRoutingGuard.js` — staff / superadmin / `RegistroInicial` cuando `!hasProfile`.
+   - `contexts/AuthContext.js` — `syncFromSession`, `restore`, membresías, `joinOrganizationWithInviteCode`, flags de bootstrap.
+
+2. **Grep** en el repo: `ROUTING_DEBUG`, `navigateToDestination`, `resetStackTo`, `RegistroInicial`, `WelcomeGlobal`.
+
+3. **Trazado opt-in**: con `EXPO_PUBLIC_AUTH_TRACE=1` en `.env`, los `authTrace(...)` en `useWelcomeRouting` (y donde se añadan) deben mostrar fase + payload; sin `=1`, **no** loguear auth en consola por defecto.
+
+## Invariantes de producto (no romper sin decisión explícita)
+
+- El **Splash** no debe saltar directo a flujos de registro interno: solo a **WelcomeGlobal** (salvo cambio acordado en PR).
+- **WelcomeGlobal** es la puerta pública; la navegación automática con sesión (p. ej. web) **no** debe ejecutarse mientras `authSessionRestored === false` o `initialProfileSyncDone === false` con usuario logueado.
+- En web, el auto-`onContinue` **solo** si ya existe `profile.id` (no saltar a post-auth con sesión sin fila `profiles`).
+- No mandar a **`RegistroInicial`** / equivalente “crear cuenta” si el bootstrap de perfil **aún no declaró** sync terminado (`initialProfileSyncDone`).
+- Cambios en **RPC / RLS** (`join_organization_with_invite`, `profiles`, `organization_memberships`): revisar migraciones en `supabase/migrations/` y probar con usuario real + invitación; el CLI local es `npx supabase ...` (no asumir `supabase` global en PATH).
+
+## Estilo de cambio (quirúrgico)
+
+- Un problema → un cambio acotado; evitar refactors masivos en el mismo PR que auth.
+- Tras editar: ejecutar al menos `npm run lint:ci` o el smoke de routing que use el repo (`npm run smoke:routing` si aplica).
+- Si se añade lógica de navegación: documentar en comentario **qué invariante** protege (una línea).
+
+## Logs
+
+- Preferir `authTrace(phase, payload)` con `EXPO_PUBLIC_AUTH_TRACE=1` antes que `console.log` dispersos.
+- En payload: ids opacos, booleans, nombres de ruta; **no** tokens ni emails completos.

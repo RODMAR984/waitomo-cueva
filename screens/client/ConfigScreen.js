@@ -302,7 +302,7 @@ const ConfigScreen = () => {
                 <Switch
                   value={notif.messages}
                   onValueChange={(v) => handleNotifToggle('messages', v)}
-                  trackColor={{ false: t.overlayBorder, true: t.brand?.primary ?? '#00ffff' }}
+                  trackColor={{ false: t.overlayBorder, true: typeof t.brand === 'string' ? t.brand : t.logoCian }}
                   thumbColor="#f4ffff"
                 />
               )}
@@ -318,7 +318,7 @@ const ConfigScreen = () => {
                 <Switch
                   value={notif.trabajo_dia}
                   onValueChange={(v) => handleNotifToggle('trabajo_dia', v)}
-                  trackColor={{ false: t.overlayBorder, true: t.brand?.primary ?? '#00ffff' }}
+                  trackColor={{ false: t.overlayBorder, true: typeof t.brand === 'string' ? t.brand : t.logoCian }}
                   thumbColor="#f4ffff"
                 />
               )}
@@ -334,7 +334,7 @@ const ConfigScreen = () => {
                 <Switch
                   value={notif.novedades}
                   onValueChange={(v) => handleNotifToggle('novedades', v)}
-                  trackColor={{ false: t.overlayBorder, true: t.brand?.primary ?? '#00ffff' }}
+                  trackColor={{ false: t.overlayBorder, true: typeof t.brand === 'string' ? t.brand : t.logoCian }}
                   thumbColor="#f4ffff"
                 />
               )}
@@ -350,7 +350,7 @@ const ConfigScreen = () => {
                 <Switch
                   value={notif.plan_pago}
                   onValueChange={(v) => handleNotifToggle('plan_pago', v)}
-                  trackColor={{ false: t.overlayBorder, true: t.brand?.primary ?? '#00ffff' }}
+                  trackColor={{ false: t.overlayBorder, true: typeof t.brand === 'string' ? t.brand : t.logoCian }}
                   thumbColor="#f4ffff"
                 />
               )}

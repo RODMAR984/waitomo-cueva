@@ -20,6 +20,7 @@ import { createWelcomeGlobalLayoutStyles } from '../../styles/welcomeGlobalLayou
 import { useWelcomeRouting } from '../../hooks/useWelcomeRouting';
 import { WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { authTrace } from '../../utils/authTrace';
 
 export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE };
 
@@ -30,6 +31,7 @@ export default function WelcomeGlobalScreen() {
   const { t: tStr, locale, setLocale } = useLocale();
   const {
     session,
+    profile,
     isDualHatUser,
     activeAppMode,
     persistActiveAppMode,
@@ -37,6 +39,7 @@ export default function WelcomeGlobalScreen() {
     hasClientMembership,
     authNavigationReady,
     initialProfileSyncDone,
+    authSessionRestored = true,
     logout,
   } = useAuth() || {};
 
@@ -64,6 +67,9 @@ export default function WelcomeGlobalScreen() {
     if (needsDualRedirect) return;
     const uid = session?.user?.id || null;
     if (!uid) return;
+    // Sin perfil no auto-navegamos: sesión local + cuenta borrada en Supabase u OAuth en curso
+    // llevaba a RegistroInicial sin pasar por la decisión del usuario en Welcome.
+    if (!profile?.id) return;
     if (lastAutoNavUserIdRef.current === uid) return;
     lastAutoNavUserIdRef.current = uid;
     try {
@@ -72,8 +78,27 @@ export default function WelcomeGlobalScreen() {
         console.log('ROUTING_DEBUG WelcomeGlobal autoContinue', { uid });
       }
     } catch (_) {}
+    authTrace('welcome_web_auto_onContinue', {
+      initialProfileSyncDone: initialProfileSyncDone === true,
+      authNavigationReady: authNavigationReady === true,
+      hasProfile: !!profile?.id,
+      hasClientMembership,
+      hasStaffMembership,
+      needsDualRedirect,
+    });
     onContinue();
-  }, [Platform.OS, sessionRoutingReady, needsDualRedirect, session?.user?.id, onContinue]);
+  }, [
+    Platform.OS,
+    sessionRoutingReady,
+    needsDualRedirect,
+    session?.user?.id,
+    profile?.id,
+    onContinue,
+    initialProfileSyncDone,
+    authNavigationReady,
+    hasClientMembership,
+    hasStaffMembership,
+  ]);
 
   const onLogout = async () => {
     try {
@@ -96,12 +121,32 @@ export default function WelcomeGlobalScreen() {
     [insets.top, isWideWeb],
   );
 
+  // Sin sesión = invitado: siempre el Welcome real (CTAs), nunca pantalla de “cargando” esperando restore.
+  const showSessionBootstrap =
+    !!session?.user?.id && authSessionRestored === false;
+
+  if (showSessionBootstrap) {
+    return (
+      <View
+        style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}
+        testID="welcome-global-bootstrap"
+      >
+        <LogoCompleto height={120} />
+        <ActivityIndicator size="large" color={fitT.logoCian} />
+        <Text style={layoutStyles.subtitle}>{tStr('common_loading')}</Text>
+      </View>
+    );
+  }
+
   if (
     session?.user?.id &&
     (!authNavigationReady || (Platform.OS === 'web' && initialProfileSyncDone !== true))
   ) {
     return (
-      <View style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}>
+      <View
+        style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}
+        testID="welcome-global-loading"
+      >
         <LogoCompleto height={120} />
         <ActivityIndicator size="large" color={fitT.logoCian} />
         <Text style={layoutStyles.subtitle}>{tStr('common_loading')}</Text>
@@ -111,7 +156,10 @@ export default function WelcomeGlobalScreen() {
 
   if (needsDualRedirect) {
     return (
-      <View style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}>
+      <View
+        style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}
+        testID="welcome-global-loading"
+      >
         <LogoCompleto height={120} />
         <ActivityIndicator size="large" color={fitT.logoCian} />
         <Text style={layoutStyles.subtitle}>{tStr('common_loading')}</Text>
@@ -130,7 +178,11 @@ export default function WelcomeGlobalScreen() {
         />
       </View>
 
-      <View style={[layoutStyles.content, showGuestActions ? { justifyContent: 'center' } : null]}>
+      <View
+        style={[layoutStyles.content, showGuestActions ? { justifyContent: 'center' } : null]}
+        testID="welcome-global-content"
+        collapsable={false}
+      >
         {showGuestActions ? (
           <>
             <View style={[layoutStyles.logoWrap, { marginBottom: MOBILE_SPACING.lg }]}>
@@ -203,6 +255,7 @@ export default function WelcomeGlobalScreen() {
                           style={layoutStyles.ctaPrimary}
                           onPress={onContinue}
                           activeOpacity={0.85}
+                          testID="welcome-session-continue"
                         >
                           <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_action_continue')}</Text>
                         </TouchableOpacity>
@@ -259,6 +312,7 @@ export default function WelcomeGlobalScreen() {
                         style={layoutStyles.ctaPrimary}
                         onPress={onContinue}
                         activeOpacity={0.85}
+                        testID="welcome-session-continue"
                       >
                         <Text style={layoutStyles.ctaPrimaryText}>{primaryLabel}</Text>
                       </TouchableOpacity>

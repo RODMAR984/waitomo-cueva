@@ -40,6 +40,9 @@ const FALLBACK_PLAN_IDS = [
   { id: 'pase_total', active: true },
 ];
 
+/** Evita spinner eterno si la query a `plans` no resuelve (red / RLS / tablas). */
+const PLANS_QUERY_TIMEOUT_MS = 14000;
+
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
   const full =
@@ -93,12 +96,29 @@ export default function PlanSelectorScreen({ navigation, route }) {
     setLoading(true);
     (async () => {
       try {
-        const { data, error } = await supabase
+        const queryPromise = supabase
           .from('plans')
           .select('id, code, title, subtitle, card_highlights, active, order')
           .eq('organization_id', effectiveOrgId)
           .eq('active', true)
           .order('order', { ascending: true });
+
+        const timeoutPromise = new Promise((resolve) =>
+          setTimeout(
+            () => resolve({ data: null, error: { message: 'plan_selector_query_timeout' }, __timedOut: true }),
+            PLANS_QUERY_TIMEOUT_MS,
+          ),
+        );
+
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        const { data, error } = result || {};
+        if (result?.__timedOut || error?.message === 'plan_selector_query_timeout') {
+          console.log('PlanSelector: timeout cargando planes (>=' + PLANS_QUERY_TIMEOUT_MS + 'ms)', {
+            organization_id: effectiveOrgId,
+          });
+          if (alive) setPlansFromApi([]);
+          return;
+        }
         if (error) throw error;
         if (alive) setPlansFromApi(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -591,7 +611,7 @@ export default function PlanSelectorScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.noOrgCta}
                 activeOpacity={0.88}
-                onPress={() => navigation.navigate('JoinWithInvite')}
+                onPress={() => navigation.navigate('WelcomeClientJoin')}
               >
                 <Text style={styles.noOrgCtaText}>{tStr('plan_selector_no_org_cta')}</Text>
               </TouchableOpacity>

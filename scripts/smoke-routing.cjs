@@ -50,6 +50,7 @@ function run() {
     'AdminLite',
     'Admin',
     'ConfiguraTuEspacio',
+    'FitEngineSpaceIntro',
     'RegistroInicial',
   ];
   for (const route of criticalRoutes) {

@@ -57,3 +57,5 @@ test-results/
 .maestro/
 maestro/.env
 maestro/.env.local
+Maestro/.env
+Maestro/.env.local

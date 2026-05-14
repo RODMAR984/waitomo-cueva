@@ -977,7 +977,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
     }
     return (
       <BackgroundWrapper screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
-        <View style={styles.container}>
+        <View style={styles.container} testID="screen-trabajo-dia">
           <ScrollView contentContainerStyle={styles.lockScroll} keyboardShouldPersistTaps="handled">
             <NeoPanel style={[styles.panel, styles.lockPanel]}>
               <View style={styles.panelHeader}>
@@ -999,6 +999,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                 <Text style={styles.lockCtaText}>{tStr('client_entitlement_go_pay')}</Text>
               </TouchableOpacity>
               <BackNavButton
+                testID="trabajo-nav-back"
                 onPress={() => navigation.goBack()}
                 label={tStr('common_back')}
                 style={[styles.backBtn, styles.lockBackBtn]}
@@ -1017,6 +1018,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       seed={bgSeed}
     >
       <KeyboardAvoidingView
+        testID="screen-trabajo-dia"
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
@@ -1034,7 +1036,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           <NeoPanel style={styles.panel}>
             {/* Header */}
             <View style={styles.panelHeader}>
-              <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+              <BackNavButton
+                testID="trabajo-nav-back"
+                onPress={() => navigation.goBack()}
+                label={tStr('common_back')}
+                style={styles.backBtn}
+              />
               <Text style={styles.planTitle}>{planNombreCorregido || tStr('trabajo_plan_seleccionado')}</Text>
               <Text style={styles.planSubtitle}>{horarioEfectivo || tStr('trabajo_horario_libre')}</Text>
               {!!fechaTexto && <Text style={styles.dateText}>{fechaTexto}</Text>}

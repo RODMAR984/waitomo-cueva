@@ -1,0 +1,24 @@
+# Admin de organización (owner / admin / coach con panel staff): mismo login global que el resto.
+# Requiere MAESTRO_ORG_ADMIN_EMAIL y MAESTRO_ORG_ADMIN_PASSWORD
+appId: com.waitomofitengine.cueva
+---
+- runFlow: wait-welcome.yaml
+- tapOn:
+    id: welcome-cta-login-client
+- assertVisible:
+    id: login-email-input
+- tapOn:
+    id: login-email-input
+- eraseText
+- inputText: ${MAESTRO_ORG_ADMIN_EMAIL}
+- tapOn:
+    id: login-password-input
+- eraseText
+- inputText: ${MAESTRO_ORG_ADMIN_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: login-submit
+- extendedWaitUntil:
+    visible:
+      id: admin-dashboard-root
+    timeout: 120000

@@ -74,6 +74,12 @@ npm run test:e2e:web
 - **Ver el navegador:** `npm run test:e2e:web:headed`
 - **Saltar re-export si `dist/` ya está fresco:** `$env:PLAYWRIGHT_SKIP_EXPORT = "1"` antes de `npx playwright test …`.
 
+## 4b) Maestro — smoke móvil (Android / iOS, opcional)
+
+- No sustituye Playwright web; valida **binario nativo** instalado en emulador o dispositivo (`npx expo run:android` / `run:ios`).
+- Credenciales: **`Maestro/.env.local`** (plantilla `Maestro/.env.example`) — tres pares para la suite completa (`MAESTRO_CLIENT_*`, `MAESTRO_ORG_ADMIN_*`, `MAESTRO_ADMIN_*`).
+- Comandos: `npm run test:mobile` (suite), o `test:mobile:client` / `test:mobile:org-admin` / `test:mobile:admin` por rol. Detalle: **`Maestro/README.md`**.
+
 - Ejecutar (equivale a export web + Playwright):
   - `npm run test:e2e:web`
 - Incluye:

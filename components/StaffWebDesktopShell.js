@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,20 @@ import {
   TouchableOpacity,
   Platform,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { useAuth } from '../contexts/AuthContext';
 import useStaffAdminNavTiles from '../hooks/useStaffAdminNavTiles';
 import { MOBILE_RADII, MOBILE_TYPE } from '../theme/mobileSpec';
+import ImpersonationBanner from './ImpersonationBanner';
 
 const STAFF_WEB_RAIL = 232;
-const STAFF_WEB_MIN_WIDTH = 1100;
+/** Misma anchura que `WEB_DESKTOP_BREAKPOINT`: rail staff solo en ventanas anchas. */
+export const STAFF_WEB_DESKTOP_MIN_WIDTH = 1100;
+const STAFF_WEB_MIN_WIDTH = STAFF_WEB_DESKTOP_MIN_WIDTH;
 
 const hexToRgba = (hex, alpha = 1) => {
   const clean = String(hex || '').replace('#', '');
@@ -66,6 +71,22 @@ const ROUTE_NAME_TO_TILE_KEY = {
   AdminMercadoPagoSettingsScreen: 'mp',
   AdminBadges: 'badges',
   AdminBadgesScreen: 'badges',
+  Superadmin: 'platform',
+  SuperadminScreen: 'platform',
+  SuperadminObservability: 'platform',
+  SuperadminObservabilityScreen: 'platform',
+  SuperadminTopic: 'platform',
+  SuperadminTopicScreen: 'platform',
+  SuperadminOrgs: 'platform',
+  SuperadminOrgsScreen: 'platform',
+  SuperadminAuditLog: 'platform',
+  SuperadminAuditLogScreen: 'platform',
+  SuperadminFeatureFlags: 'platform',
+  SuperadminFeatureFlagsScreen: 'platform',
+  SuperadminTickets: 'platform',
+  SuperadminTicketsScreen: 'platform',
+  SuperadminTicketDetail: 'platform',
+  SuperadminTicketDetailScreen: 'platform',
   Perfil: 'perfil',
   PerfilUsuario: 'perfil',
   Novedades: 'novedades',
@@ -80,9 +101,29 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
   const { width } = useWindowDimensions();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
+  const { logout } = useAuth();
   const isDesktopWeb = Platform.OS === 'web' && width >= STAFF_WEB_MIN_WIDTH;
   const { groups: adminNavGroups } = useStaffAdminNavTiles(navigation, tStr);
   const activeTileKey = ROUTE_NAME_TO_TILE_KEY[route?.name] || null;
+
+  const handleRailLogout = useCallback(() => {
+    const run = async () => {
+      try {
+        await logout();
+      } catch (e) {
+        console.log('staff rail logout:', e?.message || e);
+      }
+    };
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const ok = window.confirm(`${tStr('perfil_logout_title')}\n\n${tStr('perfil_logout_message')}`);
+      if (ok) void run();
+      return;
+    }
+    Alert.alert(tStr('perfil_logout_title'), tStr('perfil_logout_message'), [
+      { text: tStr('common_cancel'), style: 'cancel' },
+      { text: tStr('perfil_logout_confirm'), style: 'destructive', onPress: () => void run() },
+    ]);
+  }, [logout, tStr]);
 
   const styles = useMemo(
     () =>
@@ -95,8 +136,10 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         },
         staffWebRail: {
           width: STAFF_WEB_RAIL,
+          alignSelf: 'stretch',
+          flexDirection: 'column',
           paddingTop: 16,
-          paddingBottom: 12,
+          paddingBottom: 10,
           paddingHorizontal: 8,
           borderRightWidth: 1,
           borderRightColor: t.overlayBorder,
@@ -122,8 +165,28 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           opacity: 0.9,
         },
         staffWebRailScroll: {
-          flexGrow: 1,
-          flexShrink: 1,
+          flex: 1,
+          minHeight: 0,
+        },
+        staffWebRailLogoutWrap: {
+          borderTopWidth: 1,
+          borderTopColor: t.overlayBorder,
+          paddingTop: 10,
+          marginTop: 4,
+        },
+        staffWebRailLogoutBtn: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          columnGap: 10,
+          paddingVertical: 10,
+          paddingHorizontal: 8,
+          borderRadius: MOBILE_RADII.sm,
+        },
+        staffWebRailLogoutText: {
+          color: t.danger,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '700',
+          flex: 1,
         },
         staffWebRailItem: {
           flexDirection: 'row',
@@ -151,8 +214,15 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
     [t],
   );
 
+  const main = (
+    <>
+      <ImpersonationBanner />
+      {children}
+    </>
+  );
+
   if (!isDesktopWeb) {
-    return children;
+    return main;
   }
 
   return (
@@ -172,6 +242,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
                 return (
                   <TouchableOpacity
                     key={tile.key}
+                    testID={`staff-hub-tile-${tile.key}`}
                     style={[styles.staffWebRailItem, active && styles.staffWebRailItemActive]}
                     onPress={tile.onPress}
                     activeOpacity={0.88}
@@ -186,8 +257,23 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
             </View>
           ))}
         </ScrollView>
+        <View style={styles.staffWebRailLogoutWrap}>
+          <TouchableOpacity
+            style={styles.staffWebRailLogoutBtn}
+            onPress={handleRailLogout}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={tStr('admin_salir')}
+            testID="staff-rail-logout"
+          >
+            <Ionicons name="log-out-outline" size={20} color={t.danger} />
+            <Text style={styles.staffWebRailLogoutText} numberOfLines={1}>
+              {tStr('admin_salir')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.staffWebMainColumn}>{children}</View>
+      <View style={styles.staffWebMainColumn}>{main}</View>
     </View>
   );
 }

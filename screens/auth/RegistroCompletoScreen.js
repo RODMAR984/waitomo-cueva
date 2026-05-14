@@ -15,8 +15,6 @@ import {
   Alert,
   ScrollView,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,6 +30,7 @@ import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import { AuthKeyboardAvoidingView, authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -449,16 +448,13 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
 
   return (
     <BackgroundWrapper plan={plan}>
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <AuthKeyboardAvoidingView style={styles.kav}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={authScrollKeyboardDismissMode}
         >
           <NeoPanel style={styles.panel}>
-            <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('reg_complete_title')}</Text>
 
             {/* ✅ FIX (estética): banner solo cuando ESTAMOS asegurando sesión (no por !profile) */}
@@ -548,9 +544,10 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
                 {saving ? tStr('reg_complete_saving') : tStr('reg_complete_continue')}
               </Text>
             </TouchableOpacity>
+            <BackNavButton onPress={() => navigation.goBack()} style={{ marginTop: MOBILE_SPACING.md }} />
           </NeoPanel>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </AuthKeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }

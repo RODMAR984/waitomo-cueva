@@ -1,15 +1,26 @@
 // SplashScreen — Logo completo (triangulo + texto). Fondo #050a0d.
 
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { fitengineLogoColors as fe } from '../../theme/colors';
 import LogoCompleto from '../../components/LogoCompleto';
 import { useLocale } from '../../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { authTrace } from '../../utils/authTrace';
 
 const SPLASH_DURATION_MS = 1600;
+/** Web frío (sin OAuth en URL): salir antes del timer largo de marca; el “peso” está en restore cap ~2.6s. */
+const SPLASH_WEB_COLD_MS = 550;
+
+function isWebOAuthReturnUrl() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  const q = String(window.location?.search || '');
+  if (q.includes('code=')) return true;
+  const h = String(window.location?.hash || '');
+  return h.includes('code=') || h.includes('access_token=');
+}
 
 export default function SplashScreen() {
   const navigation = useNavigation();
@@ -17,17 +28,25 @@ export default function SplashScreen() {
   const goneRef = useRef(false);
 
   useEffect(() => {
+    // OAuth en web: volver con ?code= — no esperar 1.6s para salir del splash (mejor UX y menos sensación de “clavado”).
+    const delayMs = isWebOAuthReturnUrl()
+      ? 80
+      : Platform.OS === 'web'
+        ? SPLASH_WEB_COLD_MS
+        : SPLASH_DURATION_MS;
     const timer = setTimeout(() => {
       if (goneRef.current) return;
       goneRef.current = true;
+      authTrace('splash_replace', { to: 'WelcomeGlobal', delayMs });
       navigation.replace('WelcomeGlobal');
-    }, SPLASH_DURATION_MS);
+    }, delayMs);
     return () => clearTimeout(timer);
   }, [navigation]);
 
   const goToWelcome = () => {
     if (goneRef.current) return;
     goneRef.current = true;
+    authTrace('splash_replace', { to: 'WelcomeGlobal', delayMs: 'tap' });
     navigation.replace('WelcomeGlobal');
   };
 
@@ -37,7 +56,7 @@ export default function SplashScreen() {
       onPress={goToWelcome}
       style={[styles.container, { backgroundColor: fe.background }]}
     >
-      <View style={styles.center}>
+      <View style={styles.center} testID="splash-screen" collapsable={false}>
         <LogoCompleto height={155} style={styles.logo} />
         <Text style={[styles.byWaitomo, { color: fe.subText }]}>{tStr('splash_by_waitomo')}</Text>
       </View>

@@ -1247,8 +1247,15 @@ export default function ClientScreen() {
         } catch {
           void 0;
         }
-        const staffRoute = needsFitEngineSpaceSetup
-          ? { name: 'ConfiguraTuEspacio', params: { email: user?.email } }
+        const hasStaffOrgRoutingHint =
+          hasStaffMembership ||
+          (ownedOrganizations?.length || 0) > 0 ||
+          (organizationsOwnedByUser?.length || 0) > 0 ||
+          !!(profile?.organization_id && String(profile.organization_id).trim());
+        const staffNeedsConfigure =
+          needsFitEngineSpaceSetup && !hasStaffOrgRoutingHint;
+        const staffRoute = staffNeedsConfigure
+          ? { name: 'FitEngineSpaceIntro', params: { email: user?.email } }
           : { name: 'AdminLite' };
         if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [staffRoute] })) {
           return;
@@ -1259,8 +1266,14 @@ export default function ClientScreen() {
     }
 
     if (activeAppMode === 'staff' && (hasOwnedFitEngineOrgs || isStaffRole)) {
-      const staffRoute = needsFitEngineSpaceSetup
-        ? { name: 'ConfiguraTuEspacio', params: { email: user?.email } }
+      const hasStaffOrgRoutingHint =
+        hasStaffMembership ||
+        (ownedOrganizations?.length || 0) > 0 ||
+        (organizationsOwnedByUser?.length || 0) > 0 ||
+        !!(profile?.organization_id && String(profile.organization_id).trim());
+      const staffNeedsConfigure = needsFitEngineSpaceSetup && !hasStaffOrgRoutingHint;
+      const staffRoute = staffNeedsConfigure
+        ? { name: 'FitEngineSpaceIntro', params: { email: user?.email } }
         : { name: 'AdminLite' };
       if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [staffRoute] })) {
         return;
@@ -1307,7 +1320,7 @@ export default function ClientScreen() {
     try {
       // eslint-disable-next-line no-console
       console.log('🔁 ClientScreen.resetToWelcome: usando safeNavigate a Welcome');
-      return !!safeNavigate(['Welcome', 'WelcomeScreen']);
+      return !!safeNavigate(['WelcomeGlobal']);
     } catch {
       // eslint-disable-next-line no-console
       console.log('❌ ClientScreen.resetToWelcome: todas las rutas fallaron');
@@ -2024,7 +2037,12 @@ export default function ClientScreen() {
                     <Text style={styles.planPillText}>{tStr('client_calendario')}</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.planPillBtn} activeOpacity={0.9} onPress={goTrabajoHoy}>
+                  <TouchableOpacity
+                    testID="client-home-cta-trabajo-hoy"
+                    style={styles.planPillBtn}
+                    activeOpacity={0.9}
+                    onPress={goTrabajoHoy}
+                  >
                     <Text style={styles.planPillText}>{tStr('client_trabajo_hoy')}</Text>
                   </TouchableOpacity>
                 </View>

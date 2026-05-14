@@ -25,7 +25,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import { ADMIN_PANEL_GUTTER, ADMIN_SECTION_GAP } from '../../theme/adminSpec';
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD', 'EUR'];
@@ -193,7 +193,7 @@ export default function AdminFinanzasScreen({ route }) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        safe: { backgroundColor: 'transparent', flex: 1, paddingTop: insets.top + 8 },
+        safe: { backgroundColor: 'transparent', flex: 1, paddingTop: screenHeaderTopPadding(insets.top) },
         container: { flex: 1 },
         contentContainer: {
           padding: MOBILE_SPACING.lg,

@@ -1,22 +1,24 @@
-# Superadmin: deep link waitomo://admin → login → panel. Requiere MAESTRO_ADMIN_EMAIL y MAESTRO_ADMIN_PASSWORD
+# Superadmin: mismo login global que cliente/staff (email + password) → hub plataforma.
+# Requiere MAESTRO_ADMIN_EMAIL y MAESTRO_ADMIN_PASSWORD
 appId: com.waitomofitengine.cueva
 ---
-- runFlow: steps/wait-welcome.yaml
-- openLink: waitomo://admin
-- assertVisible:
-    id: admin-login-email-input
+- runFlow: wait-welcome.yaml
 - tapOn:
-    id: admin-login-email-input
+    id: welcome-cta-login-client
+- assertVisible:
+    id: login-email-input
+- tapOn:
+    id: login-email-input
 - eraseText
 - inputText: ${MAESTRO_ADMIN_EMAIL}
 - tapOn:
-    id: admin-login-password-input
+    id: login-password-input
 - eraseText
 - inputText: ${MAESTRO_ADMIN_PASSWORD}
 - hideKeyboard
 - tapOn:
-    id: admin-login-submit
+    id: login-submit
 - extendedWaitUntil:
     visible:
-      id: admin-dashboard-root
+      id: superadmin-hub-root
     timeout: 120000

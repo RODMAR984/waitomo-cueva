@@ -10,32 +10,37 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 import BackgroundWrapper from '../../components/BackgroundWrapper';
-import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
+import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useThemeContext } from '../../contexts/ThemeContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
-import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import { authMarketingChromeRoot, authSoftPanelStyle } from '../../theme/appVisualCohesion';
+import { WEB_CONTENT_MAX_WIDTH, WEB_AUTH_SIGNUP_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import {
+  AuthKeyboardAvoidingView,
+  AuthDismissKeyboardOutside,
+  authScrollContentJustify,
+} from '../../components/AuthWebFormShell';
 
 export default function CreaCuentaScreen() {
   const { t: tStr } = useLocale();
+  const { isDark } = useThemeContext();
   const navigation = useNavigation();
   const route = useRoute();
 
   const { signInWithProvider, user } = useAuth();
 
   // ⬅️ params que vienen desde AbonosPases
-  const { plan, abono } = route.params || {};
+  const { plan, abono, fromInvite } = route.params || {};
 
   // ✅ clave: SOLO redirigir automático si el user apareció por OAuth
   const [oauthStarted, setOauthStarted] = useState(false);
@@ -60,11 +65,12 @@ export default function CreaCuentaScreen() {
             fromOAuth: true,
             plan,
             abono,
+            fromInvite: !!fromInvite,
           },
         },
       ],
     });
-  }, [oauthStarted, user?.id]);
+  }, [oauthStarted, user?.id, plan, abono, fromInvite, navigation]);
 
   const styles = useMemo(
     () =>
@@ -74,19 +80,18 @@ export default function CreaCuentaScreen() {
           padding: MOBILE_SPACING.xl,
           paddingTop: 48,
           width: '100%',
-          maxWidth: WEB_CONTENT_MAX_WIDTH,
+          maxWidth:
+            Platform.OS === 'web'
+              ? Math.min(WEB_CONTENT_MAX_WIDTH, WEB_AUTH_SIGNUP_MAX_WIDTH)
+              : WEB_CONTENT_MAX_WIDTH,
           alignSelf: 'center',
         },
         outer: {
           flex: 1,
-          justifyContent: 'center',
+          justifyContent: authScrollContentJustify(),
         },
         panel: {
-          backgroundColor: fe.panelBg,
-          borderColor: fe.panelBorder,
-          borderRadius: MOBILE_RADII.lg,
-          borderWidth: 1,
-          padding: MOBILE_SPACING.xl,
+          ...authSoftPanelStyle,
         },
         title: {
           color: fe.subText,
@@ -122,19 +127,19 @@ export default function CreaCuentaScreen() {
         buttonSocial: {
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: fe.inputBg,
+          backgroundColor: fe.buttonBg,
+          borderColor: fe.buttonBorder,
           borderRadius: MOBILE_RADII.sm,
-          paddingVertical: MOBILE_SPACING.md,
-          paddingHorizontal: MOBILE_SPACING.md,
-          minHeight: MOBILE_SIZES.controlHeight,
-          marginBottom: MOBILE_SPACING.sm + 2,
           borderWidth: 1,
-          borderColor: fe.panelBorder,
+          paddingVertical: MOBILE_SPACING.md,
+          paddingHorizontal: MOBILE_SPACING.lg,
+          minHeight: MOBILE_SIZES.controlHeightLg,
+          marginBottom: MOBILE_SPACING.md,
         },
         buttonSocialText: {
-          color: fe.text,
-          fontSize: MOBILE_TYPE.body,
-          fontWeight: '600',
+          color: fe.buttonText,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: 'bold',
         },
         buttonSecondary: {
           marginTop: MOBILE_SPACING.md,
@@ -145,7 +150,6 @@ export default function CreaCuentaScreen() {
           fontSize: MOBILE_TYPE.caption,
           textDecorationLine: 'underline',
         },
-        brandPowered: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
     [],
   );
@@ -157,6 +161,7 @@ export default function CreaCuentaScreen() {
       abono,
       fromCreaCuenta: true,
       fromOAuth: false,
+      fromInvite: !!fromInvite,
     });
   };
 
@@ -190,51 +195,48 @@ export default function CreaCuentaScreen() {
 
   return (
     <BackgroundWrapper screen="neutral">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.kav}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.outer}>
-            <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
-              <LogoCompleto height={52} />
-              <Text style={styles.brandPowered}>powered by WAITOMO</Text>
-            </View>
-            <NeoPanel style={styles.panel}>
-              <BackNavButton onPress={handleVolver} />
-              <Text style={styles.title}>{tStr('creacuenta_title')}</Text>
-              <Text style={styles.subtitle}>{tStr('creacuenta_subtitle')}</Text>
-
-              <TouchableOpacity
-                style={styles.buttonPrimary}
-                onPress={handleEmail}
-              >
-                <Text style={styles.buttonPrimaryText}>{tStr('creacuenta_email')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.buttonSocial}
-                onPress={() => handleOAuth('google')}
-              >
-                <Text style={styles.buttonSocialText}>{tStr('creacuenta_continue_google')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.buttonSocial, { marginTop: MOBILE_SPACING.sm + 2 }]}
-                onPress={() => handleOAuth('apple')}
-              >
-                <Text style={styles.buttonSocialText}>{tStr('creacuenta_continue_apple')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.buttonSecondary} onPress={handleVolver}>
-                <Text style={styles.buttonSecondaryText}>
-                  {plan || abono ? tStr('creacuenta_back_plans') : tStr('creacuenta_back_welcome')}
+      <View style={authMarketingChromeRoot}>
+        <LogoTriangleBackground
+          isDark={isDark}
+          variant="registro"
+          blendMode="lighten"
+          sizeScale={2.8}
+          opacityOverride={isDark ? 0.42 : 0.28}
+        />
+        <AuthKeyboardAvoidingView style={[styles.kav, { flex: 1, zIndex: 1 }]}>
+          <AuthDismissKeyboardOutside>
+            <View style={styles.outer}>
+              <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
+                <LogoCompleto height={52} />
+              </View>
+              <NeoPanel edge={false} style={styles.panel}>
+                <Text style={styles.title}>{tStr('creacuenta_title')}</Text>
+                <Text style={styles.subtitle}>
+                  {fromInvite ? tStr('invite_pending_body') : tStr('creacuenta_subtitle')}
                 </Text>
-              </TouchableOpacity>
-            </NeoPanel>
-          </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+
+                <TouchableOpacity style={styles.buttonPrimary} onPress={handleEmail}>
+                  <Text style={styles.buttonPrimaryText}>{tStr('creacuenta_email')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.buttonSocial} onPress={() => handleOAuth('google')}>
+                  <Text style={styles.buttonSocialText}>{tStr('creacuenta_continue_google')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.buttonSocial} onPress={() => handleOAuth('apple')}>
+                  <Text style={styles.buttonSocialText}>{tStr('creacuenta_continue_apple')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.buttonSecondary} onPress={handleVolver}>
+                  <Text style={styles.buttonSecondaryText}>
+                    {plan || abono ? tStr('creacuenta_back_plans') : tStr('creacuenta_back_welcome')}
+                  </Text>
+                </TouchableOpacity>
+              </NeoPanel>
+            </View>
+          </AuthDismissKeyboardOutside>
+        </AuthKeyboardAvoidingView>
+      </View>
     </BackgroundWrapper>
   );
 }

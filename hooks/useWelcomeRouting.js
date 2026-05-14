@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { navigationRef, resetNavigationRoot } from '../navigationRef';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 import { resolveStaffDestination } from '../utils/authRoutingGuard';
+import { authTrace } from '../utils/authTrace';
 
 function resetStackTo(navigation, routes) {
   const state = { index: 0, routes };
@@ -37,6 +38,11 @@ export function useWelcomeRouting() {
     organizationMemberships,
     hasStaffMembership,
     hasClientMembership,
+    isPlatformAdmin,
+    platformAdminActive,
+    initialProfileSyncDone,
+    authSessionRestored,
+    authNavigationReady,
   } = useAuth() || {};
 
   const navigateForStaffDual = useCallback(() => {
@@ -45,11 +51,27 @@ export function useWelcomeRouting() {
       needsFitEngineSpaceSetup,
       hasProfile: !!profile,
       ownedOrganizationsCount: ownedOrganizations?.length || 0,
+      isPlatformAdmin: typeof isPlatformAdmin === 'function' && isPlatformAdmin(),
+      hasStaffMembership,
+      profileOrganizationId: profile?.organization_id,
     });
     const params =
-      destination === 'ConfiguraTuEspacio' ? { email: session?.user?.email } : undefined;
+      destination === 'ConfiguraTuEspacio' || destination === 'FitEngineSpaceIntro'
+        ? { email: session?.user?.email }
+        : undefined;
     resetStackTo(navigation, [{ name: destination, params }]);
-  }, [navigation, ownedOrganizations?.length, profile, role, needsFitEngineSpaceSetup, session?.user?.email]);
+  }, [
+    navigation,
+    ownedOrganizations?.length,
+    profile,
+    profile?.organization_id,
+    role,
+    needsFitEngineSpaceSetup,
+    session?.user?.email,
+    isPlatformAdmin,
+    platformAdminActive,
+    hasStaffMembership,
+  ]);
 
   const membershipsLoaded = Array.isArray(organizationMemberships);
   const isDualByMemberships = hasClientMembership && hasStaffMembership;
@@ -57,6 +79,16 @@ export function useWelcomeRouting() {
   const navigateToDestination = useCallback(
     (modeOverride) => {
       const mode = modeOverride !== undefined ? modeOverride : activeAppMode;
+
+      if (authSessionRestored === false) {
+        authTrace('navigateToDestination_skip', { reason: 'auth_session_not_restored' });
+        return;
+      }
+      if (session?.user?.id && initialProfileSyncDone === false) {
+        authTrace('navigateToDestination_skip', { reason: 'initial_profile_sync_pending' });
+        return;
+      }
+
       // eslint-disable-next-line no-console
       console.log('ROUTING_DEBUG WelcomeGlobal navigateToDestination', {
         modeOverride,
@@ -71,8 +103,22 @@ export function useWelcomeRouting() {
         needsFitEngineSpaceSetup,
       });
 
-      if (role === 'superadmin') {
-        resetStackTo(navigation, [{ name: 'Admin' }]);
+      authTrace('navigateToDestination', {
+        modeOverride: modeOverride === undefined ? null : String(modeOverride),
+        resolvedMode: mode ?? null,
+        role: role ?? null,
+        profileId: profile?.id ?? null,
+        sessionUserId: session?.user?.id ? '(set)' : null,
+        initialProfileSyncDone: initialProfileSyncDone !== false,
+        authSessionRestored: authSessionRestored !== false,
+        authNavigationReady: authNavigationReady !== false,
+        hasStaffMembership,
+        hasClientMembership,
+        ownedOrgsCount: ownedOrganizations?.length ?? 0,
+      });
+
+      if (role === 'superadmin' || (typeof isPlatformAdmin === 'function' && isPlatformAdmin())) {
+        resetStackTo(navigation, [{ name: 'Superadmin' }]);
         return;
       }
 
@@ -93,6 +139,7 @@ export function useWelcomeRouting() {
           return;
         }
         if (!profile) {
+          authTrace('navigate_route', { name: 'RegistroInicial', branch: 'dual_fallback_no_profile' });
           resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
@@ -115,6 +162,7 @@ export function useWelcomeRouting() {
 
       if ((isDualByMemberships || isDualHatUser) && mode === 'client') {
         if (!profile) {
+          authTrace('navigate_route', { name: 'RegistroInicial', branch: 'dual_client_no_profile' });
           resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
@@ -136,6 +184,7 @@ export function useWelcomeRouting() {
       }
       if (membershipsLoaded && hasClientMembership && !hasStaffMembership) {
         if (!profile) {
+          authTrace('navigate_route', { name: 'RegistroInicial', branch: 'client_member_no_profile' });
           resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
           return;
         }
@@ -143,9 +192,14 @@ export function useWelcomeRouting() {
         return;
       }
 
-      if ((role === 'coach' || role === 'admin') && needsFitEngineSpaceSetup) {
+      if (
+        (role === 'coach' || role === 'admin') &&
+        needsFitEngineSpaceSetup &&
+        !hasStaffMembership &&
+        (ownedOrganizations?.length || 0) === 0
+      ) {
         resetStackTo(navigation, [
-          { name: 'ConfiguraTuEspacio', params: { email: session?.user?.email } },
+          { name: 'FitEngineSpaceIntro', params: { email: session?.user?.email } },
         ]);
         return;
       }
@@ -162,10 +216,13 @@ export function useWelcomeRouting() {
         return;
       }
       if (!profile) {
+        authTrace('navigate_route', { name: 'RegistroInicial', branch: 'default_no_profile' });
         resetStackTo(navigation, [{ name: 'RegistroInicial' }]);
         return;
       }
-      resetStackTo(navigation, [{ name: getClientPostAuthRouteName(profile, { hasClientMembership }) }]);
+      const clientDest = getClientPostAuthRouteName(profile, { hasClientMembership });
+      authTrace('navigate_route', { name: clientDest, branch: 'default_client_post_auth' });
+      resetStackTo(navigation, [{ name: clientDest }]);
     },
     [
       navigation,
@@ -183,6 +240,11 @@ export function useWelcomeRouting() {
       ownedOrganizations,
       organizationsOwnedByUser,
       needsFitEngineSpaceSetup,
+      isPlatformAdmin,
+      platformAdminActive,
+      initialProfileSyncDone,
+      authSessionRestored,
+      authNavigationReady,
     ],
   );
 

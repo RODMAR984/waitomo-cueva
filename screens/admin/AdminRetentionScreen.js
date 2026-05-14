@@ -11,7 +11,6 @@ import {
   TextInput,
   Modal,
   Alert,
-  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +24,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import { ADMIN_PANEL_GUTTER } from '../../theme/adminSpec';
 
 const hexToRgba = (hex, alpha = 1) => {
@@ -117,7 +116,7 @@ export default function AdminRetentionScreen() {
         header: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'web' ? MOBILE_SPACING.lg : 8 + insets.top,
+          paddingTop: screenHeaderTopPadding(insets.top),
           paddingHorizontal: MOBILE_SPACING.lg,
           paddingBottom: 8,
           width: '100%',

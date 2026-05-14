@@ -11,6 +11,14 @@ appId: com.waitomofitengine.cueva
     id: calendario-nav-back
 - assertVisible:
     id: client-home-root
+# Accesos rápidos (perfil / directorio / chat) van en columna secundaria bajo el plan — hace falta scroll en pantallas chicas.
+- scrollUntilVisible:
+    element:
+      id: client-home-cta-directory
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn:
     id: client-home-cta-directory
 - assertVisible:
@@ -19,10 +27,25 @@ appId: com.waitomofitengine.cueva
     id: directory-nav-back
 - assertVisible:
     id: client-home-root
+- scrollUntilVisible:
+    element:
+      id: client-home-cta-perfil
+    direction: DOWN
+    timeout: 25000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn:
     id: client-home-cta-perfil
 - assertVisible:
     id: screen-perfil
+# El volver está al final del formulario — hay que scrollear hasta el botón.
+- scrollUntilVisible:
+    element:
+      id: perfil-nav-back
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn:
     id: perfil-nav-back
 - assertVisible:
