@@ -35,8 +35,9 @@ test.describe('Web smoke: welcome y auth base', () => {
     await page.goto('/');
     await page.getByTestId('welcome-cta-login-client').click();
 
-    await expect(page.getByPlaceholder('Email')).toBeVisible();
-    await expect(page.getByText('Iniciar sesión', { exact: true })).toBeVisible();
+    // Pantalla de acceso unificada (inputs con testID); no usar getByText('Iniciar sesión'): también aparece en el CTA del welcome en el árbol → strict mode.
+    await expect(page.getByTestId('login-email-input')).toBeVisible();
+    await expect(page.getByTestId('login-submit')).toBeVisible();
     await expect(page.getByTestId('login-switch-staff-from-client')).toHaveCount(0);
   });
 });
