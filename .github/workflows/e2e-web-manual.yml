@@ -1,0 +1,62 @@
+# Solo E2E web (Playwright): sin ESLint, sin Lighthouse, sin bundle-check.
+# Útil para re-probar el navegador de CI sin esperar el job completo.
+# GitHub → Actions → "E2E web (manual)" → Run workflow.
+#
+# Mantener variables E2E_* alineadas con `.github/workflows/ci.yml`.
+
+name: E2E web (manual)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-web-manual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Export web (dist/)
+        run: npm run perf:web:export
+        env:
+          EXPO_PUBLIC_RUM_ANON_KEY: ${{ secrets.EXPO_PUBLIC_RUM_ANON_KEY }}
+
+      - name: Install Playwright (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright test
+        run: npx playwright test
+        env:
+          CI: true
+          PLAYWRIGHT_SKIP_EXPORT: '1'
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_CLIENT_EMAIL: ${{ secrets.E2E_CLIENT_EMAIL }}
+          E2E_CLIENT_PASSWORD: ${{ secrets.E2E_CLIENT_PASSWORD }}
+          E2E_ORG_ADMIN_EMAIL: ${{ secrets.E2E_ORG_ADMIN_EMAIL }}
+          E2E_ORG_ADMIN_PASSWORD: ${{ secrets.E2E_ORG_ADMIN_PASSWORD }}
+          E2E_PLATFORM_ADMIN_EMAIL: ${{ secrets.E2E_PLATFORM_ADMIN_EMAIL }}
+          E2E_PLATFORM_ADMIN_PASSWORD: ${{ secrets.E2E_PLATFORM_ADMIN_PASSWORD }}
+          E2E_JOURNEY_STRICT: '1'
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-manual
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
