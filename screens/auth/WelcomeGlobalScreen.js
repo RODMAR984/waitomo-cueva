@@ -1,6 +1,6 @@
 // WelcomeGlobalScreen — Logo + marca, Empezar / gym-coach, iniciar sesión, idioma, pie legal.
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -18,6 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../../theme/colors';
 import { createWelcomeGlobalLayoutStyles } from '../../styles/welcomeGlobalLayoutStyles';
 import { useWelcomeRouting } from '../../hooks/useWelcomeRouting';
+import { readWebAuthRouteForUser } from '../../utils/webAuthRoutePersistence';
 import { WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { authTrace } from '../../utils/authTrace';
@@ -45,10 +46,23 @@ export default function WelcomeGlobalScreen() {
 
   const { navigateToDestination, onContinue, isDualByMemberships } = useWelcomeRouting();
 
+  const resetStackTo = useCallback(
+    (routes) => {
+      const state = { index: 0, routes };
+      try {
+        navigation.reset(state);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.log('ROUTING_DEBUG WelcomeGlobal reset failed', e?.message || e);
+      }
+    },
+    [navigation],
+  );
+
+  const profileReady =
+    !!session?.user?.id && profile?.id === session.user.id && initialProfileSyncDone === true;
   const sessionRoutingReady =
-    !!session?.user?.id &&
-    authNavigationReady &&
-    (Platform.OS !== 'web' || initialProfileSyncDone === true);
+    !!session?.user?.id && authNavigationReady && initialProfileSyncDone === true;
 
   const isDualSession = sessionRoutingReady && (isDualByMemberships || isDualHatUser);
 
@@ -60,22 +74,43 @@ export default function WelcomeGlobalScreen() {
     navigation.replace('WelcomeDualChoice');
   }, [needsDualRedirect, navigation]);
 
-  const lastAutoNavUserIdRef = useRef(null);
+  const webBootstrapDoneRef = useRef(false);
+  const webBootstrapUidRef = useRef(null);
+  useEffect(() => {
+    const uid = session?.user?.id || null;
+    if (uid !== webBootstrapUidRef.current) {
+      webBootstrapUidRef.current = uid;
+      webBootstrapDoneRef.current = false;
+    }
+  }, [session?.user?.id]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!sessionRoutingReady) return;
     if (needsDualRedirect) return;
     const uid = session?.user?.id || null;
     if (!uid) return;
-    // Sin perfil no auto-navegamos: sesión local + cuenta borrada en Supabase u OAuth en curso
-    // llevaba a RegistroInicial sin pasar por la decisión del usuario en Welcome.
     if (!profile?.id) return;
-    if (lastAutoNavUserIdRef.current === uid) return;
-    lastAutoNavUserIdRef.current = uid;
+    if (webBootstrapDoneRef.current) return;
+    webBootstrapDoneRef.current = true;
+
+    const saved = readWebAuthRouteForUser(uid);
+    if (saved?.name) {
+      try {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+          // eslint-disable-next-line no-console
+          console.log('ROUTING_DEBUG WelcomeGlobal restore route after refresh', saved);
+        }
+      } catch (_) {}
+      authTrace('welcome_web_restore_route', { route: saved.name });
+      resetStackTo([{ name: saved.name, params: saved.params }]);
+      return;
+    }
+
     try {
       if (typeof __DEV__ !== 'undefined' && __DEV__) {
         // eslint-disable-next-line no-console
-        console.log('ROUTING_DEBUG WelcomeGlobal autoContinue', { uid });
+        console.log('ROUTING_DEBUG WelcomeGlobal first bootstrap onContinue', { uid });
       }
     } catch (_) {}
     authTrace('welcome_web_auto_onContinue', {
@@ -98,6 +133,7 @@ export default function WelcomeGlobalScreen() {
     authNavigationReady,
     hasClientMembership,
     hasStaffMembership,
+    resetStackTo,
   ]);
 
   const onLogout = async () => {
@@ -106,8 +142,10 @@ export default function WelcomeGlobalScreen() {
     } catch (_) {}
   };
 
-  const showContinueSession = sessionRoutingReady && !needsDualRedirect;
+  const showContinueSession =
+    !!session?.user?.id && profileReady && !needsDualRedirect;
   const showGuestActions = !session?.user?.id;
+  const showSessionResume = !!session?.user?.id && !showGuestActions;
 
   const resumeSubtitleKey = showContinueSession
     ? isDualSession
@@ -120,52 +158,6 @@ export default function WelcomeGlobalScreen() {
     () => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top, { isWide: isWideWeb }),
     [insets.top, isWideWeb],
   );
-
-  // Sin sesión = invitado: siempre el Welcome real (CTAs), nunca pantalla de “cargando” esperando restore.
-  const showSessionBootstrap =
-    !!session?.user?.id && authSessionRestored === false;
-
-  if (showSessionBootstrap) {
-    return (
-      <View
-        style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}
-        testID="welcome-global-bootstrap"
-      >
-        <LogoCompleto height={120} />
-        <ActivityIndicator size="large" color={fitT.logoCian} />
-        <Text style={layoutStyles.subtitle}>{tStr('common_loading')}</Text>
-      </View>
-    );
-  }
-
-  if (
-    session?.user?.id &&
-    (!authNavigationReady || (Platform.OS === 'web' && initialProfileSyncDone !== true))
-  ) {
-    return (
-      <View
-        style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}
-        testID="welcome-global-loading"
-      >
-        <LogoCompleto height={120} />
-        <ActivityIndicator size="large" color={fitT.logoCian} />
-        <Text style={layoutStyles.subtitle}>{tStr('common_loading')}</Text>
-      </View>
-    );
-  }
-
-  if (needsDualRedirect) {
-    return (
-      <View
-        style={[layoutStyles.container, layoutStyles.loadingBox, { justifyContent: 'center' }]}
-        testID="welcome-global-loading"
-      >
-        <LogoCompleto height={120} />
-        <ActivityIndicator size="large" color={fitT.logoCian} />
-        <Text style={layoutStyles.subtitle}>{tStr('common_loading')}</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={layoutStyles.container}>
@@ -183,7 +175,7 @@ export default function WelcomeGlobalScreen() {
         testID="welcome-global-content"
         collapsable={false}
       >
-        {showGuestActions ? (
+        {showGuestActions && !showSessionResume ? (
           <>
             <View style={[layoutStyles.logoWrap, { marginBottom: MOBILE_SPACING.lg }]}>
               <LogoCompleto height={152} />
@@ -252,12 +244,15 @@ export default function WelcomeGlobalScreen() {
                     return (
                       <>
                         <TouchableOpacity
-                          style={layoutStyles.ctaPrimary}
+                          style={[layoutStyles.ctaPrimary, !profileReady ? { opacity: 0.55 } : null]}
                           onPress={onContinue}
                           activeOpacity={0.85}
+                          disabled={!profileReady}
                           testID="welcome-session-continue"
                         >
-                          <Text style={layoutStyles.ctaPrimaryText}>{tStr('welcome_action_continue')}</Text>
+                          <Text style={layoutStyles.ctaPrimaryText}>
+                            {!profileReady ? tStr('common_loading') : tStr('welcome_action_continue')}
+                          </Text>
                         </TouchableOpacity>
                         {dualUnknownMode ? (
                           <>
@@ -309,12 +304,15 @@ export default function WelcomeGlobalScreen() {
                   return (
                     <>
                       <TouchableOpacity
-                        style={layoutStyles.ctaPrimary}
+                        style={[layoutStyles.ctaPrimary, !profileReady ? { opacity: 0.55 } : null]}
                         onPress={onContinue}
                         activeOpacity={0.85}
+                        disabled={!profileReady}
                         testID="welcome-session-continue"
                       >
-                        <Text style={layoutStyles.ctaPrimaryText}>{primaryLabel}</Text>
+                        <Text style={layoutStyles.ctaPrimaryText}>
+                          {!profileReady ? tStr('common_loading') : primaryLabel}
+                        </Text>
                       </TouchableOpacity>
                       {showSwitchToStaff ? (
                         <TouchableOpacity

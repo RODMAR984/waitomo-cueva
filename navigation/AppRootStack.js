@@ -94,7 +94,7 @@ const Stack = createNativeStackNavigator();
  * }} props
  */
 export default function AppRootStack({ screenOptions, registroOwnerBackgroundColor }) {
-  const initialRouteName = Platform.OS === 'web' ? 'WelcomeGlobal' : 'Splash';
+  const initialRouteName = 'Splash';
   return (
     <Stack.Navigator initialRouteName={initialRouteName} screenOptions={screenOptions}>
       {/* Entrada pública */}

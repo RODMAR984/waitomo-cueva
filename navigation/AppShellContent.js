@@ -12,6 +12,7 @@ import { applyWebDocumentTitle } from '../utils/webDocumentTitle';
 import { syncSentryUserContext } from '../utils/sentryWebClient';
 import { flushObservabilityEventsIfNeeded } from '../utils/observabilityFlush';
 import { navigationRef } from '../navigationRef';
+import { saveWebAuthRouteForUser } from '../utils/webAuthRoutePersistence';
 
 import AppRootStack from './AppRootStack';
 import ClientInviteLinkHandler from '../components/ClientInviteLinkHandler';
@@ -118,6 +119,9 @@ export default function AppShellContent() {
                 to: nextName,
               });
               routeNameRef.current = nextName;
+            }
+            if (Platform.OS === 'web' && user?.id && nextName) {
+              saveWebAuthRouteForUser(user.id, nextName, r?.params);
             }
             try {
               applyWebDocumentTitle(state, tStr);

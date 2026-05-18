@@ -32,6 +32,8 @@ import {
 import { getOAuthRedirectUriForSupabase } from '../utils/fitengineUrls';
 import { trackEvent } from '../utils/observability';
 import { resetNavigationRootToWelcome } from '../navigationRef';
+import { clearWebAuthRoute } from '../utils/webAuthRoutePersistence';
+import { authTrace, authTraceSnapshot } from '../utils/authTrace';
 
 /** Dónde se inició OAuth en web: si Google vuelve a otro origen, redirigimos acá con el mismo ?code=. */
 const WEB_OAUTH_START_REDIRECT_KEY = 'waitomo_oauth_web_redirect';
@@ -246,9 +248,43 @@ function clearWebLogoutSidecarStorage() {
   try {
     window.sessionStorage?.removeItem?.(WEB_OAUTH_START_REDIRECT_KEY);
     window.localStorage?.removeItem?.(WEB_OAUTH_START_REDIRECT_KEY);
+    clearWebAuthRoute();
   } catch (_) {
     /* ignore */
   }
+}
+
+/** Valida JWT contra el servidor; reintenta red transitoria antes de confiar en storage local. */
+async function getAuthUserWithRetry(maxAttempts = 3) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const { data: ju, error: juErr } = await supabase.auth.getUser();
+    if (!juErr && ju?.user?.id) return { user: ju.user, error: null };
+    lastErr = juErr;
+    const msg = String(juErr?.message || juErr || '').toLowerCase();
+    const status = juErr?.status ?? juErr?.statusCode;
+    const looksNetwork =
+      msg.includes('failed to fetch') ||
+      msg.includes('networkerror') ||
+      msg.includes('network request failed') ||
+      msg.includes('load failed') ||
+      String(juErr?.name || '') === 'AuthRetryableFetchError';
+    const looksRevoked =
+      status === 401 ||
+      status === 403 ||
+      msg.includes('user not found') ||
+      msg.includes('invalid jwt') ||
+      msg.includes('jwt expired') ||
+      msg.includes('session not found') ||
+      msg.includes('session missing');
+    if (looksRevoked && !looksNetwork) {
+      return { user: null, error: juErr, revoked: true };
+    }
+    if (attempt < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+    }
+  }
+  return { user: null, error: lastErr, revoked: false };
 }
 
 const clearSupabaseAuthStorage = async () => {
@@ -360,6 +396,8 @@ export const AuthProvider = ({ children }) => {
   const lastFetchedUserIdRef = useRef(null);
   /** Evita solapar varios fetchProfile por onAuthStateChange + restore a la vez. */
   const profileSyncInFlightRef = useRef(null);
+  /** Promesa compartida cuando restore + onAuthStateChange disparan sync a la vez. */
+  const profileSyncPromiseRef = useRef(null);
   /** Evita spamear consola con el mismo "omitido en curso" en cada callback duplicado. */
   const profileSyncConcurrentSkipLoggedRef = useRef(false);
   const lastAvatarCleanupUserIdRef = useRef(null);
@@ -955,17 +993,38 @@ export const AuthProvider = ({ children }) => {
     };
   }, [session?.user?.id, profile?.organization_id, staffRoles, membershipsFetchKey]);
 
-  /** Evita WelcomeGlobal en “cargando” eterno si sync / AsyncStorage / Supabase no terminan. */
+  /** Sesión sin perfil tras timeout largo (sync lento); no cortar mientras fetch de perfil está en vuelo. */
   useEffect(() => {
     if (!session?.user?.id) return undefined;
-    const watchdogMs = 7000;
-    const t = setTimeout(() => {
-      console.log(
-        '🟠 AUTH_BOOTSTRAP_WATCHDOG: desbloqueando Welcome (initialProfileSync + orgs + modo persistido)',
-      );
-      setInitialProfileSyncDone(true);
+    const uid = session.user.id;
+    const watchdogMs = 28000;
+    const t = setTimeout(async () => {
+      if (profileRef.current?.id === uid) return;
+      if (profileSyncInFlightRef.current === uid) return;
+      authTrace('watchdog_ghost_signout', {
+        userId: `${String(uid).slice(0, 8)}…`,
+      });
+      console.log('🧨 AUTH_BOOTSTRAP_WATCHDOG: sesión sin perfil → signOut local');
+      try {
+        await clearSupabaseAuthStorage();
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (e) {
+        console.log('🧨 watchdog signOut:', e?.message || e);
+      }
+      profileSyncInFlightRef.current = null;
+      profileSyncPromiseRef.current = null;
+      lastFetchedUserIdRef.current = null;
+      setSession(null);
+      setProfile(null);
+      setRole(null);
+      setOrganization(null);
+      setOwnedOrganizations([]);
+      setOrganizationMemberships([]);
       setOwnedOrgsLoading(false);
+      setActiveAppModeState(null);
       setActiveAppModeHydrated(true);
+      setInitialProfileSyncDone(true);
+      setAuthSessionRestored(true);
     }, watchdogMs);
     return () => clearTimeout(t);
   }, [session?.user?.id]);
@@ -1111,37 +1170,33 @@ export const AuthProvider = ({ children }) => {
   }, [session?.user?.id, ownedOrgsLoading, activeAppModeHydrated]);
 
   useEffect(() => {
-    if (!session?.user?.id) return;
-    if (ownedOrgsLoading) return;
-    // eslint-disable-next-line no-console
-    console.log('ROUTING_DEBUG AuthContext snapshot', {
-      userId: session.user.id,
+    authTraceSnapshot('context', {
+      session,
+      profile,
+      role,
+      organization,
+      impersonatingOrgId,
       activeAppMode,
-      activeAppModeHydrated,
-      profileRole: profile?.role,
-      hasStaffMembership,
-      hasClientMembership,
-      ownedOrgsCount: ownedOrganizations?.length ?? 0,
-      orgsOwnedByUserCount: organizationsOwnedByUser?.length ?? 0,
-      needsFitEngineSpaceSetup,
-      membershipCount: organizationMemberships?.length ?? 0,
-      isDualHatUser,
+      initialProfileSyncDone,
+      authSessionRestored,
       authNavigationReady,
+      ownedOrgsLoading,
+      organizationMemberships,
     });
   }, [
     session?.user?.id,
-    ownedOrgsLoading,
+    profile?.id,
+    profile?.organization_id,
+    role,
+    organization?.id,
+    organization?.name,
+    impersonatingOrgId,
     activeAppMode,
-    activeAppModeHydrated,
-    profile?.role,
-    hasStaffMembership,
-    hasClientMembership,
-    ownedOrganizations,
-    organizationsOwnedByUser,
-    needsFitEngineSpaceSetup,
-    organizationMemberships,
-    isDualHatUser,
+    initialProfileSyncDone,
+    authSessionRestored,
     authNavigationReady,
+    ownedOrgsLoading,
+    organizationMemberships,
   ]);
 
   /**
@@ -1667,9 +1722,30 @@ export const AuthProvider = ({ children }) => {
   // SYNC
   // -------------------------
   const syncFromSession = async (nextSession) => {
+    const nextUserId = nextSession?.user?.id || null;
+    authTrace('syncFromSession_start', {
+      nextUserId: nextUserId ? `${String(nextUserId).slice(0, 8)}…` : null,
+      lastFetched: lastFetchedUserIdRef.current
+        ? `${String(lastFetchedUserIdRef.current).slice(0, 8)}…`
+        : null,
+    });
+    if (
+      nextUserId &&
+      lastFetchedUserIdRef.current &&
+      lastFetchedUserIdRef.current !== nextUserId
+    ) {
+      lastFetchedUserIdRef.current = null;
+      profileSyncInFlightRef.current = null;
+      profileSyncPromiseRef.current = null;
+      profileSyncConcurrentSkipLoggedRef.current = false;
+      setProfile(null);
+      setRole(null);
+      setOrganization(null);
+    }
+
     setSession(nextSession || null);
 
-    const userId = nextSession?.user?.id || null;
+    const userId = nextUserId;
     const accessToken = nextSession?.access_token || null;
 
     if (!userId) {
@@ -1701,6 +1777,7 @@ export const AuthProvider = ({ children }) => {
       // Si el ref dice "ya sincronicé" pero el estado perdió profile (carrera / remount / limpieza parcial),
       // NO omitir: si no, Login ve profile=null + initialProfileSyncDone=true y manda a RegistroInicial.
       if (profileRef.current?.id === userId) {
+        setSession(nextSession || null);
         // No await: si join_organization_with_invite cuelga, bloqueaba setInitialProfileSyncDone
         // y WelcomeGlobal quedaba en “cargando” para siempre en web.
         setInitialProfileSyncDone(true);
@@ -1715,15 +1792,11 @@ export const AuthProvider = ({ children }) => {
       }
       console.log('🧠 SYNC: ref coincide pero sin profile en estado → fetch forzado', { userId });
     }
-    if (profileSyncInFlightRef.current === userId) {
-      if (!profileSyncConcurrentSkipLoggedRef.current) {
-        profileSyncConcurrentSkipLoggedRef.current = true;
-        console.log('🧠 SYNC: omitido (fetch de perfil en curso)', {
-          userId,
-          note: 'restore + onAuthStateChange suelen disparar 2+; el primero hace el SELECT',
-        });
-      }
-      return profileRef.current?.id === userId ? profileRef.current : null;
+    if (profileSyncInFlightRef.current === userId && profileSyncPromiseRef.current) {
+      authTrace('syncFromSession_await_inflight', {
+        userId: `${String(userId).slice(0, 8)}…`,
+      });
+      return profileSyncPromiseRef.current;
     }
 
     console.log('🧠 SYNC CHECK', {
@@ -1733,8 +1806,20 @@ export const AuthProvider = ({ children }) => {
       tokenLen: accessToken ? String(accessToken).length : 0,
     });
 
+    const syncWork = (async () => {
     setInitialProfileSyncDone(false);
     profileSyncInFlightRef.current = userId;
+    const profileSyncUiCapMs = 15000;
+    const profileSyncUiCap = setTimeout(() => {
+      if (profileSyncInFlightRef.current !== userId) return;
+      authTrace('sync_profile_ui_cap', {
+        userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+        ms: profileSyncUiCapMs,
+      });
+      setInitialProfileSyncDone(true);
+      setAuthSessionRestored(true);
+    }, profileSyncUiCapMs);
+    let sessionForState = nextSession;
     let syncedProfile = null;
     try {
       console.log('🧠 SYNC → fetchProfile(userId, accessToken)');
@@ -1757,7 +1842,13 @@ export const AuthProvider = ({ children }) => {
       } else {
         // Sin fila en profiles (trigger falló, OAuth reciente, etc.): refresh + re-SELECT + ensureProfile.
         // Antes: refresh OK pero dejábamos profile=null → “perfil vacío” y join/membresías incoherentes.
-        const { data: refData, error: refErr } = await supabase.auth.refreshSession();
+        const refreshRace = await Promise.race([
+          supabase.auth.refreshSession(),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('refresh_session_timeout')), 10000);
+          }),
+        ]).catch((e) => ({ data: null, error: e }));
+        const { data: refData, error: refErr } = refreshRace || {};
         if (refErr || !refData?.user || !refData?.session) {
           await clearSupabaseAuthStorage();
           try {
@@ -1778,8 +1869,8 @@ export const AuthProvider = ({ children }) => {
           await setPlanActualStorage(null);
           return null;
         }
-        setSession(refData.session);
         const newToken = refData.session.access_token;
+        sessionForState = refData.session;
         let pRetry = await fetchProfile(userId, newToken);
         if (!pRetry?.id) {
           const um = refData.session.user?.user_metadata || {};
@@ -1817,17 +1908,43 @@ export const AuthProvider = ({ children }) => {
 
       lastFetchedUserIdRef.current = userId;
     } finally {
-      profileSyncInFlightRef.current = null;
-      profileSyncConcurrentSkipLoggedRef.current = false;
-      // Marcar sync listo antes de invitación pendiente: el RPC puede tardar o colgarse;
-      // el efecto con initialProfileSyncDone vuelve a intentar applyPendingClientInviteOnce.
-      setInitialProfileSyncDone(true);
-      void applyPendingClientInviteOnce().catch(() => {});
+      clearTimeout(profileSyncUiCap);
+      const profileOk =
+        !!syncedProfile?.id && String(syncedProfile.id) === String(userId);
+      if (!profileOk) {
+        authTrace('sync_profile_missing', {
+          userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+          syncedProfileId: syncedProfile?.id ? `${String(syncedProfile.id).slice(0, 8)}…` : null,
+        });
+        console.log('🟠 SYNC: sesión sin fila profile (no signOut automático)');
+        setSession(sessionForState || nextSession || null);
+        setInitialProfileSyncDone(true);
+        setAuthSessionRestored(true);
+      } else {
+        setSession(sessionForState || null);
+        setInitialProfileSyncDone(true);
+        void applyPendingClientInviteOnce().catch(() => {});
+      }
     }
 
-    // En segundo plano para no bloquear OAuth/Login (fetchUserPlans puede hacer timeout con RLS).
     fetchUserPlans(userId).catch(() => {});
+    authTrace('syncFromSession_done', {
+      userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+      profileRole: syncedProfile?.role ?? null,
+    });
     return syncedProfile;
+    })();
+
+    profileSyncPromiseRef.current = syncWork;
+    try {
+      return await syncWork;
+    } finally {
+      if (profileSyncInFlightRef.current === userId) {
+        profileSyncInFlightRef.current = null;
+      }
+      profileSyncPromiseRef.current = null;
+      profileSyncConcurrentSkipLoggedRef.current = false;
+    }
   };
 
   // -------------------------
@@ -1837,6 +1954,7 @@ export const AuthProvider = ({ children }) => {
     let mounted = true;
 
     const restore = async () => {
+      authTrace('restore_start', { platform: Platform.OS });
       // WelcomeGlobal muestra el mismo “splash” hasta authSessionRestored. Antes solo pasaba a true
       // al terminar TODO restore (syncFromSession + fetch perfil + refresh…), pudiendo colgarse minutos.
       let welcomeUiUnblocked = false;
@@ -1845,14 +1963,37 @@ export const AuthProvider = ({ children }) => {
         welcomeUiUnblocked = true;
         setAuthSessionRestored(true);
       };
-      /** Tope duro: el usuario debe ver Welcome (CTAs o spinner de sesión) en ~≤3s, no esperar restore completo. */
-      const RESTORE_UI_CAP_MS = 2600;
+      /** Si sync cuelga, Welcome no puede esperar al finally del restore sin tope. */
+      const RESTORE_UI_CAP_MS = 3500;
       const uiCapTimer = setTimeout(() => {
-        console.log(
-          '🟠 restore: RESTORE_UI_CAP — desbloqueando WelcomeGlobal (restore/sync puede seguir en vuelo)',
-        );
+        authTrace('restore_ui_cap', { ms: RESTORE_UI_CAP_MS });
         unblockWelcomeBootstrapUI();
       }, RESTORE_UI_CAP_MS);
+
+      const runSyncWithTimeout = async (sess, label) => {
+        const SYNC_CAP_MS = 18000;
+        try {
+          return await Promise.race([
+            syncFromSession(sess),
+            new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('sync_timeout')), SYNC_CAP_MS);
+            }),
+          ]);
+        } catch (e) {
+          if (String(e?.message || e) === 'sync_timeout') {
+            authTrace('restore_sync_timeout', { label, ms: SYNC_CAP_MS });
+            console.log(`🧨 restore: sync timeout (${label}) → limpio sesión local`);
+            await clearSupabaseAuthStorage();
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch (_) {}
+            if (mounted) await syncFromSession(null);
+          } else {
+            throw e;
+          }
+        }
+      };
+
       try {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const authCode = getWebOAuthCodeFromQuery();
@@ -1902,7 +2043,7 @@ export const AuthProvider = ({ children }) => {
                 const cleanUrl = `${window.location.origin}${window.location.pathname}`;
                 window.history.replaceState({}, document.title, cleanUrl);
               } catch (_) {}
-              if (mounted) await syncFromSession(urlSessionData.session);
+              if (mounted) await runSyncWithTimeout(urlSessionData.session, 'oauth_code');
               return;
             }
 
@@ -1914,7 +2055,7 @@ export const AuthProvider = ({ children }) => {
                   const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
                   window.history.replaceState({}, document.title, cleanUrl);
                 } catch (_) {}
-                if (mounted) await syncFromSession(setData.session);
+                if (mounted) await runSyncWithTimeout(setData.session, 'oauth_hash');
                 return;
               }
               console.log('🟠 restore web hash session error:', setError?.message || setError);
@@ -1939,6 +2080,11 @@ export const AuthProvider = ({ children }) => {
         }
 
         const { data, error } = await supabase.auth.getSession();
+        authTrace('restore_getSession', {
+          hasSession: !!data?.session?.user?.id,
+          userId: data?.session?.user?.id ? `${String(data.session.user.id).slice(0, 8)}…` : null,
+          error: error?.message ?? null,
+        });
 
         if (error) {
           const msg = String(error?.message || error || '').toLowerCase();
@@ -1978,39 +2124,24 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         if (sessionFromStorage?.user?.id) {
-          // getSession() lee storage local: si borraste el usuario en Supabase, el JWT puede seguir
-          // “fresco” y la app creía que seguías logueado. getUser() pega al servidor y valida el token.
-          const { data: ju, error: juErr } = await supabase.auth.getUser();
-          if (juErr || !ju?.user?.id) {
-            const msg = String(juErr?.message || juErr || '').toLowerCase();
-            const status = juErr?.status ?? juErr?.statusCode;
-            const looksNetwork =
-              msg.includes('failed to fetch') ||
-              msg.includes('networkerror') ||
-              msg.includes('network request failed') ||
-              msg.includes('load failed') ||
-              String(juErr?.name || '') === 'AuthRetryableFetchError';
-            const looksRevoked =
-              !ju?.user?.id ||
-              status === 401 ||
-              status === 403 ||
-              msg.includes('user not found') ||
-              msg.includes('invalid jwt') ||
-              msg.includes('jwt expired') ||
-              msg.includes('session not found') ||
-              msg.includes('session missing');
-            if (!looksNetwork && looksRevoked) {
+          const { user: liveUser, error: juErr, revoked } = await getAuthUserWithRetry();
+          if (!liveUser?.id) {
+            if (revoked) {
+              const msg = String(juErr?.message || juErr || '').toLowerCase();
+              const status = juErr?.status ?? juErr?.statusCode;
               console.log('🧨 restore: sesión local inválida o usuario borrado (getUser) → signOut local', {
                 status,
                 snippet: msg.slice(0, 120),
               });
-              await clearSupabaseAuthStorage();
-              try {
-                await supabase.auth.signOut({ scope: 'local' });
-              } catch (_) {}
-              if (mounted) await syncFromSession(null);
-              return;
+            } else {
+              console.log('🟠 restore: getUser falló tras reintentos — no rehidrato sesión local a ciegas');
             }
+            await clearSupabaseAuthStorage();
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch (_) {}
+            if (mounted) await syncFromSession(null);
+            return;
           }
         }
         if (sessionFromStorage?.user?.id) {
@@ -2018,7 +2149,7 @@ export const AuthProvider = ({ children }) => {
           const nowSec = Date.now() / 1000;
           const tokenStillFresh = typeof exp === 'number' && Number.isFinite(exp) && exp > nowSec + 120;
           if (tokenStillFresh) {
-            if (mounted) await syncFromSession(sessionFromStorage);
+            if (mounted) await runSyncWithTimeout(sessionFromStorage, 'getSession_fresh');
             return;
           }
           const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
@@ -2031,11 +2162,11 @@ export const AuthProvider = ({ children }) => {
             if (mounted) await syncFromSession(null);
             return;
           }
-          if (mounted) await syncFromSession(refreshData.session);
+          if (mounted) await runSyncWithTimeout(refreshData.session, 'refreshSession');
           return;
         }
 
-        await syncFromSession(sessionFromStorage);
+        await runSyncWithTimeout(sessionFromStorage, 'getSession_empty');
       } catch (e) {
         console.log('restore session catch:', e);
         if (mounted) {
@@ -2045,16 +2176,27 @@ export const AuthProvider = ({ children }) => {
       } finally {
         clearTimeout(uiCapTimer);
         unblockWelcomeBootstrapUI();
+        authTrace('restore_ui_unblocked', { authSessionRestored: true });
       }
     };
 
     restore();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (!mounted) return;
       const justLoggedOutAt = justLoggedOutAtRef.current;
-      if (justLoggedOutAt != null && Date.now() - justLoggedOutAt < LOGOUT_IGNORE_MS && nextSession?.user) {
-        console.log('🧨 onAuthStateChange: acabo de cerrar sesión → rechazo sesión fantasma');
+      // Tras logout, Supabase a veces rehidrata TOKEN_REFRESHED/INITIAL_SESSION; no bloquear SIGNED_IN (login nuevo).
+      const isExplicitSignIn = event === 'SIGNED_IN';
+      if (isExplicitSignIn && nextSession?.user) {
+        justLoggedOutAtRef.current = null;
+      }
+      if (
+        !isExplicitSignIn &&
+        justLoggedOutAt != null &&
+        Date.now() - justLoggedOutAt < LOGOUT_IGNORE_MS &&
+        nextSession?.user
+      ) {
+        console.log('🧨 onAuthStateChange: acabo de cerrar sesión → rechazo sesión fantasma', { event });
         try {
           await supabase.auth.signOut({ scope: 'local' });
         } catch (_) {}
@@ -2270,6 +2412,7 @@ export const AuthProvider = ({ children }) => {
   // REGISTER / LOGIN (igual)
   // -------------------------
   const register = async ({ email, password, fullName, phone, planActual, username, role: roleParam }) => {
+    justLoggedOutAtRef.current = null;
     setLoading(true);
     try {
       const normalizedEmail = (email || '').trim().toLowerCase();
@@ -2308,6 +2451,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async ({ email, password }) => {
+    // Login explícito: no aplicar guard anti-sesión-fantasma post-logout (onAuthStateChange SIGNED_IN).
+    justLoggedOutAtRef.current = null;
     setLoading(true);
     try {
       const normalized = (email || '').trim().toLowerCase();
@@ -2327,6 +2472,7 @@ export const AuthProvider = ({ children }) => {
   // OAUTH Google / Apple
   // -------------------------
   const signInWithProvider = async (provider) => {
+    justLoggedOutAtRef.current = null;
     const finishOAuthWithReturnUrl = async (returnedUrl) => {
       const hasHash = returnedUrl.includes('#');
       const hasCode = /[?&]code=/.test(returnedUrl);

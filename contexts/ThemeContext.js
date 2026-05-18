@@ -42,8 +42,16 @@ function themePresetToBaseMode(preset) {
 }
 
 export const ThemeProvider = ({ children }) => {
-  const { profile, organization, user, hasClientMembership, hasStaffMembership, activeAppMode } =
-    useAuth() || {};
+  const {
+    profile,
+    organization,
+    user,
+    hasClientMembership,
+    hasStaffMembership,
+    activeAppMode,
+    ownedOrgsLoading,
+    initialProfileSyncDone,
+  } = useAuth() || {};
   const [mode, setModeState] = useState('dark');
   /** Evita flashes neutral→org cuando `organization` es null un instante (refresh, race al hidratar). */
   const lastOrgForThemeRef = useRef(null);
@@ -87,19 +95,36 @@ export const ThemeProvider = ({ children }) => {
 
   const isDark = effectiveMode === 'dark';
   const t = useMemo(() => {
-    const resolvedOrg =
-      !user?.id
-        ? null
-        : organization?.id != null
-          ? organization
-          : lastOrgForThemeRef.current?.id
-            ? lastOrgForThemeRef.current
-            : null;
+    const profileOrgId =
+      profile?.organization_id && String(profile.organization_id).trim()
+        ? String(profile.organization_id).trim()
+        : null;
+    const stillBootstrapping =
+      !!user?.id && (ownedOrgsLoading || initialProfileSyncDone === false);
+
+    let resolvedOrg = null;
+    if (!user?.id) {
+      resolvedOrg = null;
+    } else if (organization?.id != null) {
+      resolvedOrg = organization;
+    } else if (stillBootstrapping && lastOrgForThemeRef.current?.id) {
+      if (!profileOrgId || lastOrgForThemeRef.current.id === profileOrgId) {
+        resolvedOrg = lastOrgForThemeRef.current;
+      }
+    }
+
     if (!resolvedOrg?.id) {
       return getThemeTokensFitEnginePlatform(effectiveMode, null);
     }
     return getThemeTokens(effectiveMode, resolvedOrg);
-  }, [effectiveMode, organization, user?.id]);
+  }, [
+    effectiveMode,
+    organization,
+    user?.id,
+    profile?.organization_id,
+    ownedOrgsLoading,
+    initialProfileSyncDone,
+  ]);
 
   // Cargar modo: primero AsyncStorage, luego si hay profile.theme_mode lo aplicamos y sincronizamos
   useEffect(() => {

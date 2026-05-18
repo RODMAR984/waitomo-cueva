@@ -133,6 +133,14 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           flexDirection: 'row',
           alignItems: 'stretch',
           minHeight: 0,
+          ...(Platform.OS === 'web'
+            ? {
+                width: '100%',
+                alignSelf: 'stretch',
+                minHeight: '100vh',
+                backgroundColor: t.bg,
+              }
+            : null),
         },
         staffWebRail: {
           width: STAFF_WEB_RAIL,
@@ -142,8 +150,9 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           paddingBottom: 10,
           paddingHorizontal: 8,
           borderRightWidth: 1,
-          borderRightColor: t.overlayBorder,
-          backgroundColor: t.boxBg,
+          borderRightColor: t.border,
+          // Fondo de pantalla opaco: `boxBg` en oscuro es cian translúcido y deja ver la foto → “verde con velo”.
+          backgroundColor: t.bg,
         },
         staffWebRailCaption: {
           color: t.subText,
@@ -167,10 +176,11 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         staffWebRailScroll: {
           flex: 1,
           minHeight: 0,
+          backgroundColor: t.bg,
         },
         staffWebRailLogoutWrap: {
           borderTopWidth: 1,
-          borderTopColor: t.overlayBorder,
+          borderTopColor: t.border,
           paddingTop: 10,
           marginTop: 4,
         },
@@ -209,6 +219,13 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         staffWebMainColumn: {
           flex: 1,
           minWidth: 0,
+          ...(Platform.OS === 'web'
+            ? {
+                width: '100%',
+                alignSelf: 'stretch',
+                minHeight: '100vh',
+              }
+            : null),
         },
       }),
     [t],

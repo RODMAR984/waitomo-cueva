@@ -47,7 +47,7 @@ export default function AsignarCoachesScreen({ route }) {
   const insets = useSafeAreaInsets();
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
-  const { currentUser, isSuperAdmin, organization, organizationsOwnedByUser } = useAuth();
+  const { session, profile, isSuperAdmin, organization, organizationsOwnedByUser } = useAuth();
 
   const plans = route?.params?.plans || DEFAULT_PLANS;
 
@@ -110,7 +110,8 @@ export default function AsignarCoachesScreen({ route }) {
   );
 
   const autorizado =
-    !!isSuperAdmin?.(currentUser?.id) || (!!organization?.id && isOwnerOfCurrentOrg);
+    (typeof isSuperAdmin === 'function' && isSuperAdmin()) ||
+    (!!organization?.id && isOwnerOfCurrentOrg);
 
   const [inputByPlan, setInputByPlan] = useState({});
 

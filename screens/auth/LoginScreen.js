@@ -307,7 +307,7 @@ export default function LoginScreen() {
         profile: p,
         forStaff,
         needsFitEngineSpaceSetup,
-        authNavigationReady,
+        authNavigationReady: authNavigationReady || !!p?.id,
         hasClientMembership: !!hasClientMembership,
         isPlatformAdmin: typeof isPlatformAdmin === 'function' && isPlatformAdmin(),
         hasStaffMembership: !!hasStaffMembership,
@@ -444,6 +444,10 @@ export default function LoginScreen() {
         } catch (_) {}
       }
 
+      if (!loggedProfile?.id) {
+        Alert.alert(tStr('gym_config_alert_title_error'), tStr('login_error_profile_load'));
+        return;
+      }
       const effectiveRole = loggedProfile?.role || 'cliente';
       if (forStaff && !isStaffRole(effectiveRole)) {
         setShowStaffAccessChoice(true);

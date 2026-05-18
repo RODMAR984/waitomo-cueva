@@ -309,7 +309,7 @@ export default function AdminScreen() {
 
   const { bloques, saveBloques, refreshTrigger } = useTrainingData();
   const {
-    currentUser,
+    session,
     rolesByUser,
     isSuperAdmin,
     logout,
@@ -317,9 +317,9 @@ export default function AdminScreen() {
     organization,
     organizationsOwnedByUser,
   } = useAuth();
-  const myId = currentUser?.id || null;
+  const myId = session?.user?.id || profile?.id || null;
   const myRole = rolesByUser?.[myId];
-  const isSA = !!(myId && isSuperAdmin(myId));
+  const isSA = typeof isSuperAdmin === 'function' ? isSuperAdmin() : false;
   const isCoach = myRole === 'coach';
   const coachPlanActual = profile?.plan_actual ? String(profile.plan_actual) : null;
 

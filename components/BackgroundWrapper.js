@@ -7,39 +7,54 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isWaitomoOrg, hexToRgba, usesFitEnginePlatformShell } from '../theme/colors';
 import { FITENGINE_APP_CANVAS_BG } from '../theme/appVisualCohesion';
-import LogoTriangleBackground from './LogoTriangleBackground';
 import {
   IMAGENES_POR_PLAN as planImages,
   IMAGEN_WELCOME as welcomeImage,
 } from '../utils/imagenesFijas';
 
+/** En web, `ImageBackground` suele encogerse al ancho del contenido → franja clara a la derecha. */
+const WEB_FULL_BLEED =
+  Platform.OS === 'web'
+    ? {
+        width: '100%',
+        alignSelf: 'stretch',
+        minHeight: '100%',
+        backgroundColor: '#021b23',
+      }
+    : null;
+const WEB_IMAGE_COVER =
+  Platform.OS === 'web'
+    ? {
+        width: '100%',
+        minWidth: '100%',
+        minHeight: '100%',
+        objectFit: 'cover',
+      }
+    : null;
+
+function webImageBgProps(style, imageStyle, bgColor) {
+  return {
+    style: [styles.flex, WEB_FULL_BLEED, bgColor ? { backgroundColor: bgColor } : null, style].filter(Boolean),
+    imageStyle: [imageStyle, WEB_IMAGE_COVER].filter(Boolean),
+  };
+}
+
 const IMAGEN_PLAN_SELECTOR = require('../assets/plan_image/bg_plan_selector.jpg');
 /** Directorio público “buscar gym”: misma referencia visual que PublicDirectoryScreen. */
 const BG_PUBLIC_DIRECTORY = require('../assets/plan_image/bg_fitengine_public_directory.jpg');
+const BG_FITENGINE_FALLBACK = require('../assets/plan_image/bg_fallback.jpg');
+/** Shell FitEngine: triángulo sobre negro, pantalla completa (no watermark encima). */
+const BG_FITENGINE_TRIANGLE = require('../assets/triangulo-ab.png');
 
 /**
- * Fondos para orgs en shell FitEngine (sin branding propio): siempre incluye la imagen de “buscar tu centro”
- * más fotos neutras (sin nombres Waitomo). Rotan según pantalla/usuario/org para variar en el flujo.
+ * Shell FitEngine (org sin branding propio): solo 3 fotos de producto, rotación por pantalla/usuario/org.
+ * Sin LogoTriangleBackground superpuesto — el triángulo es una de las tres imágenes de fondo.
  */
 const FITENGINE_PLATFORM_SHELL_BACKGROUNDS = [
   BG_PUBLIC_DIRECTORY,
-  require('../assets/plan_image/bg_plan_selector.jpg'),
-  require('../assets/plan_image/bg_kettlebell_logo.jpg'),
-  require('../assets/plan_image/bg_fallback.jpg'),
-  require('../assets/plan_image/bg_welcome_glow.jpg'),
-  require('../assets/plan_image/bg2.jpg'),
-  require('../assets/plan_image/bg3.jpg'),
-  require('../assets/plan_image/bg4.jpg'),
-  require('../assets/plan_image/bg5.jpg'),
-  require('../assets/plan_image/bg6.jpg'),
-  require('../assets/plan_image/plan_openbox.jpg'),
-  require('../assets/plan_image/plan_cross.jpg'),
-  require('../assets/plan_image/plan_evolucion.jpg'),
-  require('../assets/plan_image/plan_stretching.jpg'),
-  require('../assets/plan_image/plan_yoga.jpg'),
-  require('../assets/plan_image/plan_oly.jpg'),
-  require('../assets/plan_image/plan_hyrox_1.jpg'),
-].filter(img => img);
+  BG_FITENGINE_FALLBACK,
+  BG_FITENGINE_TRIANGLE,
+].filter(Boolean);
 
 function pickFitEngineShellBackgroundSource({ screenLower, userId, orgId }) {
   const arr = FITENGINE_PLATFORM_SHELL_BACKGROUNDS;
@@ -138,14 +153,8 @@ export default function BackgroundWrapper({
    * Triángulo centrado detrás del velo: con paneles neo semitransparentes (Engine room, config gym, etc.)
    * se percibe como columna oscura vertical. Ocultarlo en back-office staff; en cliente in-app se mantiene.
    */
-  const hideFitEngineTriangleForStaffBackdrop =
-    screenLower.includes('admin') || screenLower === 'gymconfig';
-  const showFitEngineTriangleWatermark = !hideFitEngineTriangleForStaffBackdrop;
-  const showFitEngineShellWatermark =
-    !!user?.id &&
-    !!orgForBackground?.id &&
-    usesFitEnginePlatformShell(orgForBackground) &&
-    !isFitEnginePlatformBackgroundScreen(screenLower);
+  const isFePlatformShellOrg =
+    !!orgForBackground?.id && usesFitEnginePlatformShell(orgForBackground);
   const isWelcome = screenLower.includes('welcome');
   const overlayColor = forceDarkOverlay ? 'rgba(0,0,0,0.24)' : t.screenOverlay;
   const overlayStyle = { ...StyleSheet.absoluteFillObject, backgroundColor: overlayColor };
@@ -182,11 +191,12 @@ export default function BackgroundWrapper({
 
   // Fondo explícito (p. ej. clase de prueba / formularios con rotación general)
   if (fondo) {
+    const bgProps = webImageBgProps(style, imageStyle);
     return (
       <ImageBackground
         source={fondo}
-        style={[styles.flex, style]}
-        imageStyle={imageStyle}
+        style={bgProps.style}
+        imageStyle={bgProps.imageStyle}
         resizeMode="cover"
       >
         <View style={overlayStyle} />
@@ -203,16 +213,14 @@ export default function BackgroundWrapper({
         userId: user?.id,
         orgId: orgForBackground?.id,
       });
+      const bgProps = webImageBgProps(style, imageStyle, t.bg);
       return (
         <ImageBackground
           source={feSolidShellSource}
-          style={[styles.flex, style]}
-          imageStyle={imageStyle}
+          style={bgProps.style}
+          imageStyle={bgProps.imageStyle}
           resizeMode="cover"
         >
-          {showFitEngineTriangleWatermark ? (
-            <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
-          ) : null}
           <View style={overlayStyle} />
           {children}
         </ImageBackground>
@@ -220,12 +228,6 @@ export default function BackgroundWrapper({
     }
     return (
       <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
-        {showFitEngineShellWatermark && showFitEngineTriangleWatermark ? (
-          <LogoTriangleBackground
-            isDark={isDark}
-            blendMode={isDark ? 'screen' : 'multiply'}
-          />
-        ) : null}
         {children}
       </View>
     );
@@ -235,11 +237,12 @@ export default function BackgroundWrapper({
   const orgImageScrimStyle = { ...StyleSheet.absoluteFillObject, backgroundColor: orgImageScrim };
 
   if (useOrgBackground && orgBgType === 'image' && orgBgUrl) {
+    const bgProps = webImageBgProps(style, imageStyle);
     return (
       <ImageBackground
         source={{ uri: orgBgUrl }}
-        style={[styles.flex, style]}
-        imageStyle={imageStyle}
+        style={bgProps.style}
+        imageStyle={bgProps.imageStyle}
         resizeMode="cover"
       >
         <View style={orgImageScrimStyle} />
@@ -305,7 +308,6 @@ export default function BackgroundWrapper({
         imageStyle={[imageStyle, webImageCover].filter(Boolean)}
         resizeMode="cover"
       >
-        <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
         <View style={overlayStyle} />
         {children}
       </ImageBackground>
@@ -318,16 +320,16 @@ export default function BackgroundWrapper({
     orgId: orgForBackground?.id,
   });
 
-  // Intro “configurá tu espacio” y el asistente de branding: pool FitEngine + triángulo (cambia entre pantallas).
+  // Intro / branding FitEngine: mismo pool de 3 fondos (sin watermark).
   if (screenLower === 'fitenginespaceintro' || screenLower === 'configuratuespacio') {
+    const bgProps = webImageBgProps(style, imageStyle, t.bg);
     return (
       <ImageBackground
         source={feShellSourceAuth}
-        style={[styles.flex, style]}
-        imageStyle={imageStyle}
+        style={bgProps.style}
+        imageStyle={bgProps.imageStyle}
         resizeMode="cover"
       >
-        <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
         <View style={overlayStyle} />
         {children}
       </ImageBackground>
@@ -344,36 +346,33 @@ export default function BackgroundWrapper({
         </View>
       );
     }
-    const useFeDirectoryShell =
-      !!orgForBackground?.id && usesFitEnginePlatformShell(orgForBackground);
-    if (useFeDirectoryShell) {
+    if (isFePlatformShellOrg) {
       const feShellSource = pickFitEngineShellBackgroundSource({
         screenLower,
         userId: user?.id,
         orgId: orgForBackground?.id,
       });
+      const bgProps = webImageBgProps(style, imageStyle, t.bg);
       return (
         <ImageBackground
           source={feShellSource}
-          style={[styles.flex, style]}
-          imageStyle={imageStyle}
+          style={bgProps.style}
+          imageStyle={bgProps.imageStyle}
           resizeMode="cover"
         >
-          {showFitEngineTriangleWatermark ? (
-            <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />
-          ) : null}
           <View style={overlayStyle} />
           {children}
         </ImageBackground>
       );
     }
     const source = TRABAJO_DIA_BACKGROUNDS[randomIndex];
+    const bgProps = webImageBgProps(style, imageStyle);
 
     return (
       <ImageBackground
         source={source}
-        style={[styles.flex, style]}
-        imageStyle={imageStyle}
+        style={bgProps.style}
+        imageStyle={bgProps.imageStyle}
         resizeMode="cover"
       >
         <View style={overlayStyle} />
@@ -384,11 +383,12 @@ export default function BackgroundWrapper({
 
   // SEGUNDO: pantalla específica con imagen propia (selector de planes)
   if (screenLower.includes('planselector')) {
+    const bgProps = webImageBgProps(style, imageStyle);
     return (
       <ImageBackground
         source={IMAGEN_PLAN_SELECTOR}
-        style={[styles.flex, style]}
-        imageStyle={imageStyle}
+        style={bgProps.style}
+        imageStyle={bgProps.imageStyle}
         resizeMode="cover"
       >
         <View style={overlayStyle} />
@@ -410,11 +410,12 @@ export default function BackgroundWrapper({
   }
 
   // Welcome: zoom ligero en la imagen para efecto “recortado” (mano + kettlebell más protagonistas)
+  const bgProps = webImageBgProps(style, imageStyle);
   return (
     <ImageBackground
       source={source}
-      style={[styles.flex, style]}
-      imageStyle={imageStyle}
+      style={bgProps.style}
+      imageStyle={bgProps.imageStyle}
       resizeMode="cover"
     >
       <View style={overlayStyle} />

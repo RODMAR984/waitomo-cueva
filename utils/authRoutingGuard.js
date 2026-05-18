@@ -22,8 +22,10 @@ export function resolveStaffDestination({
   const hasStaffOrgHint =
     (ownedOrganizationsCount || 0) > 0 || hasStaffMembership || orgIdHint;
 
-  // Hub panel plataforma (ruta dedicada); el admin de gym sigue en AdminLite / sub-rutas.
-  if (normalizedRole === 'superadmin' || isPlatformAdmin) return 'Superadmin';
+  // Plataforma: sin gym propio → hub. Si también sos dueño/staff de un centro (p. ej. Waitomo) → admin del gym.
+  if (normalizedRole === 'superadmin' || isPlatformAdmin) {
+    return hasStaffOrgHint ? 'AdminLite' : 'Superadmin';
+  }
 
   if (STAFF_ROLES.has(normalizedRole)) {
     if (hasStaffOrgHint) return 'AdminLite';
@@ -60,18 +62,21 @@ export function resolvePostAuthDestination({
   const hasStaffOrgHint =
     (ownedOrganizationsCount || 0) > 0 || hasStaffMembership === true || orgIdHint;
 
-  // Hub panel plataforma (ruta dedicada); el admin de gym sigue en AdminLite / sub-rutas.
-  if (normalizedRole === 'superadmin' || isPlatformAdmin) return 'Superadmin';
+  // Plataforma: sin gym propio → hub. Dueño/admin de Waitomo u otro centro → AdminLite (plataforma desde menú).
+  if (normalizedRole === 'superadmin' || isPlatformAdmin) {
+    return hasStaffOrgHint ? 'AdminLite' : 'Superadmin';
+  }
 
   if (STAFF_ROLES.has(normalizedRole)) {
-    if (!authNavigationReady) return null;
+    // Tras login el perfil ya viene en mano; no bloquear por fetch de memberships en vuelo.
+    if (!authNavigationReady && !hasProfile) return null;
     if (hasStaffOrgHint) return 'AdminLite';
     return needsFitEngineSpaceSetup ? 'FitEngineSpaceIntro' : 'AdminLite';
   }
 
   // Dueño de gym: el login no debe mandar al panel cliente (`getClientPostAuthRouteName`).
   if (normalizedRole === 'owner') {
-    if (!authNavigationReady) return null;
+    if (!authNavigationReady && !hasProfile) return null;
     if (forStaff && !hasProfile) return 'FitEngineSpaceIntro';
     if (!hasProfile) return 'RegistroInicial';
     return hasStaffOrgHint ? 'AdminLite' : 'FitEngineSpaceIntro';

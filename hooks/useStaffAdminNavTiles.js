@@ -14,10 +14,11 @@ function getFocusedRouteName(state) {
  * Usada en web escritorio por StaffWebDesktopShell y por AdminScreen (grid móvil / compacto).
  */
 export default function useStaffAdminNavTiles(navigation, tStr) {
-  const { currentUser, isSuperAdmin, isPlatformAdmin, profile, organization, organizationsOwnedByUser } = useAuth();
+  const { session, profile, isSuperAdmin, isPlatformAdmin, organization, organizationsOwnedByUser } =
+    useAuth();
 
-  const myId = currentUser?.id || null;
-  const isSA = !!(myId && isSuperAdmin(myId));
+  const myId = session?.user?.id || profile?.id || null;
+  const isSA = typeof isSuperAdmin === 'function' ? isSuperAdmin() : false;
   const isOrgOwner = (organizationsOwnedByUser?.length ?? 0) > 0;
   const isLite = !(isSA || isOrgOwner);
   const hasPlatformPanel = typeof isPlatformAdmin === 'function' && isPlatformAdmin();

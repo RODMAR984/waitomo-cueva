@@ -15,11 +15,12 @@ export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../t
 export { ADMIN_PANEL_GUTTER, ADMIN_SECTION_GAP, ADMIN_TABLE_ROW_MIN_HEIGHT } from '../../theme/adminSpec';
 
 function AdminLiteScreen(props) {
-  const { currentUser, isSuperAdmin, organizationsOwnedByUser } = useAuth();
+  const { isSuperAdmin, organizationsOwnedByUser } = useAuth();
 
   const isOrgOwner = (organizationsOwnedByUser?.length ?? 0) > 0;
+  const isSA = typeof isSuperAdmin === 'function' ? isSuperAdmin() : false;
 
-  if (isSuperAdmin(currentUser?.id) || isOrgOwner) {
+  if (isSA || isOrgOwner) {
     // Superadmin y dueños de organización usan Admin "full"
     return <AdminScreen {...props} mode="full" />;
   }

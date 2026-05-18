@@ -88,6 +88,13 @@ export function useWelcomeRouting() {
         authTrace('navigateToDestination_skip', { reason: 'initial_profile_sync_pending' });
         return;
       }
+      if (session?.user?.id && profile?.id !== session.user.id) {
+        authTrace('navigateToDestination_skip', {
+          reason: 'profile_missing_or_mismatch',
+          hasProfile: !!profile?.id,
+        });
+        return;
+      }
 
       // eslint-disable-next-line no-console
       console.log('ROUTING_DEBUG WelcomeGlobal navigateToDestination', {
@@ -118,7 +125,12 @@ export function useWelcomeRouting() {
       });
 
       if (role === 'superadmin' || (typeof isPlatformAdmin === 'function' && isPlatformAdmin())) {
-        resetStackTo(navigation, [{ name: 'Superadmin' }]);
+        const orgIdHint = !!(profile?.organization_id && String(profile.organization_id).trim());
+        const hasStaffOrgHint =
+          (organizationsOwnedByUser?.length || 0) > 0 ||
+          hasStaffMembership ||
+          orgIdHint;
+        resetStackTo(navigation, [{ name: hasStaffOrgHint ? 'AdminLite' : 'Superadmin' }]);
         return;
       }
 

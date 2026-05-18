@@ -165,6 +165,8 @@ export const translations = {
     login_alert_wrong_creds_other_session_body:
       'Había una sesión con otro correo. La cerramos para que puedas iniciar con la cuenta correcta. Volvé a ingresar email y contraseña.',
     login_error_signin_generic: 'No se pudo iniciar sesión. Revisá los datos o intentá de nuevo.',
+    login_error_profile_load:
+      'Iniciaste sesión pero no pudimos cargar tu perfil. Intentá de nuevo o usá Cerrar sesión en la bienvenida.',
     login_alert_email_required_title: 'Email requerido',
     login_alert_email_required_body: 'Escribí el email con el que te registraste para enviarte el enlace.',
     login_alert_reset_soon_title: 'Próximamente',
@@ -2154,6 +2156,8 @@ export const translations = {
     login_alert_wrong_creds_other_session_body:
       'There was a session with another email. We signed you out so you can sign in with the right account. Enter email and password again.',
     login_error_signin_generic: 'Could not sign in. Check your details or try again.',
+    login_error_profile_load:
+      'You are signed in but we could not load your profile. Try again or sign out from the welcome screen.',
     login_alert_email_required_title: 'Email required',
     login_alert_email_required_body: 'Enter the email you used to register so we can send the link.',
     login_alert_reset_soon_title: 'Coming soon',
