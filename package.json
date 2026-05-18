@@ -27,6 +27,7 @@
     "perf:web:bundle-check": "node scripts/check-web-bundle.cjs",
     "perf:lhci": "lhci autorun --config=./lighthouserc.js",
     "qa:web:release": "npm run qa:release && npm run perf:web:export && npm run perf:web:bundle-check",
+    "qa:web:release:pwa": "npm run qa:release && npm run perf:web:export:pwa && npm run perf:web:bundle-check",
     "qa:web:release:lhci": "npm run qa:web:release && npm run perf:lhci",
     "release:verify": "npm run qa:web:release && playwright test",
     "test:e2e:web": "npm run perf:web:export && playwright test",
