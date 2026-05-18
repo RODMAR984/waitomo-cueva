@@ -1,7 +1,7 @@
 // components/BackgroundWrapper.js - VERSIÓN CON ROTACIÓN + #20b branding multi-org
 // Si la org (no Waitomo) tiene background_type/background_url, los usa. Waitomo = comportamiento fijo.
 import React from 'react';
-import { ImageBackground, View, StyleSheet, Dimensions } from 'react-native';
+import { ImageBackground, View, StyleSheet, Dimensions, Platform } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -278,18 +278,31 @@ export default function BackgroundWrapper({
     );
   }
 
-  const feShellSourcePublic = pickFitEngineShellBackgroundSource({
-    screenLower: 'publicdirectory',
-    userId: user?.id,
-    orgId: orgForBackground?.id,
-  });
-
-  // Directorio público (onboarding FitEngine): pool marca + triángulo + velo (sin rotación Waitomo).
+  // Directorio público: siempre la imagen “buscar gym” (no el pool rotativo del shell FitEngine).
   if (screenLower === 'publicdirectory') {
+    const webFullBleed =
+      Platform.OS === 'web'
+        ? {
+            width: '100%',
+            alignSelf: 'stretch',
+            minHeight: '100%',
+            backgroundColor: '#0a0d10',
+          }
+        : null;
+    const webImageCover =
+      Platform.OS === 'web'
+        ? {
+            width: '100%',
+            minWidth: '100%',
+            minHeight: '100%',
+            objectFit: 'cover',
+          }
+        : null;
     return (
       <ImageBackground
-        source={feShellSourcePublic}
-        style={[styles.flex, style]}
+        source={BG_PUBLIC_DIRECTORY}
+        style={[styles.flex, style, webFullBleed]}
+        imageStyle={[imageStyle, webImageCover].filter(Boolean)}
         resizeMode="cover"
       >
         <LogoTriangleBackground isDark={isDark} blendMode={isDark ? 'screen' : 'multiply'} />

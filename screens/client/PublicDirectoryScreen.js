@@ -235,7 +235,6 @@ export default function PublicDirectoryScreen() {
         empty: { color: t.subText, textAlign: 'center', marginTop: MOBILE_SPACING.xxl, fontSize: MOBILE_TYPE.bodyStrong },
         err: { color: '#f87171', textAlign: 'center', marginTop: MOBILE_SPACING.lg, fontSize: MOBILE_TYPE.body },
         orgInitial: { color: t.subText, fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800' },
-        brandPowered: { color: t.subText, fontSize: MOBILE_TYPE.caption, marginTop: MOBILE_SPACING.xs },
       }),
     [insets.top, t],
   );
@@ -330,7 +329,6 @@ export default function PublicDirectoryScreen() {
       <View testID="screen-directory" style={styles.kav}>
         <View style={styles.head}>
           <LogoCompleto height={MOBILE_SIZES.localeControlHeight + MOBILE_SPACING.sm} />
-          <Text style={styles.brandPowered}>{tStr('login_brand_powered')}</Text>
         </View>
         <BackNavButton testID="directory-nav-back" onPress={handleBack} label={tStr('common_back')} />
         <Text style={styles.title}>{tStr('directory_title')}</Text>
