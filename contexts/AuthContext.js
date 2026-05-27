@@ -33,6 +33,11 @@ import { getOAuthRedirectUriForSupabase } from '../utils/fitengineUrls';
 import { trackEvent } from '../utils/observability';
 import { resetNavigationRootToWelcome } from '../navigationRef';
 import { clearWebAuthRoute } from '../utils/webAuthRoutePersistence';
+import {
+  parsePaymentConnectReturnFromWindow,
+  stashPendingPaymentConnectResult,
+  stripPaymentConnectQueryFromHistory,
+} from '../utils/paymentConnectWebReturn';
 import { authTrace, authTraceSnapshot } from '../utils/authTrace';
 
 /** Dónde se inició OAuth en web: si Google vuelve a otro origen, redirigimos acá con el mismo ?code=. */
@@ -402,12 +407,20 @@ export const AuthProvider = ({ children }) => {
   const profileSyncConcurrentSkipLoggedRef = useRef(false);
   const lastAvatarCleanupUserIdRef = useRef(null);
   const justLoggedOutAtRef = useRef(null);
+  /** Tras logout, la UI trata como invitado aunque Supabase rehidrate token unos segundos. */
+  const postLogoutUiUntilRef = useRef(0);
   /** URL inicial OAuth (waitomo://#...) con la que se abrió la app; si luego openAuthSessionAsync devuelve esta misma URL, la rechazamos como sesión fantasma */
   const staleInitialOAuthUrlRef = useRef(null);
   /** Watchdog de membresías: solo se reinicia al cambiar `session.user.id`, no al actualizar `profile.organization_id`. */
   const ownedOrgsWallTimerRef = useRef(null);
   const ownedOrgsWallTimerUserRef = useRef(null);
-  const LOGOUT_IGNORE_MS = 8000;
+  const LOGOUT_IGNORE_MS = 12000;
+  const POST_LOGOUT_UI_MS = 12000;
+
+  const isPostLogoutUiActive = useCallback(
+    () => Date.now() < (postLogoutUiUntilRef.current || 0),
+    [],
+  );
 
   // -------------------------
   // FETCH PROFILE (REST) ✅ TOKEN OVERRIDE
@@ -1996,6 +2009,12 @@ export const AuthProvider = ({ children }) => {
 
       try {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const paymentConnectReturn = parsePaymentConnectReturnFromWindow();
+          if (paymentConnectReturn) {
+            stripPaymentConnectQueryFromHistory();
+            stashPendingPaymentConnectResult(paymentConnectReturn);
+          }
+
           const authCode = getWebOAuthCodeFromQuery();
           // Volver al mismo origen donde quedó el code_verifier PKCE (localStorage por host).
           if (authCode && typeof sessionStorage !== 'undefined') {
@@ -2413,6 +2432,7 @@ export const AuthProvider = ({ children }) => {
   // -------------------------
   const register = async ({ email, password, fullName, phone, planActual, username, role: roleParam }) => {
     justLoggedOutAtRef.current = null;
+    postLogoutUiUntilRef.current = 0;
     setLoading(true);
     try {
       const normalizedEmail = (email || '').trim().toLowerCase();
@@ -2453,9 +2473,33 @@ export const AuthProvider = ({ children }) => {
   const login = async ({ email, password }) => {
     // Login explícito: no aplicar guard anti-sesión-fantasma post-logout (onAuthStateChange SIGNED_IN).
     justLoggedOutAtRef.current = null;
+    postLogoutUiUntilRef.current = 0;
+    const normalized = (email || '').trim().toLowerCase();
+    try {
+      const { data: preSession } = await supabase.auth.getSession();
+      const preEmail = String(preSession?.session?.user?.email || '')
+        .trim()
+        .toLowerCase();
+      if (
+        preSession?.session?.user?.id &&
+        preEmail &&
+        preEmail !== normalized
+      ) {
+        await clearSupabaseAuthStorage();
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+        } catch (_) {}
+        setSession(null);
+        setProfile(null);
+        setRole(null);
+        setOrganization(null);
+        lastFetchedUserIdRef.current = null;
+      }
+    } catch (_) {
+      /* ignore */
+    }
     setLoading(true);
     try {
-      const normalized = (email || '').trim().toLowerCase();
       const { data, error } = await supabase.auth.signInWithPassword({
         email: normalized,
         password,
@@ -2473,6 +2517,7 @@ export const AuthProvider = ({ children }) => {
   // -------------------------
   const signInWithProvider = async (provider) => {
     justLoggedOutAtRef.current = null;
+    postLogoutUiUntilRef.current = 0;
     const finishOAuthWithReturnUrl = async (returnedUrl) => {
       const hasHash = returnedUrl.includes('#');
       const hasCode = /[?&]code=/.test(returnedUrl);
@@ -2649,6 +2694,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     console.log('🚪 logout: global->local + limpiar storage');
     justLoggedOutAtRef.current = Date.now();
+    postLogoutUiUntilRef.current = Date.now() + POST_LOGOUT_UI_MS;
 
     const uidBeforeLogout = session?.user?.id || null;
     // Web: borrar token y restos OAuth ANTES de signOut (evita que el cliente re-escriba sesión al revocar).
@@ -2800,6 +2846,8 @@ export const AuthProvider = ({ children }) => {
       initialProfileSyncDone,
       /** false hasta el primer restore de sesión; evita welcome “invitado” con session aún null. */
       authSessionRestored,
+      /** Tras cerrar sesión: UI invitado aunque el token tarde en borrarse del storage. */
+      isPostLogoutUiActive,
       persistActiveAppMode,
 
       register,
@@ -2851,6 +2899,7 @@ export const AuthProvider = ({ children }) => {
       authNavigationReady,
       initialProfileSyncDone,
       authSessionRestored,
+      isPostLogoutUiActive,
       persistActiveAppMode,
       refreshOrganization,
       refreshProfile,

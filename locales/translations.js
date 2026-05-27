@@ -890,6 +890,8 @@ export const translations = {
     admin_mp_checkout_toggle_caption_on: 'Apagalo para pausar cobros MP en este gym sin borrar la vinculación.',
     admin_mp_webhook_note:
       'Webhook: /functions/v1/mercadopago-webhook (configuración en panel MP y secretos en Supabase).',
+    admin_mp_dev_docs_hint: 'Documentación técnica (opcional):',
+    admin_mp_dev_docs_link: 'Mercado Pago Developers',
     admin_mp_banner_paused_title: 'Cuenta vinculada — checkout pausado',
     admin_mp_banner_paused_body:
       'Los socios no verán checkout MP hasta que actives el interruptor y guardes. Podés desconectar para revocar el acceso.',
@@ -2875,6 +2877,8 @@ export const translations = {
     admin_mp_checkout_toggle_caption_on: 'Turn off to pause MP checkout for this gym without removing the link.',
     admin_mp_webhook_note:
       'Webhook: /functions/v1/mercadopago-webhook (configure in MP dashboard and secrets in Supabase).',
+    admin_mp_dev_docs_hint: 'Technical docs (optional):',
+    admin_mp_dev_docs_link: 'Mercado Pago Developers',
     admin_mp_banner_paused_title: 'Account linked — checkout paused',
     admin_mp_banner_paused_body:
       'Members won’t see MP checkout until you turn the switch on and save. Disconnect to revoke access.',

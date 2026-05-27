@@ -13,6 +13,13 @@ import { syncSentryUserContext } from '../utils/sentryWebClient';
 import { flushObservabilityEventsIfNeeded } from '../utils/observabilityFlush';
 import { navigationRef } from '../navigationRef';
 import { saveWebAuthRouteForUser } from '../utils/webAuthRoutePersistence';
+import {
+  parsePaymentConnectReturnFromWindow,
+  paymentConnectRouteForKind,
+  stashPendingPaymentConnectResult,
+  stripPaymentConnectQueryFromHistory,
+} from '../utils/paymentConnectWebReturn';
+import { initWebNavigationHistoryGuard } from '../utils/webNavigationHistory';
 
 import AppRootStack from './AppRootStack';
 import ClientInviteLinkHandler from '../components/ClientInviteLinkHandler';
@@ -40,6 +47,36 @@ export default function AppShellContent() {
 
   useEffect(() => {
     trackEvent('app_content_mounted', { platform: Platform.OS });
+    initWebNavigationHistoryGuard();
+  }, []);
+
+  const paymentConnectHandledRef = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const parsed = parsePaymentConnectReturnFromWindow();
+    if (!parsed || paymentConnectHandledRef.current) return;
+    paymentConnectHandledRef.current = true;
+    stripPaymentConnectQueryFromHistory();
+    stashPendingPaymentConnectResult(parsed);
+
+    const tryNavigate = () => {
+      if (!navigationRef.isReady()) return false;
+      const route = paymentConnectRouteForKind(parsed.kind);
+      try {
+        navigationRef.navigate(route);
+      } catch (_) {
+        /* ignore */
+      }
+      return true;
+    };
+
+    if (!tryNavigate()) {
+      const id = setInterval(() => {
+        if (tryNavigate()) clearInterval(id);
+      }, 80);
+      return () => clearInterval(id);
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {

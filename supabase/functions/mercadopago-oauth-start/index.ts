@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
   }
   const actorId = userData.user.id;
 
-  let body: { organization_id?: string; native_return_url?: string } = {};
+  let body: { organization_id?: string; native_return_url?: string; web_return_url?: string } = {};
   try {
     body = await req.json();
   } catch {
@@ -82,6 +82,34 @@ Deno.serve(async (req: Request) => {
       status: 400,
       headers: { ...cors, "Content-Type": "application/json" },
     });
+  }
+
+  function isAllowedWebReturn(raw: string) {
+    const s = String(raw || "").trim();
+    if (!s || s.length > 512) return false;
+    try {
+      const u = new URL(s);
+      if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+      const host = u.hostname.toLowerCase();
+      if (host === "localhost" || host === "127.0.0.1") return true;
+      if (host === "fitengine.app" || host.endsWith(".fitengine.app")) return true;
+      if (host.endsWith(".vercel.app")) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  const webReturnRaw = String(body.web_return_url || "").trim();
+  let webReturn = "";
+  if (webReturnRaw) {
+    if (!isAllowedWebReturn(webReturnRaw)) {
+      return new Response(JSON.stringify({ error: "web_return_url_not_allowed" }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    webReturn = webReturnRaw;
   }
 
   const nativeReturnRaw = String(body.native_return_url || "").trim();
@@ -145,6 +173,7 @@ Deno.serve(async (req: Request) => {
     iat: Date.now(),
   };
   if (nativeReturn) payload.native_return = nativeReturn;
+  if (webReturn) payload.web_return = webReturn;
   const encoded = b64url(JSON.stringify(payload));
   const sig = await hmacSHA256(stateSecret, encoded);
   const state = `${encoded}.${sig}`;

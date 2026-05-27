@@ -7,12 +7,14 @@ import { IMAGENES_POR_PLAN, IMAGEN_WELCOME } from '../utils/imagenesFijas';
 import { initSentryWebFromEnv } from '../utils/sentryWebClient';
 import { initWebVitalsReporting } from '../utils/webVitals';
 import { applyWebViewportCanvas } from '../utils/webViewportCanvas';
+import { initWebNavigationHistoryGuard } from '../utils/webNavigationHistory';
 
 export function runAppBootstrapOnce() {
   initSentryWebFromEnv();
   initWebVitalsReporting();
   if (Platform.OS === 'web') {
     applyWebViewportCanvas();
+    initWebNavigationHistoryGuard();
   }
 
   Object.values(IMAGENES_POR_PLAN).forEach((image) => {

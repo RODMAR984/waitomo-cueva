@@ -23,6 +23,13 @@ import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { getStripeConnectRedirectUri } from '../../utils/fitengineUrls';
+import {
+  consumePendingPaymentConnectResult,
+  getStripeConnectWebReturnUri,
+  parsePaymentConnectReturnFromWindow,
+  stripPaymentConnectQueryFromHistory,
+} from '../../utils/paymentConnectWebReturn';
+import { runWebPaymentConnectOAuth } from '../../utils/runWebPaymentConnectOAuth';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -82,6 +89,28 @@ export default function AdminStripeSettingsScreen() {
     }
   }, [acct, canEdit, checkoutOn, orgId, refreshOrganization, tStr]);
 
+  const showStripeConnectResult = useCallback(
+    async (status, reason) => {
+      if (status === 'ok') {
+        if (typeof refreshOrganization === 'function' && orgId) await refreshOrganization(orgId);
+        Alert.alert(tStr('admin_stripe_connect_title'), tStr('admin_stripe_connect_success'));
+        return;
+      }
+      Alert.alert(tStr('admin_stripe_connect_title'), reason || tStr('gym_config_alert_title_error'));
+    },
+    [orgId, refreshOrganization, tStr],
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const fromUrl = parsePaymentConnectReturnFromWindow();
+    const pending = consumePendingPaymentConnectResult('stripe');
+    const result = fromUrl?.kind === 'stripe' ? fromUrl : pending;
+    if (!result || result.kind !== 'stripe') return;
+    stripPaymentConnectQueryFromHistory();
+    void showStripeConnectResult(result.status, result.reason);
+  }, [showStripeConnectResult]);
+
   const connectStripeAuto = useCallback(async () => {
     if (!orgId || !canEdit) {
       Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
@@ -89,9 +118,11 @@ export default function AdminStripeSettingsScreen() {
     }
     setConnecting(true);
     try {
+      const webReturn = Platform.OS === 'web' ? getStripeConnectWebReturnUri() : '';
       const nativeReturn = Platform.OS !== 'web' ? getStripeConnectRedirectUri() : '';
       const body = { organization_id: orgId };
       if (nativeReturn) body.native_return_url = nativeReturn;
+      if (webReturn) body.web_return_url = webReturn;
 
       const { data, error } = await supabase.functions.invoke('stripe-connect-start', { body });
       if (error) throw error;
@@ -99,7 +130,12 @@ export default function AdminStripeSettingsScreen() {
       if (!oauthUrl) throw new Error('missing_oauth_url');
 
       if (Platform.OS === 'web') {
-        await Linking.openURL(oauthUrl);
+        const parsed = await runWebPaymentConnectOAuth(oauthUrl, webReturn);
+        if (!parsed) {
+          Alert.alert(tStr('admin_stripe_connect_title'), tStr('admin_stripe_connect_cancelled'));
+          return;
+        }
+        await showStripeConnectResult(parsed.status, parsed.reason);
         return;
       }
 
@@ -115,18 +151,13 @@ export default function AdminStripeSettingsScreen() {
       const parsed = ExpoLinking.parse(result.url);
       const status = String(parsed.queryParams?.status || '').trim();
       const reason = String(parsed.queryParams?.reason || '').trim();
-      if (status === 'ok') {
-        if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
-        Alert.alert(tStr('admin_stripe_connect_title'), tStr('admin_stripe_connect_success'));
-      } else {
-        Alert.alert(tStr('admin_stripe_connect_title'), reason || tStr('gym_config_alert_title_error'));
-      }
+      await showStripeConnectResult(status, reason);
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
     } finally {
       setConnecting(false);
     }
-  }, [canEdit, orgId, refreshOrganization, tStr]);
+  }, [canEdit, orgId, showStripeConnectResult, tStr]);
 
   const styles = useMemo(
     () =>

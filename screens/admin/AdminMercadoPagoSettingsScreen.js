@@ -22,6 +22,13 @@ import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../../supabaseClient';
 import { getMercadoPagoConnectRedirectUri } from '../../utils/fitengineUrls';
+import {
+  consumePendingPaymentConnectResult,
+  getMercadoPagoWebReturnUri,
+  parsePaymentConnectReturnFromWindow,
+  stripPaymentConnectQueryFromHistory,
+} from '../../utils/paymentConnectWebReturn';
+import { runWebPaymentConnectOAuth } from '../../utils/runWebPaymentConnectOAuth';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -57,6 +64,28 @@ export default function AdminMercadoPagoSettingsScreen() {
   useEffect(() => {
     WebBrowser.maybeCompleteAuthSession();
   }, []);
+
+  const showMpConnectResult = useCallback(
+    async (status, reason) => {
+      if (status === 'ok') {
+        if (typeof refreshOrganization === 'function' && orgId) await refreshOrganization(orgId);
+        Alert.alert(tStr('admin_mp_connect_title'), tStr('admin_mp_connect_success'));
+        return;
+      }
+      Alert.alert(tStr('admin_mp_connect_title'), reason || tStr('gym_config_alert_title_error'));
+    },
+    [orgId, refreshOrganization, tStr],
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const fromUrl = parsePaymentConnectReturnFromWindow();
+    const pending = consumePendingPaymentConnectResult('mercadopago');
+    const result = fromUrl?.kind === 'mercadopago' ? fromUrl : pending;
+    if (!result || result.kind !== 'mercadopago') return;
+    stripPaymentConnectQueryFromHistory();
+    void showMpConnectResult(result.status, result.reason);
+  }, [showMpConnectResult]);
 
   const dirty = checkoutOn !== !!organization?.mercadopago_checkout_enabled;
 
@@ -139,16 +168,23 @@ export default function AdminMercadoPagoSettingsScreen() {
     }
     setConnecting(true);
     try {
+      const webReturn = Platform.OS === 'web' ? getMercadoPagoWebReturnUri() : '';
       const nativeReturn = Platform.OS !== 'web' ? getMercadoPagoConnectRedirectUri() : '';
       const body = { organization_id: orgId };
       if (nativeReturn) body.native_return_url = nativeReturn;
+      if (webReturn) body.web_return_url = webReturn;
 
       const data = await invokeEdgeAuthed('mercadopago-oauth-start', body);
       const oauthUrl = String(data?.oauth_url || '');
       if (!oauthUrl) throw new Error('missing_oauth_url');
 
       if (Platform.OS === 'web') {
-        await Linking.openURL(oauthUrl);
+        const parsed = await runWebPaymentConnectOAuth(oauthUrl, webReturn);
+        if (!parsed) {
+          Alert.alert(tStr('admin_mp_connect_title'), tStr('admin_mp_connect_cancelled'));
+          return;
+        }
+        await showMpConnectResult(parsed.status, parsed.reason);
         return;
       }
 
@@ -164,12 +200,7 @@ export default function AdminMercadoPagoSettingsScreen() {
       const parsed = ExpoLinking.parse(result.url);
       const status = String(parsed.queryParams?.status || '').trim();
       const reason = String(parsed.queryParams?.reason || '').trim();
-      if (status === 'ok') {
-        if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
-        Alert.alert(tStr('admin_mp_connect_title'), tStr('admin_mp_connect_success'));
-      } else {
-        Alert.alert(tStr('admin_mp_connect_title'), reason || tStr('gym_config_alert_title_error'));
-      }
+      await showMpConnectResult(status, reason);
     } catch (e) {
       if (String(e?.message || '').includes('auth_session_missing')) {
         Alert.alert(tStr('security_error_title'), tStr('security_sign_in_required_body'));
@@ -183,7 +214,7 @@ export default function AdminMercadoPagoSettingsScreen() {
     } finally {
       setConnecting(false);
     }
-  }, [canEdit, invokeEdgeAuthed, orgId, refreshOrganization, tStr]);
+  }, [canEdit, invokeEdgeAuthed, orgId, showMpConnectResult, tStr]);
 
   const disconnectMp = useCallback(() => {
     if (!orgId || !canEdit) {
@@ -324,10 +355,15 @@ export default function AdminMercadoPagoSettingsScreen() {
         </Text>
 
         <Text style={styles.hint}>{tStr('admin_mp_webhook_note')}</Text>
-
-        <TouchableOpacity onPress={() => Linking.openURL('https://www.mercadopago.com.ar/developers')}>
-          <Text style={styles.link}>Mercado Pago Developers</Text>
-        </TouchableOpacity>
+        <Text style={styles.fieldCaption}>
+          {tStr('admin_mp_dev_docs_hint')}{' '}
+          <Text
+            style={styles.link}
+            onPress={() => Linking.openURL('https://www.mercadopago.com.ar/developers')}
+          >
+            {tStr('admin_mp_dev_docs_link')}
+          </Text>
+        </Text>
 
         {canEdit ? (
           <TouchableOpacity

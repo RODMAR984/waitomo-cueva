@@ -423,6 +423,12 @@ export default function LoginScreen() {
       return;
     }
 
+    if (session?.user?.id && !sessionMatchesInputEmail && typeof logout === 'function') {
+      try {
+        await logout();
+      } catch (_) {}
+    }
+
     try {
       setSubmitting(true);
       loginSyncReturnedProfileRef.current = null;

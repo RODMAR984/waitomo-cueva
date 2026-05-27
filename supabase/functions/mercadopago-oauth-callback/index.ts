@@ -44,8 +44,24 @@ function isAllowedNativeReturn(raw: string) {
   );
 }
 
+function isAllowedWebReturn(raw: string) {
+  const s = String(raw || "").trim();
+  if (!s || s.length > 512) return false;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const host = u.hostname.toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1") return true;
+    if (host === "fitengine.app" || host.endsWith(".fitengine.app")) return true;
+    if (host.endsWith(".vercel.app")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function buildMpConnectAppUrl(
-  nativePayload: { native_return?: string } | null,
+  nativePayload: { native_return?: string; web_return?: string } | null,
   parts: { status: string; reason?: string },
 ) {
   const qs = new URLSearchParams();
@@ -56,6 +72,11 @@ function buildMpConnectAppUrl(
   const native = String(nativePayload?.native_return || "").trim();
   if (native && isAllowedNativeReturn(native)) {
     return native.includes("?") ? `${native}&${q}` : `${native}?${q}`;
+  }
+  const web = String(nativePayload?.web_return || "").trim();
+  if (web && isAllowedWebReturn(web)) {
+    const sep = web.includes("?") ? "&" : "?";
+    return `${web}${sep}${q}`;
   }
   const returnBase = (Deno.env.get("FITENGINE_WEB_APP_URL") || "https://app.fitengine.app").replace(/\/$/, "");
   return `${returnBase}/?${q}`;
@@ -90,7 +111,7 @@ Deno.serve(async (req: Request) => {
     return redirectToApp(buildMpConnectAppUrl(null, { status: "error", reason: "invalid_state" }));
   }
 
-  let payload: { org_id?: string; native_return?: string; actor_id?: string; iat?: number };
+  let payload: { org_id?: string; native_return?: string; web_return?: string; actor_id?: string; iat?: number };
   try {
     payload = JSON.parse(b64urlToText(encoded));
   } catch {

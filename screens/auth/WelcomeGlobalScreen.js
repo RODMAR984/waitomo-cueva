@@ -42,6 +42,7 @@ export default function WelcomeGlobalScreen() {
     initialProfileSyncDone,
     authSessionRestored = true,
     logout,
+    isPostLogoutUiActive,
   } = useAuth() || {};
 
   const { navigateToDestination, onContinue, isDualByMemberships } = useWelcomeRouting();
@@ -69,6 +70,9 @@ export default function WelcomeGlobalScreen() {
   const needsDualRedirect =
     sessionRoutingReady && (isDualByMemberships || isDualHatUser) && activeAppMode == null;
 
+  const suppressSessionAfterLogout =
+    typeof isPostLogoutUiActive === 'function' && isPostLogoutUiActive();
+
   useEffect(() => {
     if (!needsDualRedirect) return;
     navigation.replace('WelcomeDualChoice');
@@ -86,6 +90,7 @@ export default function WelcomeGlobalScreen() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    if (suppressSessionAfterLogout) return;
     if (!sessionRoutingReady) return;
     if (needsDualRedirect) return;
     const uid = session?.user?.id || null;
@@ -124,6 +129,7 @@ export default function WelcomeGlobalScreen() {
     onContinue();
   }, [
     Platform.OS,
+    suppressSessionAfterLogout,
     sessionRoutingReady,
     needsDualRedirect,
     session?.user?.id,
@@ -143,9 +149,9 @@ export default function WelcomeGlobalScreen() {
   };
 
   const showContinueSession =
-    !!session?.user?.id && profileReady && !needsDualRedirect;
-  const showGuestActions = !session?.user?.id;
-  const showSessionResume = !!session?.user?.id && !showGuestActions;
+    !!session?.user?.id && profileReady && !needsDualRedirect && !suppressSessionAfterLogout;
+  const showGuestActions = !session?.user?.id || suppressSessionAfterLogout;
+  const showSessionResume = !!session?.user?.id && !showGuestActions && !suppressSessionAfterLogout;
 
   const resumeSubtitleKey = showContinueSession
     ? isDualSession

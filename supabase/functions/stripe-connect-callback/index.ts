@@ -43,9 +43,25 @@ function isAllowedNativeReturn(raw: string) {
   );
 }
 
-/** Vuelta a app nativa (deep link) o a la web; `native_return` via state firmado (solo lo mandó el cliente). */
+function isAllowedWebReturn(raw: string) {
+  const s = String(raw || "").trim();
+  if (!s || s.length > 512) return false;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const host = u.hostname.toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1") return true;
+    if (host === "fitengine.app" || host.endsWith(".fitengine.app")) return true;
+    if (host.endsWith(".vercel.app")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Vuelta a app nativa (deep link) o a la web; `native_return` / `web_return` via state firmado. */
 function buildStripeConnectAppUrl(
-  nativePayload: { native_return?: string } | null,
+  nativePayload: { native_return?: string; web_return?: string } | null,
   parts: { status: string; account_id?: string; reason?: string },
 ) {
   const qs = new URLSearchParams();
@@ -57,6 +73,11 @@ function buildStripeConnectAppUrl(
   const native = String(nativePayload?.native_return || "").trim();
   if (native && isAllowedNativeReturn(native)) {
     return native.includes("?") ? `${native}&${q}` : `${native}?${q}`;
+  }
+  const web = String(nativePayload?.web_return || "").trim();
+  if (web && isAllowedWebReturn(web)) {
+    const sep = web.includes("?") ? "&" : "?";
+    return `${web}${sep}${q}`;
   }
   const returnBase = (Deno.env.get("FITENGINE_WEB_APP_URL") || "https://app.fitengine.app").replace(/\/$/, "");
   return `${returnBase}/?${q}`;
