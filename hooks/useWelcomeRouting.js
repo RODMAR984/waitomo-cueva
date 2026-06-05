@@ -88,10 +88,10 @@ export function useWelcomeRouting() {
         authTrace('navigateToDestination_skip', { reason: 'initial_profile_sync_pending' });
         return;
       }
-      if (session?.user?.id && profile?.id !== session.user.id) {
+      if (session?.user?.id && profile?.id && profile.id !== session.user.id) {
         authTrace('navigateToDestination_skip', {
-          reason: 'profile_missing_or_mismatch',
-          hasProfile: !!profile?.id,
+          reason: 'profile_id_mismatch',
+          hasProfile: true,
         });
         return;
       }

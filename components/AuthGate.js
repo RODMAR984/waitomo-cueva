@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { navigationRef, resetNavigationRootToWelcome } from '../navigationRef';
+import { isProtectedAuthRoute } from '../utils/webAuthRoutePersistence';
 
 /** Debounce para no resetear por un null transitorio (p. ej. durante callback de Google OAuth). */
 const AUTHGATE_NULL_DEBOUNCE_MS = 500;
@@ -38,21 +39,7 @@ export default function AuthGate({ children }) {
           return;
         }
         const routeName = navigationRef.getCurrentRoute()?.name || '';
-        const isEntryScreen =
-          routeName === 'Splash' ||
-          routeName === 'WelcomeGlobal' ||
-          routeName === 'WelcomeClientJoin' ||
-          routeName === 'Welcome' ||
-          routeName === 'WelcomeScreen' ||
-          routeName === 'Login' ||
-          routeName === 'LoginScreen' ||
-          routeName === 'JoinWithInvite' ||
-          routeName === 'PublicDirectory' ||
-          routeName === 'Directory' ||
-          routeName === 'RegistroOwner' ||
-          routeName === 'ConfiguraTuEspacio' ||
-          routeName === 'FitEngineSpaceIntro';
-        if (isEntryScreen) return;
+        if (!isProtectedAuthRoute(routeName)) return;
         void resetNavigationRootToWelcome({ maxWaitMs: 8000 });
       }, AUTHGATE_NULL_DEBOUNCE_MS);
     }

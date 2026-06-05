@@ -76,3 +76,18 @@ export function clearWebAuthRoute() {
     // sin-op
   }
 }
+
+/** Pantalla autenticada (no entrada pública): requiere perfil alineado con la sesión. */
+export function isProtectedAuthRoute(routeName) {
+  const name = routeName && String(routeName).trim();
+  if (!name) return false;
+  return !ENTRY_ROUTES.has(name);
+}
+
+/** JWT con fila `profiles` del mismo usuario (evita rutas guardadas / panel “fantasma”). */
+export function isSessionProfileAligned(userId, profile) {
+  const uid = userId && String(userId).trim();
+  if (!uid) return true;
+  if (!profile?.id) return false;
+  return String(profile.id) === uid;
+}

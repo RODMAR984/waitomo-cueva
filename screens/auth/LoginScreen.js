@@ -385,7 +385,9 @@ export default function LoginScreen() {
     if (!session?.user?.id) return;
     if (!sessionMatchesInputEmail) return;
     if (loading || submitting) return;
-    if (!(profile || postAuthGateOpen)) return;
+    if (initialProfileSyncDone === false) return;
+    if (profile?.id && profile.id !== session.user.id) return;
+    if (!(profile?.id || postAuthGateOpen)) return;
 
     if (forStaff) {
       if (isStaffRole(contextRole)) {
@@ -411,6 +413,7 @@ export default function LoginScreen() {
     postAuthGateOpen,
     forStaff,
     navigateByRole,
+    initialProfileSyncDone,
     authNavigationReady,
     needsFitEngineSpaceSetup,
     allowStaffAutoNav,

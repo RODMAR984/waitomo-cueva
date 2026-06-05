@@ -12,7 +12,10 @@ import { applyWebDocumentTitle } from '../utils/webDocumentTitle';
 import { syncSentryUserContext } from '../utils/sentryWebClient';
 import { flushObservabilityEventsIfNeeded } from '../utils/observabilityFlush';
 import { navigationRef } from '../navigationRef';
-import { saveWebAuthRouteForUser } from '../utils/webAuthRoutePersistence';
+import {
+  isSessionProfileAligned,
+  saveWebAuthRouteForUser,
+} from '../utils/webAuthRoutePersistence';
 import {
   parsePaymentConnectReturnFromWindow,
   paymentConnectRouteForKind,
@@ -29,7 +32,7 @@ import AuthGate from '../components/AuthGate';
  * Navegación + providers de dominio inmediato (plan / training) bajo el árbol de auth ya resuelto arriba en App.js.
  */
 export default function AppShellContent() {
-  const { user, role, organization } = useAuth() || {};
+  const { user, profile, role, organization, initialProfileSyncDone } = useAuth() || {};
   const { theme, t } = useThemeContext();
   const { t: tStr } = useLocale();
   const routeNameRef = useRef(null);
@@ -158,7 +161,13 @@ export default function AppShellContent() {
               routeNameRef.current = nextName;
               pushWebSpaHistoryEntry(nextName);
             }
-            if (Platform.OS === 'web' && user?.id && nextName) {
+            if (
+              Platform.OS === 'web' &&
+              user?.id &&
+              nextName &&
+              initialProfileSyncDone !== false &&
+              isSessionProfileAligned(user.id, profile)
+            ) {
               saveWebAuthRouteForUser(user.id, nextName, r?.params);
             }
             try {

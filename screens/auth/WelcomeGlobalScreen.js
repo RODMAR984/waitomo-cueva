@@ -18,7 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fitengineLogoColors as fe, fitengineUiTokens as fitT } from '../../theme/colors';
 import { createWelcomeGlobalLayoutStyles } from '../../styles/welcomeGlobalLayoutStyles';
 import { useWelcomeRouting } from '../../hooks/useWelcomeRouting';
-import { readWebAuthRouteForUser } from '../../utils/webAuthRoutePersistence';
+import { clearWebAuthRoute } from '../../utils/webAuthRoutePersistence';
 import { WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { authTrace } from '../../utils/authTrace';
@@ -60,10 +60,13 @@ export default function WelcomeGlobalScreen() {
     [navigation],
   );
 
+  // Sync terminado + perfil ausente → Continuar habilitado (rutea a RegistroInicial).
+  // Perfil de otro usuario (stale) → seguir en “cargando” hasta que AuthContext alinee.
+  // No exigir authNavigationReady aquí: bloqueaba Continuar; el routing lo usa aparte (sessionRoutingReady).
   const profileReady =
     !!session?.user?.id &&
     initialProfileSyncDone === true &&
-    (!profile?.id || profile.id === session.user.id);
+    (profile?.id == null || profile.id === session.user.id);
   const sessionRoutingReady =
     !!session?.user?.id && authNavigationReady && initialProfileSyncDone === true;
 
@@ -90,6 +93,14 @@ export default function WelcomeGlobalScreen() {
     }
   }, [session?.user?.id]);
 
+  // Sesión restaurada sin fila profiles: descartar ruta guardada (evita F5 → panel fantasma).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!session?.user?.id || initialProfileSyncDone !== true) return;
+    if (profile?.id && profile.id === session.user.id) return;
+    clearWebAuthRoute();
+  }, [session?.user?.id, profile?.id, initialProfileSyncDone]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (suppressSessionAfterLogout) return;
@@ -98,22 +109,12 @@ export default function WelcomeGlobalScreen() {
     const uid = session?.user?.id || null;
     if (!uid) return;
     if (!initialProfileSyncDone) return;
+    // Invariante web: no restaurar ruta ni auto-Continuar sin fila profiles alineada (evita usuario fantasma).
+    if (!profile?.id || profile.id !== uid) return;
     if (webBootstrapDoneRef.current) return;
     webBootstrapDoneRef.current = true;
 
-    const saved = readWebAuthRouteForUser(uid);
-    if (saved?.name) {
-      try {
-        if (typeof __DEV__ !== 'undefined' && __DEV__) {
-          // eslint-disable-next-line no-console
-          console.log('ROUTING_DEBUG WelcomeGlobal restore route after refresh', saved);
-        }
-      } catch (_) {}
-      authTrace('welcome_web_restore_route', { route: saved.name });
-      resetStackTo([{ name: saved.name, params: saved.params }]);
-      return;
-    }
-
+    // Invariante web: no restaurar ruta profunda guardada (pantallas sin guard de perfil → fantasma).
     try {
       if (typeof __DEV__ !== 'undefined' && __DEV__) {
         // eslint-disable-next-line no-console
