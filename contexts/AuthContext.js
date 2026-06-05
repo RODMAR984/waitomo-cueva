@@ -2878,7 +2878,6 @@ export const AuthProvider = ({ children }) => {
       authSessionRestored,
       /** Tras cerrar sesión: UI invitado aunque el token tarde en borrarse del storage. */
       isPostLogoutUiActive,
-      revalidateSessionForContinue,
       persistActiveAppMode,
 
       register,
