@@ -858,6 +858,17 @@ export const AuthProvider = ({ children }) => {
     ownedOrgsLoadingRef.current = ownedOrgsLoading;
   }, [ownedOrgsLoading]);
 
+  /** Evita Welcome en “Cargando…” si el fetch de memberships se cancela o cuelga. */
+  useEffect(() => {
+    if (!session?.user?.id || !ownedOrgsLoading) return undefined;
+    const t = setTimeout(() => {
+      if (!ownedOrgsLoadingRef.current) return;
+      console.log('🟠 ownedOrgsLoading: tope 10s → liberar UI');
+      setOwnedOrgsLoading(false);
+    }, 10000);
+    return () => clearTimeout(t);
+  }, [session?.user?.id, ownedOrgsLoading]);
+
   useLayoutEffect(() => {
     if (session?.user?.id) {
       setOwnedOrgsLoading(true);
@@ -2157,15 +2168,6 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         if (sessionFromStorage?.user?.id) {
-          if (Platform.OS === 'web' && !isWebSessionOwnerConsistent(sessionFromStorage.user)) {
-            console.log('🧨 restore: sesión local no coincide con el último login en este origen → limpio');
-            await clearSupabaseAuthStorage();
-            try {
-              await supabase.auth.signOut({ scope: 'local' });
-            } catch (_) {}
-            if (mounted) await syncFromSession(null);
-            return;
-          }
           const { user: liveUser, error: juErr, revoked } = await getAuthUserWithRetry();
           if (!liveUser?.id) {
             if (revoked) {
@@ -2843,7 +2845,7 @@ export const AuthProvider = ({ children }) => {
     lastFetchedUserIdRef.current = null;
     profileSyncInFlightRef.current = null;
     profileSyncPromiseRef.current = null;
-    setOwnedOrgsLoading(true);
+    setMembershipsFetchKey((k) => k + 1);
 
     const { data: refreshed } = await supabase.auth.getSession();
     const sessionToSync = refreshed?.session || sess;
@@ -2856,7 +2858,10 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
-    await waitForMembershipsBootstrap();
+    const membershipsReady = await waitForMembershipsBootstrap(6000);
+    if (!membershipsReady && ownedOrgsLoadingRef.current) {
+      setOwnedOrgsLoading(false);
+    }
     if (Platform.OS === 'web') {
       persistWebSessionOwner(liveUser.id, liveUser.email);
     }

@@ -47,6 +47,7 @@ export default function WelcomeGlobalScreen() {
   } = useAuth() || {};
 
   const [continueBusy, setContinueBusy] = useState(false);
+  const [profileWaitTimedOut, setProfileWaitTimedOut] = useState(false);
 
   const { navigateToDestination, onContinue, isDualByMemberships } = useWelcomeRouting();
 
@@ -63,8 +64,24 @@ export default function WelcomeGlobalScreen() {
     [navigation],
   );
 
-  const profileReady =
-    !!session?.user?.id && profile?.id === session.user.id && initialProfileSyncDone === true;
+  const profileSynced =
+    !!session?.user?.id &&
+    initialProfileSyncDone === true &&
+    (!profile?.id || profile.id === session.user.id);
+  const profileReady = profileSynced || profileWaitTimedOut;
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setProfileWaitTimedOut(false);
+      return undefined;
+    }
+    if (profileSynced) {
+      setProfileWaitTimedOut(false);
+      return undefined;
+    }
+    const id = setTimeout(() => setProfileWaitTimedOut(true), 8000);
+    return () => clearTimeout(id);
+  }, [session?.user?.id, profileSynced]);
   const sessionRoutingReady =
     !!session?.user?.id && authNavigationReady && initialProfileSyncDone === true;
 
