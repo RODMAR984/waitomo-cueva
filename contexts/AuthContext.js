@@ -34,6 +34,11 @@ import { trackEvent } from '../utils/observability';
 import { resetNavigationRootToWelcome } from '../navigationRef';
 import { clearWebAuthRoute } from '../utils/webAuthRoutePersistence';
 import {
+  clearWebSessionOwner,
+  isWebSessionOwnerConsistent,
+  persistWebSessionOwner,
+} from '../utils/webSessionOwner';
+import {
   parsePaymentConnectReturnFromWindow,
   stashPendingPaymentConnectResult,
   stripPaymentConnectQueryFromHistory,
@@ -254,6 +259,7 @@ function clearWebLogoutSidecarStorage() {
     window.sessionStorage?.removeItem?.(WEB_OAUTH_START_REDIRECT_KEY);
     window.localStorage?.removeItem?.(WEB_OAUTH_START_REDIRECT_KEY);
     clearWebAuthRoute();
+    clearWebSessionOwner();
   } catch (_) {
     /* ignore */
   }
@@ -369,6 +375,7 @@ export const AuthProvider = ({ children }) => {
   /** Memberships activas (user + organization + role) para routing serio multi-org. */
   const [organizationMemberships, setOrganizationMemberships] = useState([]);
   const [ownedOrgsLoading, setOwnedOrgsLoading] = useState(false);
+  const ownedOrgsLoadingRef = useRef(false);
   /** Incrementar tras join por código para forzar refetch de organization_memberships (evita UI “sin org”). */
   const [membershipsFetchKey, setMembershipsFetchKey] = useState(0);
   /** Misma persona cliente en un gym + coach en otra org: modo activo en el dispositivo. */
@@ -847,6 +854,10 @@ export const AuthProvider = ({ children }) => {
   }, [session?.user?.id, role, platformAdminActive, fetchOrganization]);
 
   // Antes del primer paint con sesión: marcar carga de orgs propias (si no, WelcomeGlobal navega con owned=[]).
+  useEffect(() => {
+    ownedOrgsLoadingRef.current = ownedOrgsLoading;
+  }, [ownedOrgsLoading]);
+
   useLayoutEffect(() => {
     if (session?.user?.id) {
       setOwnedOrgsLoading(true);
@@ -1936,6 +1947,9 @@ export const AuthProvider = ({ children }) => {
       } else {
         setSession(sessionForState || null);
         setInitialProfileSyncDone(true);
+        if (Platform.OS === 'web') {
+          persistWebSessionOwner(userId, sessionForState?.user?.email || nextSession?.user?.email);
+        }
         void applyPendingClientInviteOnce().catch(() => {});
       }
     }
@@ -2143,6 +2157,15 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         if (sessionFromStorage?.user?.id) {
+          if (Platform.OS === 'web' && !isWebSessionOwnerConsistent(sessionFromStorage.user)) {
+            console.log('🧨 restore: sesión local no coincide con el último login en este origen → limpio');
+            await clearSupabaseAuthStorage();
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch (_) {}
+            if (mounted) await syncFromSession(null);
+            return;
+          }
           const { user: liveUser, error: juErr, revoked } = await getAuthUserWithRetry();
           if (!liveUser?.id) {
             if (revoked) {
@@ -2506,6 +2529,9 @@ export const AuthProvider = ({ children }) => {
       });
       if (error) throw error;
       const syncedProfile = await syncFromSession(data?.session || null);
+      if (Platform.OS === 'web' && data?.user?.id) {
+        persistWebSessionOwner(data.user.id, data.user.email);
+      }
       return { user: data?.user || null, profile: syncedProfile ?? null };
     } finally {
       setLoading(false);
@@ -2750,6 +2776,96 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const waitForMembershipsBootstrap = useCallback(async (maxMs = 12000) => {
+    const start = Date.now();
+    return new Promise((resolve) => {
+      const tick = () => {
+        if (!ownedOrgsLoadingRef.current) {
+          resolve(true);
+          return;
+        }
+        if (Date.now() - start >= maxMs) {
+          resolve(false);
+          return;
+        }
+        setTimeout(tick, 80);
+      };
+      tick();
+    });
+  }, []);
+
+  /** Welcome “Continuar”: validar token en servidor y refrescar perfil/membresías (anti sesión fantasma). */
+  const revalidateSessionForContinue = useCallback(async () => {
+    authTrace('revalidate_continue_start', {});
+    const { data: sessData } = await supabase.auth.getSession();
+    const sess = sessData?.session;
+    if (!sess?.user?.id) {
+      authTrace('revalidate_continue_fail', { reason: 'no_local_session' });
+      await logout();
+      return false;
+    }
+    if (Platform.OS === 'web' && !isWebSessionOwnerConsistent(sess.user)) {
+      authTrace('revalidate_continue_fail', { reason: 'web_owner_mismatch' });
+      await clearSupabaseAuthStorage();
+      await syncFromSession(null);
+      return false;
+    }
+    const { user: liveUser, revoked } = await getAuthUserWithRetry();
+    if (!liveUser?.id || revoked) {
+      authTrace('revalidate_continue_fail', { reason: 'getUser_invalid' });
+      await clearSupabaseAuthStorage();
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (_) {}
+      await syncFromSession(null);
+      return false;
+    }
+    if (Platform.OS === 'web' && !isWebSessionOwnerConsistent(liveUser)) {
+      authTrace('revalidate_continue_fail', { reason: 'live_owner_mismatch' });
+      await clearSupabaseAuthStorage();
+      await syncFromSession(null);
+      return false;
+    }
+
+    const isPa =
+      String(role || '').toLowerCase() === 'superadmin' ||
+      platformAdminActiveRef.current === true ||
+      platformAdminActive === true;
+    if (!isPa) {
+      impersonatingOrgIdRef.current = null;
+      setImpersonatingOrgId(null);
+      try {
+        const key = impersonateOrgStorageKey(liveUser.id);
+        if (key) await AsyncStorage.removeItem(key);
+      } catch (_) {}
+    }
+
+    lastFetchedUserIdRef.current = null;
+    profileSyncInFlightRef.current = null;
+    profileSyncPromiseRef.current = null;
+    setOwnedOrgsLoading(true);
+
+    const { data: refreshed } = await supabase.auth.getSession();
+    const sessionToSync = refreshed?.session || sess;
+    await syncFromSession(sessionToSync);
+
+    if (profileRef.current?.id && profileRef.current.id !== liveUser.id) {
+      authTrace('revalidate_continue_fail', { reason: 'profile_mismatch' });
+      await clearSupabaseAuthStorage();
+      await syncFromSession(null);
+      return false;
+    }
+
+    await waitForMembershipsBootstrap();
+    if (Platform.OS === 'web') {
+      persistWebSessionOwner(liveUser.id, liveUser.email);
+    }
+    authTrace('revalidate_continue_ok', {
+      userId: `${String(liveUser.id).slice(0, 8)}…`,
+    });
+    return true;
+  }, [logout, platformAdminActive, role, waitForMembershipsBootstrap]);
+
   // ROLES
   const isAdmin = () => role === 'admin' || role === 'superadmin';
   const isCoach = () => role === 'coach';
@@ -2848,6 +2964,7 @@ export const AuthProvider = ({ children }) => {
       authSessionRestored,
       /** Tras cerrar sesión: UI invitado aunque el token tarde en borrarse del storage. */
       isPostLogoutUiActive,
+      revalidateSessionForContinue,
       persistActiveAppMode,
 
       register,
@@ -2900,6 +3017,7 @@ export const AuthProvider = ({ children }) => {
       initialProfileSyncDone,
       authSessionRestored,
       isPostLogoutUiActive,
+      revalidateSessionForContinue,
       persistActiveAppMode,
       refreshOrganization,
       refreshProfile,

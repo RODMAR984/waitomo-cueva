@@ -1,6 +1,6 @@
 // WelcomeGlobalScreen — Logo + marca, Empezar / gym-coach, iniciar sesión, idioma, pie legal.
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -43,7 +43,10 @@ export default function WelcomeGlobalScreen() {
     authSessionRestored = true,
     logout,
     isPostLogoutUiActive,
+    revalidateSessionForContinue,
   } = useAuth() || {};
+
+  const [continueBusy, setContinueBusy] = useState(false);
 
   const { navigateToDestination, onContinue, isDualByMemberships } = useWelcomeRouting();
 
@@ -78,67 +81,33 @@ export default function WelcomeGlobalScreen() {
     navigation.replace('WelcomeDualChoice');
   }, [needsDualRedirect, navigation]);
 
-  const webBootstrapDoneRef = useRef(false);
-  const webBootstrapUidRef = useRef(null);
-  useEffect(() => {
-    const uid = session?.user?.id || null;
-    if (uid !== webBootstrapUidRef.current) {
-      webBootstrapUidRef.current = uid;
-      webBootstrapDoneRef.current = false;
-    }
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (suppressSessionAfterLogout) return;
-    if (!sessionRoutingReady) return;
-    if (needsDualRedirect) return;
-    const uid = session?.user?.id || null;
-    if (!uid) return;
-    if (!profile?.id) return;
-    if (webBootstrapDoneRef.current) return;
-    webBootstrapDoneRef.current = true;
-
-    const saved = readWebAuthRouteForUser(uid);
-    if (saved?.name) {
-      try {
-        if (typeof __DEV__ !== 'undefined' && __DEV__) {
-          // eslint-disable-next-line no-console
-          console.log('ROUTING_DEBUG WelcomeGlobal restore route after refresh', saved);
-        }
-      } catch (_) {}
-      authTrace('welcome_web_restore_route', { route: saved.name });
-      resetStackTo([{ name: saved.name, params: saved.params }]);
-      return;
-    }
-
+  const handleContinueSession = useCallback(async () => {
+    if (continueBusy || !profileReady) return;
+    setContinueBusy(true);
     try {
-      if (typeof __DEV__ !== 'undefined' && __DEV__) {
-        // eslint-disable-next-line no-console
-        console.log('ROUTING_DEBUG WelcomeGlobal first bootstrap onContinue', { uid });
+      if (typeof revalidateSessionForContinue === 'function') {
+        const ok = await revalidateSessionForContinue();
+        if (!ok) return;
       }
-    } catch (_) {}
-    authTrace('welcome_web_auto_onContinue', {
-      initialProfileSyncDone: initialProfileSyncDone === true,
-      authNavigationReady: authNavigationReady === true,
-      hasProfile: !!profile?.id,
-      hasClientMembership,
-      hasStaffMembership,
-      needsDualRedirect,
-    });
-    onContinue();
+      const uid = session?.user?.id || null;
+      if (Platform.OS === 'web' && uid) {
+        const saved = readWebAuthRouteForUser(uid);
+        if (saved?.name) {
+          authTrace('welcome_web_restore_route', { route: saved.name });
+          resetStackTo([{ name: saved.name, params: saved.params }]);
+          return;
+        }
+      }
+      onContinue();
+    } finally {
+      setContinueBusy(false);
+    }
   }, [
-    Platform.OS,
-    suppressSessionAfterLogout,
-    sessionRoutingReady,
-    needsDualRedirect,
+    continueBusy,
+    profileReady,
+    revalidateSessionForContinue,
     session?.user?.id,
-    profile?.id,
     onContinue,
-    initialProfileSyncDone,
-    authNavigationReady,
-    hasClientMembership,
-    hasStaffMembership,
     resetStackTo,
   ]);
 
@@ -250,14 +219,19 @@ export default function WelcomeGlobalScreen() {
                     return (
                       <>
                         <TouchableOpacity
-                          style={[layoutStyles.ctaPrimary, !profileReady ? { opacity: 0.55 } : null]}
-                          onPress={onContinue}
+                          style={[
+                            layoutStyles.ctaPrimary,
+                            !profileReady || continueBusy ? { opacity: 0.55 } : null,
+                          ]}
+                          onPress={handleContinueSession}
                           activeOpacity={0.85}
-                          disabled={!profileReady}
+                          disabled={!profileReady || continueBusy}
                           testID="welcome-session-continue"
                         >
                           <Text style={layoutStyles.ctaPrimaryText}>
-                            {!profileReady ? tStr('common_loading') : tStr('welcome_action_continue')}
+                            {!profileReady || continueBusy
+                              ? tStr('common_loading')
+                              : tStr('welcome_action_continue')}
                           </Text>
                         </TouchableOpacity>
                         {dualUnknownMode ? (
@@ -266,6 +240,10 @@ export default function WelcomeGlobalScreen() {
                               <TouchableOpacity
                                 style={layoutStyles.ctaSecondary}
                                 onPress={async () => {
+                                  if (typeof revalidateSessionForContinue === 'function') {
+                                    const ok = await revalidateSessionForContinue();
+                                    if (!ok) return;
+                                  }
                                   if (persistActiveAppMode && session?.user?.id) {
                                     await persistActiveAppMode('staff', session.user.id);
                                   }
@@ -282,6 +260,10 @@ export default function WelcomeGlobalScreen() {
                               <TouchableOpacity
                                 style={layoutStyles.ctaSecondary}
                                 onPress={async () => {
+                                  if (typeof revalidateSessionForContinue === 'function') {
+                                    const ok = await revalidateSessionForContinue();
+                                    if (!ok) return;
+                                  }
                                   if (persistActiveAppMode && session?.user?.id) {
                                     await persistActiveAppMode('client', session.user.id);
                                   }
@@ -310,20 +292,27 @@ export default function WelcomeGlobalScreen() {
                   return (
                     <>
                       <TouchableOpacity
-                        style={[layoutStyles.ctaPrimary, !profileReady ? { opacity: 0.55 } : null]}
-                        onPress={onContinue}
+                        style={[
+                          layoutStyles.ctaPrimary,
+                          !profileReady || continueBusy ? { opacity: 0.55 } : null,
+                        ]}
+                        onPress={handleContinueSession}
                         activeOpacity={0.85}
-                        disabled={!profileReady}
+                        disabled={!profileReady || continueBusy}
                         testID="welcome-session-continue"
                       >
                         <Text style={layoutStyles.ctaPrimaryText}>
-                          {!profileReady ? tStr('common_loading') : primaryLabel}
+                          {!profileReady || continueBusy ? tStr('common_loading') : primaryLabel}
                         </Text>
                       </TouchableOpacity>
                       {showSwitchToStaff ? (
                         <TouchableOpacity
                           style={layoutStyles.ctaSecondary}
                           onPress={async () => {
+                            if (typeof revalidateSessionForContinue === 'function') {
+                              const ok = await revalidateSessionForContinue();
+                              if (!ok) return;
+                            }
                             if (persistActiveAppMode && session?.user?.id) {
                               await persistActiveAppMode('staff', session.user.id);
                             }
@@ -340,6 +329,10 @@ export default function WelcomeGlobalScreen() {
                         <TouchableOpacity
                           style={layoutStyles.ctaSecondary}
                           onPress={async () => {
+                            if (typeof revalidateSessionForContinue === 'function') {
+                              const ok = await revalidateSessionForContinue();
+                              if (!ok) return;
+                            }
                             if (persistActiveAppMode && session?.user?.id) {
                               await persistActiveAppMode('client', session.user.id);
                             }
