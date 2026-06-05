@@ -19,7 +19,7 @@ import {
   stashPendingPaymentConnectResult,
   stripPaymentConnectQueryFromHistory,
 } from '../utils/paymentConnectWebReturn';
-import { initWebNavigationHistoryGuard } from '../utils/webNavigationHistory';
+import { initWebNavigationHistoryGuard, pushWebSpaHistoryEntry } from '../utils/webNavigationHistory';
 
 import AppRootStack from './AppRootStack';
 import ClientInviteLinkHandler from '../components/ClientInviteLinkHandler';
@@ -156,6 +156,7 @@ export default function AppShellContent() {
                 to: nextName,
               });
               routeNameRef.current = nextName;
+              pushWebSpaHistoryEntry(nextName);
             }
             if (Platform.OS === 'web' && user?.id && nextName) {
               saveWebAuthRouteForUser(user.id, nextName, r?.params);

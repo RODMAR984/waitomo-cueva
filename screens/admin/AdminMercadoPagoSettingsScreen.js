@@ -28,7 +28,10 @@ import {
   parsePaymentConnectReturnFromWindow,
   stripPaymentConnectQueryFromHistory,
 } from '../../utils/paymentConnectWebReturn';
-import { runWebPaymentConnectOAuth } from '../../utils/runWebPaymentConnectOAuth';
+import {
+  clearWebPaymentConnectInflight,
+  startWebPaymentConnectOAuthSameTab,
+} from '../../utils/runWebPaymentConnectOAuth';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -83,6 +86,7 @@ export default function AdminMercadoPagoSettingsScreen() {
     const pending = consumePendingPaymentConnectResult('mercadopago');
     const result = fromUrl?.kind === 'mercadopago' ? fromUrl : pending;
     if (!result || result.kind !== 'mercadopago') return;
+    clearWebPaymentConnectInflight('mercadopago');
     stripPaymentConnectQueryFromHistory();
     void showMpConnectResult(result.status, result.reason);
   }, [showMpConnectResult]);
@@ -179,12 +183,7 @@ export default function AdminMercadoPagoSettingsScreen() {
       if (!oauthUrl) throw new Error('missing_oauth_url');
 
       if (Platform.OS === 'web') {
-        const parsed = await runWebPaymentConnectOAuth(oauthUrl, webReturn);
-        if (!parsed) {
-          Alert.alert(tStr('admin_mp_connect_title'), tStr('admin_mp_connect_cancelled'));
-          return;
-        }
-        await showMpConnectResult(parsed.status, parsed.reason);
+        startWebPaymentConnectOAuthSameTab(oauthUrl, 'mercadopago');
         return;
       }
 

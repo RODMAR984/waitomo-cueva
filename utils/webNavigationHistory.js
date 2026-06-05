@@ -27,6 +27,23 @@ const ENTRY_ROUTE_NAMES = new Set([
 
 let installed = false;
 
+export function pushWebSpaHistoryEntry(routeName) {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+  if (!routeName || ENTRY_ROUTE_NAMES.has(routeName)) return;
+  try {
+    const href = window.location.href;
+    const url = new URL(href);
+    if (url.searchParams.has('mercadopago_connect') || url.searchParams.has('stripe_connect')) return;
+    window.history.pushState({ [GUARD_FLAG]: 1, route: routeName }, '', href);
+  } catch (_) {
+    try {
+      window.history.pushState({ [GUARD_FLAG]: 1, route: routeName }, '');
+    } catch (_) {
+      /* ignore */
+    }
+  }
+}
+
 /**
  * En web, la flecha Atrás del navegador recorre el historial del browser (OAuth, MP, etc.),
  * no el stack de React Navigation. Empujamos un estado extra y en popstate intentamos volver
@@ -37,9 +54,14 @@ export function initWebNavigationHistoryGuard() {
   installed = true;
 
   try {
-    window.history.pushState({ [GUARD_FLAG]: 1 }, '');
+    const routeName = navigationRef.isReady?.() ? navigationRef.getCurrentRoute()?.name : '';
+    pushWebSpaHistoryEntry(routeName || 'App');
   } catch (_) {
-    /* ignore */
+    try {
+      window.history.pushState({ [GUARD_FLAG]: 1 }, '');
+    } catch (_) {
+      /* ignore */
+    }
   }
 
   window.addEventListener('popstate', () => {
@@ -54,7 +76,8 @@ export function initWebNavigationHistoryGuard() {
       /* ignore */
     }
     try {
-      window.history.pushState({ [GUARD_FLAG]: 1 }, '');
+      const nextRoute = navigationRef.getCurrentRoute()?.name || routeName;
+      pushWebSpaHistoryEntry(nextRoute);
     } catch (_) {
       /* ignore */
     }

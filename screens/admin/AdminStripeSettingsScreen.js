@@ -29,7 +29,10 @@ import {
   parsePaymentConnectReturnFromWindow,
   stripPaymentConnectQueryFromHistory,
 } from '../../utils/paymentConnectWebReturn';
-import { runWebPaymentConnectOAuth } from '../../utils/runWebPaymentConnectOAuth';
+import {
+  clearWebPaymentConnectInflight,
+  startWebPaymentConnectOAuthSameTab,
+} from '../../utils/runWebPaymentConnectOAuth';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -107,6 +110,7 @@ export default function AdminStripeSettingsScreen() {
     const pending = consumePendingPaymentConnectResult('stripe');
     const result = fromUrl?.kind === 'stripe' ? fromUrl : pending;
     if (!result || result.kind !== 'stripe') return;
+    clearWebPaymentConnectInflight('stripe');
     stripPaymentConnectQueryFromHistory();
     void showStripeConnectResult(result.status, result.reason);
   }, [showStripeConnectResult]);
@@ -130,12 +134,7 @@ export default function AdminStripeSettingsScreen() {
       if (!oauthUrl) throw new Error('missing_oauth_url');
 
       if (Platform.OS === 'web') {
-        const parsed = await runWebPaymentConnectOAuth(oauthUrl, webReturn);
-        if (!parsed) {
-          Alert.alert(tStr('admin_stripe_connect_title'), tStr('admin_stripe_connect_cancelled'));
-          return;
-        }
-        await showStripeConnectResult(parsed.status, parsed.reason);
+        startWebPaymentConnectOAuthSameTab(oauthUrl, 'stripe');
         return;
       }
 

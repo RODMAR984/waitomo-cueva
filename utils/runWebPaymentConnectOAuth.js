@@ -1,24 +1,28 @@
-import * as WebBrowser from 'expo-web-browser';
-import * as ExpoLinking from 'expo-linking';
+const INFLIGHT_MP_KEY = 'waitomo_mp_connect_inflight_v1';
+const INFLIGHT_STRIPE_KEY = 'waitomo_stripe_connect_inflight_v1';
 
 /**
- * OAuth de pagos en web: popup/redirect controlado (no pestaña suelta con Linking.openURL).
- * @returns {Promise<{ status: string, reason?: string } | null>} null si canceló
+ * OAuth de pagos en web: misma pestaña (evita popup en app.fitengine.app sin sesión).
+ * Al volver, AppShellContent + pantalla admin leen ?mercadopago_connect=done / stripe.
  */
-export async function runWebPaymentConnectOAuth(oauthUrl, returnUri) {
-  WebBrowser.maybeCompleteAuthSession();
-  const result = await WebBrowser.openAuthSessionAsync(oauthUrl, returnUri, {
-    preferEphemeralSession: false,
-  });
-  if (result.type === 'cancel' || result.type === 'dismiss') {
-    return null;
+export function startWebPaymentConnectOAuthSameTab(oauthUrl, kind) {
+  if (typeof window === 'undefined' || !oauthUrl) return false;
+  const key = kind === 'stripe' ? INFLIGHT_STRIPE_KEY : INFLIGHT_MP_KEY;
+  try {
+    sessionStorage.setItem(key, String(Date.now()));
+  } catch (_) {
+    /* ignore */
   }
-  if (result.type !== 'success' || !result.url) {
-    throw new Error('payment_connect_unknown_result');
+  window.location.assign(oauthUrl);
+  return true;
+}
+
+export function clearWebPaymentConnectInflight(kind) {
+  if (typeof sessionStorage === 'undefined') return;
+  const key = kind === 'stripe' ? INFLIGHT_STRIPE_KEY : INFLIGHT_MP_KEY;
+  try {
+    sessionStorage.removeItem(key);
+  } catch (_) {
+    /* ignore */
   }
-  const parsed = ExpoLinking.parse(result.url);
-  return {
-    status: String(parsed.queryParams?.status || '').trim() || 'error',
-    reason: String(parsed.queryParams?.reason || '').trim() || undefined,
-  };
 }

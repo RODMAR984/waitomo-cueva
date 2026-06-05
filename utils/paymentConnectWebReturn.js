@@ -30,14 +30,23 @@ export function isAllowedPaymentConnectWebReturnUrl(raw) {
   }
 }
 
-export function getMercadoPagoWebReturnUri() {
+function getPaymentConnectWebReturnUri(pathSegment) {
   if (Platform.OS !== 'web') return '';
-  return AuthSession.makeRedirectUri({ path: 'mercadopago-connect' });
+  const path = String(pathSegment || '').replace(/^\/+/, '');
+  // Mismo origen que la pestaña abierta (fitengine.app vs app.fitengine.app); no app.json.
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const origin = String(window.location.origin).replace(/\/+$/, '');
+    return `${origin}/${path}`;
+  }
+  return AuthSession.makeRedirectUri({ path });
+}
+
+export function getMercadoPagoWebReturnUri() {
+  return getPaymentConnectWebReturnUri('mercadopago-connect');
 }
 
 export function getStripeConnectWebReturnUri() {
-  if (Platform.OS !== 'web') return '';
-  return AuthSession.makeRedirectUri({ path: 'stripe-connect' });
+  return getPaymentConnectWebReturnUri('stripe-connect');
 }
 
 function readSearchParams() {
