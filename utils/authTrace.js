@@ -29,6 +29,8 @@ export function traceEnabled() {
     const ls = webLocalTraceOverride();
     if (ls === true) return true;
     if (ls === false) return false;
+    // Web producción: trazas en F12 por defecto (fe_auth_trace=0 para silenciar).
+    if (Platform.OS === 'web') return true;
     if (typeof __DEV__ !== 'undefined' && __DEV__) return true;
     return String(process.env.EXPO_PUBLIC_AUTH_TRACE || '').trim() === '1';
   } catch {

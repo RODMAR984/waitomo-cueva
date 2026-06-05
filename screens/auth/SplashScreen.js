@@ -22,6 +22,12 @@ function isWebOAuthReturnUrl() {
   return h.includes('code=') || h.includes('access_token=');
 }
 
+function isWebPaymentConnectReturnUrl() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  const q = String(window.location?.search || '');
+  return q.includes('stripe_connect=') || q.includes('mercadopago_connect=');
+}
+
 export default function SplashScreen() {
   const navigation = useNavigation();
   const { t: tStr } = useLocale();
@@ -29,11 +35,12 @@ export default function SplashScreen() {
 
   useEffect(() => {
     // OAuth en web: volver con ?code= — no esperar 1.6s para salir del splash (mejor UX y menos sensación de “clavado”).
-    const delayMs = isWebOAuthReturnUrl()
-      ? 80
-      : Platform.OS === 'web'
-        ? SPLASH_WEB_COLD_MS
-        : SPLASH_DURATION_MS;
+    const delayMs =
+      isWebOAuthReturnUrl() || isWebPaymentConnectReturnUrl()
+        ? 80
+        : Platform.OS === 'web'
+          ? SPLASH_WEB_COLD_MS
+          : SPLASH_DURATION_MS;
     const timer = setTimeout(() => {
       if (goneRef.current) return;
       goneRef.current = true;

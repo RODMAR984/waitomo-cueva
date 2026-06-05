@@ -31,9 +31,10 @@ import {
 } from '../utils/pendingClientInviteStorage';
 import { getOAuthRedirectUriForSupabase } from '../utils/fitengineUrls';
 import { trackEvent } from '../utils/observability';
-import { resetNavigationRootToWelcome } from '../navigationRef';
+import { resetNavigationRoot, resetNavigationRootToWelcome, WELCOME_GLOBAL_ROOT_STATE } from '../navigationRef';
 import { clearWebAuthRoute } from '../utils/webAuthRoutePersistence';
 import {
+  hasPendingPaymentConnectResult,
   parsePaymentConnectReturnFromWindow,
   stashPendingPaymentConnectResult,
   stripPaymentConnectQueryFromHistory,
@@ -359,6 +360,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     profileRef.current = profile;
   }, [profile]);
+  /** Evita re-disparar ownedOrgsLoading en cada setSession del mismo usuario (causa panel vacío). */
+  const sessionUserLayoutRef = useRef(null);
   const [organization, setOrganization] = useState(null);
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -370,7 +373,6 @@ export const AuthProvider = ({ children }) => {
   const [organizationMemberships, setOrganizationMemberships] = useState([]);
   const [ownedOrgsLoading, setOwnedOrgsLoading] = useState(false);
   const ownedOrgsLoadingRef = useRef(false);
-  const [ownedOrgsNavForced, setOwnedOrgsNavForced] = useState(false);
   /** Incrementar tras join por código para forzar refetch de organization_memberships (evita UI “sin org”). */
   const [membershipsFetchKey, setMembershipsFetchKey] = useState(0);
   /** Misma persona cliente en un gym + coach en otra org: modo activo en el dispositivo. */
@@ -439,9 +441,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     const START = Date.now();
-    const REQUEST_TIMEOUT_MS = 8000;
-    const PROFILE_FETCH_ATTEMPTS = 2;
-    const PROFILE_RETRY_DELAY_MS = 500;
+    const REQUEST_TIMEOUT_MS = 12000;
+    const PROFILE_FETCH_ATTEMPTS = 3;
+    const PROFILE_RETRY_DELAY_MS = 600;
 
     const accessToken = accessTokenOverride || session?.access_token || null;
 
@@ -784,19 +786,33 @@ export const AuthProvider = ({ children }) => {
     async function applyOrg() {
       const orgId = resolveEffectiveOrganizationId();
       if (!orgId) {
-        if (!cancelled) setOrganization(null);
+        if (!cancelled) {
+          // No vaciar org hidratada en sync mientras memberships/modo siguen cargando (causa panel fantasma).
+          if (ownedOrgsLoadingRef.current) return;
+          if (profileSyncInFlightRef.current) return;
+          const profOrg =
+            profile?.organization_id && String(profile.organization_id).trim()
+              ? String(profile.organization_id).trim()
+              : null;
+          if (profOrg && String(organization?.id || '') === profOrg) return;
+          authTrace('applyOrg_clear', {
+            profOrg: profOrg ? `${profOrg.slice(0, 8)}…` : null,
+            hadOrg: !!organization?.id,
+          });
+          setOrganization(null);
+        }
         return;
       }
       const org = await fetchOrganization(orgId);
       if (cancelled) return;
       if (org) setOrganization(org);
-      else setOrganization(null);
+      else if (!ownedOrgsLoadingRef.current) setOrganization(null);
     }
     applyOrg();
     return () => {
       cancelled = true;
     };
-  }, [resolveEffectiveOrganizationId, fetchOrganization]);
+  }, [resolveEffectiveOrganizationId, fetchOrganization, profile?.organization_id, organization?.id]);
 
   /** Restaurar impersonación persistida (solo admins de plataforma). */
   useEffect(() => {
@@ -853,27 +869,11 @@ export const AuthProvider = ({ children }) => {
     ownedOrgsLoadingRef.current = ownedOrgsLoading;
   }, [ownedOrgsLoading]);
 
-  /** Evita Welcome en “Cargando…” si el fetch de memberships se cancela o cuelga. */
-  useEffect(() => {
-    if (!session?.user?.id) {
-      setOwnedOrgsNavForced(false);
-      return undefined;
-    }
-    if (!ownedOrgsLoading) {
-      setOwnedOrgsNavForced(true);
-      return undefined;
-    }
-    setOwnedOrgsNavForced(false);
-    const t = setTimeout(() => {
-      console.log('🟠 ownedOrgsLoading: tope 5s → liberar navegación');
-      setOwnedOrgsNavForced(true);
-      setOwnedOrgsLoading(false);
-    }, 5000);
-    return () => clearTimeout(t);
-  }, [session?.user?.id, ownedOrgsLoading]);
-
   useLayoutEffect(() => {
-    if (session?.user?.id) {
+    const uid = session?.user?.id || null;
+    if (uid === sessionUserLayoutRef.current) return;
+    sessionUserLayoutRef.current = uid;
+    if (uid) {
       setOwnedOrgsLoading(true);
       setActiveAppModeHydrated(false);
     } else {
@@ -884,6 +884,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (!session?.user?.id) {
+      // Sync en vuelo: profile ya cargó pero session aún no expuesta → no vaciar memberships.
+      if (profileSyncInFlightRef.current) return undefined;
       if (ownedOrgsWallTimerRef.current) {
         clearTimeout(ownedOrgsWallTimerRef.current);
         ownedOrgsWallTimerRef.current = null;
@@ -892,7 +894,7 @@ export const AuthProvider = ({ children }) => {
       setOwnedOrganizations([]);
       setOrganizationMemberships([]);
       setOwnedOrgsLoading(false);
-      return;
+      return undefined;
     }
     const uid = session.user.id;
     if (ownedOrgsWallTimerUserRef.current !== uid) {
@@ -1023,11 +1025,6 @@ export const AuthProvider = ({ children }) => {
     })();
     return () => {
       cancelled = true;
-      // No limpiar ownedOrgsWallTimerRef aquí: si solo cambió `profile.organization_id`, el watchdog
-      // sigue anclado al mismo usuario y evita ownedOrgsLoading colgado; al cambiar de usuario el efecto
-      // de arriba reinicia el timer.
-      // Si el fetch se cancela, el `finally` del async no hace setOwnedOrgsLoading(false).
-      setOwnedOrgsLoading(false);
     };
   }, [session?.user?.id, profile?.organization_id, staffRoles, membershipsFetchKey]);
 
@@ -1035,7 +1032,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (!session?.user?.id) return undefined;
     const uid = session.user.id;
-    const watchdogMs = 28000;
+    const watchdogMs = 12000;
     const t = setTimeout(async () => {
       if (profileRef.current?.id === uid) return;
       if (profileSyncInFlightRef.current === uid) return;
@@ -1201,11 +1198,81 @@ export const AuthProvider = ({ children }) => {
     });
   }, [session?.user?.id, organizationMemberships, staffRoles, profile?.organization_id]);
 
-  /** WelcomeGlobal / login: no navegar hasta tener orgs propias + modo guardado leído (evita carrera a ClientTabs). */
+  /** WelcomeGlobal / login: no navegar hasta memberships + modo leídos (sin tope artificial de 5s). */
   const authNavigationReady = useMemo(() => {
     if (!session?.user?.id) return true;
-    return activeAppModeHydrated && (!ownedOrgsLoading || ownedOrgsNavForced);
-  }, [session?.user?.id, ownedOrgsLoading, activeAppModeHydrated, ownedOrgsNavForced]);
+    return activeAppModeHydrated && !ownedOrgsLoading;
+  }, [session?.user?.id, ownedOrgsLoading, activeAppModeHydrated]);
+
+  /** Sesión + perfil + org del centro (si aplica) listos — evita panel vacío tras reabrir. */
+  const authBootstrapReady = useMemo(() => {
+    const uid = session?.user?.id;
+    if (!uid) return true;
+    if (!initialProfileSyncDone || !profile?.id || profile.id !== uid) return false;
+    if (!authNavigationReady) return false;
+    const profOrg = profile?.organization_id && String(profile.organization_id).trim();
+    if (profOrg && String(organization?.id || '') !== profOrg) return false;
+    const r = String(role || profile?.role || '').toLowerCase();
+    const isStaffRole = staffRoles.has(r) && r !== 'cliente';
+    if (isStaffRole) {
+      const isPlatformUser =
+        r === 'superadmin' ||
+        platformAdminActiveRef.current === true ||
+        platformAdminActive === true;
+      const hasStaffContext =
+        isPlatformUser ||
+        hasStaffMembership ||
+        (organizationsOwnedByUser?.length ?? 0) > 0 ||
+        (!!profOrg && !!organization?.id);
+      if (!hasStaffContext) return false;
+    }
+    if (r === 'cliente' && profOrg && !organization?.id) return false;
+    return true;
+  }, [
+    session?.user?.id,
+    profile?.id,
+    profile?.organization_id,
+    profile?.role,
+    role,
+    organization?.id,
+    initialProfileSyncDone,
+    authNavigationReady,
+    hasStaffMembership,
+    organizationsOwnedByUser,
+    staffRoles,
+    platformAdminActive,
+  ]);
+
+  useEffect(() => {
+    if (!session?.user?.id || authBootstrapReady) return undefined;
+    const t = setTimeout(() => {
+      authTrace('bootstrap_stuck', {
+        initialProfileSyncDone: initialProfileSyncDone !== false,
+        authNavigationReady: authNavigationReady !== false,
+        ownedOrgsLoading: !!ownedOrgsLoading,
+        hasStaffMembership: !!hasStaffMembership,
+        ownedOrgsCount: organizationsOwnedByUser?.length ?? 0,
+        orgId: organization?.id ? `${String(organization.id).slice(0, 8)}…` : null,
+        profOrg: profile?.organization_id
+          ? `${String(profile.organization_id).slice(0, 8)}…`
+          : null,
+        role: role ?? profile?.role ?? null,
+      });
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [
+    session?.user?.id,
+    authBootstrapReady,
+    initialProfileSyncDone,
+    authNavigationReady,
+    ownedOrgsLoading,
+    hasStaffMembership,
+    organizationsOwnedByUser,
+    organization?.id,
+    profile?.organization_id,
+    role,
+    profile?.role,
+  ]);
 
   useEffect(() => {
     authTraceSnapshot('context', {
@@ -1756,6 +1823,144 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const purgeLocalAuthState = async () => {
+    await clearSupabaseAuthStorage();
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (_) {}
+    impersonatingOrgIdRef.current = null;
+    setImpersonatingOrgId(null);
+    platformAdminActiveRef.current = null;
+    setPlatformAdminActive(null);
+    setSession(null);
+    setProfile(null);
+    setOrganization(null);
+    setRole(null);
+    setUserPlans([]);
+    setActivePlanId(null);
+    setOwnedOrganizations([]);
+    setOrganizationMemberships([]);
+    setOwnedOrgsLoading(false);
+    setActiveAppModeState(null);
+    setActiveAppModeHydrated(true);
+    lastFetchedUserIdRef.current = null;
+    lastAvatarCleanupUserIdRef.current = null;
+    sessionUserLayoutRef.current = null;
+    await setPlanActualStorage(null);
+    setInitialProfileSyncDone(true);
+    setAuthSessionRestored(true);
+  };
+
+  /** Memberships + org activa + modo app; debe terminar antes de exponer sesión al UI. */
+  const hydratePostProfileSync = async (userId, profileRow) => {
+    const orgFetchAttempts =
+      Platform.OS === 'web' && hasPendingPaymentConnectResult() ? 8 : 3;
+    setOwnedOrgsLoading(true);
+    try {
+      const { data: memberships, error: membershipsError } = await supabase
+        .from('organization_memberships')
+        .select(
+          'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,public_directory_enabled,google_place_id,google_place_summary)'
+        )
+        .eq('user_id', userId)
+        .eq('active', true);
+
+      if (!membershipsError && Array.isArray(memberships)) {
+        const mapped = memberships
+          .filter((m) => !!m?.organization_id)
+          .map((m) => ({
+            id: m.id,
+            organization_id: m.organization_id,
+            role: m.role,
+            active: !!m.active,
+            is_default: !!m.is_default,
+            organization: m.organization || null,
+          }));
+
+        const { data: ownerOrgRows, error: ownerOrgErr } = await supabase
+          .from('organizations')
+          .select(
+            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,public_directory_enabled,google_place_id,google_place_summary'
+          )
+          .eq('owner_id', userId);
+        if (!ownerOrgErr && Array.isArray(ownerOrgRows)) {
+          for (const org of ownerOrgRows) {
+            if (!org?.id) continue;
+            const alreadyStaffForOrg = mapped.some(
+              (m) => m.organization_id === org.id && staffRoles.has(m.role)
+            );
+            if (!alreadyStaffForOrg) {
+              mapped.push({
+                id: null,
+                organization_id: org.id,
+                role: 'owner',
+                active: true,
+                is_default: false,
+                organization: org,
+              });
+            }
+          }
+        }
+        setOrganizationMemberships(mapped);
+        const staffOrgs = mapped
+          .filter((m) => staffRoles.has(m.role) && (m.organization?.id || m.organization_id))
+          .map((m) => {
+            if (m.organization?.id) return m.organization;
+            return {
+              id: m.organization_id,
+              name: '',
+              type: null,
+              owner_id: null,
+              active: true,
+            };
+          });
+        const unique = [];
+        const seen = new Set();
+        for (const org of staffOrgs) {
+          if (!org?.id || seen.has(org.id)) continue;
+          seen.add(org.id);
+          unique.push(org);
+        }
+        setOwnedOrganizations(unique);
+      } else if (membershipsError) {
+        console.log('🟠 hydrate memberships:', membershipsError?.message || membershipsError);
+      }
+
+      const profOrgId =
+        profileRow?.organization_id && String(profileRow.organization_id).trim()
+          ? String(profileRow.organization_id).trim()
+          : null;
+      if (profOrgId) {
+        let org = null;
+        for (let attempt = 0; attempt < orgFetchAttempts; attempt += 1) {
+          org = await fetchOrganization(profOrgId);
+          if (org?.id) break;
+          await new Promise((r) => setTimeout(r, 450 * (attempt + 1)));
+        }
+        if (!org?.id) {
+          authTrace('bootstrap_org_missing', {
+            orgId: `${profOrgId.slice(0, 8)}…`,
+          });
+          return false;
+        }
+        setOrganization(org);
+      }
+
+      const mode = await Promise.race([
+        readActiveAppMode(userId),
+        new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
+      setActiveAppModeState(mode);
+      setActiveAppModeHydrated(true);
+      return true;
+    } catch (e) {
+      console.log('🟠 hydratePostProfileSync:', e?.message || e);
+      return false;
+    } finally {
+      setOwnedOrgsLoading(false);
+    }
+  };
+
   // -------------------------
   // SYNC
   // -------------------------
@@ -1780,8 +1985,6 @@ export const AuthProvider = ({ children }) => {
       setRole(null);
       setOrganization(null);
     }
-
-    setSession(nextSession || null);
 
     const userId = nextUserId;
     const accessToken = nextSession?.access_token || null;
@@ -1847,15 +2050,15 @@ export const AuthProvider = ({ children }) => {
     const syncWork = (async () => {
     setInitialProfileSyncDone(false);
     profileSyncInFlightRef.current = userId;
-    const profileSyncUiCapMs = 15000;
+    // No marcar initialProfileSyncDone aquí: desbloqueaba Continuar sin profile → sesión fantasma.
+    const profileSyncUiCapMs = 20000;
     const profileSyncUiCap = setTimeout(() => {
       if (profileSyncInFlightRef.current !== userId) return;
       authTrace('sync_profile_ui_cap', {
         userId: userId ? `${String(userId).slice(0, 8)}…` : null,
         ms: profileSyncUiCapMs,
+        note: 'sync_still_in_flight',
       });
-      setInitialProfileSyncDone(true);
-      setAuthSessionRestored(true);
     }, profileSyncUiCapMs);
     let sessionForState = nextSession;
     let syncedProfile = null;
@@ -1950,18 +2153,43 @@ export const AuthProvider = ({ children }) => {
       const profileOk =
         !!syncedProfile?.id && String(syncedProfile.id) === String(userId);
       if (!profileOk) {
-        authTrace('sync_profile_missing', {
+        authTrace('sync_profile_purge', {
           userId: userId ? `${String(userId).slice(0, 8)}…` : null,
           syncedProfileId: syncedProfile?.id ? `${String(syncedProfile.id).slice(0, 8)}…` : null,
         });
-        console.log('🟠 SYNC: sesión sin fila profile (no signOut automático)');
-        setSession(sessionForState || nextSession || null);
-        setInitialProfileSyncDone(true);
-        setAuthSessionRestored(true);
+        console.log('🧨 SYNC: sin perfil tras reintentos → signOut local (no sesión fantasma)');
+        await purgeLocalAuthState();
       } else {
-        setSession(sessionForState || null);
-        setInitialProfileSyncDone(true);
-        void applyPendingClientInviteOnce().catch(() => {});
+        const hydrated = await hydratePostProfileSync(userId, syncedProfile);
+        const paymentReturnPending =
+          Platform.OS === 'web' && hasPendingPaymentConnectResult();
+        if (!hydrated && !paymentReturnPending) {
+          authTrace('sync_hydrate_purge', {
+            userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+          });
+          console.log('🧨 SYNC: perfil OK pero org/contexto no → signOut local');
+          await purgeLocalAuthState();
+        } else {
+          if (!hydrated && paymentReturnPending) {
+            authTrace('sync_hydrate_defer_purge_payment_return', {
+              userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+            });
+            void hydratePostProfileSync(userId, syncedProfile).catch(() => {});
+          }
+          sessionUserLayoutRef.current = userId;
+          setSession(sessionForState || null);
+          setInitialProfileSyncDone(true);
+          setAuthSessionRestored(true);
+          authTrace('sync_session_exposed', {
+            userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+            hydrated: !!hydrated,
+            profOrg: syncedProfile?.organization_id
+              ? `${String(syncedProfile.organization_id).slice(0, 8)}…`
+              : null,
+            memberships: organizationMemberships?.length ?? null,
+          });
+          void applyPendingClientInviteOnce().catch(() => {});
+        }
       }
     }
 
@@ -2020,12 +2248,17 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           if (String(e?.message || e) === 'sync_timeout') {
             authTrace('restore_sync_timeout', { label, ms: SYNC_CAP_MS });
-            console.log(`🧨 restore: sync timeout (${label}) → limpio sesión local`);
-            await clearSupabaseAuthStorage();
-            try {
-              await supabase.auth.signOut({ scope: 'local' });
-            } catch (_) {}
-            if (mounted) await syncFromSession(null);
+            if (Platform.OS === 'web' && hasPendingPaymentConnectResult()) {
+              console.log(`🟠 restore: sync timeout (${label}) con vuelta Stripe/MP — no purgo; sync sigue en background`);
+              authTrace('restore_sync_timeout_payment_defer', { label });
+            } else {
+              console.log(`🧨 restore: sync timeout (${label}) → limpio sesión local`);
+              await clearSupabaseAuthStorage();
+              try {
+                await supabase.auth.signOut({ scope: 'local' });
+              } catch (_) {}
+              if (mounted) await syncFromSession(null);
+            }
           } else {
             throw e;
           }
@@ -2168,11 +2401,9 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         if (sessionFromStorage?.user?.id) {
-          if (Platform.OS === 'web') {
-            lastFetchedUserIdRef.current = null;
-            profileSyncInFlightRef.current = null;
-            profileSyncPromiseRef.current = null;
-          }
+          lastFetchedUserIdRef.current = null;
+          profileSyncInFlightRef.current = null;
+          profileSyncPromiseRef.current = null;
           const { user: liveUser, error: juErr, revoked } = await getAuthUserWithRetry();
           if (!liveUser?.id) {
             if (revoked) {
@@ -2726,6 +2957,10 @@ export const AuthProvider = ({ children }) => {
     justLoggedOutAtRef.current = Date.now();
     postLogoutUiUntilRef.current = Date.now() + POST_LOGOUT_UI_MS;
 
+    // Resetear navegación ANTES de limpiar sesión (evita stack staff/cliente con session=null → pantalla negra).
+    resetNavigationRoot(WELCOME_GLOBAL_ROOT_STATE);
+    void resetNavigationRootToWelcome({ maxWaitMs: 10000 });
+
     const uidBeforeLogout = session?.user?.id || null;
     // Web: borrar token y restos OAuth ANTES de signOut (evita que el cliente re-escriba sesión al revocar).
     await clearSupabaseAuthStorage();
@@ -2759,6 +2994,7 @@ export const AuthProvider = ({ children }) => {
     setAuthSessionRestored(true);
     lastFetchedUserIdRef.current = null;
     lastAvatarCleanupUserIdRef.current = null;
+    sessionUserLayoutRef.current = null;
 
     try {
       await supabase.auth.signOut({ scope: 'global' });
@@ -2774,8 +3010,7 @@ export const AuthProvider = ({ children }) => {
       await setPlanActualStorage(null);
       await syncFromSession(null);
       setTimeout(() => { justLoggedOutAtRef.current = null; }, LOGOUT_IGNORE_MS);
-      // `navigationRef.isReady()` a veces es false en el primer tick tras limpiar estado: un solo reset
-      // no corre y el stack queda en staff/cliente sin sesión → pantalla en blanco. Reintentar hasta listo.
+      resetNavigationRoot(WELCOME_GLOBAL_ROOT_STATE);
       void resetNavigationRootToWelcome({ maxWaitMs: 10000 });
     }
   };
@@ -2872,6 +3107,7 @@ export const AuthProvider = ({ children }) => {
       activeAppMode,
       activeAppModeHydrated,
       authNavigationReady,
+      authBootstrapReady,
       /** false hasta que syncFromSession termine el fetch de perfil (o decida skip por ya sincronizado). */
       initialProfileSyncDone,
       /** false hasta el primer restore de sesión; evita welcome “invitado” con session aún null. */
@@ -2927,6 +3163,7 @@ export const AuthProvider = ({ children }) => {
       activeAppMode,
       activeAppModeHydrated,
       authNavigationReady,
+      authBootstrapReady,
       initialProfileSyncDone,
       authSessionRestored,
       isPostLogoutUiActive,

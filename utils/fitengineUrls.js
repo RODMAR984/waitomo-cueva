@@ -83,18 +83,17 @@ export function getOAuthRedirectUriForSupabase() {
   return 'waitomo://auth/callback';
 }
 
-function getWebPaymentConnectReturnPath(pathSegment) {
+function getWebPaymentConnectReturnOrigin() {
   if (typeof window !== 'undefined' && window.location?.origin) {
-    const origin = String(window.location.origin).replace(/\/+$/, '');
-    return `${origin}/${pathSegment}`;
+    return `${String(window.location.origin).replace(/\/+$/, '')}/`;
   }
-  return AuthSession.makeRedirectUri({ path: pathSegment });
+  return AuthSession.makeRedirectUri({ path: '/' });
 }
 
 /** Mismo patrón que OAuth: Stripe Connect vuelve acá y `openAuthSessionAsync` cierra el in-app browser. */
 export function getStripeConnectRedirectUri() {
   if (Platform.OS === 'web') {
-    return getWebPaymentConnectReturnPath('stripe-connect');
+    return getWebPaymentConnectReturnOrigin();
   }
   return 'waitomo://stripe-connect';
 }
@@ -102,7 +101,7 @@ export function getStripeConnectRedirectUri() {
 /** OAuth MP vendedor: mismo patrón que Stripe (openAuthSessionAsync). */
 export function getMercadoPagoConnectRedirectUri() {
   if (Platform.OS === 'web') {
-    return getWebPaymentConnectReturnPath('mercadopago-connect');
+    return getWebPaymentConnectReturnOrigin();
   }
   return 'waitomo://mercadopago-connect';
 }

@@ -43,6 +43,7 @@ export function useWelcomeRouting() {
     initialProfileSyncDone,
     authSessionRestored,
     authNavigationReady,
+    authBootstrapReady,
   } = useAuth() || {};
 
   const navigateForStaffDual = useCallback(() => {
@@ -86,6 +87,13 @@ export function useWelcomeRouting() {
       }
       if (session?.user?.id && initialProfileSyncDone === false) {
         authTrace('navigateToDestination_skip', { reason: 'initial_profile_sync_pending' });
+        return;
+      }
+      if (session?.user?.id && authBootstrapReady !== true) {
+        authTrace('navigateToDestination_skip', {
+          reason: 'bootstrap_not_ready',
+          hasProfile: !!profile?.id,
+        });
         return;
       }
       if (session?.user?.id && profile?.id && profile.id !== session.user.id) {
@@ -217,6 +225,10 @@ export function useWelcomeRouting() {
       }
 
       if (role === 'coach' || role === 'admin') {
+        if (!hasStaffMembership && (ownedOrganizations?.length || 0) === 0) {
+          authTrace('navigateToDestination_skip', { reason: 'staff_no_context' });
+          return;
+        }
         resetStackTo(navigation, [{ name: 'AdminLite' }]);
         return;
       }
@@ -257,6 +269,7 @@ export function useWelcomeRouting() {
       initialProfileSyncDone,
       authSessionRestored,
       authNavigationReady,
+      authBootstrapReady,
     ],
   );
 

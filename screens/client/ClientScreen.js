@@ -168,6 +168,7 @@ export default function ClientScreen() {
     needsFitEngineSpaceSetup,
     authNavigationReady,
     initialProfileSyncDone,
+    refreshOrganization,
     hasStaffMembership,
     hasClientMembership,
     persistActiveAppMode,
@@ -1191,6 +1192,21 @@ export default function ClientScreen() {
     if (!navigationRef.isReady()) return;
     resetNavigationRoot({ index: 0, routes: [{ name: 'RegistroInicial' }] });
   }, [user?.id, profile?.id, initialProfileSyncDone]);
+
+  // Perfil con gym pero org aún no hidratada → reintentar (evita panel “fantasma” tras reabrir).
+  useEffect(() => {
+    const profOrg = profile?.organization_id && String(profile.organization_id).trim();
+    if (!user?.id || !profOrg || organization?.id === profOrg) return;
+    if (initialProfileSyncDone === false) return;
+    if (typeof refreshOrganization !== 'function') return;
+    void refreshOrganization(profOrg);
+  }, [
+    user?.id,
+    profile?.organization_id,
+    organization?.id,
+    initialProfileSyncDone,
+    refreshOrganization,
+  ]);
 
   // Guardia anti-ruta equivocada: no quedarse en panel cliente si la cuenta es gym/staff.
   useEffect(() => {

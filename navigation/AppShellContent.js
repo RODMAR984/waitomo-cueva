@@ -17,6 +17,7 @@ import {
   saveWebAuthRouteForUser,
 } from '../utils/webAuthRoutePersistence';
 import {
+  consumePendingPaymentConnectResult,
   parsePaymentConnectReturnFromWindow,
   paymentConnectRouteForKind,
   stashPendingPaymentConnectResult,
@@ -32,7 +33,8 @@ import AuthGate from '../components/AuthGate';
  * Navegación + providers de dominio inmediato (plan / training) bajo el árbol de auth ya resuelto arriba en App.js.
  */
 export default function AppShellContent() {
-  const { user, profile, role, organization, initialProfileSyncDone } = useAuth() || {};
+  const { user, profile, role, organization, initialProfileSyncDone, authBootstrapReady } =
+    useAuth() || {};
   const { theme, t } = useThemeContext();
   const { t: tStr } = useLocale();
   const routeNameRef = useRef(null);
@@ -61,26 +63,46 @@ export default function AppShellContent() {
     paymentConnectHandledRef.current = true;
     stripPaymentConnectQueryFromHistory();
     stashPendingPaymentConnectResult(parsed);
+  }, []);
 
-    const tryNavigate = () => {
+  const paymentConnectNavDoneRef = useRef(false);
+  useEffect(() => {
+    if (!user?.id) paymentConnectNavDoneRef.current = false;
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!user?.id || authBootstrapReady !== true) return;
+    if (paymentConnectNavDoneRef.current) return;
+
+    let pending = null;
+    for (const kind of ['stripe', 'mercadopago']) {
+      pending = consumePendingPaymentConnectResult(kind);
+      if (pending) break;
+    }
+    if (!pending) return;
+
+    paymentConnectNavDoneRef.current = true;
+    const targetRoute = paymentConnectRouteForKind(pending.kind);
+
+    const attempt = () => {
       if (!navigationRef.isReady()) return false;
-      const route = paymentConnectRouteForKind(parsed.kind);
       try {
-        navigationRef.navigate(route);
+        navigationRef.navigate(targetRoute);
       } catch (_) {
         /* ignore */
       }
       return true;
     };
 
-    if (!tryNavigate()) {
+    if (!attempt()) {
       const id = setInterval(() => {
-        if (tryNavigate()) clearInterval(id);
+        if (attempt()) clearInterval(id);
       }, 80);
       return () => clearInterval(id);
     }
     return undefined;
-  }, []);
+  }, [user?.id, authBootstrapReady]);
 
   useEffect(() => {
     if (!user?.id) return undefined;

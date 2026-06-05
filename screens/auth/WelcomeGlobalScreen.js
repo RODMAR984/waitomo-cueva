@@ -39,6 +39,7 @@ export default function WelcomeGlobalScreen() {
     hasStaffMembership,
     hasClientMembership,
     authNavigationReady,
+    authBootstrapReady,
     initialProfileSyncDone,
     authSessionRestored = true,
     logout,
@@ -60,15 +61,9 @@ export default function WelcomeGlobalScreen() {
     [navigation],
   );
 
-  // Sync terminado + perfil ausente → Continuar habilitado (rutea a RegistroInicial).
-  // Perfil de otro usuario (stale) → seguir en “cargando” hasta que AuthContext alinee.
-  // No exigir authNavigationReady aquí: bloqueaba Continuar; el routing lo usa aparte (sessionRoutingReady).
-  const profileReady =
-    !!session?.user?.id &&
-    initialProfileSyncDone === true &&
-    (profile?.id == null || profile.id === session.user.id);
-  const sessionRoutingReady =
-    !!session?.user?.id && authNavigationReady && initialProfileSyncDone === true;
+  // Perfil + org + memberships listos; si no, AuthContext purga JWT (no panel vacío).
+  const profileReady = !!session?.user?.id && authBootstrapReady === true;
+  const sessionRoutingReady = profileReady;
 
   const isDualSession = sessionRoutingReady && (isDualByMemberships || isDualHatUser);
 

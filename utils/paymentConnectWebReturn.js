@@ -30,23 +30,38 @@ export function isAllowedPaymentConnectWebReturnUrl(raw) {
   }
 }
 
-function getPaymentConnectWebReturnUri(pathSegment) {
+/** Mismo origen + `/` que OAuth Supabase (query `stripe_connect` / `mercadopago_connect`). */
+function getPaymentConnectWebReturnUri() {
   if (Platform.OS !== 'web') return '';
-  const path = String(pathSegment || '').replace(/^\/+/, '');
-  // Mismo origen que la pestaña abierta (fitengine.app vs app.fitengine.app); no app.json.
   if (typeof window !== 'undefined' && window.location?.origin) {
-    const origin = String(window.location.origin).replace(/\/+$/, '');
-    return `${origin}/${path}`;
+    return `${String(window.location.origin).replace(/\/+$/, '')}/`;
   }
-  return AuthSession.makeRedirectUri({ path });
+  return AuthSession.makeRedirectUri({ path: '/' });
 }
 
 export function getMercadoPagoWebReturnUri() {
-  return getPaymentConnectWebReturnUri('mercadopago-connect');
+  return getPaymentConnectWebReturnUri();
 }
 
 export function getStripeConnectWebReturnUri() {
-  return getPaymentConnectWebReturnUri('stripe-connect');
+  return getPaymentConnectWebReturnUri();
+}
+
+/** Hay resultado OAuth de pagos en sessionStorage (vuelta de Stripe/MP, sync aún en curso). */
+export function hasPendingPaymentConnectResult() {
+  const ss = Platform.OS === 'web' && typeof sessionStorage !== 'undefined' ? sessionStorage : null;
+  if (!ss) return false;
+  for (const key of [PENDING_MP_KEY, PENDING_STRIPE_KEY]) {
+    try {
+      const raw = ss.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (Date.now() - (Number(parsed.ts) || 0) <= 10 * 60 * 1000) return true;
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  return false;
 }
 
 function readSearchParams() {
