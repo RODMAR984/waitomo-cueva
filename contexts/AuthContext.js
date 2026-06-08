@@ -411,6 +411,8 @@ export const AuthProvider = ({ children }) => {
   const profileSyncConcurrentSkipLoggedRef = useRef(false);
   const lastAvatarCleanupUserIdRef = useRef(null);
   const justLoggedOutAtRef = useRef(null);
+  /** Login con contraseña en curso: ignorar SIGNED_OUT tardío que borraba la sesión recién creada. */
+  const explicitLoginInFlightRef = useRef(false);
   /** Tras logout, la UI trata como invitado aunque Supabase rehidrate token unos segundos. */
   const postLogoutUiUntilRef = useRef(0);
   /** URL inicial OAuth (waitomo://#...) con la que se abrió la app; si luego openAuthSessionAsync devuelve esta misma URL, la rechazamos como sesión fantasma */
@@ -2159,6 +2161,10 @@ export const AuthProvider = ({ children }) => {
       userId: userId ? `${String(userId).slice(0, 8)}…` : null,
       profileRole: syncedProfile?.role ?? null,
     });
+    if (syncedProfile?.id) return syncedProfile;
+    if (profileRef.current?.id && String(profileRef.current.id) === String(userId)) {
+      return profileRef.current;
+    }
     return syncedProfile;
     })();
 
@@ -2422,6 +2428,13 @@ export const AuthProvider = ({ children }) => {
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (!mounted) return;
+      if (explicitLoginInFlightRef.current && event !== 'SIGNED_IN') {
+        authTrace('onAuthStateChange_skip', {
+          event,
+          reason: 'explicit_login_in_flight',
+        });
+        return;
+      }
       const justLoggedOutAt = justLoggedOutAtRef.current;
       // Tras logout, Supabase a veces rehidrata TOKEN_REFRESHED/INITIAL_SESSION; no bloquear SIGNED_IN (login nuevo).
       const isExplicitSignIn = event === 'SIGNED_IN';
@@ -2697,10 +2710,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const waitForProfileRow = async (userId, accessToken, maxMs = 8000) => {
+    if (!userId) return null;
+    const deadline = Date.now() + maxMs;
+    while (Date.now() < deadline) {
+      const row = profileRef.current;
+      if (row?.id && String(row.id) === String(userId)) return row;
+      const fetched = await fetchProfile(userId, accessToken);
+      if (fetched?.id) return fetched;
+      await new Promise((r) => setTimeout(r, 350));
+    }
+    return profileRef.current?.id === userId ? profileRef.current : null;
+  };
+
   const login = async ({ email, password }) => {
     // Login explícito: no aplicar guard anti-sesión-fantasma post-logout (onAuthStateChange SIGNED_IN).
     justLoggedOutAtRef.current = null;
     postLogoutUiUntilRef.current = 0;
+    explicitLoginInFlightRef.current = true;
     const normalized = (email || '').trim().toLowerCase();
     try {
       const { data: preSession } = await supabase.auth.getSession();
@@ -2732,9 +2759,26 @@ export const AuthProvider = ({ children }) => {
         password,
       });
       if (error) throw error;
-      const syncedProfile = await syncFromSession(data?.session || null);
-      return { user: data?.user || null, profile: syncedProfile ?? null };
+      let nextSession = data?.session || null;
+      if (!nextSession?.access_token) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        nextSession = sessionData?.session || null;
+      }
+      let syncedProfile = await syncFromSession(nextSession);
+      const userId = data?.user?.id || nextSession?.user?.id || null;
+      const token = nextSession?.access_token || null;
+      if (!syncedProfile?.id && userId) {
+        authTrace('login_profile_wait', {
+          userId: `${String(userId).slice(0, 8)}…`,
+        });
+        syncedProfile = await waitForProfileRow(userId, token, 8000);
+      }
+      return {
+        user: data?.user || nextSession?.user || null,
+        profile: syncedProfile ?? null,
+      };
     } finally {
+      explicitLoginInFlightRef.current = false;
       setLoading(false);
     }
   };

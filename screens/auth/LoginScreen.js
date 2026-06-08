@@ -453,16 +453,18 @@ export default function LoginScreen() {
         } catch (_) {}
       }
 
-      if (!loggedProfile?.id) {
+      const effectiveProfile = loggedProfile;
+      if (!effectiveProfile?.id) {
         Alert.alert(tStr('gym_config_alert_title_error'), tStr('login_error_profile_load'));
         return;
       }
-      const effectiveRole = loggedProfile?.role || 'cliente';
+      const effectiveRole = effectiveProfile?.role || 'cliente';
       if (forStaff && !isStaffRole(effectiveRole)) {
         setShowStaffAccessChoice(true);
         return;
       }
-      navigateByRole(effectiveRole, loggedProfile);
+      setAllowStaffAutoNav(true);
+      navigateByRole(effectiveRole, effectiveProfile);
     } catch (error) {
       loginSyncReturnedProfileRef.current = null;
       reportError('auth_login_failed', error, {

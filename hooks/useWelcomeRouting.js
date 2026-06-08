@@ -92,7 +92,12 @@ export function useWelcomeRouting() {
         authTrace('navigateToDestination_skip', { reason: 'profile_sync_pending' });
         return;
       }
-      if (session?.user?.id && !authNavigationReady) {
+      // Con perfil alineado, no bloquear Continuar mientras memberships/modo siguen cargando.
+      if (
+        session?.user?.id &&
+        !authNavigationReady &&
+        (!profile?.id || profile.id !== session.user.id)
+      ) {
         authTrace('navigateToDestination_skip', { reason: 'navigation_not_ready' });
         return;
       }
