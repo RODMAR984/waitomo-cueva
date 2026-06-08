@@ -417,6 +417,9 @@ export const AuthProvider = ({ children }) => {
   const syncGenerationRef = useRef(0);
   /** Restore inicial en curso: evita INITIAL_SESSION duplicado que invalida el primer sync. */
   const restoreBootstrapInFlightRef = useRef(false);
+  /** Evita solapar recoverMissingProfile (watchdog + login_cap + background). */
+  const profileRecoveryInFlightRef = useRef(null);
+  const recoverMissingProfileRef = useRef(async () => null);
   /** Tras logout, la UI trata como invitado aunque Supabase rehidrate token unos segundos. */
   const postLogoutUiUntilRef = useRef(0);
   /** URL inicial OAuth (waitomo://#...) con la que se abrió la app; si luego openAuthSessionAsync devuelve esta misma URL, la rechazamos como sesión fantasma */
@@ -1077,19 +1080,20 @@ export const AuthProvider = ({ children }) => {
     };
   }, [session?.user?.id, profile?.organization_id, staffRoles, membershipsFetchKey]);
 
-  /** Perfil lento: solo log (no signOut — rompía login/restore con red lenta). */
+  /** Sesión sin fila profiles: reintento activo (no solo log). */
   useEffect(() => {
     if (!session?.user?.id) return undefined;
     const uid = session.user.id;
+    const token = session?.access_token || null;
     const t = setTimeout(() => {
       if (profileRef.current?.id === uid) return;
-      if (profileSyncInFlightRef.current === uid) return;
       authTrace('watchdog_profile_still_missing', {
         userId: `${String(uid).slice(0, 8)}…`,
       });
-    }, 20000);
+      void recoverMissingProfileRef.current?.(uid, token);
+    }, 12000);
     return () => clearTimeout(t);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, session?.access_token]);
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -1990,6 +1994,65 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /** JWT en UI pero profiles null (cap de sync, red lenta, platform_admins colgado, etc.). */
+  const recoverMissingProfile = async (userId, accessTokenHint = null) => {
+    if (!userId) return null;
+    if (profileRef.current?.id === userId) return profileRef.current;
+    if (profileRecoveryInFlightRef.current === userId) return null;
+    profileRecoveryInFlightRef.current = userId;
+    authTrace('recover_missing_profile_start', {
+      userId: `${String(userId).slice(0, 8)}…`,
+    });
+    try {
+      let token = accessTokenHint || session?.access_token || null;
+      if (!token) {
+        const { data } = await supabase.auth.getSession().catch(() => ({ data: null }));
+        token = data?.session?.access_token || null;
+      }
+      let row = token ? await fetchProfile(userId, token) : null;
+      if (!row?.id) {
+        const { data: refData } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
+        const refreshed = refData?.session || null;
+        if (refreshed?.access_token) {
+          token = refreshed.access_token;
+          row = await fetchProfile(userId, token);
+        }
+      }
+      if (!row?.id && token) {
+        const um =
+          session?.user?.user_metadata ||
+          (await supabase.auth.getUser().catch(() => ({ data: null })))?.data?.user
+            ?.user_metadata ||
+          {};
+        const fullName =
+          String(um.full_name || um.name || um.nombre || session?.user?.email || '').trim() ||
+          'Usuario';
+        await ensureProfile({ id: userId, full_name: fullName });
+        row = await fetchProfile(userId, token);
+      }
+      if (row?.id) {
+        await applyProfileFromRow(row);
+        setMembershipsFetchKey((k) => k + 1);
+        void hydratePostProfileSync(userId, row).catch(() => {});
+        void refreshPlatformAdminFromSession(userId);
+        authTrace('recover_missing_profile_ok', {
+          userId: `${String(userId).slice(0, 8)}…`,
+          role: row.role ?? null,
+        });
+        return row;
+      }
+      authTrace('recover_missing_profile_failed', {
+        userId: `${String(userId).slice(0, 8)}…`,
+      });
+      return null;
+    } finally {
+      if (profileRecoveryInFlightRef.current === userId) {
+        profileRecoveryInFlightRef.current = null;
+      }
+    }
+  };
+  recoverMissingProfileRef.current = recoverMissingProfile;
+
   /** Reabrir pestaña: no exponer JWT en UI hasta tener fila profiles (evita sesión fantasma). */
   const scheduleRestoreProfileRetry = (sess, userId, myGen, maxMs = 12000) => {
     void (async () => {
@@ -2008,7 +2071,7 @@ export const AuthProvider = ({ children }) => {
         }
         if (row?.id && syncGenerationRef.current === myGen) {
           await applyProfileFromRow(row);
-          await refreshPlatformAdminFromSession(userId);
+          void refreshPlatformAdminFromSession(userId);
           sessionUserLayoutRef.current = userId;
           setSession(live);
           setInitialProfileSyncDone(true);
@@ -2101,7 +2164,7 @@ export const AuthProvider = ({ children }) => {
         userId: `${String(userId).slice(0, 8)}…`,
         reason: 'profile_already_synced',
       });
-      await refreshPlatformAdminFromSession(userId);
+      void refreshPlatformAdminFromSession(userId);
       return profileRef.current;
     }
     if (lastFetchedUserIdRef.current === userId) {
@@ -2158,6 +2221,8 @@ export const AuthProvider = ({ children }) => {
       profileSyncPromiseRef.current = null;
       if (allowSessionWithoutProfile) {
         exposeSessionFromCap('login_cap');
+        const capSess = sessionForStateRef.current || nextSession;
+        void recoverMissingProfile(userId, capSess?.access_token || null);
         return;
       }
       if (profileRef.current?.id === userId) {
@@ -2192,7 +2257,6 @@ export const AuthProvider = ({ children }) => {
         );
         if (syncGenerationRef.current !== myGen) return null;
         syncedProfile = p;
-        await refreshPlatformAdminFromSession(userId);
       } else {
         // Sin fila en profiles (trigger falló, OAuth reciente, etc.): refresh + re-SELECT + ensureProfile.
         // Antes: refresh OK pero dejábamos profile=null → “perfil vacío” y join/membresías incoherentes.
@@ -2230,7 +2294,6 @@ export const AuthProvider = ({ children }) => {
           if (syncGenerationRef.current !== myGen) return null;
           syncedProfile = pRetry;
           setMembershipsFetchKey((k) => k + 1);
-          await refreshPlatformAdminFromSession(userId);
         } else {
           impersonatingOrgIdRef.current = null;
           setImpersonatingOrgId(null);
@@ -2276,6 +2339,7 @@ export const AuthProvider = ({ children }) => {
             : null,
         });
         setMembershipsFetchKey((k) => k + 1);
+        void refreshPlatformAdminFromSession(userId);
         void hydratePostProfileSync(userId, syncedProfile).catch(() => {});
         void applyPendingClientInviteOnce().catch(() => {});
       } else if (hasValidJwt && allowSessionWithoutProfile) {
@@ -2292,31 +2356,7 @@ export const AuthProvider = ({ children }) => {
         authTrace('sync_profile_retry_background', {
           userId: userId ? `${String(userId).slice(0, 8)}…` : null,
         });
-        void (async () => {
-          profileSyncInFlightRef.current = userId;
-          try {
-            const token = sessionForState?.access_token || null;
-            let p = await fetchProfile(userId, token);
-            if (!p?.id && token) {
-              await ensureProfile({
-                id: userId,
-                full_name:
-                  String(sessionForState?.user?.user_metadata?.full_name || '').trim() ||
-                  'Usuario',
-              });
-              p = await fetchProfile(userId, token);
-            }
-            if (p?.id) {
-              await applyProfileFromRow(p);
-              setMembershipsFetchKey((k) => k + 1);
-              void hydratePostProfileSync(userId, p).catch(() => {});
-            }
-          } finally {
-            if (profileSyncInFlightRef.current === userId) {
-              profileSyncInFlightRef.current = null;
-            }
-          }
-        })();
+        void recoverMissingProfile(userId, sessionForState?.access_token || null);
         void applyPendingClientInviteOnce().catch(() => {});
       } else if (hasValidJwt) {
         authTrace('sync_restore_defer_session', {
