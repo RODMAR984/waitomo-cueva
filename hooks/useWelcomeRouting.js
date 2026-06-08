@@ -43,7 +43,6 @@ export function useWelcomeRouting() {
     initialProfileSyncDone,
     authSessionRestored,
     authNavigationReady,
-    authBootstrapReady,
   } = useAuth() || {};
 
   const navigateForStaffDual = useCallback(() => {
@@ -89,14 +88,15 @@ export function useWelcomeRouting() {
         authTrace('navigateToDestination_skip', { reason: 'initial_profile_sync_pending' });
         return;
       }
-      if (session?.user?.id && authBootstrapReady !== true) {
-        authTrace('navigateToDestination_skip', {
-          reason: 'bootstrap_not_ready',
-          hasProfile: !!profile?.id,
-        });
+      if (session?.user?.id && initialProfileSyncDone === false) {
+        authTrace('navigateToDestination_skip', { reason: 'profile_sync_pending' });
         return;
       }
-      if (session?.user?.id && profile?.id && profile.id !== session.user.id) {
+      if (session?.user?.id && !authNavigationReady) {
+        authTrace('navigateToDestination_skip', { reason: 'navigation_not_ready' });
+        return;
+      }
+      if (session?.user?.id && (!profile?.id || profile.id !== session.user.id)) {
         authTrace('navigateToDestination_skip', {
           reason: 'profile_id_mismatch',
           hasProfile: true,
@@ -265,7 +265,6 @@ export function useWelcomeRouting() {
       initialProfileSyncDone,
       authSessionRestored,
       authNavigationReady,
-      authBootstrapReady,
     ],
   );
 

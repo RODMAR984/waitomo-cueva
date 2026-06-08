@@ -39,7 +39,6 @@ export default function WelcomeGlobalScreen() {
     hasStaffMembership,
     hasClientMembership,
     authNavigationReady,
-    authBootstrapReady,
     initialProfileSyncDone,
     authSessionRestored = true,
     logout,
@@ -61,9 +60,12 @@ export default function WelcomeGlobalScreen() {
     [navigation],
   );
 
-  // Perfil + org + memberships listos; si no, AuthContext purga JWT (no panel vacío).
-  const profileReady = !!session?.user?.id && authBootstrapReady === true;
-  const sessionRoutingReady = profileReady;
+  // Continuar: sesión + perfil alineado (org/memberships pueden terminar en el panel).
+  const profileReady =
+    !!session?.user?.id &&
+    initialProfileSyncDone !== false &&
+    profile?.id === session.user.id;
+  const sessionRoutingReady = profileReady && authNavigationReady !== false;
 
   const isDualSession = sessionRoutingReady && (isDualByMemberships || isDualHatUser);
 
