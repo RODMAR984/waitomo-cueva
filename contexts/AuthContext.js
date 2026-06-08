@@ -415,6 +415,8 @@ export const AuthProvider = ({ children }) => {
   const explicitLoginInFlightRef = useRef(false);
   /** Invalida syncFromSession en vuelo cuando llega logout o sync(null). */
   const syncGenerationRef = useRef(0);
+  /** Restore inicial en curso: evita INITIAL_SESSION duplicado que invalida el primer sync. */
+  const restoreBootstrapInFlightRef = useRef(false);
   /** Tras logout, la UI trata como invitado aunque Supabase rehidrate token unos segundos. */
   const postLogoutUiUntilRef = useRef(0);
   /** URL inicial OAuth (waitomo://#...) con la que se abrió la app; si luego openAuthSessionAsync devuelve esta misma URL, la rechazamos como sesión fantasma */
@@ -478,13 +480,26 @@ export const AuthProvider = ({ children }) => {
     }
 
     const START = Date.now();
-    const REQUEST_TIMEOUT_MS = 12000;
-    const PROFILE_FETCH_ATTEMPTS = 3;
-    const PROFILE_RETRY_DELAY_MS = 600;
+    const REQUEST_TIMEOUT_MS = 6000;
+    const PROFILE_FETCH_ATTEMPTS = 2;
+    const PROFILE_RETRY_DELAY_MS = 400;
 
     const accessToken = accessTokenOverride || session?.access_token || null;
 
     const cols = PROFILE_COLS;
+
+    try {
+      const viaClientFast = await Promise.race([
+        fetchProfileViaSupabase(userId),
+        new Promise((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
+      if (viaClientFast?.id) {
+        console.log('✅ fetchProfile: via Supabase client', viaClientFast.id);
+        return viaClientFast;
+      }
+    } catch (_) {
+      /* REST fallback */
+    }
 
     const withAbort = async (fn, label) => {
       const controller = new AbortController();
@@ -1225,12 +1240,10 @@ export const AuthProvider = ({ children }) => {
     activeAppModeHydrated,
   ]);
 
-  // Perfil huérfano (fetchProfile antiguo o sync abortado): sin sesión no debe quedar role/profile.
+  // Perfil huérfano (sync abortado): sin sesión no debe quedar role/profile en UI.
   useEffect(() => {
     if (session?.user?.id) return undefined;
     if (!profile?.id) return undefined;
-    if (explicitLoginInFlightRef.current) return undefined;
-    if (profileSyncInFlightRef.current) return undefined;
     authTrace('orphan_profile_cleared', {
       profileId: `${String(profile.id).slice(0, 8)}…`,
     });
@@ -2113,7 +2126,26 @@ export const AuthProvider = ({ children }) => {
     setInitialProfileSyncDone(false);
     profileSyncInFlightRef.current = userId;
     // No marcar initialProfileSyncDone aquí: desbloqueaba Continuar sin profile → sesión fantasma.
-    const profileSyncUiCapMs = 12000;
+    const sessionForStateRef = { current: nextSession };
+    let sessionForState = nextSession;
+    const profileSyncUiCapMs = 8000;
+    const exposeSessionFromCap = (note) => {
+      const sess = sessionForStateRef.current || nextSession;
+      const hasJwt =
+        !!sess?.user?.id &&
+        !!sess?.access_token &&
+        String(sess.user.id) === String(userId);
+      if (hasJwt) {
+        sessionUserLayoutRef.current = userId;
+        setSession(sess);
+        authTrace('sync_cap_expose_session', {
+          userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+          note,
+        });
+      }
+      setInitialProfileSyncDone(true);
+      setAuthSessionRestored(true);
+    };
     const profileSyncUiCap = setTimeout(() => {
       if (profileSyncInFlightRef.current !== userId) return;
       if (syncGenerationRef.current !== myGen) return;
@@ -2125,20 +2157,26 @@ export const AuthProvider = ({ children }) => {
       profileSyncInFlightRef.current = null;
       profileSyncPromiseRef.current = null;
       if (allowSessionWithoutProfile) {
-        setInitialProfileSyncDone(true);
-        setAuthSessionRestored(true);
+        exposeSessionFromCap('login_cap');
         return;
       }
       if (profileRef.current?.id === userId) {
-        setSession(sessionForStateRef?.current || nextSession);
-        setInitialProfileSyncDone(true);
-        setAuthSessionRestored(true);
+        exposeSessionFromCap('restore_profile_ready');
         return;
       }
-      scheduleRestoreProfileRetry(nextSession, userId, myGen, 8000);
+      const sess = sessionForStateRef?.current || nextSession;
+      const hasJwt =
+        !!sess?.user?.id &&
+        !!sess?.access_token &&
+        String(sess.user.id) === String(userId);
+      if (hasJwt) {
+        exposeSessionFromCap('restore_defer_retry');
+        scheduleRestoreProfileRetry(sess, userId, myGen, 8000);
+        return;
+      }
+      void purgeLocalAuthState();
+      setInitialProfileSyncDone(true);
     }, profileSyncUiCapMs);
-    const sessionForStateRef = { current: nextSession };
-    let sessionForState = nextSession;
     let syncedProfile = null;
     try {
       console.log('🧠 SYNC → fetchProfile(userId, accessToken)');
@@ -2153,7 +2191,6 @@ export const AuthProvider = ({ children }) => {
           nextSession?.user?.user_metadata
         );
         if (syncGenerationRef.current !== myGen) return null;
-        await applyProfileFromRow(p);
         syncedProfile = p;
         await refreshPlatformAdminFromSession(userId);
       } else {
@@ -2191,7 +2228,6 @@ export const AuthProvider = ({ children }) => {
             refreshedSession.user?.user_metadata
           );
           if (syncGenerationRef.current !== myGen) return null;
-          await applyProfileFromRow(pRetry);
           syncedProfile = pRetry;
           setMembershipsFetchKey((k) => k + 1);
           await refreshPlatformAdminFromSession(userId);
@@ -2211,7 +2247,13 @@ export const AuthProvider = ({ children }) => {
       lastFetchedUserIdRef.current = userId;
     } finally {
       clearTimeout(profileSyncUiCap);
-      if (syncGenerationRef.current !== myGen) return null;
+      if (syncGenerationRef.current !== myGen) {
+        if (profileRef.current?.id === userId) {
+          setProfile(null);
+          setRole(null);
+        }
+        return null;
+      }
       const profileOk =
         !!syncedProfile?.id && String(syncedProfile.id) === String(userId);
       const hasValidJwt =
@@ -2220,6 +2262,7 @@ export const AuthProvider = ({ children }) => {
         String(sessionForState.user.id) === String(userId);
 
       if (profileOk) {
+        await applyProfileFromRow(syncedProfile);
         sessionUserLayoutRef.current = userId;
         setSession(sessionForState || null);
         setInitialProfileSyncDone(true);
@@ -2322,6 +2365,7 @@ export const AuthProvider = ({ children }) => {
     let mounted = true;
 
     const restore = async () => {
+      restoreBootstrapInFlightRef.current = true;
       authTrace('restore_start', { platform: Platform.OS });
       // WelcomeGlobal muestra el mismo “splash” hasta authSessionRestored. Antes solo pasaba a true
       // al terminar TODO restore (syncFromSession + fetch perfil + refresh…), pudiendo colgarse minutos.
@@ -2562,6 +2606,7 @@ export const AuthProvider = ({ children }) => {
       } finally {
         clearTimeout(uiCapTimer);
         unblockWelcomeBootstrapUI();
+        restoreBootstrapInFlightRef.current = false;
         authTrace('restore_ui_unblocked', { authSessionRestored: true });
       }
     };
@@ -2570,6 +2615,13 @@ export const AuthProvider = ({ children }) => {
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (!mounted) return;
+      if (event === 'INITIAL_SESSION' && restoreBootstrapInFlightRef.current) {
+        authTrace('onAuthStateChange_skip', {
+          event,
+          reason: 'restore_bootstrap_in_flight',
+        });
+        return;
+      }
       if (explicitLoginInFlightRef.current && event !== 'SIGNED_IN') {
         authTrace('onAuthStateChange_skip', {
           event,
