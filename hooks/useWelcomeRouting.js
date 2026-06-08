@@ -225,10 +225,6 @@ export function useWelcomeRouting() {
       }
 
       if (role === 'coach' || role === 'admin') {
-        if (!hasStaffMembership && (ownedOrganizations?.length || 0) === 0) {
-          authTrace('navigateToDestination_skip', { reason: 'staff_no_context' });
-          return;
-        }
         resetStackTo(navigation, [{ name: 'AdminLite' }]);
         return;
       }

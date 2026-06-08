@@ -1212,35 +1212,14 @@ export const AuthProvider = ({ children }) => {
     if (!authNavigationReady) return false;
     const profOrg = profile?.organization_id && String(profile.organization_id).trim();
     if (profOrg && String(organization?.id || '') !== profOrg) return false;
-    const r = String(role || profile?.role || '').toLowerCase();
-    const isStaffRole = staffRoles.has(r) && r !== 'cliente';
-    if (isStaffRole) {
-      const isPlatformUser =
-        r === 'superadmin' ||
-        platformAdminActiveRef.current === true ||
-        platformAdminActive === true;
-      const hasStaffContext =
-        isPlatformUser ||
-        hasStaffMembership ||
-        (organizationsOwnedByUser?.length ?? 0) > 0 ||
-        (!!profOrg && !!organization?.id);
-      if (!hasStaffContext) return false;
-    }
-    if (r === 'cliente' && profOrg && !organization?.id) return false;
     return true;
   }, [
     session?.user?.id,
     profile?.id,
     profile?.organization_id,
-    profile?.role,
-    role,
     organization?.id,
     initialProfileSyncDone,
     authNavigationReady,
-    hasStaffMembership,
-    organizationsOwnedByUser,
-    staffRoles,
-    platformAdminActive,
   ]);
 
   useEffect(() => {
@@ -2014,23 +1993,19 @@ export const AuthProvider = ({ children }) => {
 
     // No usar `!profile` aquí: en llamadas seguidas (restore + onAuthStateChange) el closure
     // sigue viendo profile=null y re-dispara fetch en bucle.
-    if (lastFetchedUserIdRef.current === userId && Platform.OS !== 'web') {
-      // Si el ref dice "ya sincronicé" pero el estado perdió profile (carrera / remount / limpieza parcial),
-      // NO omitir: si no, Login ve profile=null + initialProfileSyncDone=true y manda a RegistroInicial.
-      if (profileRef.current?.id === userId) {
-        setSession(nextSession || null);
-        // No await: si join_organization_with_invite cuelga, bloqueaba setInitialProfileSyncDone
-        // y WelcomeGlobal quedaba en “cargando” para siempre en web.
-        setInitialProfileSyncDone(true);
-        void applyPendingClientInviteOnce().catch(() => {});
-        console.log('🧠 SYNC: omitido (perfil ya sincronizado para este usuario)', {
-          userId,
-          lastFetchedUserId: lastFetchedUserIdRef.current,
-          note: 'profile en log puede ser null por closure de React; no indica estado real',
-        });
-        await refreshPlatformAdminFromSession(userId);
-        return profileRef.current;
-      }
+    if (lastFetchedUserIdRef.current === userId && profileRef.current?.id === userId) {
+      setSession(nextSession || null);
+      setInitialProfileSyncDone(true);
+      setAuthSessionRestored(true);
+      void applyPendingClientInviteOnce().catch(() => {});
+      authTrace('syncFromSession_skip', {
+        userId: `${String(userId).slice(0, 8)}…`,
+        reason: 'profile_already_synced',
+      });
+      await refreshPlatformAdminFromSession(userId);
+      return profileRef.current;
+    }
+    if (lastFetchedUserIdRef.current === userId) {
       console.log('🧠 SYNC: ref coincide pero sin profile en estado → fetch forzado', { userId });
     }
     if (profileSyncInFlightRef.current === userId && profileSyncPromiseRef.current) {
@@ -2161,35 +2136,25 @@ export const AuthProvider = ({ children }) => {
         await purgeLocalAuthState();
       } else {
         const hydrated = await hydratePostProfileSync(userId, syncedProfile);
-        const paymentReturnPending =
-          Platform.OS === 'web' && hasPendingPaymentConnectResult();
-        if (!hydrated && !paymentReturnPending) {
-          authTrace('sync_hydrate_purge', {
+        sessionUserLayoutRef.current = userId;
+        setSession(sessionForState || null);
+        setInitialProfileSyncDone(true);
+        setAuthSessionRestored(true);
+        authTrace('sync_session_exposed', {
+          userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+          hydrated: !!hydrated,
+          profOrg: syncedProfile?.organization_id
+            ? `${String(syncedProfile.organization_id).slice(0, 8)}…`
+            : null,
+        });
+        if (!hydrated) {
+          authTrace('sync_hydrate_retry_background', {
             userId: userId ? `${String(userId).slice(0, 8)}…` : null,
           });
-          console.log('🧨 SYNC: perfil OK pero org/contexto no → signOut local');
-          await purgeLocalAuthState();
-        } else {
-          if (!hydrated && paymentReturnPending) {
-            authTrace('sync_hydrate_defer_purge_payment_return', {
-              userId: userId ? `${String(userId).slice(0, 8)}…` : null,
-            });
-            void hydratePostProfileSync(userId, syncedProfile).catch(() => {});
-          }
-          sessionUserLayoutRef.current = userId;
-          setSession(sessionForState || null);
-          setInitialProfileSyncDone(true);
-          setAuthSessionRestored(true);
-          authTrace('sync_session_exposed', {
-            userId: userId ? `${String(userId).slice(0, 8)}…` : null,
-            hydrated: !!hydrated,
-            profOrg: syncedProfile?.organization_id
-              ? `${String(syncedProfile.organization_id).slice(0, 8)}…`
-              : null,
-            memberships: organizationMemberships?.length ?? null,
-          });
-          void applyPendingClientInviteOnce().catch(() => {});
+          setMembershipsFetchKey((k) => k + 1);
+          void hydratePostProfileSync(userId, syncedProfile).catch(() => {});
         }
+        void applyPendingClientInviteOnce().catch(() => {});
       }
     }
 
@@ -2248,16 +2213,11 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           if (String(e?.message || e) === 'sync_timeout') {
             authTrace('restore_sync_timeout', { label, ms: SYNC_CAP_MS });
-            if (Platform.OS === 'web' && hasPendingPaymentConnectResult()) {
-              console.log(`🟠 restore: sync timeout (${label}) con vuelta Stripe/MP — no purgo; sync sigue en background`);
-              authTrace('restore_sync_timeout_payment_defer', { label });
-            } else {
-              console.log(`🧨 restore: sync timeout (${label}) → limpio sesión local`);
-              await clearSupabaseAuthStorage();
-              try {
-                await supabase.auth.signOut({ scope: 'local' });
-              } catch (_) {}
-              if (mounted) await syncFromSession(null);
+            console.log(`🟠 restore: sync timeout (${label}) — conservo JWT, reintento en background`);
+            if (mounted && sess?.user?.id) {
+              setSession(sess);
+              setAuthSessionRestored(true);
+              void syncFromSession(sess).catch(() => {});
             }
           } else {
             throw e;
@@ -2405,23 +2365,25 @@ export const AuthProvider = ({ children }) => {
           profileSyncInFlightRef.current = null;
           profileSyncPromiseRef.current = null;
           const { user: liveUser, error: juErr, revoked } = await getAuthUserWithRetry();
-          if (!liveUser?.id) {
-            if (revoked) {
-              const msg = String(juErr?.message || juErr || '').toLowerCase();
-              const status = juErr?.status ?? juErr?.statusCode;
-              console.log('🧨 restore: sesión local inválida o usuario borrado (getUser) → signOut local', {
-                status,
-                snippet: msg.slice(0, 120),
-              });
-            } else {
-              console.log('🟠 restore: getUser falló tras reintentos — no rehidrato sesión local a ciegas');
-            }
+          if (!liveUser?.id && revoked) {
+            const msg = String(juErr?.message || juErr || '').toLowerCase();
+            const status = juErr?.status ?? juErr?.statusCode;
+            console.log('🧨 restore: sesión revocada (getUser) → signOut local', {
+              status,
+              snippet: msg.slice(0, 120),
+            });
             await clearSupabaseAuthStorage();
             try {
               await supabase.auth.signOut({ scope: 'local' });
             } catch (_) {}
             if (mounted) await syncFromSession(null);
             return;
+          }
+          if (!liveUser?.id) {
+            authTrace('restore_getUser_deferred', {
+              label: 'use_local_session',
+              err: String(juErr?.message || juErr || '').slice(0, 80),
+            });
           }
         }
         if (sessionFromStorage?.user?.id) {
@@ -2469,6 +2431,14 @@ export const AuthProvider = ({ children }) => {
       const isExplicitSignIn = event === 'SIGNED_IN';
       if (isExplicitSignIn && nextSession?.user) {
         justLoggedOutAtRef.current = null;
+        const uid = nextSession.user.id;
+        if (
+          profileSyncInFlightRef.current === uid ||
+          (lastFetchedUserIdRef.current === uid && profileRef.current?.id === uid)
+        ) {
+          authTrace('onAuthStateChange_skip', { event, reason: 'login_sync_in_flight_or_done' });
+          return;
+        }
       }
       if (
         !isExplicitSignIn &&

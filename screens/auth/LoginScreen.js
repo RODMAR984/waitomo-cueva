@@ -64,7 +64,6 @@ export default function LoginScreen() {
     initialProfileSyncDone,
     needsFitEngineSpaceSetup,
     authNavigationReady,
-    authBootstrapReady,
     hasClientMembership,
     isPlatformAdmin,
     platformAdminActive,
@@ -387,7 +386,6 @@ export default function LoginScreen() {
     if (!sessionMatchesInputEmail) return;
     if (loading || submitting) return;
     if (initialProfileSyncDone === false) return;
-    if (authBootstrapReady !== true) return;
     if (profile?.id && profile.id !== session.user.id) return;
     if (!(profile?.id || postAuthGateOpen)) return;
 
@@ -417,7 +415,6 @@ export default function LoginScreen() {
     navigateByRole,
     initialProfileSyncDone,
     authNavigationReady,
-    authBootstrapReady,
     needsFitEngineSpaceSetup,
     allowStaffAutoNav,
     platformAdminActive,
