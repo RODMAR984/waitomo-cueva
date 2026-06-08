@@ -103,14 +103,30 @@ export default function WelcomeGlobalScreen() {
 
   const showContinueSession =
     profileReady && !needsDualRedirect && !suppressSessionAfterLogout;
-  const showGuestActions = !profileReady || suppressSessionAfterLogout;
-  const showSessionResume = profileReady && !suppressSessionAfterLogout;
 
-  const resumeSubtitleKey = showContinueSession
+  /** Restore/sync en curso: no mostrar CTAs de invitado (Empezar / login) antes de Continuar. */
+  const authBootstrapPending =
+    !authSessionRestored ||
+    initialProfileSyncDone === false ||
+    (!!session?.user?.id &&
+      String(profile?.id || '') !== String(session.user.id));
+
+  const showGuestActions =
+    suppressSessionAfterLogout ||
+    (authSessionRestored &&
+      initialProfileSyncDone !== false &&
+      !session?.user?.id &&
+      !profileReady);
+
+  const showResumeShell = !showGuestActions;
+
+  const resumeSubtitleKey = profileReady
     ? isDualSession
       ? 'welcome_dual_resume_subtitle'
       : 'welcome_session_resume_subtitle'
-    : 'welcome_global_subtitle';
+    : session?.user?.id
+      ? 'welcome_session_resume_subtitle'
+      : 'common_loading';
 
   const isWideWeb = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
   const layoutStyles = useMemo(
@@ -134,7 +150,7 @@ export default function WelcomeGlobalScreen() {
         testID="welcome-global-content"
         collapsable={false}
       >
-        {showGuestActions && !showSessionResume ? (
+        {showGuestActions ? (
           <>
             <View style={[layoutStyles.logoWrap, { marginBottom: MOBILE_SPACING.lg }]}>
               <LogoCompleto height={152} />
@@ -187,6 +203,9 @@ export default function WelcomeGlobalScreen() {
               <LogoCompleto height={160} />
             </View>
             <Text style={layoutStyles.subtitle}>{tStr(resumeSubtitleKey)}</Text>
+            {authBootstrapPending && !session?.user?.email ? (
+              <ActivityIndicator color={fe.cyan} style={{ marginTop: MOBILE_SPACING.md }} />
+            ) : null}
 
             <View style={layoutStyles.ctaWrap}>
               {session?.user?.email ? (
