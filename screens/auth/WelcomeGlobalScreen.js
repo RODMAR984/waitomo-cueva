@@ -65,7 +65,8 @@ export default function WelcomeGlobalScreen() {
     !!session?.user?.id &&
     initialProfileSyncDone !== false &&
     profile?.id === session.user.id;
-  const sessionRoutingReady = profileReady && authNavigationReady !== false;
+  const sessionRoutingReady =
+    profileReady && initialProfileSyncDone !== false;
 
   const isDualSession = sessionRoutingReady && (isDualByMemberships || isDualHatUser);
 

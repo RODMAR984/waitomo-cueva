@@ -413,6 +413,8 @@ export const AuthProvider = ({ children }) => {
   const justLoggedOutAtRef = useRef(null);
   /** Login con contraseña en curso: ignorar SIGNED_OUT tardío que borraba la sesión recién creada. */
   const explicitLoginInFlightRef = useRef(false);
+  /** Invalida syncFromSession en vuelo cuando llega logout o sync(null). */
+  const syncGenerationRef = useRef(0);
   /** Tras logout, la UI trata como invitado aunque Supabase rehidrate token unos segundos. */
   const postLogoutUiUntilRef = useRef(0);
   /** URL inicial OAuth (waitomo://#...) con la que se abrió la app; si luego openAuthSessionAsync devuelve esta misma URL, la rechazamos como sesión fantasma */
@@ -428,8 +430,41 @@ export const AuthProvider = ({ children }) => {
     [],
   );
 
+  const applyProfileFromRow = async (row) => {
+    if (!row?.id) return null;
+    setProfile(row);
+    setRole(row?.role || null);
+    const pAct = row?.plan_actual ? String(row.plan_actual) : null;
+    setActivePlanId(pAct);
+    await setPlanActualStorage(pAct);
+    return row;
+  };
+
+  const fetchProfileViaSupabase = async (userId) => {
+    if (!userId) return null;
+    try {
+      const sel = await supabase
+        .from('profiles')
+        .select(PROFILE_COLS)
+        .eq('id', userId)
+        .maybeSingle();
+      if (sel?.error) {
+        console.log('❌ fetchProfileSupabase:', sel.error?.message || sel.error);
+        return null;
+      }
+      if (sel?.data?.id) {
+        console.log('✅ fetchProfileSupabase: EXISTE profile', sel.data.id);
+        return sel.data;
+      }
+      return null;
+    } catch (e) {
+      console.log('❌ fetchProfileSupabase catch:', e?.message || e);
+      return null;
+    }
+  };
+
   // -------------------------
-  // FETCH PROFILE (REST) ✅ TOKEN OVERRIDE
+  // FETCH PROFILE (REST) ✅ TOKEN OVERRIDE — solo lectura; no muta React state
   // -------------------------
   const fetchProfile = async (userOrId, accessTokenOverride = null) => {
     const userId =
@@ -613,22 +648,19 @@ export const AuthProvider = ({ children }) => {
         }
 
         console.log('✅ fetchProfileREST: EXISTE profile', row.id);
-        setProfile(row);
-        setRole(row?.role || null);
-
-        const pAct = row?.plan_actual ? String(row.plan_actual) : null;
-        setActivePlanId(pAct);
-        await setPlanActualStorage(pAct);
-
-        // Organización: se resuelve en useEffect (dual hat + activeAppMode + organization_id)
         return row;
       }
+
+      const viaClient = await fetchProfileViaSupabase(userId);
+      if (viaClient?.id) return viaClient;
 
       // No hay fila: no crear aquí. Devolver null; ensureProfile (solo si el usuario sigue en Auth) crea el perfil.
       console.log('🟠 fetchProfileREST: NO existe profile → return null (no UPSERT aquí)');
       return null;
     } catch (e) {
       console.log('❌ fetchProfileREST SELECT catch:', e?.message || e, e);
+      const viaClient = await fetchProfileViaSupabase(userId);
+      if (viaClient?.id) return viaClient;
       return null;
     }
   };
@@ -1181,8 +1213,32 @@ export const AuthProvider = ({ children }) => {
   /** WelcomeGlobal / login: no navegar hasta memberships + modo leídos (sin tope artificial de 5s). */
   const authNavigationReady = useMemo(() => {
     if (!session?.user?.id) return true;
+    const profileAligned =
+      !!profile?.id && String(profile.id) === String(session.user.id);
+    if (profileAligned && initialProfileSyncDone !== false) return true;
     return activeAppModeHydrated && !ownedOrgsLoading;
-  }, [session?.user?.id, ownedOrgsLoading, activeAppModeHydrated]);
+  }, [
+    session?.user?.id,
+    profile?.id,
+    initialProfileSyncDone,
+    ownedOrgsLoading,
+    activeAppModeHydrated,
+  ]);
+
+  // Perfil huérfano (fetchProfile antiguo o sync abortado): sin sesión no debe quedar role/profile.
+  useEffect(() => {
+    if (session?.user?.id) return undefined;
+    if (!profile?.id) return undefined;
+    if (explicitLoginInFlightRef.current) return undefined;
+    if (profileSyncInFlightRef.current) return undefined;
+    authTrace('orphan_profile_cleared', {
+      profileId: `${String(profile.id).slice(0, 8)}…`,
+    });
+    setProfile(null);
+    setRole(null);
+    setInitialProfileSyncDone(true);
+    return undefined;
+  }, [session?.user?.id, profile?.id]);
 
   /** Sesión + perfil + org del centro (si aplica) listos — evita panel vacío tras reabrir. */
   const authBootstrapReady = useMemo(() => {
@@ -1367,7 +1423,8 @@ export const AuthProvider = ({ children }) => {
   const refreshProfile = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    await fetchProfile(userId, session?.access_token);
+    const row = await fetchProfile(userId, session?.access_token);
+    if (row?.id) await applyProfileFromRow(row);
   }, [session?.user?.id, session?.access_token]);
 
   const joinOrganizationWithInviteCode = useCallback(
@@ -1949,6 +2006,10 @@ export const AuthProvider = ({ children }) => {
     const accessToken = nextSession?.access_token || null;
 
     if (!userId) {
+      syncGenerationRef.current += 1;
+      profileSyncInFlightRef.current = null;
+      profileSyncPromiseRef.current = null;
+      profileSyncConcurrentSkipLoggedRef.current = false;
       console.log('🧠 SYNC: sin userId → limpio estado');
       impersonatingOrgIdRef.current = null;
       setImpersonatingOrgId(null);
@@ -2003,23 +2064,62 @@ export const AuthProvider = ({ children }) => {
     });
 
     const syncWork = (async () => {
+    const myGen = ++syncGenerationRef.current;
     setInitialProfileSyncDone(false);
     profileSyncInFlightRef.current = userId;
     // No marcar initialProfileSyncDone aquí: desbloqueaba Continuar sin profile → sesión fantasma.
-    const profileSyncUiCapMs = 20000;
+    const profileSyncUiCapMs = 12000;
     const profileSyncUiCap = setTimeout(() => {
       if (profileSyncInFlightRef.current !== userId) return;
+      if (syncGenerationRef.current !== myGen) return;
       authTrace('sync_profile_ui_cap', {
         userId: userId ? `${String(userId).slice(0, 8)}…` : null,
         ms: profileSyncUiCapMs,
-        note: 'sync_still_in_flight',
+        note: 'force_unblock',
       });
+      profileSyncInFlightRef.current = null;
+      profileSyncPromiseRef.current = null;
+      setInitialProfileSyncDone(true);
+      setAuthSessionRestored(true);
+      void (async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+          const live = data?.session || null;
+          if (live?.user?.id && String(live.user.id) === String(userId)) {
+            setSession(live);
+            if (!profileRef.current?.id) {
+              const row = await fetchProfile(userId, live.access_token);
+              if (row?.id && syncGenerationRef.current === myGen) {
+                await applyProfileFromRow(row);
+              }
+            }
+            return;
+          }
+        } catch (_) {
+          /* ignore */
+        }
+        if (profileRef.current?.id && syncGenerationRef.current === myGen) {
+          authTrace('sync_orphan_profile_clear', {
+            userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+          });
+          setProfile(null);
+          setRole(null);
+        }
+      })();
     }, profileSyncUiCapMs);
     let sessionForState = nextSession;
     let syncedProfile = null;
     try {
+      if (
+        nextSession?.user?.id &&
+        nextSession?.access_token &&
+        String(nextSession.user.id) === String(userId)
+      ) {
+        setSession(nextSession);
+      }
       console.log('🧠 SYNC → fetchProfile(userId, accessToken)');
       let p = await fetchProfile(userId, accessToken);
+      if (syncGenerationRef.current !== myGen) return null;
 
       if (p?.id) {
         p = await healProfileRoleFromUserMetadata(
@@ -2028,11 +2128,8 @@ export const AuthProvider = ({ children }) => {
           p,
           nextSession?.user?.user_metadata
         );
-        setProfile(p);
-        setRole(p?.role || null);
-        const pAct = p?.plan_actual ? String(p.plan_actual) : null;
-        setActivePlanId(pAct);
-        await setPlanActualStorage(pAct);
+        if (syncGenerationRef.current !== myGen) return null;
+        await applyProfileFromRow(p);
         syncedProfile = p;
         await refreshPlatformAdminFromSession(userId);
       } else {
@@ -2068,11 +2165,8 @@ export const AuthProvider = ({ children }) => {
             pRetry,
             refreshedSession.user?.user_metadata
           );
-          setProfile(pRetry);
-          setRole(pRetry?.role || null);
-          const pAct = pRetry?.plan_actual ? String(pRetry.plan_actual) : null;
-          setActivePlanId(pAct);
-          await setPlanActualStorage(pAct);
+          if (syncGenerationRef.current !== myGen) return null;
+          await applyProfileFromRow(pRetry);
           syncedProfile = pRetry;
           setMembershipsFetchKey((k) => k + 1);
           await refreshPlatformAdminFromSession(userId);
@@ -2092,6 +2186,7 @@ export const AuthProvider = ({ children }) => {
       lastFetchedUserIdRef.current = userId;
     } finally {
       clearTimeout(profileSyncUiCap);
+      if (syncGenerationRef.current !== myGen) return null;
       const profileOk =
         !!syncedProfile?.id && String(syncedProfile.id) === String(userId);
       const hasValidJwt =
@@ -2134,8 +2229,7 @@ export const AuthProvider = ({ children }) => {
                 p = await fetchProfile(userId, token);
               }
               if (p?.id) {
-                setProfile(p);
-                setRole(p?.role || null);
+                await applyProfileFromRow(p);
                 setMembershipsFetchKey((k) => k + 1);
                 void hydratePostProfileSync(userId, p).catch(() => {});
               }

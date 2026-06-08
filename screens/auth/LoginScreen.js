@@ -32,6 +32,7 @@ import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../t
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { supabase } from '../../supabaseClient';
 import { resolvePostAuthDestination } from '../../utils/authRoutingGuard';
+import { navigationRef, resetNavigationRoot } from '../../navigationRef';
 import { reportError, trackEvent } from '../../utils/observability';
 import NeoPanel from '../../components/NeoPanel';
 import {
@@ -320,7 +321,13 @@ export default function LoginScreen() {
           ? { email }
           : undefined;
 
-      navigation.reset({ index: 0, routes: [{ name: destination, params }] });
+      const state = { index: 0, routes: [{ name: destination, params }] };
+      if (navigationRef.isReady() && resetNavigationRoot(state)) return;
+      try {
+        navigation.reset(state);
+      } catch (e) {
+        console.log('ROUTING_DEBUG navigateByRole reset failed', e?.message || e);
+      }
     },
     [
       navigation,
