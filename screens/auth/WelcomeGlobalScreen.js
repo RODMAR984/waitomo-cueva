@@ -1,6 +1,6 @@
 // WelcomeGlobalScreen — Logo + marca, Empezar / gym-coach, iniciar sesión, idioma, pie legal.
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -21,8 +21,6 @@ import { useWelcomeRouting } from '../../hooks/useWelcomeRouting';
 import { clearWebAuthRoute } from '../../utils/webAuthRoutePersistence';
 import { WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import { authTrace } from '../../utils/authTrace';
-
 export { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE };
 
 export default function WelcomeGlobalScreen() {
@@ -38,27 +36,15 @@ export default function WelcomeGlobalScreen() {
     persistActiveAppMode,
     hasStaffMembership,
     hasClientMembership,
-    authNavigationReady,
     initialProfileSyncDone,
     authSessionRestored = true,
     logout,
     isPostLogoutUiActive,
+    role,
+    organization,
   } = useAuth() || {};
 
   const { navigateToDestination, onContinue, isDualByMemberships } = useWelcomeRouting();
-
-  const resetStackTo = useCallback(
-    (routes) => {
-      const state = { index: 0, routes };
-      try {
-        navigation.reset(state);
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.log('ROUTING_DEBUG WelcomeGlobal reset failed', e?.message || e);
-      }
-    },
-    [navigation],
-  );
 
   // Continuar: sesión + perfil alineado (org/memberships pueden terminar en el panel).
   const profileReady =
@@ -81,16 +67,6 @@ export default function WelcomeGlobalScreen() {
     navigation.replace('WelcomeDualChoice');
   }, [needsDualRedirect, navigation]);
 
-  const webBootstrapDoneRef = useRef(false);
-  const webBootstrapUidRef = useRef(null);
-  useEffect(() => {
-    const uid = session?.user?.id || null;
-    if (uid !== webBootstrapUidRef.current) {
-      webBootstrapUidRef.current = uid;
-      webBootstrapDoneRef.current = false;
-    }
-  }, [session?.user?.id]);
-
   // Sesión restaurada sin fila profiles: descartar ruta guardada (evita F5 → panel fantasma).
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -99,49 +75,25 @@ export default function WelcomeGlobalScreen() {
     clearWebAuthRoute();
   }, [session?.user?.id, profile?.id, initialProfileSyncDone]);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (suppressSessionAfterLogout) return;
-    if (!sessionRoutingReady) return;
-    if (needsDualRedirect) return;
-    const uid = session?.user?.id || null;
-    if (!uid) return;
-    if (!initialProfileSyncDone) return;
-    // Invariante web: no restaurar ruta ni auto-Continuar sin fila profiles alineada (evita usuario fantasma).
-    if (!profile?.id || profile.id !== uid) return;
-    if (webBootstrapDoneRef.current) return;
-    webBootstrapDoneRef.current = true;
+  const resumeRoleLabel = useMemo(() => {
+    const r = String(profile?.role || role || '').toLowerCase();
+    if (r === 'superadmin') return tStr('admin_nav_superadmin_title');
+    if (r === 'admin') return 'Admin';
+    if (r === 'coach') return 'Coach';
+    if (r === 'cliente') return tStr('welcome_client');
+    return r ? r.charAt(0).toUpperCase() + r.slice(1) : null;
+  }, [profile?.role, role, tStr]);
 
-    // Invariante web: no restaurar ruta profunda guardada (pantallas sin guard de perfil → fantasma).
-    try {
-      if (typeof __DEV__ !== 'undefined' && __DEV__) {
-        // eslint-disable-next-line no-console
-        console.log('ROUTING_DEBUG WelcomeGlobal first bootstrap onContinue', { uid });
-      }
-    } catch (_) {}
-    authTrace('welcome_web_auto_onContinue', {
-      initialProfileSyncDone: initialProfileSyncDone === true,
-      authNavigationReady: authNavigationReady === true,
-      hasProfile: !!profile?.id,
-      hasClientMembership,
-      hasStaffMembership,
-      needsDualRedirect,
-    });
-    onContinue();
-  }, [
-    Platform.OS,
-    suppressSessionAfterLogout,
-    sessionRoutingReady,
-    needsDualRedirect,
-    session?.user?.id,
-    profile?.id,
-    onContinue,
-    initialProfileSyncDone,
-    authNavigationReady,
-    hasClientMembership,
-    hasStaffMembership,
-    resetStackTo,
-  ]);
+  const resumeIdentityLine = useMemo(() => {
+    const parts = [];
+    const displayName = String(profile?.full_name || '').trim();
+    if (displayName && displayName !== String(session?.user?.email || '').trim()) {
+      parts.push(displayName);
+    }
+    if (organization?.name) parts.push(organization.name);
+    if (resumeRoleLabel) parts.push(resumeRoleLabel);
+    return parts.length ? parts.join(' · ') : null;
+  }, [profile?.full_name, session?.user?.email, organization?.name, resumeRoleLabel]);
 
   const onLogout = async () => {
     try {
@@ -240,6 +192,11 @@ export default function WelcomeGlobalScreen() {
               {session?.user?.email ? (
                 <Text style={layoutStyles.sessionEmail} numberOfLines={1}>
                   {session.user.email}
+                </Text>
+              ) : null}
+              {resumeIdentityLine ? (
+                <Text style={layoutStyles.subtitle} numberOfLines={2}>
+                  {resumeIdentityLine}
                 </Text>
               ) : null}
               <View style={layoutStyles.sessionActionsRow}>
