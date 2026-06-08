@@ -1977,16 +1977,61 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /** Reabrir pestaña: no exponer JWT en UI hasta tener fila profiles (evita sesión fantasma). */
+  const scheduleRestoreProfileRetry = (sess, userId, myGen, maxMs = 12000) => {
+    void (async () => {
+      const deadline = Date.now() + maxMs;
+      while (Date.now() < deadline && syncGenerationRef.current === myGen) {
+        let live = sess;
+        let token = live?.access_token || null;
+        let row = token ? await fetchProfile(userId, token) : null;
+        if (!row?.id) {
+          const { data } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
+          if (data?.session?.user?.id) {
+            live = data.session;
+            token = live.access_token;
+            row = await fetchProfile(userId, token);
+          }
+        }
+        if (row?.id && syncGenerationRef.current === myGen) {
+          await applyProfileFromRow(row);
+          await refreshPlatformAdminFromSession(userId);
+          sessionUserLayoutRef.current = userId;
+          setSession(live);
+          setInitialProfileSyncDone(true);
+          setAuthSessionRestored(true);
+          setMembershipsFetchKey((k) => k + 1);
+          void hydratePostProfileSync(userId, row).catch(() => {});
+          authTrace('sync_restore_profile_ok', {
+            userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+          });
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      if (syncGenerationRef.current !== myGen) return;
+      authTrace('sync_restore_profile_failed_purge', {
+        userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+      });
+      await purgeLocalAuthState();
+      setInitialProfileSyncDone(true);
+    })();
+  };
+
   // -------------------------
   // SYNC
   // -------------------------
-  const syncFromSession = async (nextSession) => {
+  const syncFromSession = async (nextSession, options = {}) => {
+    const allowSessionWithoutProfile =
+      options.allowSessionWithoutProfile === true ||
+      explicitLoginInFlightRef.current === true;
     const nextUserId = nextSession?.user?.id || null;
     authTrace('syncFromSession_start', {
       nextUserId: nextUserId ? `${String(nextUserId).slice(0, 8)}…` : null,
       lastFetched: lastFetchedUserIdRef.current
         ? `${String(lastFetchedUserIdRef.current).slice(0, 8)}…`
         : null,
+      allowSessionWithoutProfile,
     });
     if (
       nextUserId &&
@@ -2075,48 +2120,27 @@ export const AuthProvider = ({ children }) => {
       authTrace('sync_profile_ui_cap', {
         userId: userId ? `${String(userId).slice(0, 8)}…` : null,
         ms: profileSyncUiCapMs,
-        note: 'force_unblock',
+        note: allowSessionWithoutProfile ? 'login_cap' : 'restore_retry',
       });
       profileSyncInFlightRef.current = null;
       profileSyncPromiseRef.current = null;
-      setInitialProfileSyncDone(true);
-      setAuthSessionRestored(true);
-      void (async () => {
-        try {
-          const { data } = await supabase.auth.getSession();
-          const live = data?.session || null;
-          if (live?.user?.id && String(live.user.id) === String(userId)) {
-            setSession(live);
-            if (!profileRef.current?.id) {
-              const row = await fetchProfile(userId, live.access_token);
-              if (row?.id && syncGenerationRef.current === myGen) {
-                await applyProfileFromRow(row);
-              }
-            }
-            return;
-          }
-        } catch (_) {
-          /* ignore */
-        }
-        if (profileRef.current?.id && syncGenerationRef.current === myGen) {
-          authTrace('sync_orphan_profile_clear', {
-            userId: userId ? `${String(userId).slice(0, 8)}…` : null,
-          });
-          setProfile(null);
-          setRole(null);
-        }
-      })();
+      if (allowSessionWithoutProfile) {
+        setInitialProfileSyncDone(true);
+        setAuthSessionRestored(true);
+        return;
+      }
+      if (profileRef.current?.id === userId) {
+        setSession(sessionForStateRef?.current || nextSession);
+        setInitialProfileSyncDone(true);
+        setAuthSessionRestored(true);
+        return;
+      }
+      scheduleRestoreProfileRetry(nextSession, userId, myGen, 8000);
     }, profileSyncUiCapMs);
+    const sessionForStateRef = { current: nextSession };
     let sessionForState = nextSession;
     let syncedProfile = null;
     try {
-      if (
-        nextSession?.user?.id &&
-        nextSession?.access_token &&
-        String(nextSession.user.id) === String(userId)
-      ) {
-        setSession(nextSession);
-      }
       console.log('🧠 SYNC → fetchProfile(userId, accessToken)');
       let p = await fetchProfile(userId, accessToken);
       if (syncGenerationRef.current !== myGen) return null;
@@ -2150,6 +2174,7 @@ export const AuthProvider = ({ children }) => {
         } else {
         const newToken = refreshedSession.access_token;
         sessionForState = refreshedSession;
+        sessionForStateRef.current = refreshedSession;
         let pRetry = await fetchProfile(userId, newToken);
         if (!pRetry?.id) {
           const um = refreshedSession.user?.user_metadata || {};
@@ -2194,53 +2219,69 @@ export const AuthProvider = ({ children }) => {
         !!sessionForState?.access_token &&
         String(sessionForState.user.id) === String(userId);
 
-      if (profileOk || hasValidJwt) {
+      if (profileOk) {
         sessionUserLayoutRef.current = userId;
         setSession(sessionForState || null);
         setInitialProfileSyncDone(true);
         setAuthSessionRestored(true);
         authTrace('sync_session_exposed', {
           userId: userId ? `${String(userId).slice(0, 8)}…` : null,
-          profileOk,
+          profileOk: true,
           hasValidJwt,
           profOrg: syncedProfile?.organization_id
             ? `${String(syncedProfile.organization_id).slice(0, 8)}…`
             : null,
         });
-        if (profileOk) {
-          setMembershipsFetchKey((k) => k + 1);
-          void hydratePostProfileSync(userId, syncedProfile).catch(() => {});
-        } else {
-          authTrace('sync_profile_retry_background', {
-            userId: userId ? `${String(userId).slice(0, 8)}…` : null,
-          });
-          void (async () => {
-            profileSyncInFlightRef.current = userId;
-            try {
-              const token = sessionForState?.access_token || null;
-              let p = await fetchProfile(userId, token);
-              if (!p?.id && token) {
-                await ensureProfile({
-                  id: userId,
-                  full_name:
-                    String(sessionForState?.user?.user_metadata?.full_name || '').trim() ||
-                    'Usuario',
-                });
-                p = await fetchProfile(userId, token);
-              }
-              if (p?.id) {
-                await applyProfileFromRow(p);
-                setMembershipsFetchKey((k) => k + 1);
-                void hydratePostProfileSync(userId, p).catch(() => {});
-              }
-            } finally {
-              if (profileSyncInFlightRef.current === userId) {
-                profileSyncInFlightRef.current = null;
-              }
-            }
-          })();
-        }
+        setMembershipsFetchKey((k) => k + 1);
+        void hydratePostProfileSync(userId, syncedProfile).catch(() => {});
         void applyPendingClientInviteOnce().catch(() => {});
+      } else if (hasValidJwt && allowSessionWithoutProfile) {
+        sessionUserLayoutRef.current = userId;
+        setSession(sessionForState || null);
+        setInitialProfileSyncDone(true);
+        setAuthSessionRestored(true);
+        authTrace('sync_session_exposed', {
+          userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+          profileOk: false,
+          hasValidJwt: true,
+          mode: 'login_or_oauth',
+        });
+        authTrace('sync_profile_retry_background', {
+          userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+        });
+        void (async () => {
+          profileSyncInFlightRef.current = userId;
+          try {
+            const token = sessionForState?.access_token || null;
+            let p = await fetchProfile(userId, token);
+            if (!p?.id && token) {
+              await ensureProfile({
+                id: userId,
+                full_name:
+                  String(sessionForState?.user?.user_metadata?.full_name || '').trim() ||
+                  'Usuario',
+              });
+              p = await fetchProfile(userId, token);
+            }
+            if (p?.id) {
+              await applyProfileFromRow(p);
+              setMembershipsFetchKey((k) => k + 1);
+              void hydratePostProfileSync(userId, p).catch(() => {});
+            }
+          } finally {
+            if (profileSyncInFlightRef.current === userId) {
+              profileSyncInFlightRef.current = null;
+            }
+          }
+        })();
+        void applyPendingClientInviteOnce().catch(() => {});
+      } else if (hasValidJwt) {
+        authTrace('sync_restore_defer_session', {
+          userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+        });
+        setInitialProfileSyncDone(false);
+        setAuthSessionRestored(true);
+        scheduleRestoreProfileRetry(sessionForState, userId, myGen);
       } else {
         authTrace('sync_profile_purge', {
           userId: userId ? `${String(userId).slice(0, 8)}…` : null,
@@ -2297,11 +2338,11 @@ export const AuthProvider = ({ children }) => {
         unblockWelcomeBootstrapUI();
       }, RESTORE_UI_CAP_MS);
 
-      const runSyncWithTimeout = async (sess, label) => {
+      const runSyncWithTimeout = async (sess, label, syncOptions = {}) => {
         const SYNC_CAP_MS = 18000;
         try {
           return await Promise.race([
-            syncFromSession(sess),
+            syncFromSession(sess, syncOptions),
             new Promise((_, reject) => {
               setTimeout(() => reject(new Error('sync_timeout')), SYNC_CAP_MS);
             }),
@@ -2309,11 +2350,10 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           if (String(e?.message || e) === 'sync_timeout') {
             authTrace('restore_sync_timeout', { label, ms: SYNC_CAP_MS });
-            console.log(`🟠 restore: sync timeout (${label}) — conservo JWT, reintento en background`);
+            console.log(`🟠 restore: sync timeout (${label}) — reintento sin exponer JWT en UI`);
             if (mounted && sess?.user?.id) {
-              setSession(sess);
               setAuthSessionRestored(true);
-              void syncFromSession(sess).catch(() => {});
+              void syncFromSession(sess, syncOptions).catch(() => {});
             }
           } else {
             throw e;
@@ -2376,7 +2416,11 @@ export const AuthProvider = ({ children }) => {
                 const cleanUrl = `${window.location.origin}${window.location.pathname}`;
                 window.history.replaceState({}, document.title, cleanUrl);
               } catch (_) {}
-              if (mounted) await runSyncWithTimeout(urlSessionData.session, 'oauth_code');
+              if (mounted) {
+                await runSyncWithTimeout(urlSessionData.session, 'oauth_code', {
+                  allowSessionWithoutProfile: true,
+                });
+              }
               return;
             }
 
@@ -2388,7 +2432,11 @@ export const AuthProvider = ({ children }) => {
                   const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
                   window.history.replaceState({}, document.title, cleanUrl);
                 } catch (_) {}
-                if (mounted) await runSyncWithTimeout(setData.session, 'oauth_hash');
+                if (mounted) {
+                  await runSyncWithTimeout(setData.session, 'oauth_hash', {
+                    allowSessionWithoutProfile: true,
+                  });
+                }
                 return;
               }
               console.log('🟠 restore web hash session error:', setError?.message || setError);
@@ -2558,7 +2606,9 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       try {
-        await syncFromSession(nextSession || null);
+        await syncFromSession(nextSession || null, {
+          allowSessionWithoutProfile: isExplicitSignIn,
+        });
       } catch (e) {
         console.log('onAuthStateChange catch:', e);
       }
@@ -2797,7 +2847,9 @@ export const AuthProvider = ({ children }) => {
         nextSession = sessionData?.session || null;
       }
 
-      if (nextSession) await syncFromSession(nextSession);
+      if (nextSession) {
+        await syncFromSession(nextSession, { allowSessionWithoutProfile: true });
+      }
       return user;
     } finally {
       setLoading(false);
@@ -2896,7 +2948,7 @@ export const AuthProvider = ({ children }) => {
           const { data: exchangedUrl, error: exUrlError } = await Promise.race([exchangePromise, timeoutPromise]);
           if (!exUrlError && exchangedUrl?.session) {
             console.log('🟢 OAuth [DEBUG] sesión desde exchangeCodeForSession');
-            await syncFromSession(exchangedUrl.session);
+            await syncFromSession(exchangedUrl.session, { allowSessionWithoutProfile: true });
             return exchangedUrl;
           }
         } catch (e) {
@@ -2912,7 +2964,7 @@ export const AuthProvider = ({ children }) => {
       if (code) {
         const { data: exchanged, error: exError } = await supabase.auth.exchangeCodeForSession(returnedUrl);
         if (exError) throw exError;
-        await syncFromSession(exchanged?.session || null);
+        await syncFromSession(exchanged?.session || null, { allowSessionWithoutProfile: true });
         return exchanged;
       }
 
@@ -2961,7 +3013,7 @@ export const AuthProvider = ({ children }) => {
             staleInitialOAuthUrlRef.current = null;
             console.log('🟢 OAuth: sesión desde fragmento (JWT), sincronizando.');
             await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-            await syncFromSession(session);
+            await syncFromSession(session, { allowSessionWithoutProfile: true });
             return { session, user };
           }
         }
@@ -2980,7 +3032,7 @@ export const AuthProvider = ({ children }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData?.session?.user) {
         console.log('🟢 OAuth fallback: sesión ya presente, sincronizando.');
-        await syncFromSession(sessionData.session);
+        await syncFromSession(sessionData.session, { allowSessionWithoutProfile: true });
         return { session: sessionData.session, user: sessionData.session.user };
       }
 
@@ -3058,6 +3110,7 @@ export const AuthProvider = ({ children }) => {
   // -------------------------
   const logout = async () => {
     console.log('🚪 logout: global->local + limpiar storage');
+    syncGenerationRef.current += 1;
     justLoggedOutAtRef.current = Date.now();
     postLogoutUiUntilRef.current = Date.now() + POST_LOGOUT_UI_MS;
 

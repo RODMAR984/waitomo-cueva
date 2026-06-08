@@ -150,9 +150,9 @@ export default function WelcomeGlobalScreen() {
   };
 
   const showContinueSession =
-    !!session?.user?.id && profileReady && !needsDualRedirect && !suppressSessionAfterLogout;
-  const showGuestActions = !session?.user?.id || suppressSessionAfterLogout;
-  const showSessionResume = !!session?.user?.id && !showGuestActions && !suppressSessionAfterLogout;
+    profileReady && !needsDualRedirect && !suppressSessionAfterLogout;
+  const showGuestActions = !profileReady || suppressSessionAfterLogout;
+  const showSessionResume = profileReady && !suppressSessionAfterLogout;
 
   const resumeSubtitleKey = showContinueSession
     ? isDualSession
