@@ -17,13 +17,14 @@ import {
   saveWebAuthRouteForUser,
 } from '../utils/webAuthRoutePersistence';
 import {
-  consumePendingPaymentConnectResult,
   parsePaymentConnectReturnFromWindow,
   paymentConnectRouteForKind,
+  peekPendingPaymentConnectResult,
   stashPendingPaymentConnectResult,
   stripPaymentConnectQueryFromHistory,
 } from '../utils/paymentConnectWebReturn';
 import { initWebNavigationHistoryGuard, pushWebSpaHistoryEntry } from '../utils/webNavigationHistory';
+import { resetNavigationRoot } from '../navigationRef';
 
 import AppRootStack from './AppRootStack';
 import ClientInviteLinkHandler from '../components/ClientInviteLinkHandler';
@@ -77,31 +78,29 @@ export default function AppShellContent() {
 
     let pending = null;
     for (const kind of ['stripe', 'mercadopago']) {
-      pending = consumePendingPaymentConnectResult(kind);
+      pending = peekPendingPaymentConnectResult(kind);
       if (pending) break;
     }
     if (!pending) return;
 
-    paymentConnectNavDoneRef.current = true;
     const targetRoute = paymentConnectRouteForKind(pending.kind);
 
     const attempt = () => {
       if (!navigationRef.isReady()) return false;
-      try {
-        navigationRef.navigate(targetRoute);
-      } catch (_) {
-        /* ignore */
-      }
-      return true;
+      const ok = resetNavigationRoot({
+        index: 0,
+        routes: [{ name: targetRoute }],
+      });
+      if (ok) paymentConnectNavDoneRef.current = true;
+      return ok;
     };
 
-    if (!attempt()) {
-      const id = setInterval(() => {
-        if (attempt()) clearInterval(id);
-      }, 80);
-      return () => clearInterval(id);
-    }
-    return undefined;
+    if (attempt()) return undefined;
+
+    const id = setInterval(() => {
+      if (attempt()) clearInterval(id);
+    }, 80);
+    return () => clearInterval(id);
   }, [user?.id, authBootstrapReady]);
 
   useEffect(() => {

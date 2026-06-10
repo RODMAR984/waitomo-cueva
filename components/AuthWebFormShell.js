@@ -14,7 +14,8 @@ import {
   Keyboard,
 } from 'react-native';
 
-export function AuthKeyboardAvoidingView({ style, children, ...rest }) {
+/** En web no usar KAV (comprime el layout en Safari móvil). Mismo patrón en auth y formularios staff. */
+export function FormKeyboardAvoidingView({ style, children, ...rest }) {
   if (Platform.OS === 'web') {
     return (
       <View style={style} {...rest}>
@@ -28,6 +29,8 @@ export function AuthKeyboardAvoidingView({ style, children, ...rest }) {
     </KeyboardAvoidingView>
   );
 }
+
+export const AuthKeyboardAvoidingView = FormKeyboardAvoidingView;
 
 /** En web no envolver: el dismiss al tocar fuera compite con el foco del input. */
 export function AuthDismissKeyboardOutside({ children }) {

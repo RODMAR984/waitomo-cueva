@@ -11,7 +11,6 @@ import {
   ScrollView,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Modal,
   Keyboard,
@@ -54,6 +53,7 @@ import {
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import { FormKeyboardAvoidingView } from '../../components/AuthWebFormShell';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -67,6 +67,8 @@ const PLAN_VALUE_TO_CHAT_PLAN_ID = {
 // Teal oscuro Waitomo para paneles/inputs (base fija, sin verdes)
 const BASE_TEAL = '#021b23';
 const BASE_TEAL_SOFT = '#032b36';
+/** RN Web (Safari iOS): multiline sin minHeight colapsa y solapa labels. */
+const ADMIN_TEXTAREA_MIN_HEIGHT = 108;
 
 const hexToRgbaLocal = (hex, alpha = 1) => {
   const clean = String(hex).replace('#', '');
@@ -907,17 +909,17 @@ export default function AdminScreen() {
         },
         composerGrid: {
           flexDirection: isDesktopWeb ? 'row' : 'column',
-          columnGap: 12,
+          columnGap: isDesktopWeb ? 12 : 0,
           rowGap: 12,
           marginBottom: 8,
+          width: '100%',
+          alignSelf: 'stretch',
         },
         composerColMain: {
-          flex: isDesktopWeb ? 1 : 0,
-          minWidth: 0,
+          ...(isDesktopWeb ? { flex: 1, minWidth: 0 } : { width: '100%', alignSelf: 'stretch' }),
         },
         composerColSide: {
-          flex: isDesktopWeb ? 1 : 0,
-          minWidth: 0,
+          ...(isDesktopWeb ? { flex: 1, minWidth: 0 } : { width: '100%', alignSelf: 'stretch' }),
         },
         textarea: {
           backgroundColor: t.inputBg,
@@ -926,27 +928,33 @@ export default function AdminScreen() {
           borderWidth: 1,
           color: t.text,
           marginBottom: 12,
+          minHeight: ADMIN_TEXTAREA_MIN_HEIGHT,
           padding: 12,
+          textAlignVertical: 'top',
+          ...(Platform.OS === 'web' ? { width: '100%' } : null),
         },
 
         primaryBtn: {
           alignItems: 'center',
+          justifyContent: 'center',
           ...t.buttonPrimary,
           borderRadius: MOBILE_RADII.sm,
           marginBottom: 14,
           marginTop: 4,
-          padding: 12,
+          minHeight: MOBILE_SIZES.controlHeight,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
         },
         actionRow: {
           flexDirection: isDesktopWeb ? 'row' : 'column',
           columnGap: 10,
-          rowGap: 8,
+          rowGap: 10,
           alignItems: 'stretch',
-          marginTop: 4,
+          marginTop: 8,
+          width: '100%',
         },
         actionBtnWide: {
-          flex: isDesktopWeb ? 1 : 0,
-          marginBottom: isDesktopWeb ? 0 : 10,
+          ...(isDesktopWeb ? { flex: 1, marginBottom: 0 } : { width: '100%', alignSelf: 'stretch' }),
         },
         managementGrid: {
           flexDirection: isDesktopWeb ? 'row' : 'column',
@@ -1246,7 +1254,9 @@ export default function AdminScreen() {
           backgroundColor: hexToRgbaLocal(t.brand, 0.14),
           borderRadius: MOBILE_RADII.compact,
           marginTop: 10,
+          marginBottom: 4,
           padding: 10,
+          alignSelf: 'stretch',
         },
         previewTitle: { color: t.text, fontWeight: '600' },
         /** Misma base tipográfica que el texto: evita desalineación %RM con el resto. */
@@ -1744,9 +1754,8 @@ export default function AdminScreen() {
 
   return (
     <BackgroundWrapper screen="admin">
-      <KeyboardAvoidingView
+      <FormKeyboardAvoidingView
         testID="admin-dashboard-root"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[
           styles.screen,
           Platform.OS !== 'web'
@@ -1759,7 +1768,7 @@ export default function AdminScreen() {
               contentContainerStyle={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
+              keyboardDismissMode={Platform.OS === 'web' ? 'none' : 'on-drag'}
             >
               <View style={styles.chromeHeader}>
                 <View style={styles.headerRow}>
@@ -2067,7 +2076,7 @@ export default function AdminScreen() {
             </View>
               </NeoPanel>
             </ScrollView>
-      </KeyboardAvoidingView>
+      </FormKeyboardAvoidingView>
 
       <Modal visible={aiModalVisible} transparent animationType="fade" onRequestClose={() => setAiModalVisible(false)}>
         <View style={styles.modalOverlay}>

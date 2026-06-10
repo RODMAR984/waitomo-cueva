@@ -190,7 +190,11 @@ Deno.serve(async (req: Request) => {
 
   const { error: upErr } = await supabase
     .from("organizations")
-    .update({ mercadopago_checkout_enabled: true, mercadopago_oauth_linked: true })
+    .update({
+      mercadopago_checkout_enabled: true,
+      mercadopago_oauth_linked: true,
+      mercadopago_mp_user_id: mpUserId,
+    })
     .eq("id", organizationId);
   if (upErr) {
     const msg = String(upErr.message || "db_update_failed");

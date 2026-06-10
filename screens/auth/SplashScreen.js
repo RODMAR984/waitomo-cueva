@@ -9,6 +9,10 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { authTrace } from '../../utils/authTrace';
+import {
+  hasPendingPaymentConnectResult,
+  parsePaymentConnectReturnFromWindow,
+} from '../../utils/paymentConnectWebReturn';
 
 const SPLASH_DURATION_MS = 1600;
 /** Web frío (sin OAuth en URL): salir antes del timer largo de marca; el “peso” está en restore cap ~2.6s. */
@@ -34,6 +38,17 @@ export default function SplashScreen() {
   const goneRef = useRef(false);
 
   useEffect(() => {
+    // Vuelta OAuth pagos (Stripe/MP): no mandar a Welcome; AppShellContent resetea a la pantalla admin.
+    if (
+      Platform.OS === 'web' &&
+      (isWebPaymentConnectReturnUrl() ||
+        parsePaymentConnectReturnFromWindow() ||
+        hasPendingPaymentConnectResult())
+    ) {
+      authTrace('splash_skip', { reason: 'payment_connect_return' });
+      return undefined;
+    }
+
     // OAuth en web: volver con ?code= — no esperar 1.6s para salir del splash (mejor UX y menos sensación de “clavado”).
     const delayMs =
       isWebOAuthReturnUrl() || isWebPaymentConnectReturnUrl()

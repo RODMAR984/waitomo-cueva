@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Switch,
@@ -18,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { FormKeyboardAvoidingView } from '../../components/AuthWebFormShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -257,11 +257,7 @@ export default function AdminNovedadesScreen() {
 
   return (
     <BackgroundWrapper screen="admin">
-      <KeyboardAvoidingView
-        testID="screen-admin-novedades"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+      <FormKeyboardAvoidingView testID="screen-admin-novedades" style={{ flex: 1 }}>
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             {!hideInlineBack ? (
@@ -387,7 +383,7 @@ export default function AdminNovedadesScreen() {
             ))
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </FormKeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }

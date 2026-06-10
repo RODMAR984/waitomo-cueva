@@ -11,7 +11,6 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
-  KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -19,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackgroundWrapper from '../../components/BackgroundWrapper';
+import { FormKeyboardAvoidingView } from '../../components/AuthWebFormShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -499,11 +499,7 @@ export default function AdminPlanesScreen() {
 
   return (
     <BackgroundWrapper screen="admin">
-      <KeyboardAvoidingView
-        testID="screen-admin-planes"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+      <FormKeyboardAvoidingView testID="screen-admin-planes" style={{ flex: 1 }}>
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             {!hideInlineBack ? (
@@ -769,7 +765,7 @@ export default function AdminPlanesScreen() {
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </FormKeyboardAvoidingView>
     </BackgroundWrapper>
   );
 }

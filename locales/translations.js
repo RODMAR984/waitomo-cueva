@@ -903,6 +903,11 @@ export const translations = {
     admin_mp_connect_unknown_result: 'No se recibió confirmación de Mercado Pago.',
     admin_mp_banner_connected_title: 'Mercado Pago conectado',
     admin_mp_banner_connected_body: 'Checkout Pro usa tu cuenta de vendedor. Podés desconectar cuando quieras.',
+    admin_mp_linked_account: 'Cuenta vendedor MP: {{id}}',
+    admin_mp_linked_account_unknown: 'Cuenta vendedor MP vinculada (ID no disponible).',
+    admin_mp_already_linked_title: 'Ya conectado',
+    admin_mp_already_linked_body:
+      'Este gym ya tiene Mercado Pago vinculado. Desconectá primero si querés usar otra cuenta.',
     admin_mp_disconnect: 'Desconectar Mercado Pago',
     admin_mp_disconnect_confirm_title: '¿Desconectar?',
     admin_mp_disconnect_confirm_body: 'Los socios dejarán de poder pagar con checkout MP hasta que vuelvas a conectar.',
@@ -2890,6 +2895,11 @@ export const translations = {
     admin_mp_connect_unknown_result: 'Did not receive Mercado Pago confirmation.',
     admin_mp_banner_connected_title: 'Mercado Pago connected',
     admin_mp_banner_connected_body: 'Checkout Pro uses your seller account. You can disconnect anytime.',
+    admin_mp_linked_account: 'MP seller account: {{id}}',
+    admin_mp_linked_account_unknown: 'Mercado Pago seller account linked (ID unavailable).',
+    admin_mp_already_linked_title: 'Already connected',
+    admin_mp_already_linked_body:
+      'This gym already has Mercado Pago linked. Disconnect first if you want to use another account.',
     admin_mp_disconnect: 'Disconnect Mercado Pago',
     admin_mp_disconnect_confirm_title: 'Disconnect?',
     admin_mp_disconnect_confirm_body: 'Members will not be able to pay via MP checkout until you connect again.',

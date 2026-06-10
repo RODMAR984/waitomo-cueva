@@ -32,6 +32,7 @@ import {
   clearWebPaymentConnectInflight,
   startWebPaymentConnectOAuthSameTab,
 } from '../../utils/runWebPaymentConnectOAuth';
+import { confirmAction } from '../../utils/confirmAction';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -54,6 +55,12 @@ export default function AdminMercadoPagoSettingsScreen() {
 
   const mpLinked = !!organization?.mercadopago_oauth_linked;
   const checkoutLive = mpLinked && !!organization?.mercadopago_checkout_enabled;
+  const mpSellerId = String(organization?.mercadopago_mp_user_id || '').trim();
+  const mpAccountLine = useMemo(() => {
+    if (!mpLinked) return null;
+    if (mpSellerId) return tStr('admin_mp_linked_account').replace('{{id}}', mpSellerId);
+    return tStr('admin_mp_linked_account_unknown');
+  }, [mpLinked, mpSellerId, tStr]);
 
   const [checkoutOn, setCheckoutOn] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,16 +75,28 @@ export default function AdminMercadoPagoSettingsScreen() {
     WebBrowser.maybeCompleteAuthSession();
   }, []);
 
+  const showMpAlert = useCallback(
+    (title, message) => {
+      const body = [title, message].filter(Boolean).join('\n\n');
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(body);
+        return;
+      }
+      Alert.alert(title, message);
+    },
+    [],
+  );
+
   const showMpConnectResult = useCallback(
     async (status, reason) => {
       if (status === 'ok') {
         if (typeof refreshOrganization === 'function' && orgId) await refreshOrganization(orgId);
-        Alert.alert(tStr('admin_mp_connect_title'), tStr('admin_mp_connect_success'));
+        showMpAlert(tStr('admin_mp_connect_title'), tStr('admin_mp_connect_success'));
         return;
       }
-      Alert.alert(tStr('admin_mp_connect_title'), reason || tStr('gym_config_alert_title_error'));
+      showMpAlert(tStr('admin_mp_connect_title'), reason || tStr('gym_config_alert_title_error'));
     },
-    [orgId, refreshOrganization, tStr],
+    [orgId, refreshOrganization, showMpAlert, tStr],
   );
 
   useEffect(() => {
@@ -170,6 +189,10 @@ export default function AdminMercadoPagoSettingsScreen() {
       Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
       return;
     }
+    if (mpLinked) {
+      Alert.alert(tStr('admin_mp_already_linked_title'), tStr('admin_mp_already_linked_body'));
+      return;
+    }
     setConnecting(true);
     try {
       const webReturn = Platform.OS === 'web' ? getMercadoPagoWebReturnUri() : '';
@@ -213,39 +236,40 @@ export default function AdminMercadoPagoSettingsScreen() {
     } finally {
       setConnecting(false);
     }
-  }, [canEdit, invokeEdgeAuthed, orgId, showMpConnectResult, tStr]);
+  }, [canEdit, invokeEdgeAuthed, mpLinked, orgId, showMpConnectResult, tStr]);
 
-  const disconnectMp = useCallback(() => {
+  const disconnectMp = useCallback(async () => {
     if (!orgId || !canEdit) {
       Alert.alert(tStr('gym_config_no_permission_title'), tStr('gym_config_no_permission_body'));
       return;
     }
-    Alert.alert(tStr('admin_mp_disconnect_confirm_title'), tStr('admin_mp_disconnect_confirm_body'), [
-      { text: tStr('common_cancel') || 'Cancelar', style: 'cancel' },
-      {
-        text: tStr('admin_mp_disconnect'),
-        style: 'destructive',
-        onPress: async () => {
-          setDisconnecting(true);
-          try {
-            await invokeEdgeAuthed('mercadopago-disconnect', { organization_id: orgId });
-            if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
-            Alert.alert(tStr('admin_mp_disconnect_ok'));
-          } catch (e) {
-            if (String(e?.message || '').includes('auth_session_missing')) {
-              Alert.alert(tStr('security_error_title'), tStr('security_sign_in_required_body'));
-            } else if (String(e?.message || '').includes('fetch_unavailable')) {
-              Alert.alert(tStr('gym_config_alert_title_error'), 'Runtime sin fetch; actualizá la app.');
-            } else {
-              Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
-            }
-          } finally {
-            setDisconnecting(false);
-          }
-        },
-      },
-    ]);
-  }, [canEdit, invokeEdgeAuthed, orgId, refreshOrganization, tStr]);
+    const ok = await confirmAction({
+      title: tStr('admin_mp_disconnect_confirm_title'),
+      message: tStr('admin_mp_disconnect_confirm_body'),
+      confirmLabel: tStr('admin_mp_disconnect'),
+      cancelLabel: tStr('common_cancel') || 'Cancelar',
+      destructive: true,
+    });
+    if (!ok) return;
+
+    setDisconnecting(true);
+    try {
+      await invokeEdgeAuthed('mercadopago-disconnect', { organization_id: orgId });
+      if (typeof refreshOrganization === 'function') await refreshOrganization(orgId);
+      setCheckoutOn(false);
+      showMpAlert(tStr('admin_mp_disconnect_ok'), '');
+    } catch (e) {
+      if (String(e?.message || '').includes('auth_session_missing')) {
+        Alert.alert(tStr('security_error_title'), tStr('security_sign_in_required_body'));
+      } else if (String(e?.message || '').includes('fetch_unavailable')) {
+        Alert.alert(tStr('gym_config_alert_title_error'), 'Runtime sin fetch; actualizá la app.');
+      } else {
+        Alert.alert(tStr('gym_config_alert_title_error'), e?.message || String(e));
+      }
+    } finally {
+      setDisconnecting(false);
+    }
+  }, [canEdit, invokeEdgeAuthed, orgId, refreshOrganization, showMpAlert, tStr]);
 
   const styles = useMemo(
     () =>
@@ -319,21 +343,29 @@ export default function AdminMercadoPagoSettingsScreen() {
         <Text style={styles.title}>{tStr('admin_mp_title')}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.body}>
-        {checkoutLive ? (
-          <View style={styles.connectedBanner} accessibilityRole="summary">
-            <Ionicons name="checkmark-circle" size={28} color={t.brand} style={{ marginRight: 10, marginTop: 2 }} />
+        {mpLinked ? (
+          <View
+            style={checkoutLive ? styles.connectedBanner : styles.pausedBanner}
+            accessibilityRole="summary"
+          >
+            <Ionicons
+              name={checkoutLive ? 'checkmark-circle' : 'pause-circle'}
+              size={28}
+              color={checkoutLive ? t.brand : t.subText}
+              style={{ marginRight: 10, marginTop: 2 }}
+            />
             <View style={{ flex: 1 }}>
-              <Text style={styles.connectedTitle}>{tStr('admin_mp_banner_connected_title')}</Text>
-              <Text style={styles.connectedBody}>{tStr('admin_mp_banner_connected_body')}</Text>
-            </View>
-          </View>
-        ) : null}
-        {mpLinked && !checkoutLive ? (
-          <View style={styles.pausedBanner} accessibilityRole="summary">
-            <Ionicons name="pause-circle" size={28} color={t.subText} style={{ marginRight: 10, marginTop: 2 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.connectedTitle}>{tStr('admin_mp_banner_paused_title')}</Text>
-              <Text style={styles.connectedBody}>{tStr('admin_mp_banner_paused_body')}</Text>
+              <Text style={styles.connectedTitle}>
+                {checkoutLive
+                  ? tStr('admin_mp_banner_connected_title')
+                  : tStr('admin_mp_banner_paused_title')}
+              </Text>
+              <Text style={styles.connectedBody}>
+                {checkoutLive
+                  ? tStr('admin_mp_banner_connected_body')
+                  : tStr('admin_mp_banner_paused_body')}
+              </Text>
+              {mpAccountLine ? <Text style={styles.fieldCaption}>{mpAccountLine}</Text> : null}
             </View>
           </View>
         ) : null}
@@ -364,7 +396,7 @@ export default function AdminMercadoPagoSettingsScreen() {
           </Text>
         </Text>
 
-        {canEdit ? (
+        {canEdit && !mpLinked ? (
           <TouchableOpacity
             style={[styles.btnSecondary, connecting && styles.btnBusy]}
             onPress={connectMp}

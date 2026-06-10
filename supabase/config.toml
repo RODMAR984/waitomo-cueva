@@ -1,0 +1,20 @@
+# Edge Functions: callbacks y webhooks externos no envían JWT de Supabase.
+# Deploy: npx supabase functions deploy <nombre> --project-ref nfjjkvjsssgxxsuocmhj
+
+[functions.mercadopago-oauth-callback]
+verify_jwt = false
+
+[functions.stripe-connect-callback]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.ingest-rum-anon]
+verify_jwt = false
+
+[functions.observability-alerts]
+verify_jwt = false

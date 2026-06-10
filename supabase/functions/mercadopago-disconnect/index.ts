@@ -95,7 +95,11 @@ Deno.serve(async (req: Request) => {
   await supabase.from("mercadopago_org_credentials").delete().eq("organization_id", organizationId);
   await supabase
     .from("organizations")
-    .update({ mercadopago_checkout_enabled: false, mercadopago_oauth_linked: false })
+    .update({
+      mercadopago_checkout_enabled: false,
+      mercadopago_oauth_linked: false,
+      mercadopago_mp_user_id: null,
+    })
     .eq("id", organizationId);
 
   return new Response(JSON.stringify({ ok: true }), {

@@ -136,6 +136,23 @@ export function stashPendingPaymentConnectResult(result) {
   }
 }
 
+/** Lee resultado pendiente sin consumirlo (navegación post-OAuth antes de que monte la pantalla admin). */
+export function peekPendingPaymentConnectResult(kind) {
+  const ss = Platform.OS === 'web' && typeof sessionStorage !== 'undefined' ? sessionStorage : null;
+  if (!ss) return null;
+  const key = kind === 'mercadopago' ? PENDING_MP_KEY : PENDING_STRIPE_KEY;
+  try {
+    const raw = ss.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.kind !== kind) return null;
+    if (Date.now() - (Number(parsed.ts) || 0) > 10 * 60 * 1000) return null;
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
 export function consumePendingPaymentConnectResult(kind) {
   const ss = Platform.OS === 'web' && typeof sessionStorage !== 'undefined' ? sessionStorage : null;
   if (!ss) return null;
