@@ -47,6 +47,17 @@ export function getFitEngineUrls() {
     supportEmail: pick('fitengineSupportEmail', 'EXPO_PUBLIC_FITENGINE_SUPPORT_EMAIL', ''),
     /** Teléfono para reclamos / consultas (opcional). Formato libre; en la app se usa tel: sin espacios. */
     supportPhone: pick('fitengineSupportPhone', 'EXPO_PUBLIC_FITENGINE_SUPPORT_PHONE', ''),
+    /** Vacío hasta publicar en tiendas; se añade al mensaje de invitación si está configurado. */
+    iosAppStoreUrl: pick(
+      'fitengineIosAppStoreUrl',
+      'EXPO_PUBLIC_FITENGINE_IOS_APP_STORE_URL',
+      '',
+    ),
+    androidPlayStoreUrl: pick(
+      'fitengineAndroidPlayStoreUrl',
+      'EXPO_PUBLIC_FITENGINE_ANDROID_PLAY_STORE_URL',
+      '',
+    ),
   };
 }
 

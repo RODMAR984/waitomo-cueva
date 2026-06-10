@@ -80,6 +80,8 @@
       "fitengineTermsUrl": "https://waitomofitengine.com/terminos",
       "fitengineSupportEmail": "soporte@fitengine.app",
       "fitengineSupportPhone": "+54 9 2268 635566",
+      "fitengineIosAppStoreUrl": "",
+      "fitengineAndroidPlayStoreUrl": "",
       "showPaidShortcut": false,
       "eas": {
         "projectId": "b5e327c8-d83e-46ce-8b1c-3ab56b1300c6"

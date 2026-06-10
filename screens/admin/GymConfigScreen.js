@@ -37,6 +37,7 @@ import LogoCompleto from '../../components/LogoCompleto';
 import * as Clipboard from 'expo-clipboard';
 import { generateClientInviteCode } from '../../utils/clientInviteCode';
 import { buildClientInvitePublicLink, getFitEngineUrls } from '../../utils/fitengineUrls';
+import { buildClientInviteShareMessage } from '../../utils/clientInviteShare';
 import { FULL_HEX_CHOICE_GYM } from '../../utils/gymColorPalette';
 import { DEFAULT_CLIENT_PAYMENT_COPY } from '../../utils/clientPaymentMethods';
 import { draftMessageWithAi } from '../../utils/aiAssistant';
@@ -1008,7 +1009,7 @@ export default function GymConfigScreen() {
       await Clipboard.setStringAsync(url);
       Alert.alert(
         tStr('gym_config_copied_title'),
-        tStr('gym_config_copy_link_help'),
+        tStr('gym_config_copy_link_help').replace('{{link}}', url),
       );
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_copy_fail'));
@@ -1022,9 +1023,19 @@ export default function GymConfigScreen() {
       return;
     }
     const gym = String((name || organization?.name || 'tu gym')).trim();
-    const message = tStr('gym_invite_share_message').replace('{{gym}}', gym).replace('{{code}}', c);
+    const link = buildClientInvitePublicLink(c);
+    const message = buildClientInviteShareMessage({
+      gymName: gym,
+      code: c,
+      messageTemplate: tStr('gym_invite_share_message'),
+      storesBlockTemplate: tStr('gym_invite_share_stores_block'),
+    });
     try {
-      await Share.share({ message, title: 'FitEngine' });
+      await Share.share(
+        Platform.OS === 'ios'
+          ? { message, url: link, title: 'FitEngine' }
+          : { message, title: 'FitEngine' },
+      );
     } catch (e) {
       if (e?.message !== 'User did not share') {
         Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('gym_config_share_fail'));

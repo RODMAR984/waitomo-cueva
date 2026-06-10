@@ -344,13 +344,17 @@ export const translations = {
 
     directory_title: 'Buscar gym o coach',
     directory_subtitle:
-      'Solo aparecen espacios que eligieron listarse en FitEngine. Para anotarte, pedí el código o link a tu centro.',
+      'Espacios que eligieron listarse en FitEngine. Elegí uno y creá tu cuenta para anotarte.',
     directory_empty: 'Todavía no hay espacios publicados en el directorio.',
     directory_load_error: 'No se pudo cargar el directorio. Probá de nuevo.',
     directory_type_gym: 'Gimnasio',
     directory_type_coach: 'Coach',
     directory_badge_fitengine: 'FitEngine',
     directory_cta_join_code: 'Tengo código para unirme',
+    directory_cta_join_gym: 'Anotarme acá',
+    directory_pending_body:
+      'Elegiste {{name}}. Creá tu cuenta con email o Google; después completás tus datos y entrás al gym.',
+    directory_error_invalid_org: 'Ese espacio ya no está disponible en el directorio.',
     directory_search_placeholder: 'Filtrar por nombre o dirección…',
     directory_open_maps: 'Abrir en Google Maps',
     directory_filter_all: 'Todos',
@@ -390,12 +394,14 @@ export const translations = {
     admin_menu_marca_sub:
       'Logo, fondo, colores, invitaciones, formas de pago a socios y mensaje opcional en el selector de planes',
     gym_invite_hint_long:
-      'El enlace HTTPS (fitengine.app/join) es el mejor para mail y WhatsApp. El texto waitomo:// solo sirve con la app ya instalada en algunos chats.',
+      '«Compartir mensaje» incluye el enlace https://fitengine.app/join?code=… (web y app instalada). «Copiar enlace» pega solo la URL.',
     gym_invite_copy_code: 'Copiar solo el código',
     gym_invite_copy_link: 'Copiar enlace (HTTPS)',
     gym_invite_share: 'Compartir mensaje',
     gym_invite_share_message:
-      'Hola,\n\nTe invito a unirte a {{gym}} con la app FitEngine.\n\nTu código de invitación: {{code}}\n\nPasos:\n1) Instalá FitEngine\n2) En el inicio tocá «Tengo código de invitación de mi gym»\n3) Pegá el código.\n\n(En el correo a veces aparece waitomo://…; en muchos mails no abre al tocar — es normal. Usá el código de arriba.)',
+      'Hola,\n\nTe invito a unirte a {{gym}} en FitEngine.\n\nEntrá acá para registrarte (app web o abre la app si ya la tenés instalada):\n{{link}}\n\nSi te pide el código a mano: {{code}}{{stores_block}}',
+    gym_invite_share_stores_block:
+      'Descargá la app:\niPhone: {{ios_store}}\nAndroid: {{android_store}}',
 
     gym_config_alert_title_error: 'Error',
     gym_config_err_no_org: 'No hay organización cargada.',
@@ -424,7 +430,7 @@ export const translations = {
     gym_config_copy_code_help:
       'Solo el código. Pegalo en un mail o WhatsApp; es lo más fiable. El texto waitomo:// en el correo suele no abrir al tocar.',
     gym_config_copy_link_help:
-      'Enlace público https://fitengine.app/join?code=… — ideal para email y WhatsApp.',
+      'Enlace listo para compartir:\n{{link}}',
     gym_config_copy_fail: 'No se pudo copiar.',
     gym_config_share_fail: 'No se pudo compartir.',
     gym_config_loading: 'Cargando...',
@@ -2338,13 +2344,17 @@ export const translations = {
 
     directory_title: 'Find a gym or coach',
     directory_subtitle:
-      'Only spaces that opted in are shown. To join, ask your gym for their invite code or link.',
+      'Spaces that opted in on FitEngine. Pick one and create your account to join.',
     directory_empty: 'No spaces are listed in the directory yet.',
     directory_load_error: 'Could not load the directory. Try again.',
     directory_type_gym: 'Gym',
     directory_type_coach: 'Coach',
     directory_badge_fitengine: 'FitEngine',
     directory_cta_join_code: 'I have a code to join',
+    directory_cta_join_gym: 'Join this gym',
+    directory_pending_body:
+      'You chose {{name}}. Create your account with email or Google, complete your details, and you’re in.',
+    directory_error_invalid_org: 'That space is no longer available in the directory.',
     directory_search_placeholder: 'Filter by name or address…',
     directory_open_maps: 'Open in Google Maps',
     directory_filter_all: 'All',
@@ -2384,12 +2394,14 @@ export const translations = {
     admin_menu_marca_sub:
       'Logo, background, colors, invites, member payment methods, and optional welcome line on the plan picker',
     gym_invite_hint_long:
-      'The HTTPS link (fitengine.app/join) is best for email and WhatsApp. waitomo:// only works in some chats with the app already installed.',
+      '“Share message” includes the https://fitengine.app/join?code=… link (web or installed app). “Copy link” copies the URL only.',
     gym_invite_copy_code: 'Copy code only',
     gym_invite_copy_link: 'Copy HTTPS link',
     gym_invite_share: 'Share message',
     gym_invite_share_message:
-      'Hi,\n\nJoin {{gym}} on the FitEngine app.\n\nYour invite code: {{code}}\n\nSteps:\n1) Install FitEngine\n2) On the start screen tap «I have my gym’s invite code»\n3) Paste the code.\n\n(If you see waitomo:// in email it often won’t open — that’s normal. Use the code above.)',
+      'Hi,\n\nJoin {{gym}} on FitEngine.\n\nOpen this link to sign up (web app, or opens the native app if installed):\n{{link}}\n\nIf prompted for a code manually: {{code}}{{stores_block}}',
+    gym_invite_share_stores_block:
+      'Get the app:\niPhone: {{ios_store}}\nAndroid: {{android_store}}',
 
     gym_config_alert_title_error: 'Error',
     gym_config_err_no_org: 'No organization loaded.',
@@ -2418,7 +2430,7 @@ export const translations = {
     gym_config_copy_code_help:
       'Code only. Paste it in email or WhatsApp — most reliable. waitomo:// in email often won’t open when tapped.',
     gym_config_copy_link_help:
-      'Public https://fitengine.app/join?code=… — best for email and WhatsApp.',
+      'Link ready to share:\n{{link}}',
     gym_config_copy_fail: 'Could not copy.',
     gym_config_share_fail: 'Could not share.',
     gym_config_loading: 'Loading...',
@@ -4065,13 +4077,17 @@ translations[LOCALE_PT] = {
 
   directory_title: 'Buscar academia ou coach',
   directory_subtitle:
-    'Só aparecem espaços que optaram por listar no FitEngine. Para entrar, peça o código ou o link ao seu centro.',
+    'Espaços que optaram por listar no FitEngine. Escolha um e crie sua conta para entrar.',
   directory_empty: 'Ainda não há espaços no diretório.',
   directory_load_error: 'Não foi possível carregar o diretório. Tente de novo.',
   directory_type_gym: 'Academia',
   directory_type_coach: 'Coach',
   directory_badge_fitengine: 'FitEngine',
   directory_cta_join_code: 'Tenho código para entrar',
+  directory_cta_join_gym: 'Inscrever-me aqui',
+  directory_pending_body:
+    'Você escolheu {{name}}. Crie sua conta com e-mail ou Google, complete seus dados e entre.',
+  directory_error_invalid_org: 'Esse espaço não está mais disponível no diretório.',
   directory_search_placeholder: 'Filtrar por nome ou endereço…',
   directory_open_maps: 'Abrir no Google Maps',
   directory_filter_all: 'Todos',

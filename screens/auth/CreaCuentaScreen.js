@@ -40,7 +40,7 @@ export default function CreaCuentaScreen() {
   const { signInWithProvider, user } = useAuth();
 
   // ⬅️ params que vienen desde AbonosPases
-  const { plan, abono, fromInvite } = route.params || {};
+  const { plan, abono, fromInvite, fromDirectory, organizationName } = route.params || {};
 
   // ✅ clave: SOLO redirigir automático si el user apareció por OAuth
   const [oauthStarted, setOauthStarted] = useState(false);
@@ -66,11 +66,13 @@ export default function CreaCuentaScreen() {
             plan,
             abono,
             fromInvite: !!fromInvite,
+            fromDirectory: !!fromDirectory,
+            organizationName,
           },
         },
       ],
     });
-  }, [oauthStarted, user?.id, plan, abono, fromInvite, navigation]);
+  }, [oauthStarted, user?.id, plan, abono, fromInvite, fromDirectory, organizationName, navigation]);
 
   const styles = useMemo(
     () =>
@@ -162,6 +164,8 @@ export default function CreaCuentaScreen() {
       fromCreaCuenta: true,
       fromOAuth: false,
       fromInvite: !!fromInvite,
+      fromDirectory: !!fromDirectory,
+      organizationName,
     });
   };
 
@@ -212,7 +216,14 @@ export default function CreaCuentaScreen() {
               <NeoPanel edge={false} style={styles.panel}>
                 <Text style={styles.title}>{tStr('creacuenta_title')}</Text>
                 <Text style={styles.subtitle}>
-                  {fromInvite ? tStr('invite_pending_body') : tStr('creacuenta_subtitle')}
+                  {fromDirectory
+                    ? tStr('directory_pending_body').replace(
+                        '{{name}}',
+                        organizationName || tStr('directory_type_gym'),
+                      )
+                    : fromInvite
+                      ? tStr('invite_pending_body')
+                      : tStr('creacuenta_subtitle')}
                 </Text>
 
                 <TouchableOpacity style={styles.buttonPrimary} onPress={handleEmail}>

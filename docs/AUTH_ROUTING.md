@@ -18,11 +18,22 @@ Documento para alinear IA y desarrolladores: qué datos manda Supabase, qué lee
 - **Post-auth (rol `superadmin`):** `resolvePostAuthDestination` / `resolveStaffDestination` y `useWelcomeRouting` envían a **`Superadmin`** (hub plataforma), no a la ruta legacy `Admin`.
 - **Rutas:** `navigation/AppRootStack.js` y shell staff (`staffScreenShell.js`, `StaffWebDesktopShell.js`). Detalle: `docs/ROADMAP_SUPERADMIN_PLATFORM_PANEL.md`.
 
-## Trampa: `organization_id` en `profiles`
+## Alta cliente (código o directorio)
 
-Las migraciones históricas pueden asignar **Waitomo Training** (u otra seed) como `organization_id` por defecto. Eso **no** significa que el usuario haya completado el onboarding de gym en la app (pantalla **Configura tu espacio** / creación de org propia).
+Flujo unificado: **`CreateAccount`** (email / Google) → **`RegistroInicial`** (teléfono y datos que falten) → join → panel.
 
-**No usar solo** `!profile.organization_id` para decidir si ir a **Configura tu espacio**.
+| Entrada | Antes del registro | Join tras `RegistroInicial` |
+|--------|---------------------|------------------------------|
+| Código / link | `fe_pending_client_invite_code` | RPC `join_organization_with_invite` |
+| Directorio público | `fe_pending_client_organization_id` | RPC `join_organization_from_directory` |
+
+Sin join pendiente → **`WelcomeClientJoin`**.
+
+## `organization_id` en `profiles` (clientes)
+
+Desde migración `20260610150000_signup_client_no_default_org`, **nuevos** usuarios se crean con `organization_id` NULL. El routing cliente usa **membresía** (`hasClientMembership`), no solo `profiles.organization_id`.
+
+Para staff: **no usar solo** `!profile.organization_id` para decidir **Configura tu espacio** (coach puede tener org NULL hasta crear su gym).
 
 ## Criterio “tengo mi gym en el sistema”
 

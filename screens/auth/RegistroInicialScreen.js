@@ -25,6 +25,10 @@ import { fitengineLogoColors as fe } from '../../theme/colors';
 import { WEB_CONTENT_MAX_WIDTH, WEB_AUTH_SIGNUP_MAX_WIDTH } from '../../theme/webSpec';
 import { supabase } from '../../supabaseClient';
 import { getPendingClientInviteCode, clearPendingClientInviteCode } from '../../utils/pendingClientInviteStorage';
+import {
+  getPendingClientOrganizationId,
+  clearPendingClientOrganizationId,
+} from '../../utils/pendingClientOrganizationStorage';
 import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
@@ -40,8 +44,10 @@ import { resetToRoute } from '../../utils/resetToRoute';
 function mapJoinInviteErrorToMessage(res, tStr) {
   const e = res?.error;
   if (e === 'invalid_code') return tStr('invite_error_invalid');
+  if (e === 'invalid_org') return tStr('directory_error_invalid_org');
   if (e === 'role_not_client') return tStr('invite_error_not_client');
   if (e === 'empty_code') return tStr('invite_error_empty');
+  if (e === 'empty_org') return tStr('directory_error_invalid_org');
   if (e === 'not_authenticated') return tStr('invite_error_auth');
   return res?.message || tStr('invite_error_generic');
 }
@@ -66,6 +72,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
     ensureProfile,
     updateProfile,
     joinOrganizationWithInviteCode,
+    joinOrganizationFromDirectory,
     refreshProfile,
   } = useAuth();
 
@@ -121,6 +128,23 @@ export default function RegistroInicialScreen({ route, navigation }) {
           return;
         }
         await clearPendingClientInviteCode();
+        await clearPendingClientOrganizationId();
+      } else {
+        const orgId = await getPendingClientOrganizationId();
+        if (orgId) {
+          const res = await joinOrganizationFromDirectory(orgId);
+          if (!res?.ok) {
+            const fatal =
+              res?.error === 'invalid_org' ||
+              res?.error === 'role_not_client' ||
+              res?.error === 'empty_org';
+            if (fatal) await clearPendingClientOrganizationId();
+            showAppAlert(tStr('gym_config_alert_title_error'), mapJoinInviteErrorToMessage(res, tStr));
+            resetToRoute(navigation, 'WelcomeClientJoin');
+            return;
+          }
+          await clearPendingClientOrganizationId();
+        }
       }
 
       await refreshProfile();
@@ -143,7 +167,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
       const routeName = getClientPostAuthRouteName(prof || {}, { hasClientMembership: clientMem });
       resetToRoute(navigation, routeName);
     },
-    [email, joinOrganizationWithInviteCode, navigation, refreshProfile, tStr],
+    [email, joinOrganizationFromDirectory, joinOrganizationWithInviteCode, navigation, refreshProfile, tStr],
   );
 
   const handleSubmit = async () => {

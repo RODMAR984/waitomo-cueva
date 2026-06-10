@@ -13,6 +13,7 @@ import {
   TextInput,
   Linking,
   Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -29,6 +30,10 @@ import { fetchPublicOrganizationDirectory } from '../../utils/publicDirectory';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { resolveOrgLogoUri } from '../../utils/resolveOrgLogoUri';
+import { useAuth } from '../../contexts/AuthContext';
+import { setPendingClientOrganizationId } from '../../utils/pendingClientOrganizationStorage';
+import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
+import { supabase } from '../../supabaseClient';
 
 const DIRECTORY_PAGE_SIZE = 40;
 
@@ -69,7 +74,9 @@ export default function PublicDirectoryScreen() {
   const { t: tStr } = useLocale();
   const planCtx = usePlanContext();
   const plan = planCtx?.plan ?? null;
+  const { session, joinOrganizationFromDirectory, refreshProfile } = useAuth() || {};
   const [rows, setRows] = useState([]);
+  const [joinBusyId, setJoinBusyId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -268,6 +275,61 @@ export default function PublicDirectoryScreen() {
     }
   }, [navigation, route.name]);
 
+  const goClientPostJoin = useCallback(
+    async (userId) => {
+      if (refreshProfile) await refreshProfile();
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('plan_actual, organization_id')
+        .eq('id', userId)
+        .maybeSingle();
+      const { data: mems } = await supabase
+        .from('organization_memberships')
+        .select('role, active')
+        .eq('user_id', userId);
+      const clientMem = (mems || []).some(
+        (m) => m.active !== false && String(m.role || '').toLowerCase() === 'cliente',
+      );
+      const routeName = getClientPostAuthRouteName(prof || {}, { hasClientMembership: clientMem });
+      navigation.reset({ index: 0, routes: [{ name: routeName }] });
+    },
+    [navigation, refreshProfile],
+  );
+
+  const handleJoinGym = useCallback(
+    async (item) => {
+      const orgId = item?.id;
+      if (!orgId) return;
+      if (!session?.user?.id) {
+        await setPendingClientOrganizationId(String(orgId));
+        navigation.navigate('CreateAccount', {
+          fromDirectory: true,
+          organizationName: String(item?.name || '').trim(),
+        });
+        return;
+      }
+      setJoinBusyId(String(orgId));
+      try {
+        const res = await joinOrganizationFromDirectory(orgId);
+        if (!res?.ok) {
+          const e = res?.error;
+          const msg =
+            e === 'invalid_org'
+              ? tStr('directory_error_invalid_org')
+              : e === 'role_not_client'
+                ? tStr('invite_error_not_client')
+                : res?.message || tStr('invite_error_generic');
+          Alert.alert(tStr('directory_title'), msg);
+          return;
+        }
+        await goClientPostJoin(session.user.id);
+      } finally {
+        setJoinBusyId(null);
+      }
+    },
+    [goClientPostJoin, joinOrganizationFromDirectory, navigation, session?.user?.id, tStr],
+  );
+
   const renderItem = useCallback(
     ({ item }) => {
       const logoUri = resolveOrgLogoUri(item?.logo_url);
@@ -311,17 +373,22 @@ export default function PublicDirectoryScreen() {
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
-              style={styles.cta}
-              onPress={() => navigation.navigate('JoinWithInvite')}
+              style={[styles.cta, joinBusyId === String(item?.id) && { opacity: 0.65 }]}
+              onPress={() => void handleJoinGym(item)}
+              disabled={joinBusyId === String(item?.id)}
               activeOpacity={0.85}
             >
-              <Text style={styles.ctaText}>{tStr('directory_cta_join_code')}</Text>
+              {joinBusyId === String(item?.id) ? (
+                <ActivityIndicator color={t.buttonText || '#fff'} />
+              ) : (
+                <Text style={styles.ctaText}>{tStr('directory_cta_join_gym')}</Text>
+              )}
             </TouchableOpacity>
           </View>
         </NeoPanel>
       );
     },
-    [navigation, styles, tStr],
+    [handleJoinGym, joinBusyId, styles, t, tStr],
   );
 
   return (

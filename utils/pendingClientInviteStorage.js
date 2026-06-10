@@ -8,6 +8,12 @@ export async function setPendingClientInviteCode(code) {
     await clearPendingClientInviteCode();
     return;
   }
+  try {
+    const { clearPendingClientOrganizationId } = await import('./pendingClientOrganizationStorage');
+    await clearPendingClientOrganizationId();
+  } catch {
+    // ignore
+  }
   await AsyncStorage.setItem(KEY, c);
 }
 

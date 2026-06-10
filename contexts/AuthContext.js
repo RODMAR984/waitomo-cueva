@@ -29,6 +29,10 @@ import {
   getPendingClientInviteCode,
   clearPendingClientInviteCode,
 } from '../utils/pendingClientInviteStorage';
+import {
+  getPendingClientOrganizationId,
+  clearPendingClientOrganizationId,
+} from '../utils/pendingClientOrganizationStorage';
 import { getOAuthRedirectUriForSupabase } from '../utils/fitengineUrls';
 import { trackEvent } from '../utils/observability';
 import { resetNavigationRoot, resetNavigationRootToWelcome, WELCOME_GLOBAL_ROOT_STATE } from '../navigationRef';
@@ -1469,39 +1473,90 @@ export const AuthProvider = ({ children }) => {
     [refreshProfile, refreshOrganization]
   );
 
+  const joinOrganizationFromDirectory = useCallback(
+    async (rawOrgId) => {
+      const orgId = String(rawOrgId || '').trim();
+      if (!orgId) return { ok: false, error: 'empty_org' };
+      try {
+        const { data, error } = await supabase.rpc('join_organization_from_directory', {
+          p_org_id: orgId,
+        });
+        if (error) {
+          console.log('join_organization_from_directory rpc:', error?.message || error);
+          return { ok: false, error: 'rpc', message: error.message };
+        }
+        const j = data && typeof data === 'object' ? data : {};
+        if (!j.ok) return j;
+        await refreshProfile();
+        if (j.organization_id) await refreshOrganization(String(j.organization_id));
+        else await refreshOrganization();
+        setMembershipsFetchKey((k) => k + 1);
+        return j;
+      } catch (e) {
+        console.log('join_organization_from_directory exception:', e?.message || e);
+        return { ok: false, error: 'exception', message: e?.message };
+      }
+    },
+    [refreshProfile, refreshOrganization]
+  );
+
   const pendingInviteAppliedRef = useRef(null);
+  const pendingDirectoryOrgAppliedRef = useRef(null);
 
   /**
-   * Aplica código de invitación guardado (AsyncStorage) para la sesión actual.
-   * Se llama desde sync (antes de abrir post-auth) y desde un efecto de respaldo.
-   * No borra el código ante fallos transitorios (red/RPC) para poder reintentar.
+   * Aplica invitación o gym del directorio guardados en AsyncStorage para la sesión actual.
    */
-  async function applyPendingClientInviteOnce() {
+  async function applyPendingClientJoinOnce() {
     try {
       const code = await getPendingClientInviteCode();
-      if (!code) return;
-      if (pendingInviteAppliedRef.current === code) return;
-      const res = await joinOrganizationWithInviteCode(code);
+      if (code && pendingInviteAppliedRef.current !== code) {
+        const res = await joinOrganizationWithInviteCode(code);
+        if (res?.ok) {
+          pendingInviteAppliedRef.current = code;
+          await clearPendingClientInviteCode();
+          await clearPendingClientOrganizationId();
+          return;
+        }
+        const fatalInvite =
+          res?.error === 'invalid_code' ||
+          res?.error === 'role_not_client' ||
+          res?.error === 'empty_code';
+        if (fatalInvite) {
+          await clearPendingClientInviteCode();
+          console.log('🟠 pending client invite descartado:', res?.error || res);
+        } else {
+          console.log('🟠 pending client invite no aplicado (se conserva):', res?.error || res);
+          return;
+        }
+      }
+
+      const orgId = await getPendingClientOrganizationId();
+      if (!orgId || pendingDirectoryOrgAppliedRef.current === orgId) return;
+      const res = await joinOrganizationFromDirectory(orgId);
       if (res?.ok) {
-        pendingInviteAppliedRef.current = code;
-        await clearPendingClientInviteCode();
+        pendingDirectoryOrgAppliedRef.current = orgId;
+        await clearPendingClientOrganizationId();
         return;
       }
-      const fatal = res?.error === 'invalid_code' || res?.error === 'role_not_client' || res?.error === 'empty_code';
-      if (fatal) {
-        await clearPendingClientInviteCode();
-        console.log('🟠 pending client invite descartado:', res?.error || res);
+      const fatalDir =
+        res?.error === 'invalid_org' ||
+        res?.error === 'role_not_client' ||
+        res?.error === 'empty_org';
+      if (fatalDir) {
+        await clearPendingClientOrganizationId();
+        console.log('🟠 pending directory org descartado:', res?.error || res);
         return;
       }
-      console.log('🟠 pending client invite no aplicado (se conserva el código):', res?.error || res);
+      console.log('🟠 pending directory org no aplicado (se conserva):', res?.error || res);
     } catch (e) {
-      console.log('🟠 applyPendingClientInviteOnce:', e?.message || e);
+      console.log('🟠 applyPendingClientJoinOnce:', e?.message || e);
     }
   }
 
   useEffect(() => {
     if (!session?.user?.id) {
       pendingInviteAppliedRef.current = null;
+      pendingDirectoryOrgAppliedRef.current = null;
     }
   }, [session?.user?.id]);
 
@@ -1510,27 +1565,13 @@ export const AuthProvider = ({ children }) => {
     if (initialProfileSyncDone === false) return;
     let cancelled = false;
     (async () => {
-      const code = await getPendingClientInviteCode();
-      if (!code || cancelled) return;
-      if (pendingInviteAppliedRef.current === code) return;
-      const res = await joinOrganizationWithInviteCode(code);
       if (cancelled) return;
-      if (res?.ok) {
-        pendingInviteAppliedRef.current = code;
-        await clearPendingClientInviteCode();
-      } else if (
-        res?.error === 'invalid_code' ||
-        res?.error === 'role_not_client' ||
-        res?.error === 'empty_code'
-      ) {
-        await clearPendingClientInviteCode();
-        console.log('🟠 pending client invite (effect) descartado:', res?.error || res);
-      }
+      await applyPendingClientJoinOnce();
     })();
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id, initialProfileSyncDone, joinOrganizationWithInviteCode]);
+  }, [session?.user?.id, initialProfileSyncDone, joinOrganizationWithInviteCode, joinOrganizationFromDirectory]);
 
   // -------------------------
   // ✅ ENSURE PROFILE (igual a tu versión, sin tocar lógica)
@@ -2159,7 +2200,7 @@ export const AuthProvider = ({ children }) => {
       setSession(nextSession || null);
       setInitialProfileSyncDone(true);
       setAuthSessionRestored(true);
-      void applyPendingClientInviteOnce().catch(() => {});
+      void applyPendingClientJoinOnce().catch(() => {});
       authTrace('syncFromSession_skip', {
         userId: `${String(userId).slice(0, 8)}…`,
         reason: 'profile_already_synced',
@@ -2341,7 +2382,7 @@ export const AuthProvider = ({ children }) => {
         setMembershipsFetchKey((k) => k + 1);
         void refreshPlatformAdminFromSession(userId);
         void hydratePostProfileSync(userId, syncedProfile).catch(() => {});
-        void applyPendingClientInviteOnce().catch(() => {});
+        void applyPendingClientJoinOnce().catch(() => {});
       } else if (hasValidJwt && allowSessionWithoutProfile) {
         sessionUserLayoutRef.current = userId;
         setSession(sessionForState || null);
@@ -2357,7 +2398,7 @@ export const AuthProvider = ({ children }) => {
           userId: userId ? `${String(userId).slice(0, 8)}…` : null,
         });
         void recoverMissingProfile(userId, sessionForState?.access_token || null);
-        void applyPendingClientInviteOnce().catch(() => {});
+        void applyPendingClientJoinOnce().catch(() => {});
       } else if (hasValidJwt) {
         authTrace('sync_restore_defer_session', {
           userId: userId ? `${String(userId).slice(0, 8)}…` : null,
@@ -3396,6 +3437,7 @@ export const AuthProvider = ({ children }) => {
       refreshOrganization,
       refreshProfile,
       joinOrganizationWithInviteCode,
+      joinOrganizationFromDirectory,
 
       isAdmin,
       isCoach,
@@ -3438,6 +3480,7 @@ export const AuthProvider = ({ children }) => {
       refreshOrganization,
       refreshProfile,
       joinOrganizationWithInviteCode,
+      joinOrganizationFromDirectory,
       startImpersonation,
       stopImpersonation,
     ]

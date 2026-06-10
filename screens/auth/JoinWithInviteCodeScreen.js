@@ -46,7 +46,7 @@ export default function JoinWithInviteCodeScreen() {
   const { width } = useWindowDimensions();
   const { isDark } = useThemeContext();
   const { t: tStr } = useLocale();
-  const { session, joinOrganizationWithInviteCode, hasClientMembership } = useAuth() || {};
+  const { session, joinOrganizationWithInviteCode } = useAuth() || {};
 
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -151,9 +151,14 @@ export default function JoinWithInviteCodeScreen() {
       .select('plan_actual, organization_id')
       .eq('id', uid)
       .maybeSingle();
-    const route = getClientPostAuthRouteName(p || {}, {
-      hasClientMembership: !!hasClientMembership,
-    });
+    const { data: mems } = await supabase
+      .from('organization_memberships')
+      .select('role, active')
+      .eq('user_id', uid);
+    const clientMem = (mems || []).some(
+      (m) => m.active !== false && String(m.role || '').toLowerCase() === 'cliente',
+    );
+    const route = getClientPostAuthRouteName(p || {}, { hasClientMembership: clientMem });
     navigation.reset({ index: 0, routes: [{ name: route }] });
   };
 
