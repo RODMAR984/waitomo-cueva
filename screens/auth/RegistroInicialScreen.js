@@ -11,7 +11,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
 } from 'react-native';
@@ -35,6 +34,8 @@ import {
   authScrollKeyboardDismissMode,
   authScrollContentJustify,
 } from '../../components/AuthWebFormShell';
+import { showAppAlert } from '../../utils/confirmAction';
+import { resetToRoute } from '../../utils/resetToRoute';
 
 function mapJoinInviteErrorToMessage(res, tStr) {
   const e = res?.error;
@@ -99,10 +100,9 @@ export default function RegistroInicialScreen({ route, navigation }) {
     async (userId) => {
       const { data: sessionWrap } = await supabase.auth.getSession();
       if (!sessionWrap?.session) {
-        Alert.alert(tStr('signup_email_confirm_title'), tStr('signup_email_confirm_body'));
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login', params: { email: String(email || '').trim().toLowerCase() } }],
+        showAppAlert(tStr('signup_email_confirm_title'), tStr('signup_email_confirm_body'));
+        resetToRoute(navigation, 'Login', {
+          email: String(email || '').trim().toLowerCase(),
         });
         return;
       }
@@ -116,8 +116,8 @@ export default function RegistroInicialScreen({ route, navigation }) {
             res?.error === 'role_not_client' ||
             res?.error === 'empty_code';
           if (fatal) await clearPendingClientInviteCode();
-          Alert.alert(tStr('gym_config_alert_title_error'), mapJoinInviteErrorToMessage(res, tStr));
-          navigation.reset({ index: 0, routes: [{ name: 'WelcomeClientJoin' }] });
+          showAppAlert(tStr('gym_config_alert_title_error'), mapJoinInviteErrorToMessage(res, tStr));
+          resetToRoute(navigation, 'WelcomeClientJoin');
           return;
         }
         await clearPendingClientInviteCode();
@@ -141,7 +141,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
       );
 
       const routeName = getClientPostAuthRouteName(prof || {}, { hasClientMembership: clientMem });
-      navigation.reset({ index: 0, routes: [{ name: routeName }] });
+      resetToRoute(navigation, routeName);
     },
     [email, joinOrganizationWithInviteCode, navigation, refreshProfile, tStr],
   );
@@ -149,19 +149,23 @@ export default function RegistroInicialScreen({ route, navigation }) {
   const handleSubmit = async () => {
     if (submitting) return;
 
+    const nombreT = String(nombre || '').trim();
+    const telefonoT = String(telefono || '').trim();
+    const emailT = String(email || '').trim().toLowerCase();
+
     // Validaciones por modo
-    if (!nombre || !email || !telefono) {
-      Alert.alert(tStr('reg_ini_alert_faltan_title'), tStr('reg_ini_alert_faltan_body'));
+    if (!nombreT || !emailT || !telefonoT) {
+      showAppAlert(tStr('reg_ini_alert_faltan_title'), tStr('reg_ini_alert_faltan_body'));
       return;
     }
 
     if (!isOAuth) {
       if (!password || !confirmPassword) {
-        Alert.alert(tStr('reg_ini_alert_faltan_title'), tStr('reg_ini_alert_faltan_body'));
+        showAppAlert(tStr('reg_ini_alert_faltan_title'), tStr('reg_ini_alert_faltan_body'));
         return;
       }
       if (password !== confirmPassword) {
-        Alert.alert(tStr('reg_ini_alert_pass_title'), tStr('reg_ini_alert_pass_body'));
+        showAppAlert(tStr('reg_ini_alert_pass_title'), tStr('reg_ini_alert_pass_body'));
         return;
       }
     }
@@ -181,25 +185,34 @@ export default function RegistroInicialScreen({ route, navigation }) {
       // =========================================================
       if (!isOAuth) {
         const createdUser = await register({
-          email,
+          email: emailT,
           password,
-          fullName: nombre,
-          phone: telefono,
+          fullName: nombreT,
+          phone: telefonoT,
           planActual,
           username: null,
         });
 
         if (!createdUser || !createdUser.id) {
           console.log('❌ Registro inicial: user sin id', createdUser);
-          Alert.alert(tStr('reg_ini_error_create_title'), tStr('reg_ini_error_create_body'));
+          showAppAlert(tStr('reg_ini_error_create_title'), tStr('reg_ini_error_create_body'));
           return;
+        }
+
+        try {
+          await supabase
+            .from('profiles')
+            .update({ full_name: nombreT, phone: telefonoT })
+            .eq('id', createdUser.id);
+        } catch (_) {
+          /* no bloquea el flujo */
         }
 
         const userData = {
           id: createdUser.id,
-          nombre,
-          telefono,
-          email,
+          nombre: nombreT,
+          telefono: telefonoT,
+          email: emailT,
           password,
           ...(abono?.precio != null ? { precio: abono.precio } : {}),
         };
@@ -226,7 +239,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
       // ✅ MODO B: OAuth (NO crear auth de nuevo)
       // =========================================================
       if (!user?.id) {
-        Alert.alert(tStr('reg_ini_error_auth_title'), tStr('reg_ini_error_auth_body'));
+        showAppAlert(tStr('reg_ini_error_auth_title'), tStr('reg_ini_error_auth_body'));
         return;
       }
 
@@ -254,7 +267,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
             console.log('✅ RegistroInicial OAuth: profile guardado');
           } catch (e) {
             console.log('🟠 RegistroInicial OAuth: error guardando profile =>', e?.message || e);
-            Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('reg_ini_error_generic'));
+            showAppAlert(tStr('gym_config_alert_title_error'), e?.message || tStr('reg_ini_error_generic'));
             return;
           }
         }
@@ -301,7 +314,15 @@ export default function RegistroInicialScreen({ route, navigation }) {
     } catch (error) {
       console.log('❌ Error en registro inicial:', error);
       const message = error?.message || tStr('reg_ini_error_generic');
-      Alert.alert(tStr('gym_config_alert_title_error'), message);
+      if (/already registered|already been registered|user_already_exists/i.test(String(message))) {
+        showAppAlert(
+          tStr('reg_ini_already_registered_title'),
+          tStr('reg_ini_already_registered_body'),
+        );
+        resetToRoute(navigation, 'Login', { email: emailT });
+        return;
+      }
+      showAppAlert(tStr('gym_config_alert_title_error'), message);
     } finally {
       setSubmitting(false);
     }

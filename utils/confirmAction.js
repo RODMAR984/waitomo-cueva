@@ -1,5 +1,15 @@
 import { Alert, Platform } from 'react-native';
 
+/** Alerta simple visible en Safari iOS (Alert.alert en web a menudo no se muestra). */
+export function showAppAlert(title, message) {
+  const body = [title, message].filter(Boolean).join('\n\n');
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(body);
+    return;
+  }
+  Alert.alert(title, message);
+}
+
 /**
  * Confirmación multiplataforma. En web, Alert.alert con botones no ejecuta onPress de forma fiable.
  * @returns {Promise<boolean>}

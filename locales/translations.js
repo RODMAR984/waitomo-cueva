@@ -1434,6 +1434,9 @@ export const translations = {
     reg_ini_error_auth_title: 'Error',
     reg_ini_error_auth_body: 'No se detectó el usuario autenticado. Volvé y probá de nuevo.',
     reg_ini_error_generic: 'No se pudo completar tu registro. Revisá los datos o intentá de nuevo en unos minutos.',
+    reg_ini_already_registered_title: 'Ya tenés cuenta',
+    reg_ini_already_registered_body:
+      'Ese email ya está registrado en FitEngine. Si la contraseña es correcta, te vamos a iniciar sesión. Si no, usá «Ya tengo cuenta» o recuperá la contraseña.',
 
     reg_complete_title: 'Completá tu perfil',
     reg_complete_banner_main: 'Preparando tu sesión… un segundo.',
@@ -3423,6 +3426,9 @@ export const translations = {
     reg_ini_error_auth_title: 'Error',
     reg_ini_error_auth_body: 'No authenticated user detected. Go back and try again.',
     reg_ini_error_generic: 'Could not complete registration. Check your details or try again in a few minutes.',
+    reg_ini_already_registered_title: 'Account already exists',
+    reg_ini_already_registered_body:
+      'That email is already registered on FitEngine. If your password is correct, we will sign you in. Otherwise use «I already have an account» or reset your password.',
 
     reg_complete_title: 'Complete your profile',
     reg_complete_banner_main: 'Preparing your session… one moment.',

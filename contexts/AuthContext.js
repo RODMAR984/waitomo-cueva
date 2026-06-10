@@ -2928,7 +2928,25 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const errMsg = String(error.message || '');
+        const alreadyRegistered = /already registered|already been registered|user_already_exists/i.test(
+          errMsg,
+        );
+        if (alreadyRegistered && password) {
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          });
+          if (!signInErr && signInData?.user?.id) {
+            if (signInData.session) {
+              await syncFromSession(signInData.session, { allowSessionWithoutProfile: true });
+            }
+            return signInData.user;
+          }
+        }
+        throw error;
+      }
 
       const user = data?.user || null;
       if (!user) return null;
