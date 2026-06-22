@@ -14,6 +14,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { confirmAction, showAppAlert } from '../../utils/confirmAction';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
 import getRandomGeneralImage from '../../utils/getRandomGeneralImage';
@@ -52,36 +53,45 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
   const [objetivo, setObjetivo] = useState('');
   const [nivel, setNivel] = useState(null); // 'rookie' | 'scaled' | 'atleta'
 
-  const handleEnviar = () => {
+  const goCreateAccount = () => {
+    const evTitle = tStr('registro_evolucion_title');
+    navigation.navigate('CreateAccount', {
+      plan: { ...plan, id: plan?.id || 'evolucion', title: plan?.title || evTitle },
+      abono: null,
+      fromEvolucion: true,
+    });
+  };
+
+  const handleEnviar = async () => {
     if (!nivel) {
-      Alert.alert(tStr('reg_evol_alert_pick_level_title'), tStr('reg_evol_alert_pick_level_body'));
+      showAppAlert(tStr('reg_evol_alert_pick_level_title'), tStr('reg_evol_alert_pick_level_body'));
       return;
     }
     if (!nombre.trim() || !objetivo.trim()) {
-      Alert.alert(tStr('reg_evol_alert_missing_title'), tStr('reg_evol_alert_missing_body'));
+      showAppAlert(tStr('reg_evol_alert_missing_title'), tStr('reg_evol_alert_missing_body'));
       return;
     }
     const thanksBody = tStr('reg_evol_success_body')
       .replace('{{name}}', nombre.trim())
       .replace('{{level}}', nivel.toUpperCase());
-    Alert.alert(
-      tStr('reg_evol_success_title'),
-      thanksBody,
-      [
-        { text: tStr('config_back'), onPress: () => navigation.goBack() },
-        {
-          text: tStr('reg_evol_create_account'),
-          onPress: () => {
-            const evTitle = tStr('registro_evolucion_title');
-            navigation.navigate('CreateAccount', {
-              plan: { ...plan, id: plan?.id || 'evolucion', title: plan?.title || evTitle },
-              abono: null,
-              fromEvolucion: true,
-            });
-          },
-        },
-      ]
-    );
+
+    if (Platform.OS === 'web') {
+      showAppAlert(tStr('reg_evol_success_title'), thanksBody);
+      const createAccount = await confirmAction({
+        title: tStr('reg_evol_success_title'),
+        message: tStr('reg_evol_success_create_prompt'),
+        confirmLabel: tStr('reg_evol_create_account'),
+        cancelLabel: tStr('config_back'),
+      });
+      if (createAccount) goCreateAccount();
+      else navigation.goBack();
+      return;
+    }
+
+    Alert.alert(tStr('reg_evol_success_title'), thanksBody, [
+      { text: tStr('config_back'), onPress: () => navigation.goBack() },
+      { text: tStr('reg_evol_create_account'), onPress: goCreateAccount },
+    ]);
   };
 
   const styles = useMemo(

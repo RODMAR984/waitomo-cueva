@@ -1494,6 +1494,7 @@ export const translations = {
     reg_evol_success_body:
       'Gracias {{name}}. Registramos tu interés en Ciclo Evolución ({{level}}). Te contactaremos para enviarte tu rutina personalizada. No hay abonos ni pago en la app para este plan.',
     reg_evol_create_account: 'Crear cuenta',
+    reg_evol_success_create_prompt: '¿Querés crear una cuenta para seguir tu evolución en la app?',
     reg_evol_ph_name: 'Tu nombre',
     reg_evol_ph_goal: 'Contanos tu objetivo (fuerza, bajar grasa, etc.)',
 
@@ -3491,6 +3492,7 @@ export const translations = {
     reg_evol_success_body:
       'Thanks {{name}}. We registered your interest in Evolution Cycle ({{level}}). We will contact you to send your personalized routine. There are no subscriptions or in-app payment for this plan.',
     reg_evol_create_account: 'Create account',
+    reg_evol_success_create_prompt: 'Would you like to create an account to track your progress in the app?',
     reg_evol_ph_name: 'Your name',
     reg_evol_ph_goal: 'Tell us your goal (strength, fat loss, etc.)',
 

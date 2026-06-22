@@ -13,9 +13,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   ScrollView,
 } from 'react-native';
+import { showAppAlert } from '../../utils/confirmAction';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
 import getRandomGeneralImage from '../../utils/getRandomGeneralImage';
@@ -40,11 +40,11 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
 
   const handleContinuar = () => {
     if (!nombre.trim() || !objetivo.trim() || !contacto.trim()) {
-      Alert.alert(tStr('reg_ciclo_incomplete_title'), tStr('reg_ciclo_incomplete_body'));
+      showAppAlert(tStr('reg_ciclo_incomplete_title'), tStr('reg_ciclo_incomplete_body'));
       return;
     }
 
-    Alert.alert(tStr('reg_ciclo_sent_title'), tStr('reg_ciclo_sent_body'));
+    showAppAlert(tStr('reg_ciclo_sent_title'), tStr('reg_ciclo_sent_body'));
   };
 
   const styles = useMemo(
