@@ -216,7 +216,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.md,
           borderWidth: 1,
-          marginBottom: 12,
+          marginBottom: Platform.OS === 'web' ? 8 : 12,
           overflow: 'hidden',
         },
         blockHeader: {

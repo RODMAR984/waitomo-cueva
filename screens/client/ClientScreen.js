@@ -1386,20 +1386,20 @@ export default function ClientScreen() {
           width: '100%',
           flexDirection: isWebWide ? 'row' : 'column',
           alignItems: 'stretch',
-          justifyContent: 'space-between',
-          gap: 16,
+          justifyContent: 'flex-start',
+          gap: isWebWide ? 16 : 12,
         },
         mainColPrimary: {
-          flex: isWebWide ? 1 : 0,
-          gap: 16,
+          flex: isWebWide ? 1 : undefined,
+          flexShrink: 0,
+          gap: 12,
         },
         mainColSecondary: {
-          flex: isWebWide ? 1 : 0,
-          gap: 16,
+          flex: isWebWide ? 1 : undefined,
+          flexShrink: 0,
+          gap: 12,
         },
-        panelEqualHeight: {
-          minHeight: isWebWide ? 420 : 0,
-        },
+        panelEqualHeight: isWebWide ? { minHeight: 420 } : null,
         panel: {
           backgroundColor: t.boxBg,
           borderRadius: MOBILE_RADII.lg,
@@ -1597,12 +1597,13 @@ export default function ClientScreen() {
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
           marginBottom: 12,
+          overflow: 'hidden',
         },
         novedadesRail: {
           width: '100%',
           maxWidth: 720,
           alignSelf: 'stretch',
-          marginTop: 6,
+          marginTop: 12,
           marginBottom: 10,
         },
         novedadesCajaRail: {
@@ -1676,25 +1677,25 @@ export default function ClientScreen() {
 
         quickRow: {
           flexDirection: isWeb && !isWebWide ? 'column' : 'row',
-          justifyContent: 'space-between',
-          marginTop: 10,
+          justifyContent: 'flex-start',
+          marginTop: 8,
           alignItems: 'stretch',
-          gap: isWeb && !isWebWide ? 10 : 12,
+          gap: isWeb && !isWebWide ? 8 : 10,
         },
         quickBtn: {
-          flex: 1,
+          flex: isWebWide ? 1 : undefined,
           borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
           borderColor: t.overlayBorder,
           backgroundColor: t.boxBg,
-          paddingVertical: 16,
+          paddingVertical: isWeb && !isWebWide ? 12 : 16,
           paddingHorizontal: 12,
-          minHeight: isWebWide ? 130 : 0,
+          minHeight: isWebWide ? 130 : undefined,
           alignItems: 'center',
           justifyContent: 'center',
         },
         quickBtnLast: {},
-        quickBtnStacked: { marginRight: 0, marginBottom: 10 },
+        quickBtnStacked: { marginRight: 0, marginBottom: 0 },
         quickBtnLastStacked: { marginBottom: 0 },
         quickIconWrap: {
           width: 36,
@@ -1990,7 +1991,7 @@ export default function ClientScreen() {
 
         <View style={styles.mainGrid}>
           <View style={styles.mainColPrimary}>
-            <NeoPanel style={[styles.panel, styles.panelEqualHeight]}>
+            <NeoPanel style={[styles.panel, isWebWide ? styles.panelEqualHeight : null]}>
               <Text style={styles.sectionTitle}>{tStr('client_plan_activo')}</Text>
 
               <View style={styles.planBox}>
@@ -2100,7 +2101,7 @@ export default function ClientScreen() {
           </View>
 
           <View style={styles.mainColSecondary}>
-            <NeoPanel style={[styles.panel, styles.panelEqualHeight]}>
+            <NeoPanel style={[styles.panel, isWebWide ? styles.panelEqualHeight : null]}>
               <Text style={styles.sectionTitle}>{tStr('client_quick_access')}</Text>
 
               <View style={styles.quickRow}>

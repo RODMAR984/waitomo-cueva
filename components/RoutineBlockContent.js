@@ -10,6 +10,19 @@ const CONTENT_BASE = {
   ...(Platform.OS === 'android' ? { textAlignVertical: 'center', includeFontPadding: false } : {}),
 };
 
+/** Separador antes de un token RM cuando el anterior no deja espacio visible. */
+function separatorBeforeRm(parts, index) {
+  if (index <= 0 || parts[index]?.type !== 'rm') return '';
+  const prev = parts[index - 1];
+  if (prev.type === 'rm') return ' · ';
+  if (prev.type === 'text') {
+    const tail = prev.value || '';
+    if (!tail.trim()) return ' · ';
+    if (!/\s$/.test(tail)) return ' ';
+  }
+  return '';
+}
+
 /**
  * Renderiza el contenido de un bloque igual que el preview del admin:
  * un único Text padre con hijos inline (sin pre-wrap ni líneas sueltas).
@@ -47,6 +60,7 @@ export default function RoutineBlockContent({
           weight != null && !Number.isNaN(weight) ? `${formatRmWeightKg(weight)} kg` : null;
         const pctLabel = hasNumericPct ? `${pctNum}%` : `${seg.pctRaw}%`;
         const tokenShown = displayWeight || seg.full;
+        const prefix = separatorBeforeRm(parts, i);
 
         return (
           <Text
@@ -54,6 +68,7 @@ export default function RoutineBlockContent({
             style={[CONTENT_BASE, rmStyle]}
             onPress={onRmPress ? () => onRmPress(seg.exercise, pctLabel) : undefined}
           >
+            {prefix}
             {tokenShown}
             {!displayWeight && rmStored == null && rmHintStyle && tStr ? (
               <Text style={[CONTENT_BASE, rmHintStyle]}> {tStr('trabajo_rm_tap_completar')}</Text>
