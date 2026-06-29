@@ -28,6 +28,7 @@ import { resetNavigationRoot } from '../navigationRef';
 
 import AppRootStack from './AppRootStack';
 import ClientInviteLinkHandler from '../components/ClientInviteLinkHandler';
+import MpCheckoutReturnHandler from '../components/MpCheckoutReturnHandler';
 import AuthGate from '../components/AuthGate';
 
 /**
@@ -206,6 +207,7 @@ export default function AppShellContent() {
           }}
         >
           <ClientInviteLinkHandler />
+          <MpCheckoutReturnHandler />
           <AuthGate>
             <AppRootStack screenOptions={defaultScreenOptions} registroOwnerBackgroundColor={t.bg} />
           </AuthGate>

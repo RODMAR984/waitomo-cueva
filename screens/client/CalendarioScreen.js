@@ -18,6 +18,7 @@ import PropTypes from 'prop-types';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePlanContext } from '../../contexts/PlanContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTrainingData } from '../../contexts/TrainingDataContext';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import BackNavButton from '../../components/BackNavButton';
 import NeoPanel from '../../components/NeoPanel';
@@ -115,6 +116,7 @@ export default function CalendarioScreen({ route, navigation }) {
   const panelMaxWidth = WEB_CONTENT_MAX_WIDTH;
   const { plan: contextPlan } = usePlanContext();
   const { profile, user, organization } = useAuth();
+  const { refreshTrainingBlocksFromServer } = useTrainingData() || {};
   const params = route?.params || {};
   const planParam = params?.plan || null;
   const plan = planParam || contextPlan || planFromProfile(profile?.plan_actual);
@@ -146,6 +148,21 @@ export default function CalendarioScreen({ route, navigation }) {
   const dateLocale = locale === 'en' ? 'en-US' : 'es-AR';
   // Permite revisar historial reciente y próximos días.
   const days = useMemo(() => getNextDays(-14, 45, locale), [locale]);
+  const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);
+  const selectedDateLabel = useMemo(() => {
+    try {
+      const [y, m, d] = String(diaSeleccionado || '').split('-').map(Number);
+      if ([y, m, d].some(Number.isNaN)) return '';
+      const dt = new Date(y, m - 1, d);
+      return dt.toLocaleDateString(dateLocale, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      });
+    } catch {
+      return '';
+    }
+  }, [diaSeleccionado, dateLocale]);
   const horarios = useMemo(() => generarHorarios(plan?.nombre || 'Cross Training'), [plan?.nombre]);
 
   const planCanon = useMemo(
@@ -196,6 +213,14 @@ export default function CalendarioScreen({ route, navigation }) {
   );
 
   const orgId = organization?.id || profile?.organization_id || null;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (typeof refreshTrainingBlocksFromServer === 'function' && orgId) {
+        refreshTrainingBlocksFromServer();
+      }
+    }, [refreshTrainingBlocksFromServer, orgId]),
+  );
 
   useEffect(() => {
     let alive = true;
@@ -720,19 +745,18 @@ export default function CalendarioScreen({ route, navigation }) {
     () =>
       StyleSheet.create({
         panel: {
-          alignItems: 'center',
+          alignItems: 'stretch',
           borderRadius: MOBILE_RADII.lg,
-          marginBottom: 40,
-          marginHorizontal: 16,
-          marginTop: isWebDesktop ? 34 : height * 0.18,
-          padding: isWebDesktop ? 28 : 24,
+          marginBottom: 24,
+          marginHorizontal: 12,
+          marginTop: isWebDesktop ? 28 : 12,
+          padding: isWebDesktop ? 28 : 18,
           width: '100%',
           maxWidth: panelMaxWidth,
           alignSelf: 'center',
           backgroundColor: t.boxBg,
           borderWidth: 1,
-          borderColor: t.overlayBorder,   // unificado
-          // sombras sutiles sobre overlay
+          borderColor: t.overlayBorder,
           shadowColor: t.brand,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.25,
@@ -740,10 +764,19 @@ export default function CalendarioScreen({ route, navigation }) {
         },
         mes: {
           color: t.brand,
-          fontSize: MOBILE_TYPE.bodyStrong,
-          fontWeight: 'bold',
-          marginBottom: 10,
+          fontSize: MOBILE_TYPE.subhead,
+          fontWeight: '800',
+          marginBottom: 4,
           textAlign: 'center',
+          letterSpacing: 0.6,
+        },
+        fechaSeleccionada: {
+          color: t.text,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '700',
+          marginBottom: 14,
+          textAlign: 'center',
+          textTransform: 'capitalize',
         },
         contentGrid: {
           width: '100%',
@@ -777,37 +810,38 @@ export default function CalendarioScreen({ route, navigation }) {
 
         weekStrip: {
           width: '100%',
-          marginBottom: 8,
+          marginBottom: 12,
+          borderRadius: MOBILE_RADII.md,
+          backgroundColor: hexToRgba(t.brand, 0.06),
+          borderWidth: 1,
+          borderColor: t.overlayBorder,
+          paddingVertical: 8,
         },
-        // tira de días (ancho completo del panel; antes vivía en leftCol 36% y se veía aplastada)
         weekRow: {
-          alignItems: 'center',
+          alignItems: 'flex-end',
           flexDirection: 'row',
-          flexGrow: 1,
-          gap: isWebDesktop ? 4 : 6,
-          paddingHorizontal: 4,
+          gap: 8,
+          paddingHorizontal: 10,
           paddingVertical: 4,
         },
         diaContainer: {
           alignItems: 'center',
-          marginHorizontal: isWebDesktop ? 2 : 4,
+          minWidth: 52,
+          paddingVertical: 2,
         },
-        diaContainerOff: { opacity: 0.45 },
-        diaContainerHas: {
-          paddingHorizontal: 2,
-        },
-        // sin color literal; la “selección” se marca con circuloActivo y diaLabelActivo
+        diaContainerOff: { opacity: 0.38 },
+        diaContainerHas: {},
         diaSeleccionado: {},
         diaLabel: {
           color: t.subText,
-          fontSize: MOBILE_TYPE.meta,
-          fontWeight: 'bold',
-          marginBottom: 2,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '700',
+          marginBottom: 4,
           textAlign: 'center',
         },
         diaLabelActivo: {
           color: t.brand,
-          fontWeight: 'bold',
+          fontWeight: '800',
         },
         diaLabelHas: {
           color: t.text,
@@ -815,27 +849,39 @@ export default function CalendarioScreen({ route, navigation }) {
         circuloNumero: {
           alignItems: 'center',
           backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder, // unificado
+          borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.xl,
-          borderWidth: 1,
-          height: 40,
+          borderWidth: 1.5,
+          height: 44,
           justifyContent: 'center',
-          width: 40,
+          width: 44,
         },
         circuloActivo: {
           ...t.buttonPrimary,
+          borderWidth: 0,
+          transform: [{ scale: 1.06 }],
         },
         circuloHas: {
           borderColor: hexToRgba(t.brand, 0.55),
-          borderWidth: 1.5,
+        },
+        circuloHoy: {
+          borderColor: hexToRgba(t.brand, 0.85),
+          borderWidth: 2,
         },
         diaNumero: {
           color: t.text,
-          fontSize: MOBILE_TYPE.subhead,
-          fontWeight: 'bold',
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '800',
         },
         diaNumeroActivo: {
           ...t.buttonPrimaryText,
+        },
+        hoyTag: {
+          color: t.brand,
+          fontSize: MOBILE_TYPE.micro,
+          fontWeight: '800',
+          marginTop: 4,
+          letterSpacing: 0.4,
         },
         punto: {
           backgroundColor: t.brand,
@@ -865,15 +911,20 @@ export default function CalendarioScreen({ route, navigation }) {
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 10,
-          justifyContent: isWebDesktop ? 'flex-start' : 'center',
+          justifyContent: isWebDesktop ? 'flex-start' : 'stretch',
+          width: '100%',
         },
         horario: {
           backgroundColor: t.boxBg,
-          borderColor: t.overlayBorder, // unificado
+          borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.md,
           borderWidth: 1.2,
-          margin: 6,
-          paddingHorizontal: 20,
+          flexGrow: 1,
+          flexBasis: isWebDesktop ? '30%' : '46%',
+          maxWidth: isWebDesktop ? 220 : '48%',
+          minWidth: isWebDesktop ? 140 : 128,
+          margin: 0,
+          paddingHorizontal: 14,
           minHeight: MOBILE_SIZES.controlHeightLg,
           paddingVertical: MOBILE_SPACING.md,
           justifyContent: 'center',
@@ -977,6 +1028,7 @@ export default function CalendarioScreen({ route, navigation }) {
       <View testID="screen-calendario" style={{ flex: 1 }}>
       <NeoPanel style={styles.panel}>
         <Text style={styles.mes}>{mes.toUpperCase()}</Text>
+        {selectedDateLabel ? <Text style={styles.fechaSeleccionada}>{selectedDateLabel}</Text> : null}
 
         {mostrarRecordatorioApto && (
           <View style={styles.alertaApto}>
@@ -1014,13 +1066,15 @@ export default function CalendarioScreen({ route, navigation }) {
                 {days.map((d) => {
                   const weekday = getIsoWeekdayFromYmd(d.full);
                   const tieneContenido = offeredWeekdays.has(weekday);
-
                   const seleccionado = diaSeleccionado === d.full;
+                  const esHoy = d.full === todayYmd;
 
                   return (
                     <TouchableOpacity
                       key={d.full}
                       onPress={() => setDiaSeleccionado(d.full)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: seleccionado }}
                       style={[
                         styles.diaContainer,
                         tieneContenido && styles.diaContainerHas,
@@ -1028,15 +1082,32 @@ export default function CalendarioScreen({ route, navigation }) {
                         seleccionado && styles.diaSeleccionado,
                       ]}
                     >
-                      <Text style={[styles.diaLabel, tieneContenido && styles.diaLabelHas, seleccionado && styles.diaLabelActivo]}>
+                      <Text
+                        style={[
+                          styles.diaLabel,
+                          tieneContenido && styles.diaLabelHas,
+                          seleccionado && styles.diaLabelActivo,
+                        ]}
+                      >
                         {d.label.toUpperCase()}
                       </Text>
-                      <View style={[styles.circuloNumero, tieneContenido && styles.circuloHas, seleccionado && styles.circuloActivo]}>
+                      <View
+                        style={[
+                          styles.circuloNumero,
+                          tieneContenido && styles.circuloHas,
+                          esHoy && !seleccionado && styles.circuloHoy,
+                          seleccionado && styles.circuloActivo,
+                        ]}
+                      >
                         <Text style={[styles.diaNumero, seleccionado && styles.diaNumeroActivo]}>
                           {d.number}
                         </Text>
                       </View>
-                      {tieneContenido && <View style={styles.punto} />}
+                      {esHoy ? (
+                        <Text style={styles.hoyTag}>{locale === 'en' ? 'TODAY' : 'HOY'}</Text>
+                      ) : tieneContenido ? (
+                        <View style={styles.punto} />
+                      ) : null}
                     </TouchableOpacity>
                   );
                 })}

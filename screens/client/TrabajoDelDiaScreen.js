@@ -715,8 +715,11 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
   useFocusEffect(
     useCallback(() => {
       setBgSeed(Date.now());
+      if (typeof refreshTrainingBlocksFromServer === 'function' && effectiveOrgId) {
+        refreshTrainingBlocksFromServer();
+      }
       return undefined;
-    }, []),
+    }, [refreshTrainingBlocksFromServer, effectiveOrgId]),
   );
 
   // ================== BLOQUES FILTRADOS ==================

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.25.0?target=deno";
+import { resolveCheckoutBackUrlBase } from "../_shared/checkoutUrls.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -85,7 +86,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" });
-  const webBase = (Deno.env.get("CHECKOUT_BACK_URL_BASE") || "https://waitomofitengine.com").replace(/\/$/, "");
+  const webBase = resolveCheckoutBackUrlBase();
   const successUrl = `${webBase}/?payment=success`;
   const cancelUrl = `${webBase}/?payment=cancel`;
   const amountCents = Math.round(amount * 100);

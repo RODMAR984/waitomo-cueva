@@ -2,6 +2,7 @@
 // Body: amount, title, external_reference, organization_id (recomendado para cobrar en cuenta del gym).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveCheckoutBackUrlBase } from "../_shared/checkoutUrls.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -50,6 +51,11 @@ Deno.serve(async (req: Request) => {
     title?: string;
     external_reference?: string;
     organization_id?: string;
+    plan_id?: string;
+    abono_id?: string;
+    periodo?: string;
+    duration_days?: number;
+    included_sessions?: number | null;
   };
   try {
     body = await req.json();
@@ -66,6 +72,14 @@ Deno.serve(async (req: Request) => {
     body?.external_reference || `${user.id}_${Date.now()}`,
   ).slice(0, 256);
   const organizationId = String(body?.organization_id || "").trim();
+  const planId = String(body?.plan_id || "").trim();
+  const abonoId = String(body?.abono_id || "").trim();
+  const periodo = String(body?.periodo || new Date().toISOString().slice(0, 7)).trim();
+  const durationDays = Number(body?.duration_days) > 0 ? Number(body.duration_days) : 30;
+  const includedSessions =
+    body?.included_sessions != null && !Number.isNaN(Number(body.included_sessions))
+      ? Number(body.included_sessions)
+      : null;
 
   if (!(amount > 0) || Number.isNaN(amount)) {
     return new Response(JSON.stringify({ error: "amount must be > 0" }), {
@@ -135,8 +149,8 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const base = (Deno.env.get("CHECKOUT_BACK_URL_BASE") || "https://waitomofitengine.com")
-    .replace(/\/$/, "");
+  const base = resolveCheckoutBackUrlBase();
+  const returnQs = "mp_checkout=return";
   const supabaseUrlClean = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
   const notificationUrl = supabaseUrlClean
     ? `${supabaseUrlClean}/functions/v1/mercadopago-webhook`
@@ -153,13 +167,20 @@ Deno.serve(async (req: Request) => {
       },
     ],
     external_reference,
-    metadata: orgForMetadata
-      ? { organization_id: orgForMetadata, fitengine_external_ref: external_reference }
-      : { fitengine_external_ref: external_reference },
+    metadata: {
+      fitengine_external_ref: external_reference,
+      member_user_id: user.id,
+      ...(orgForMetadata ? { organization_id: orgForMetadata } : {}),
+      ...(planId ? { plan_id: planId } : {}),
+      ...(abonoId ? { abono_id: abonoId } : {}),
+      ...(periodo ? { periodo } : {}),
+      duration_days: String(durationDays),
+      ...(includedSessions != null ? { included_sessions: String(includedSessions) } : {}),
+    },
     back_urls: {
-      success: `${base}/`,
-      failure: `${base}/`,
-      pending: `${base}/`,
+      success: `${base}/?${returnQs}&status=approved`,
+      failure: `${base}/?${returnQs}&status=failure`,
+      pending: `${base}/?${returnQs}&status=pending`,
     },
     auto_return: "approved",
   };
@@ -197,6 +218,24 @@ Deno.serve(async (req: Request) => {
   }
 
   const pref = await mpRes.json();
+
+  if (organizationId) {
+    await supabaseAdmin.from("billing_payments").upsert(
+      {
+        organization_id: organizationId,
+        member_user_id: user.id,
+        client_id: external_reference,
+        plan_id: planId || null,
+        periodo: periodo || null,
+        monto: unit_price,
+        moneda: "ARS",
+        metodo: "mercadopago",
+        status: "pendiente",
+      },
+      { onConflict: "organization_id,client_id" },
+    );
+  }
+
   const init_point = pref?.init_point;
   const sandbox_init_point = pref?.sandbox_init_point;
   const preference_id = pref?.id;

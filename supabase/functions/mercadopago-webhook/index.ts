@@ -1,6 +1,7 @@
 // Webhook MP: confirma pago y escribe finanzas_ledger. Soporta token global (legacy) u OAuth por org (prueba tokens hasta GET 200).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fulfillMpPayment } from "../_shared/fulfillMpPayment.ts";
 
 const MP_API = "https://api.mercadopago.com";
 
@@ -172,6 +173,12 @@ Deno.serve(async (req: Request) => {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  try {
+    await fulfillMpPayment(supabase, payment);
+  } catch (e) {
+    console.error("fulfillMpPayment error", e);
   }
 
   console.log(

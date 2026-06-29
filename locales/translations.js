@@ -259,7 +259,18 @@ export const translations = {
     pago_manual_method_err: 'No se pudo registrar el intento de pago. Intentá de nuevo.',
     pago_mp_return_title: 'Volvé a FitEngine',
     pago_mp_return_body:
-      'Completá el pago en la ventana que se abrió. Cuando termines, volvé acá y tocá «Ya pagué (avisar)» para seguir.',
+      'Si el pago no se confirmó solo, esperá unos segundos o volvé a entrar. Para transferencia/efectivo, avisá al gym.',
+    pago_mp_success_title: '¡Pago confirmado!',
+    pago_mp_success_body: 'Tu abono está activo. Ya podés ver la rutina del día en Calendario.',
+    pago_mp_pending_title: 'Pago en proceso',
+    pago_mp_pending_body: 'Mercado Pago está procesando el cobro. En unos minutos se activará tu abono.',
+    pago_mp_failed_title: 'Pago no completado',
+    pago_mp_failed_body: 'El pago no se aprobó. Podés intentar de nuevo u otro medio.',
+    pago_no_price_title: 'Precio no configurado',
+    pago_no_price_body:
+      'Este abono no tiene precio cargado en el gym. Pedile al administrador que lo configure o usá transferencia/efectivo.',
+    pago_manual_paid_hint:
+      'Mercado Pago confirma el pago solo. Si pagaste por transferencia, MODO o efectivo, usá el botón de abajo.',
     pago_stripe_return_body:
       'Completá el pago en Stripe. Cuando termines, volvé acá y tocá «Ya pagué (avisar)» para seguir.',
     pago_dev_shortcut_hint: 'Atajo de desarrollo: el botón de arriba también está visible en producción.',
@@ -270,7 +281,7 @@ export const translations = {
       'Mercado Pago: tarjeta débito/crédito, saldo en cuenta, cuotas y otras billeteras en una sola pantalla.',
     pago_mp_checkout_unavailable_title: 'Checkout no disponible',
     pago_mp_checkout_unavailable_msg:
-      'Falta desplegar la función en el servidor o credenciales MP. Podés usar transferencia u otro medio, o probá más tarde.',
+      'No pudimos abrir el checkout (precio, conexión o MP del gym). Probá otro medio o más tarde.',
     pago_mp_checkout_err: 'No se pudo abrir el pago con Mercado Pago. Intentá de nuevo.',
     pago_mp_checkout_disabled_title: 'Checkout MP desactivado',
     pago_mp_checkout_disabled_msg:
@@ -2280,7 +2291,18 @@ export const translations = {
     pago_manual_method_err: 'Could not record the payment attempt. Please try again.',
     pago_mp_return_title: 'Return to FitEngine',
     pago_mp_return_body:
-      'Complete payment in the window that opened. When done, come back here and tap «I already paid (notify)» to continue.',
+      'If payment did not confirm automatically, wait a few seconds or reopen the app. For bank transfer/cash, notify your gym.',
+    pago_mp_success_title: 'Payment confirmed!',
+    pago_mp_success_body: 'Your pass is active. Open Calendar to see today’s workout.',
+    pago_mp_pending_title: 'Payment processing',
+    pago_mp_pending_body: 'Mercado Pago is processing your payment. Your pass will activate shortly.',
+    pago_mp_failed_title: 'Payment not completed',
+    pago_mp_failed_body: 'Payment was not approved. Try again or use another method.',
+    pago_no_price_title: 'Price not set',
+    pago_no_price_body:
+      'This pass has no price configured by the gym. Ask staff to set it or use transfer/cash.',
+    pago_manual_paid_hint:
+      'Mercado Pago confirms payment automatically. For transfer/MODO/cash, use the button below after paying.',
     pago_stripe_return_body:
       'Complete payment in Stripe. When done, come back here and tap «I already paid (notify)» to continue.',
     pago_dev_shortcut_hint: 'Dev shortcut note: the button above is also visible in production.',
@@ -2291,7 +2313,7 @@ export const translations = {
       'Mercado Pago: debit/credit, account balance, installments and other wallets in one checkout.',
     pago_mp_checkout_unavailable_title: 'Checkout unavailable',
     pago_mp_checkout_unavailable_msg:
-      'The server function or MP credentials may be missing. Use bank transfer or try again later.',
+      'We could not open checkout (price, connection or gym MP setup). Try another method or later.',
     pago_mp_checkout_err: 'Could not open Mercado Pago checkout. Please try again.',
     pago_mp_checkout_disabled_title: 'MP checkout is off',
     pago_mp_checkout_disabled_msg:

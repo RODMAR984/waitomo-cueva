@@ -156,10 +156,14 @@ export default function PagoScreen({ navigation, route }) {
     showAppAlert(tStr('pago_copied_title'), `${texto}\n\n${tStr('pago_copied_hint')}`);
   };
 
-  const openCheckoutUrl = async (url) => {
+  const openCheckoutUrl = async (url, { sameTab = false } = {}) => {
     if (!url) return false;
     const href = String(url);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (sameTab) {
+        window.location.assign(href);
+        return true;
+      }
       const popup = window.open(href, '_blank', 'noopener,noreferrer');
       if (!popup) window.location.assign(href);
       return true;
@@ -253,6 +257,11 @@ export default function PagoScreen({ navigation, route }) {
             title,
             externalReference: pid,
             organizationId: organization?.id || null,
+            planId: planCanon,
+            abonoId: abono?.id || abono?.__row?.id || null,
+            periodo,
+            durationDays: Number(abono?.duration_days ?? abono?.__row?.duration_days ?? 30) || 30,
+            includedSessions: abono?.included_sessions ?? abono?.__row?.included_sessions ?? null,
           });
           url = initPoint;
         } catch (e) {
@@ -512,12 +521,18 @@ export default function PagoScreen({ navigation, route }) {
                           return;
                         }
                         trackEvent('pago_mp_checkout_start', { plan_key: planCanon });
+                        if (!(typeof monto === 'number' && monto > 0)) {
+                          showAppAlert(
+                            tStr('pago_no_price_title'),
+                            tStr('pago_no_price_body'),
+                          );
+                          return;
+                        }
                         const r = await crearIntentoPago('mercadopago');
                         const url = r?.paymentUrl;
                         if (url) {
-                          await openCheckoutUrl(url);
                           trackEvent('pago_mp_checkout_browser_open', { plan_key: planCanon });
-                          showAppAlert(tStr('pago_mp_return_title'), tStr('pago_mp_return_body'));
+                          await openCheckoutUrl(url, { sameTab: Platform.OS === 'web' });
                         } else {
                           trackEvent('pago_mp_checkout_no_url', { plan_key: planCanon });
                           showAppAlert(
@@ -628,13 +643,23 @@ export default function PagoScreen({ navigation, route }) {
               </TouchableOpacity>
             ) : null}
 
-            <TouchableOpacity
-              style={styles.btnSecondary}
-              disabled={busy}
-              onPress={() => runWithBusy(handlePagoConfirmado)}
-            >
-              <Text style={styles.btnText}>{tStr('pago_btn_paid')}</Text>
-            </TouchableOpacity>
+            {(paymentMethods.transferencia ||
+              paymentMethods.cuenta_dni ||
+              paymentMethods.modo ||
+              paymentMethods.efectivo) ? (
+              <>
+                {paymentMethods.mercadopago ? (
+                  <Text style={styles.mpHint}>{tStr('pago_manual_paid_hint')}</Text>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.btnSecondary}
+                  disabled={busy}
+                  onPress={() => runWithBusy(handlePagoConfirmado)}
+                >
+                  <Text style={styles.btnText}>{tStr('pago_btn_paid')}</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
 
             {showPaidShortcut ? (
               <Text style={styles.mpHint}>{tStr('pago_dev_shortcut_hint')}</Text>

@@ -10,10 +10,30 @@ function isLocalWebHost() {
 }
 
 /**
- * @param {{ amount: number, title: string, externalReference: string, organizationId?: string|null }} p
+ * @param {{
+ *   amount: number,
+ *   title: string,
+ *   externalReference: string,
+ *   organizationId?: string|null,
+ *   planId?: string|null,
+ *   abonoId?: string|null,
+ *   periodo?: string|null,
+ *   durationDays?: number|null,
+ *   includedSessions?: number|null,
+ * }} p
  * @returns {Promise<{ init_point: string, sandbox_init_point?: string, preference_id?: string }>}
  */
-export async function createCheckoutPreference({ amount, title, externalReference, organizationId }) {
+export async function createCheckoutPreference({
+  amount,
+  title,
+  externalReference,
+  organizationId,
+  planId,
+  abonoId,
+  periodo,
+  durationDays,
+  includedSessions,
+}) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -28,6 +48,13 @@ export async function createCheckoutPreference({ amount, title, externalReferenc
   };
   if (organizationId != null && String(organizationId).trim()) {
     body.organization_id = String(organizationId).trim();
+  }
+  if (planId != null && String(planId).trim()) body.plan_id = String(planId).trim();
+  if (abonoId != null && String(abonoId).trim()) body.abono_id = String(abonoId).trim();
+  if (periodo != null && String(periodo).trim()) body.periodo = String(periodo).trim();
+  if (durationDays != null && Number(durationDays) > 0) body.duration_days = Number(durationDays);
+  if (includedSessions != null && Number.isFinite(Number(includedSessions))) {
+    body.included_sessions = Number(includedSessions);
   }
   const { data, error } = await supabase.functions.invoke('create-checkout-preference', {
     body,
