@@ -188,3 +188,36 @@ export async function normalizeRmPatternWithAi({
     plan_key: planKey,
   });
 }
+
+/** Planificación consciente de ciclo: alcance libre (todo / plan(es) / socio). */
+export async function draftCyclePlanWithAi({
+  organizationId,
+  sessionDate,
+  slotLabel = '',
+  planKey = '',
+  planKeys = null,
+  cycleScope = 'all',
+  targetClientId = null,
+  dateFrom = '',
+  dateTo = '',
+  focus = '',
+  volumeLandmarks = '',
+  extraNotes = '',
+}) {
+  return invokeGenerateRoutine({
+    mode: 'cycle_plan',
+    organization_id: organizationId,
+    session_date: sessionDate,
+    slot_label: slotLabel,
+    plan_key: planKey,
+    plan_keys: Array.isArray(planKeys) && planKeys.length ? planKeys : undefined,
+    cycle_scope: cycleScope,
+    target_client_id: targetClientId,
+    date_from: dateFrom,
+    date_to: dateTo,
+    focus,
+    volume_landmarks: volumeLandmarks,
+    extra_notes: extraNotes,
+    raw_text: focus,
+  });
+}

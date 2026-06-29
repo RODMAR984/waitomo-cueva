@@ -15,6 +15,7 @@ export default function AdminAiPromptWithVoice({
   placeholderColor,
   brandColor,
   subTextColor,
+  placeholderKey = 'admin_ai_prompt_ph',
 }) {
   const { listening: aiVoiceListening, toggleListening: toggleAiVoice, voiceNativeAvailable } =
     useAiVoiceDictation({
@@ -31,7 +32,7 @@ export default function AdminAiPromptWithVoice({
         <TextInput
           value={aiPrompt}
           onChangeText={setAiPrompt}
-          placeholder={tStr('admin_ai_prompt_ph')}
+          placeholder={tStr(placeholderKey)}
           placeholderTextColor={placeholderColor}
           style={styles.aiPromptInput}
           multiline

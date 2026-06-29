@@ -1966,7 +1966,7 @@ export const translations = {
     admin_ai_cta: '🤖 Ayuda con IA (Gemini)',
     admin_ai_title: 'Asistente IA para bloques',
     admin_ai_hint:
-      'Podés generar bloque completo, reescribir texto, normalizar patrón %RM o redactar un mensaje para copiar.',
+      'Podés generar bloque completo, planificar un ciclo con volumen y %RM, reescribir texto, normalizar patrón %RM o redactar un mensaje para copiar.',
     admin_ai_close_backdrop: 'Cerrar asistente de IA',
     admin_ai_modes_title: 'Modo (tocá una opción)',
     admin_ai_mode_hint_routine:
@@ -1977,6 +1977,24 @@ export const translations = {
       'Patrón %RM: pegá una línea “humana” (ej. “4 snatch al 75 del 3RM”) y la IA la convierte al formato FitEngine @75%3rmSnatch.',
     admin_ai_mode_hint_message:
       'Mensaje: redactá qué querés comunicar a los alumnos; la IA devuelve un texto listo para copiar a WhatsApp o mail.',
+    admin_ai_mode_hint_cycle_plan:
+      'Ciclo: lee la planificación real del rango de fechas, estima volumen por grupo muscular y arma un plan día a día con progresión de %RM. Elegí alcance (todo el gym, actividades o un socio).',
+    admin_ai_mode_cycle: 'Ciclo',
+    admin_ai_cycle_scope_title: 'Alcance',
+    admin_ai_cycle_scope_all: 'Todo el gym',
+    admin_ai_cycle_scope_plans: 'Actividad(es)',
+    admin_ai_cycle_scope_member: 'Socio',
+    admin_ai_cycle_date_from_ph: 'Desde (AAAA-MM-DD)',
+    admin_ai_cycle_date_to_ph: 'Hasta (AAAA-MM-DD)',
+    admin_ai_cycle_plans_hint: 'Marcá una o más actividades',
+    admin_ai_cycle_member_hint: 'Socio para programación 1:1',
+    admin_ai_cycle_member_required: 'Elegí un socio para alcance individual.',
+    admin_ai_cycle_plans_required: 'Marcá al menos una actividad.',
+    admin_ai_cycle_volume_ph:
+      'Tabla de volumen / landmarks (opcional): pegá acá series objetivo por grupo muscular o referencias del coach.',
+    admin_ai_cycle_prompt_ph:
+      'Ej: microciclo de fuerza, priorizar pierna, subir %RM 2–3% por semana, mantener técnica en olímpicos.',
+    admin_ai_cycle_applied_header: '— Plan de ciclo (IA) —',
     admin_ai_mode_routine: 'Rutina',
     admin_ai_mode_rewrite: 'Reescribir',
     admin_ai_mode_rm: 'Patrón %RM',
@@ -3982,7 +4000,7 @@ export const translations = {
     admin_ai_cta: '🤖 AI help (Gemini)',
     admin_ai_title: 'AI assistant for blocks',
     admin_ai_hint:
-      'Generate a full block, rewrite text, normalize %RM pattern, or draft a ready-to-copy message.',
+      'Generate a full block, plan a cycle with volume and %RM, rewrite text, normalize %RM pattern, or draft a ready-to-copy message.',
     admin_ai_close_backdrop: 'Close AI assistant',
     admin_ai_modes_title: 'Mode (tap one)',
     admin_ai_mode_hint_routine:
@@ -3993,6 +4011,24 @@ export const translations = {
       'Pattern %RM: paste a “human” line (e.g. “4 snatches at 75% of 3RM”) and the AI converts it to FitEngine format @75%3rmSnatch.',
     admin_ai_mode_hint_message:
       'Message: describe what you want to tell athletes; the AI returns copy-ready text for WhatsApp or email.',
+    admin_ai_mode_hint_cycle_plan:
+      'Cycle: reads real planning in the date range, estimates volume by muscle group, and drafts a day-by-day plan with %RM progression. Pick scope (whole gym, activities, or one member).',
+    admin_ai_mode_cycle: 'Cycle',
+    admin_ai_cycle_scope_title: 'Scope',
+    admin_ai_cycle_scope_all: 'Whole gym',
+    admin_ai_cycle_scope_plans: 'Activity(ies)',
+    admin_ai_cycle_scope_member: 'Member',
+    admin_ai_cycle_date_from_ph: 'From (YYYY-MM-DD)',
+    admin_ai_cycle_date_to_ph: 'To (YYYY-MM-DD)',
+    admin_ai_cycle_plans_hint: 'Select one or more activities',
+    admin_ai_cycle_member_hint: 'Member for 1:1 programming',
+    admin_ai_cycle_member_required: 'Pick a member for individual scope.',
+    admin_ai_cycle_plans_required: 'Select at least one activity.',
+    admin_ai_cycle_volume_ph:
+      'Volume table / landmarks (optional): paste target sets per muscle group or coach references here.',
+    admin_ai_cycle_prompt_ph:
+      'e.g. strength microcycle, prioritize legs, raise %RM 2–3% per week, keep technique on olympic lifts.',
+    admin_ai_cycle_applied_header: '— Cycle plan (AI) —',
     admin_ai_mode_routine: 'Routine',
     admin_ai_mode_rewrite: 'Rewrite',
     admin_ai_mode_rm: '%RM pattern',

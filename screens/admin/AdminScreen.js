@@ -42,6 +42,7 @@ import {
   rewriteBlockWithAi,
   draftMessageWithAi,
   normalizeRmPatternWithAi,
+  draftCyclePlanWithAi,
 } from '../../utils/aiAssistant';
 import AdminAiPromptWithVoice from '../../components/AdminAiPromptWithVoice';
 import useStaffAdminNavTiles from '../../hooks/useStaffAdminNavTiles';
@@ -138,6 +139,14 @@ const RM_PREVIEW_BASE = (extra = {}) => ({
   ...extra,
   ...(Platform.OS === 'android' ? { textAlignVertical: 'center', includeFontPadding: false } : {}),
 });
+
+const addDaysToYmd = (ymd, days) => {
+  const base = String(ymd || '').slice(0, 10);
+  const d = base ? new Date(`${base}T12:00:00`) : new Date();
+  if (Number.isNaN(d.getTime())) return formatYmdLocal(new Date());
+  d.setDate(d.getDate() + days);
+  return formatYmdLocal(d);
+};
 
 const renderPreviewWithRM = (text, styles) => {
   if (!text) return <Text style={styles.previewText}>—</Text>;
@@ -450,6 +459,13 @@ export default function AdminScreen() {
   const [aiCoachNotes, setAiCoachNotes] = useState('');
   const [aiWarnings, setAiWarnings] = useState([]);
   const [aiUsageLine, setAiUsageLine] = useState('');
+  const [aiCycleScope, setAiCycleScope] = useState('all');
+  const [aiCyclePlanKeys, setAiCyclePlanKeys] = useState([]);
+  const [aiCycleMemberId, setAiCycleMemberId] = useState(null);
+  const [aiDateFrom, setAiDateFrom] = useState('');
+  const [aiDateTo, setAiDateTo] = useState('');
+  const [aiVolumeLandmarks, setAiVolumeLandmarks] = useState('');
+  const [aiMemberOptions, setAiMemberOptions] = useState([]);
 
   const composerDirty = useMemo(() => {
     if (editingBlockId) {
@@ -630,16 +646,71 @@ export default function AdminScreen() {
   };
 
   const openAiModal = () => {
+    const dateForAi = formatYmdLocal(fecha);
     setAiModalVisible(true);
     setAiOutput('');
     setAiSuggestedTitle('');
     setAiCoachNotes('');
     setAiWarnings([]);
     setAiUsageLine('');
+    if (!aiDateTo) setAiDateTo(dateForAi);
+    if (!aiDateFrom) setAiDateFrom(addDaysToYmd(dateForAi, -28));
+    if (!aiCyclePlanKeys.length && planSeleccionado) {
+      setAiCyclePlanKeys([planSeleccionado]);
+    }
     setAiPrompt((prev) => {
       if (prev.trim()) return prev;
-      if (aiMode === 'routine') return '';
+      if (aiMode === 'routine' || aiMode === 'cycle_plan') return '';
       return contenido || '';
+    });
+  };
+
+  useEffect(() => {
+    if (!aiModalVisible || !orgIdForPlans) {
+      setAiMemberOptions([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const { data: mems, error: e1 } = await supabase
+          .from('organization_memberships')
+          .select('user_id, role, active')
+          .eq('organization_id', orgIdForPlans)
+          .eq('active', true);
+        if (!alive || e1) return;
+        const ids = [...new Set((mems || []).map((m) => m.user_id).filter(Boolean))];
+        if (!ids.length) {
+          setAiMemberOptions([]);
+          return;
+        }
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, full_name, username')
+          .in('id', ids);
+        if (!alive) return;
+        const opts = (profs || [])
+          .map((p) => ({
+            id: p.id,
+            label: (p.full_name || p.username || p.id).trim(),
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+        setAiMemberOptions(opts);
+      } catch {
+        if (alive) setAiMemberOptions([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [aiModalVisible, orgIdForPlans]);
+
+  const toggleAiCyclePlanKey = (planValue) => {
+    setAiCyclePlanKeys((prev) => {
+      const set = new Set(prev);
+      if (set.has(planValue)) set.delete(planValue);
+      else set.add(planValue);
+      return [...set];
     });
   };
 
@@ -663,9 +734,19 @@ export default function AdminScreen() {
     const dateForAi = formatYmdLocal(fecha);
     const promptText = String(aiPrompt || '').trim();
 
-    if (aiMode !== 'routine' && !promptText) {
+    if (aiMode !== 'routine' && aiMode !== 'cycle_plan' && !promptText) {
       Alert.alert(tStr('admin_ai_title'), tStr('admin_ai_prompt_required'));
       return;
+    }
+    if (aiMode === 'cycle_plan') {
+      if (aiCycleScope === 'member' && !aiCycleMemberId) {
+        Alert.alert(tStr('admin_ai_title'), tStr('admin_ai_cycle_member_required'));
+        return;
+      }
+      if (aiCycleScope === 'plans' && !aiCyclePlanKeys.length) {
+        Alert.alert(tStr('admin_ai_title'), tStr('admin_ai_cycle_plans_required'));
+        return;
+      }
     }
 
     setAiBusy(true);
@@ -701,6 +782,21 @@ export default function AdminScreen() {
           planKey: planForAi,
           slotLabel: slotForAi,
           sessionDate: dateForAi,
+          extraNotes: coachNotes,
+        });
+      } else if (aiMode === 'cycle_plan') {
+        out = await draftCyclePlanWithAi({
+          organizationId: orgIdForPlans,
+          sessionDate: dateForAi,
+          slotLabel: slotForAi,
+          planKey: planForAi,
+          planKeys: aiCycleScope === 'plans' ? aiCyclePlanKeys : null,
+          cycleScope: aiCycleScope,
+          targetClientId: aiCycleScope === 'member' ? aiCycleMemberId : null,
+          dateFrom: (aiDateFrom || '').trim() || addDaysToYmd(dateForAi, -28),
+          dateTo: (aiDateTo || '').trim() || dateForAi,
+          focus: promptText,
+          volumeLandmarks: aiVolumeLandmarks,
           extraNotes: coachNotes,
         });
       } else {
@@ -748,6 +844,14 @@ export default function AdminScreen() {
       }
     } else if (aiMode === 'message') {
       setCoachNotes((prev) => (prev.trim() ? `${prev.trim()}\n\n${aiOutput}` : aiOutput));
+    } else if (aiMode === 'cycle_plan') {
+      setCoachNotes((prev) => {
+        const hdr = tStr('admin_ai_cycle_applied_header');
+        const block = `${hdr}\n${aiOutput.trim()}`;
+        if (!prev.trim()) return block;
+        if (prev.includes(hdr)) return prev;
+        return `${prev.trim()}\n\n${block}`;
+      });
     } else {
       setContenido(aiOutput);
     }
@@ -1443,6 +1547,42 @@ export default function AdminScreen() {
           marginBottom: 10,
           opacity: 0.95,
         },
+        aiCycleLabel: {
+          alignSelf: 'stretch',
+          color: t.subText,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '700',
+          marginBottom: 6,
+          marginTop: 4,
+        },
+        aiDateRow: {
+          alignSelf: 'stretch',
+          flexDirection: 'row',
+          gap: 8,
+          marginBottom: 10,
+        },
+        aiDateInput: {
+          flex: 1,
+          backgroundColor: BASE_TEAL,
+          borderColor: 'rgba(255,255,255,0.16)',
+          borderRadius: MOBILE_RADII.sm,
+          borderWidth: 1,
+          color: t.text,
+          padding: 10,
+          fontSize: MOBILE_TYPE.caption,
+        },
+        aiVolumeInput: {
+          alignSelf: 'stretch',
+          backgroundColor: BASE_TEAL,
+          borderColor: 'rgba(255,255,255,0.16)',
+          borderRadius: MOBILE_RADII.sm,
+          borderWidth: 1,
+          color: t.text,
+          padding: 12,
+          minHeight: 72,
+          marginBottom: 12,
+          fontSize: MOBILE_TYPE.caption,
+        },
         modalTitle: {
           color: t.text,
           fontSize: MOBILE_TYPE.headline,
@@ -2120,6 +2260,7 @@ export default function AdminScreen() {
                 <View style={styles.aiModesRow}>
                   {[
                     ['routine', tStr('admin_ai_mode_routine')],
+                    ['cycle_plan', tStr('admin_ai_mode_cycle')],
                     ['rewrite', tStr('admin_ai_mode_rewrite')],
                     ['rm_format', tStr('admin_ai_mode_rm')],
                     ['message', tStr('admin_ai_mode_message')],
@@ -2139,6 +2280,99 @@ export default function AdminScreen() {
                 </View>
                 <Text style={styles.aiModeHintLine}>{tStr(`admin_ai_mode_hint_${aiMode}`)}</Text>
 
+                {aiMode === 'cycle_plan' ? (
+                  <>
+                    <Text style={styles.aiCycleLabel}>{tStr('admin_ai_cycle_scope_title')}</Text>
+                    <View style={styles.aiModesRow}>
+                      {[
+                        ['all', tStr('admin_ai_cycle_scope_all')],
+                        ['plans', tStr('admin_ai_cycle_scope_plans')],
+                        ['member', tStr('admin_ai_cycle_scope_member')],
+                      ].map(([id, lbl]) => {
+                        const on = aiCycleScope === id;
+                        return (
+                          <TouchableOpacity
+                            key={id}
+                            style={[styles.aiModePill, on && styles.aiModePillOn]}
+                            onPress={() => setAiCycleScope(id)}
+                            activeOpacity={0.85}
+                          >
+                            <Text style={[styles.aiModeTxt, on && styles.aiModeTxtOn]}>{lbl}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <View style={styles.aiDateRow}>
+                      <TextInput
+                        style={styles.aiDateInput}
+                        value={aiDateFrom}
+                        onChangeText={setAiDateFrom}
+                        placeholder={tStr('admin_ai_cycle_date_from_ph')}
+                        placeholderTextColor={t.placeholder}
+                        autoCapitalize="none"
+                      />
+                      <TextInput
+                        style={styles.aiDateInput}
+                        value={aiDateTo}
+                        onChangeText={setAiDateTo}
+                        placeholder={tStr('admin_ai_cycle_date_to_ph')}
+                        placeholderTextColor={t.placeholder}
+                        autoCapitalize="none"
+                      />
+                    </View>
+                    {aiCycleScope === 'plans' ? (
+                      <>
+                        <Text style={styles.aiCycleLabel}>{tStr('admin_ai_cycle_plans_hint')}</Text>
+                        <View style={styles.aiModesRow}>
+                          {plansDisponibles.map((p) => {
+                            const on = aiCyclePlanKeys.includes(p.value);
+                            return (
+                              <TouchableOpacity
+                                key={p.value}
+                                style={[styles.aiModePill, on && styles.aiModePillOn]}
+                                onPress={() => toggleAiCyclePlanKey(p.value)}
+                                activeOpacity={0.85}
+                              >
+                                <Text style={[styles.aiModeTxt, on && styles.aiModeTxtOn]}>{p.label}</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </>
+                    ) : null}
+                    {aiCycleScope === 'member' ? (
+                      <>
+                        <Text style={styles.aiCycleLabel}>{tStr('admin_ai_cycle_member_hint')}</Text>
+                        <View style={styles.aiModesRow}>
+                          {aiMemberOptions.slice(0, 40).map((m) => {
+                            const on = aiCycleMemberId === m.id;
+                            return (
+                              <TouchableOpacity
+                                key={m.id}
+                                style={[styles.aiModePill, on && styles.aiModePillOn]}
+                                onPress={() => setAiCycleMemberId(m.id)}
+                                activeOpacity={0.85}
+                              >
+                                <Text style={[styles.aiModeTxt, on && styles.aiModeTxtOn]} numberOfLines={1}>
+                                  {m.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </>
+                    ) : null}
+                    <TextInput
+                      style={styles.aiVolumeInput}
+                      value={aiVolumeLandmarks}
+                      onChangeText={setAiVolumeLandmarks}
+                      placeholder={tStr('admin_ai_cycle_volume_ph')}
+                      placeholderTextColor={t.placeholder}
+                      multiline
+                    />
+                  </>
+                ) : null}
+
                 {aiModalVisible ? (
                   <AdminAiPromptWithVoice
                     aiPrompt={aiPrompt}
@@ -2151,6 +2385,9 @@ export default function AdminScreen() {
                     placeholderColor={t.placeholder}
                     brandColor={t.brand}
                     subTextColor={t.subText}
+                    placeholderKey={
+                      aiMode === 'cycle_plan' ? 'admin_ai_cycle_prompt_ph' : 'admin_ai_prompt_ph'
+                    }
                   />
                 ) : null}
 

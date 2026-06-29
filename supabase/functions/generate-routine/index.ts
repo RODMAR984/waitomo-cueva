@@ -6,7 +6,8 @@ const cors = {
     "authorization, content-type, x-client-info, apikey",
 };
 
-type Mode = "routine" | "rewrite" | "message" | "rm_format";
+type Mode = "routine" | "rewrite" | "message" | "rm_format" | "cycle_plan";
+type CycleScope = "all" | "plans" | "member";
 
 type Body = {
   mode?: Mode;
@@ -15,6 +16,11 @@ type Body = {
   session_date?: string;
   slot_label?: string;
   plan_key?: string;
+  plan_keys?: string[];
+  cycle_scope?: CycleScope;
+  date_from?: string;
+  date_to?: string;
+  volume_landmarks?: string;
   duration_minutes?: number;
   focus?: string;
   extra_notes?: string;
@@ -43,7 +49,64 @@ function normalizeMode(input?: string): Mode {
   if (input === "rewrite") return "rewrite";
   if (input === "message") return "message";
   if (input === "rm_format") return "rm_format";
+  if (input === "cycle_plan") return "cycle_plan";
   return "routine";
+}
+
+function featureForMode(mode: Mode): string {
+  if (mode === "routine") return "generate_routine";
+  if (mode === "rewrite") return "rewrite_block";
+  if (mode === "message") return "draft_message";
+  if (mode === "cycle_plan") return "cycle_plan";
+  return "rm_format";
+}
+
+function parseYmd(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || "").trim());
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatYmd(d: Date): string {
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${da}`;
+}
+
+function resolveCycleDateRange(body: Body): { from: string; to: string } {
+  const toRaw = String(body.date_to || body.session_date || "").trim();
+  const toDate = parseYmd(toRaw) || new Date();
+  const to = formatYmd(toDate);
+  const fromRaw = String(body.date_from || "").trim();
+  if (fromRaw && parseYmd(fromRaw)) {
+    return { from: fromRaw, to };
+  }
+  const fromDate = new Date(toDate);
+  fromDate.setDate(fromDate.getDate() - 28);
+  return { from: formatYmd(fromDate), to };
+}
+
+function expandPlanKeysList(keys: string[]): string[] {
+  const out = new Set<string>();
+  for (const k of keys) {
+    const variants = planKeysForRecentQuery(k);
+    if (variants) variants.forEach((v) => out.add(v));
+    else if (k) out.add(k);
+  }
+  return [...out];
+}
+
+function resolveCyclePlanKeys(body: Body): string[] | null {
+  const scope = (body.cycle_scope || "all") as CycleScope;
+  if (scope === "all" || scope === "member") return null;
+  const raw = Array.isArray(body.plan_keys) ? body.plan_keys : [];
+  const fromBody = raw.map((k) => String(k || "").trim()).filter(Boolean);
+  if (fromBody.length) return expandPlanKeysList(fromBody);
+  const single = String(body.plan_key || "").trim();
+  if (!single) return null;
+  return expandPlanKeysList([single]);
 }
 
 /** Alineado con la app: bloques pueden guardarse con legacy value o con code corto. */
@@ -67,6 +130,7 @@ function buildPrompt({
   body,
   profile,
   recentBlocks,
+  cycleMeta,
 }: {
   mode: Mode;
   body: Body;
@@ -74,9 +138,18 @@ function buildPrompt({
   recentBlocks: Array<{
     fecha?: string;
     slot_label?: string;
+    plan_key?: string;
     titulo?: string;
     contenido?: string;
+    notas?: string;
   }>;
+  cycleMeta?: {
+    scope: CycleScope;
+    dateFrom: string;
+    dateTo: string;
+    planKeysLabel: string;
+    volumeLandmarks: string;
+  };
 }) {
   const date = String(body.session_date || "").trim() || "hoy";
   const slot = String(body.slot_label || "").trim() || "sin horario";
@@ -91,9 +164,11 @@ function buildPrompt({
   const athlete = profile?.full_name || profile?.username || "cliente";
 
   const recent = (recentBlocks || [])
-    .map((r, idx) =>
-      `${idx + 1}) ${String(r.fecha || "")} ${String(r.slot_label || "")} · ${String(r.titulo || "")}\n${String(r.contenido || "").slice(0, 650)}`,
-    )
+    .map((r, idx) => {
+      const planLine = r.plan_key ? ` [${r.plan_key}]` : "";
+      const notesLine = r.notas ? `\nNotas coach: ${String(r.notas).slice(0, 200)}` : "";
+      return `${idx + 1}) ${String(r.fecha || "")} ${String(r.slot_label || "")}${planLine} · ${String(r.titulo || "")}\n${String(r.contenido || "").slice(0, 900)}${notesLine}`;
+    })
     .join("\n\n");
 
   const baseRules = `
@@ -102,7 +177,56 @@ Reglas de formato FitEngine (OBLIGATORIAS):
 - Ejemplo válido: @80%1rmBack Squat
 - NO inventes formatos alternativos (nada de "80% RM", "1RM 80%", etc.)
 - Respetá ortografía técnica clara y texto pegable en "contenido".
+- Progresión de %RM: si una semana usó @60%1rmX, la siguiente sube de forma gradual (ej. +2–5% relativo o el salto que indique el coach), sin repetir el mismo % sin motivo.
+- No redondees %RM a enteros de kg en la cabeza: mantené % distintos cuando el coach pide cargas distintas.
 `;
+
+  if (mode === "cycle_plan" && cycleMeta) {
+    const scopeLabel =
+      cycleMeta.scope === "member"
+        ? `socio / 1:1 (${athlete})`
+        : cycleMeta.scope === "plans"
+        ? `actividad(es): ${cycleMeta.planKeysLabel}`
+        : "todas las actividades publicadas en la sede";
+    const landmarks = cycleMeta.volumeLandmarks.trim() ||
+      "(el coach no pegó tabla; estimá volumen con criterio conservador y marcá incertidumbre en warnings)";
+    const coachBrief = [text, extraNotes !== "sin notas" ? extraNotes : ""].filter(Boolean).join("\n\n") ||
+      "(sin instrucciones extra; inferí del historial publicado)";
+
+    return `
+Sos un asistente experto en periodización para coaches de gimnasio (FitEngine).
+${baseRules}
+El coach define el alcance; NO estás limitado a una sola actividad salvo el filtro indicado abajo.
+
+Alcance elegido por el coach: ${scopeLabel}
+Ventana de fechas del ciclo a analizar: ${cycleMeta.dateFrom} → ${cycleMeta.dateTo}
+Fecha de referencia (hoy en pantalla): ${date}
+Horario de trabajo actual (si aplica): ${slot}
+
+Instrucciones / objetivo del ciclo (coach):
+${coachBrief}
+
+Tabla de referencia de volumen por grupo muscular (si el coach la pegó; usala para ubicar MEV/MAV/MRV):
+${landmarks}
+
+Bloques ya publicados en la ventana (fuente de verdad — leé progresión, series, reps y %RM):
+${recent || "(ningún bloque publicado en ese rango; el coach programará desde cero según sus notas)"}
+
+Tareas:
+1) Resumí volumen estimado por grupo muscular (series efectivas aproximadas) según lo publicado + lo que proponés.
+2) Detectá progresión de cargas (%RM) semana a semana por ejercicio clave.
+3) Escribí la planificación DÍA A DÍA (o sesión a sesión) lista para copiar y pegar en bloques FitEngine, con título sugerido, contenido con series/reps/@%RM, y notas breves de coach cuando haga falta.
+4) Si el alcance es un socio, adaptá el lenguaje a programación individual; si es grupal, mantené formato de clase.
+
+Respondé SOLO JSON válido:
+{
+  "mode":"cycle_plan",
+  "result_text":"...texto largo markdown con secciones: Resumen volumen, Progresión, Plan día a día...",
+  "coach_notes":"...decisiones y advertencias para el coach...",
+  "warnings":["...","..."]
+}
+`;
+  }
 
   if (mode === "rewrite") {
     return `
@@ -232,6 +356,9 @@ Deno.serve(async (req: Request) => {
   const mode = normalizeMode(String(body.mode || "routine"));
   const orgIdRaw = String(body.organization_id || "").trim();
   if (!orgIdRaw) return jsonResponse(400, { error: "organization_id required" });
+  if (mode === "cycle_plan" && body.cycle_scope === "member" && !String(body.target_client_id || "").trim()) {
+    return jsonResponse(400, { error: "target_client_id required for member scope" });
+  }
 
   // PGRST116 si hay >1 fila: duplicados o varios roles staff en la misma org → limit(1).
   const { data: member, error: memErr } = await supabaseAdmin
@@ -286,6 +413,22 @@ Deno.serve(async (req: Request) => {
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     (() => {
+      if (mode === "cycle_plan") {
+        const { from, to } = resolveCycleDateRange(body);
+        let q = supabaseAdmin
+          .from("training_daily_blocks")
+          .select("fecha, slot_label, plan_key, titulo, contenido, notas, coach_id")
+          .eq("organization_id", orgIdRaw)
+          .gte("fecha", from)
+          .lte("fecha", to)
+          .order("fecha", { ascending: true })
+          .limit(120);
+        const planKeys = resolveCyclePlanKeys(body);
+        if (planKeys?.length === 1) q = q.eq("plan_key", planKeys[0]);
+        else if (planKeys && planKeys.length > 1) q = q.in("plan_key", planKeys);
+        if (member.role === "coach") q = q.eq("coach_id", user.id);
+        return q;
+      }
       const keys = planKeysForRecentQuery(String(body.plan_key || ""));
       let q = supabaseAdmin
         .from("training_daily_blocks")
@@ -313,11 +456,29 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const cycleMeta =
+    mode === "cycle_plan"
+      ? (() => {
+          const { from, to } = resolveCycleDateRange(body);
+          const scope = (body.cycle_scope || "all") as CycleScope;
+          const pk = resolveCyclePlanKeys(body);
+          const planKeysLabel = pk?.length ? pk.join(", ") : String(body.plan_key || "todas");
+          return {
+            scope,
+            dateFrom: from,
+            dateTo: to,
+            planKeysLabel,
+            volumeLandmarks: String(body.volume_landmarks || "").trim(),
+          };
+        })()
+      : undefined;
+
   const prompt = buildPrompt({
     mode,
     body,
     profile: profileRes.data,
     recentBlocks: Array.isArray(recentRes.data) ? recentRes.data : [],
+    cycleMeta,
   });
 
   const apiKey = Deno.env.get("GEMINI_API_KEY");
@@ -346,14 +507,7 @@ Deno.serve(async (req: Request) => {
       organization_id: orgIdRaw,
       user_id: user.id,
       target_client_id: body.target_client_id || null,
-      feature:
-        mode === "routine"
-          ? "generate_routine"
-          : mode === "rewrite"
-          ? "rewrite_block"
-          : mode === "message"
-          ? "draft_message"
-          : "rm_format",
+      feature: featureForMode(mode),
       success: false,
       error_message: detail,
     });
@@ -369,14 +523,7 @@ Deno.serve(async (req: Request) => {
       organization_id: orgIdRaw,
       user_id: user.id,
       target_client_id: body.target_client_id || null,
-      feature:
-        mode === "routine"
-          ? "generate_routine"
-          : mode === "rewrite"
-          ? "rewrite_block"
-          : mode === "message"
-          ? "draft_message"
-          : "rm_format",
+      feature: featureForMode(mode),
       success: false,
       error_message: "invalid_json_from_model",
     });
@@ -395,14 +542,7 @@ Deno.serve(async (req: Request) => {
     organization_id: orgIdRaw,
     user_id: user.id,
     target_client_id: body.target_client_id || null,
-    feature:
-      mode === "routine"
-        ? "generate_routine"
-        : mode === "rewrite"
-        ? "rewrite_block"
-        : mode === "message"
-        ? "draft_message"
-        : "rm_format",
+    feature: featureForMode(mode),
     input_tokens: inTok,
     output_tokens: outTok,
     cost_usd_cents: costCents,
