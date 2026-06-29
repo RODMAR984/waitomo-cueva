@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { formatYmdLocal } from '../utils/formatYmdLocal';
-
-/** Días recientes reservados a "Últimos días" (misma ventana que AdminScreen). */
-const RECENT_DAYS_EXCLUSIVE = 7;
-/** Calendario histórico: ~2 meses hacia atrás desde el límite reciente. */
-const HISTORIC_DAYS_SPAN = 62;
+import {
+  HISTORIC_RECENT_DAYS_EXCLUSIVE,
+  buildHistoricMonthGrids,
+} from '../utils/historicCalendarMonths';
 
 function blockFechaKey(b, fechaKeyFrom) {
   if (b?.fechaKey) return b.fechaKey;
@@ -17,24 +15,68 @@ function blockFechaKey(b, fechaKeyFrom) {
   }
 }
 
-function buildHistoricCalendarDays() {
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  const newestHistoric = new Date(today);
-  newestHistoric.setDate(today.getDate() - RECENT_DAYS_EXCLUSIVE - 1);
-  const oldest = new Date(today);
-  oldest.setDate(today.getDate() - HISTORIC_DAYS_SPAN);
-
-  const out = [];
-  for (let d = new Date(oldest); d <= newestHistoric; d.setDate(d.getDate() + 1)) {
-    out.push(formatYmdLocal(d));
-  }
-  return out;
+function HistoricMonthGrid({
+  month,
+  weekdayLabels,
+  datesWithBlocks,
+  selectedKey,
+  onPickDay,
+  styles,
+}) {
+  return (
+    <View style={styles.historicMonthCol}>
+      <Text style={styles.historicMonthTitle}>{month.title}</Text>
+      <View style={styles.historicWeekdayRow}>
+        {weekdayLabels.map((label, i) => (
+          <Text key={`${month.monthKey}-wd-${i}`} style={styles.historicWeekdayLabel}>
+            {label}
+          </Text>
+        ))}
+      </View>
+      {month.weeks.map((week, wi) => (
+        <View key={`${month.monthKey}-w-${wi}`} style={styles.historicWeekRow}>
+          {week.map((cell, ci) => {
+            if (!cell) {
+              return <View key={`${month.monthKey}-${wi}-${ci}`} style={styles.historicDayCellEmptySlot} />;
+            }
+            const { fk, day, inRange } = cell;
+            const has = inRange && datesWithBlocks.has(fk);
+            const selected = selectedKey === fk;
+            const disabled = !inRange || !has;
+            return (
+              <TouchableOpacity
+                key={fk}
+                disabled={disabled}
+                onPress={() => onPickDay(fk)}
+                style={[
+                  styles.historicDayCell,
+                  !inRange && styles.historicDayCellOutOfRange,
+                  inRange && has && styles.historicDayCellHasData,
+                  selected && styles.historicDayCellSelected,
+                  inRange && !has && styles.historicDayCellNoData,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.historicDayCellText,
+                    !inRange && styles.historicDayCellTextOutOfRange,
+                    selected && styles.historicDayCellTextSelected,
+                    inRange && !has && styles.historicDayCellTextMuted,
+                  ]}
+                >
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
 }
 
 /**
- * Selector de día histórico (plan ya filtrado) + bloques del día elegido.
- * Calendario colapsable para no alargar la pantalla.
+ * Selector de día histórico: 2 meses calendario + parciales, colapsable y compacto.
  */
 export default function HistoricDayPicker({
   blocks,
@@ -45,14 +87,15 @@ export default function HistoricDayPicker({
   planLabel,
   renderBlock,
   brandColor,
+  isDesktopWeb,
 }) {
-  const calendarDays = useMemo(() => buildHistoricCalendarDays(), []);
+  const calendar = useMemo(() => buildHistoricMonthGrids(dateLocale), [dateLocale]);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   const sevenAgo = useMemo(() => {
     const n = new Date();
     n.setHours(12, 0, 0, 0);
-    n.setDate(n.getDate() - RECENT_DAYS_EXCLUSIVE);
+    n.setDate(n.getDate() - HISTORIC_RECENT_DAYS_EXCLUSIVE);
     return n;
   }, []);
 
@@ -75,14 +118,12 @@ export default function HistoricDayPicker({
   const datesWithBlocks = useMemo(() => new Set(blocksByDate.keys()), [blocksByDate]);
   const hasAnyHistoric = blocksByDate.size > 0;
 
-  const oldestInCalendar = calendarDays[0] || '';
-
   const olderDateKeys = useMemo(
     () =>
       [...blocksByDate.keys()]
-        .filter((fk) => fk < oldestInCalendar)
+        .filter((fk) => fk < calendar.rangeStartKey)
         .sort((a, b) => b.localeCompare(a)),
-    [blocksByDate, oldestInCalendar],
+    [blocksByDate, calendar.rangeStartKey],
   );
 
   const [selectedKey, setSelectedKey] = useState(null);
@@ -93,25 +134,10 @@ export default function HistoricDayPicker({
   );
 
   useEffect(() => {
-    const inCalendar = calendarDays.filter((fk) => blocksByDate.has(fk));
+    const inCalendar = calendar.inRangeKeys.filter((fk) => blocksByDate.has(fk));
     const pick = inCalendar[inCalendar.length - 1] || olderDateKeys[0] || null;
     setSelectedKey(pick);
-  }, [blocksFingerprint, planLabel, calendarDays, blocksByDate, olderDateKeys]);
-
-  const monthSections = useMemo(() => {
-    const sections = [];
-    let currentMonth = '';
-    for (const fk of calendarDays) {
-      const d = new Date(`${fk}T12:00:00`);
-      const label = d.toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' });
-      if (label !== currentMonth) {
-        currentMonth = label;
-        sections.push({ monthLabel: label, days: [] });
-      }
-      sections[sections.length - 1].days.push(fk);
-    }
-    return sections;
-  }, [calendarDays, dateLocale]);
+  }, [blocksFingerprint, planLabel, calendar.inRangeKeys, blocksByDate, olderDateKeys]);
 
   const selectedBlocks = selectedKey ? blocksByDate.get(selectedKey) || [] : [];
 
@@ -129,7 +155,6 @@ export default function HistoricDayPicker({
   const formatFullDate = (fk) => {
     try {
       return new Date(`${fk}T12:00:00`).toLocaleDateString(dateLocale, {
-        weekday: 'short',
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -144,10 +169,6 @@ export default function HistoricDayPicker({
     setCalendarOpen(false);
   };
 
-  const toggleLabel = calendarOpen
-    ? tStr('admin_historico_cerrar_calendario')
-    : tStr('admin_historico_abrir_calendario');
-
   const summaryText = selectedKey
     ? formatFullDate(selectedKey)
     : hasAnyHistoric
@@ -156,12 +177,6 @@ export default function HistoricDayPicker({
 
   return (
     <View>
-      {!!planLabel && (
-        <Text style={styles.historicPlanHint} numberOfLines={1}>
-          {planLabel}
-        </Text>
-      )}
-
       <TouchableOpacity
         style={styles.historicCalendarToggle}
         onPress={() => setCalendarOpen((v) => !v)}
@@ -170,25 +185,21 @@ export default function HistoricDayPicker({
         accessibilityState={{ expanded: calendarOpen }}
       >
         <View style={styles.historicCalendarToggleLeft}>
-          <Ionicons name="calendar-outline" size={18} color={brandColor} />
-          <View style={styles.historicCalendarToggleTextWrap}>
-            <Text style={styles.historicCalendarToggleTitle}>{toggleLabel}</Text>
-            <Text style={styles.historicCalendarToggleSub} numberOfLines={1}>
-              {summaryText}
-            </Text>
-          </View>
+          <Ionicons name="calendar-outline" size={15} color={brandColor} />
+          <Text style={styles.historicCalendarToggleTitle} numberOfLines={1}>
+            {tStr('admin_historico')}{' '}
+            <Text style={styles.historicCalendarToggleSub}>{summaryText}</Text>
+          </Text>
         </View>
         <Ionicons
           name={calendarOpen ? 'chevron-up' : 'chevron-down'}
-          size={18}
+          size={16}
           color={brandColor}
         />
       </TouchableOpacity>
 
       {calendarOpen ? (
         <View style={styles.historicCalendarPanel}>
-          <Text style={styles.historicHint}>{tStr('admin_historico_hint')}</Text>
-
           {!hasAnyHistoric ? (
             <Text style={[styles.sectionEmptyText, styles.historicEmptyBanner]}>
               {tStr('admin_historico_sin_rutinas')}
@@ -201,42 +212,19 @@ export default function HistoricDayPicker({
             contentContainerStyle={styles.historicCalendarScrollContent}
             showsVerticalScrollIndicator
           >
-            {monthSections.map((sec) => (
-              <View key={sec.monthLabel} style={styles.historicMonthBlock}>
-                <Text style={styles.historicMonthTitle}>{sec.monthLabel}</Text>
-                <View style={styles.historicDayGrid}>
-                  {sec.days.map((fk) => {
-                    const d = new Date(`${fk}T12:00:00`);
-                    const has = datesWithBlocks.has(fk);
-                    const selected = selectedKey === fk;
-                    return (
-                      <TouchableOpacity
-                        key={fk}
-                        disabled={!has}
-                        onPress={() => pickDay(fk)}
-                        accessibilityLabel={formatChipDate(fk)}
-                        style={[
-                          styles.historicDayCell,
-                          has && styles.historicDayCellHasData,
-                          selected && styles.historicDayCellSelected,
-                          !has && styles.historicDayCellEmpty,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.historicDayCellText,
-                            selected && styles.historicDayCellTextSelected,
-                            !has && styles.historicDayCellTextMuted,
-                          ]}
-                        >
-                          {d.getDate()}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
+            <View style={isDesktopWeb ? styles.historicMonthsRow : null}>
+              {calendar.months.map((month) => (
+                <HistoricMonthGrid
+                  key={month.monthKey}
+                  month={month}
+                  weekdayLabels={calendar.weekdayLabels}
+                  datesWithBlocks={datesWithBlocks}
+                  selectedKey={selectedKey}
+                  onPickDay={pickDay}
+                  styles={styles}
+                />
+              ))}
+            </View>
           </ScrollView>
 
           {olderDateKeys.length > 0 ? (
@@ -285,7 +273,7 @@ export default function HistoricDayPicker({
           </ScrollView>
         </View>
       ) : selectedKey && hasAnyHistoric && !calendarOpen ? (
-        <Text style={styles.sectionEmptyText}>{tStr('admin_historico_sin_fecha')}</Text>
+        <Text style={styles.historicInlineEmpty}>{tStr('admin_historico_sin_fecha')}</Text>
       ) : null}
     </View>
   );

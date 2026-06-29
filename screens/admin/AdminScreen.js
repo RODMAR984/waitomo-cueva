@@ -1166,7 +1166,7 @@ export default function AdminScreen() {
         },
         managementGrid: {
           flexDirection: 'column',
-          rowGap: 14,
+          rowGap: 10,
           alignItems: 'stretch',
         },
         managementCol: {
@@ -1187,8 +1187,28 @@ export default function AdminScreen() {
           fontWeight: '800',
           marginBottom: 10,
         },
+        sectionCardPrimary: {
+          borderColor: hexToRgbaLocal(t.brand, 0.35),
+          padding: 14,
+        },
+        sectionCardTitlePrimary: {
+          color: t.text,
+          fontSize: MOBILE_TYPE.headline,
+          fontWeight: '800',
+          marginBottom: 12,
+        },
+        sectionCardHistoric: {
+          opacity: 0.96,
+          padding: 8,
+        },
+        sectionCardTitleHistoric: {
+          color: t.subText,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '700',
+          marginBottom: 6,
+        },
         sectionListScroll: {
-          maxHeight: isDesktopWeb ? 340 : undefined,
+          maxHeight: isDesktopWeb ? 460 : undefined,
         },
         sectionListContent: {
           paddingBottom: 4,
@@ -1199,100 +1219,118 @@ export default function AdminScreen() {
           paddingVertical: 10,
         },
         historicEmptyBanner: {
-          marginBottom: 10,
-          paddingHorizontal: 4,
+          marginBottom: 6,
+          paddingHorizontal: 2,
+          paddingVertical: 4,
         },
         historicCalendarToggle: {
           alignItems: 'center',
-          backgroundColor: hexToRgbaLocal(t.brand, 0.1),
+          backgroundColor: hexToRgbaLocal(t.brand, 0.06),
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           flexDirection: 'row',
           justifyContent: 'space-between',
-          marginBottom: 8,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
+          marginBottom: 4,
+          minHeight: 34,
+          paddingHorizontal: 8,
+          paddingVertical: 6,
         },
         historicCalendarToggleLeft: {
           alignItems: 'center',
-          columnGap: 10,
+          columnGap: 6,
           flex: 1,
           flexDirection: 'row',
-          minWidth: 0,
-        },
-        historicCalendarToggleTextWrap: {
-          flex: 1,
           minWidth: 0,
         },
         historicCalendarToggleTitle: {
-          color: t.brand,
-          fontSize: MOBILE_TYPE.caption,
-          fontWeight: '800',
+          color: t.subText,
+          flex: 1,
+          fontSize: MOBILE_TYPE.micro,
+          fontWeight: '700',
+          minWidth: 0,
         },
         historicCalendarToggleSub: {
-          color: t.subText,
-          fontSize: MOBILE_TYPE.micro,
-          marginTop: 2,
-        },
-        historicCalendarPanel: {
-          marginBottom: 8,
-        },
-        historicCalendarScroll: {
-          maxHeight: isDesktopWeb ? 200 : 180,
-        },
-        historicCalendarScrollContent: {
-          paddingBottom: 4,
-        },
-        historicHint: {
-          color: t.subText,
-          fontSize: MOBILE_TYPE.caption,
-          lineHeight: 18,
-          marginBottom: 6,
-        },
-        historicPlanHint: {
           color: t.placeholder,
           fontSize: MOBILE_TYPE.micro,
-          marginBottom: 10,
+          fontWeight: '500',
         },
-        historicMonthBlock: {
-          marginBottom: 12,
+        historicCalendarPanel: {
+          marginBottom: 4,
         },
-        historicMonthTitle: {
-          color: t.text,
-          fontSize: MOBILE_TYPE.caption,
-          fontWeight: '700',
-          marginBottom: 6,
-          textTransform: 'capitalize',
+        historicCalendarScroll: {
+          maxHeight: isDesktopWeb ? 132 : 148,
         },
-        historicDayGrid: {
+        historicCalendarScrollContent: {
+          paddingBottom: 2,
+        },
+        historicMonthsRow: {
+          columnGap: 10,
           flexDirection: 'row',
           flexWrap: 'wrap',
         },
+        historicMonthCol: {
+          flexGrow: 1,
+          flexShrink: 1,
+          marginBottom: 6,
+          minWidth: isDesktopWeb ? 200 : '100%',
+        },
+        historicMonthTitle: {
+          color: t.text,
+          fontSize: MOBILE_TYPE.micro,
+          fontWeight: '700',
+          marginBottom: 4,
+        },
+        historicWeekdayRow: {
+          flexDirection: 'row',
+          marginBottom: 2,
+        },
+        historicWeekdayLabel: {
+          color: t.placeholder,
+          flex: 1,
+          fontSize: 10,
+          fontWeight: '600',
+          textAlign: 'center',
+        },
+        historicWeekRow: {
+          flexDirection: 'row',
+          marginBottom: 1,
+        },
+        historicDayCellEmptySlot: {
+          flex: 1,
+          minHeight: 22,
+        },
         historicDayCell: {
           alignItems: 'center',
-          borderRadius: MOBILE_RADII.sm,
+          borderRadius: 4,
+          flex: 1,
           justifyContent: 'center',
-          marginBottom: 4,
-          minHeight: 34,
-          paddingVertical: 4,
-          width: '14.28%',
+          marginHorizontal: 1,
+          minHeight: 22,
+          paddingVertical: 1,
         },
-        historicDayCellEmpty: {
-          opacity: 0.35,
+        historicDayCellOutOfRange: {
+          opacity: 0.25,
+        },
+        historicDayCellNoData: {
+          opacity: 0.55,
         },
         historicDayCellHasData: {
-          backgroundColor: hexToRgbaLocal(t.brand, 0.12),
+          backgroundColor: hexToRgbaLocal(t.brand, 0.18),
         },
         historicDayCellSelected: {
-          backgroundColor: hexToRgbaLocal(t.brand, 0.32),
+          backgroundColor: hexToRgbaLocal(t.brand, 0.38),
           borderColor: t.brand,
           borderWidth: 1,
         },
         historicDayCellText: {
           color: t.text,
-          fontSize: MOBILE_TYPE.caption,
+          fontSize: 10,
           fontWeight: '600',
+        },
+        historicDayCellTextOutOfRange: {
+          color: t.placeholder,
+          fontWeight: '400',
         },
         historicDayCellTextMuted: {
           color: t.placeholder,
@@ -1303,24 +1341,24 @@ export default function AdminScreen() {
           fontWeight: '800',
         },
         historicOlderRow: {
-          marginBottom: 10,
-          marginTop: 4,
+          marginBottom: 4,
+          marginTop: 2,
         },
         historicOlderLabel: {
-          color: t.subText,
-          fontSize: MOBILE_TYPE.micro,
-          marginBottom: 6,
+          color: t.placeholder,
+          fontSize: 10,
+          marginBottom: 4,
         },
         historicOlderScroll: {
-          gap: 6,
+          gap: 4,
         },
         historicOlderChip: {
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.pill,
           borderWidth: 1,
-          marginRight: 6,
-          paddingHorizontal: 10,
-          paddingVertical: 6,
+          marginRight: 4,
+          paddingHorizontal: 8,
+          paddingVertical: 4,
         },
         historicOlderChipSelected: {
           backgroundColor: hexToRgbaLocal(t.brand, 0.22),
@@ -1338,20 +1376,26 @@ export default function AdminScreen() {
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.sm,
           borderTopWidth: 1,
-          marginTop: 8,
-          paddingTop: 10,
+          marginTop: 4,
+          paddingTop: 6,
         },
         historicSelectedScroll: {
-          maxHeight: isDesktopWeb ? 280 : 220,
+          maxHeight: isDesktopWeb ? 160 : 140,
         },
         historicSelectedScrollContent: {
-          paddingBottom: 8,
+          paddingBottom: 4,
         },
         historicSelectedDateLabel: {
           color: t.brand,
-          fontSize: MOBILE_TYPE.bodyStrong,
+          fontSize: MOBILE_TYPE.micro,
           fontWeight: '700',
-          marginBottom: 8,
+          marginBottom: 4,
+        },
+        historicInlineEmpty: {
+          color: t.placeholder,
+          fontSize: MOBILE_TYPE.micro,
+          paddingVertical: 4,
+          textAlign: 'center',
         },
         primaryBtnTextOn: t.buttonPrimaryText,
         aiBtn: {
@@ -2255,8 +2299,8 @@ export default function AdminScreen() {
                   <View style={styles.routinesWorkspace}>
                   <View style={styles.managementGrid}>
                     <View style={styles.managementCol}>
-                      <View style={styles.sectionCard}>
-                        <Text style={styles.sectionCardTitle}>{tStr('admin_ultimos_dias')}</Text>
+                      <View style={[styles.sectionCard, styles.sectionCardPrimary]}>
+                        <Text style={styles.sectionCardTitlePrimary}>{tStr('admin_ultimos_dias')}</Text>
                         {lastWeekBlocks.length === 0 ? (
                           <Text style={styles.sectionEmptyText}>{tStr('admin_sin_bloques')}</Text>
                         ) : (
@@ -2275,16 +2319,16 @@ export default function AdminScreen() {
                     </View>
 
                     <View style={styles.managementCol}>
-                      <View style={styles.sectionCard}>
-                        <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
+                      <View style={[styles.sectionCard, styles.sectionCardHistoric]}>
+                        <Text style={styles.sectionCardTitleHistoric}>{tStr('admin_historico')}</Text>
                         <HistoricDayPicker
                           blocks={bloquesPlanOrdenados}
                           fechaKeyFrom={fechaKeyFrom}
                           dateLocale={dateLocale}
                           tStr={tStr}
                           styles={styles}
-                          planLabel={historicPlanLabel}
                           brandColor={t.brand}
+                          isDesktopWeb={isDesktopWeb}
                           renderBlock={(b) => <BloqueCard key={b.id} b={b} />}
                         />
                       </View>
