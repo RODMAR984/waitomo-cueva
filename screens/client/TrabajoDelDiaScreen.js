@@ -30,7 +30,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
 import { plansMatchForBlocks } from '../../utils/trainingBlockPlan';
-import { splitTextWithRmTokens, RM_HIGHLIGHT_COLOR, formatRmWeightKg } from '../../utils/rmPattern';
+import { RM_HIGHLIGHT_COLOR } from '../../utils/rmPattern';
+import RoutineBlockContent from '../../components/RoutineBlockContent';
 import {
   fetchTrabajoDiaFeedMessages,
   insertTrabajoDiaFeedMessage,
@@ -118,8 +119,9 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         container: { backgroundColor: 'transparent', flex: 1 },
         scroll: {
           flexGrow: 1,
-          justifyContent: 'center',
-          paddingVertical: 60,
+          justifyContent: Platform.OS === 'web' ? 'flex-start' : 'center',
+          paddingTop: Platform.OS === 'web' ? 16 : 60,
+          paddingBottom: Platform.OS === 'web' ? 20 : 60,
           width: '100%',
           alignSelf: 'center',
           maxWidth: panelMaxWidth,
@@ -268,6 +270,11 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           fontSize: MOBILE_TYPE.body,
           lineHeight: 22,
         },
+        blockContentRoot: {
+          color: t.text,
+          fontSize: MOBILE_TYPE.body,
+          lineHeight: 22,
+        },
         blockLineHighlighted: {
           color: t.brand,
           fontWeight: '700',
@@ -324,6 +331,8 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         coachNotesContent: {
           color: t.text,
           fontSize: MOBILE_TYPE.body,
+          lineHeight: 22,
+          ...(Platform.OS === 'web' ? { whiteSpace: 'pre-wrap' } : null),
         },
 
         // Notas
@@ -927,50 +936,6 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
     }
   }, [refreshTrainingBlocksFromServer]);
 
-  // ================== RENDER SET LINE ==================
-  const renderSetLine = (line, idx) => {
-    const segments = splitTextWithRmTokens(String(line || ''));
-    return (
-      <Text key={`line_${idx}`} style={[styles.blockLine, { marginBottom: 8 }]}>
-        {segments.map((seg, j) => {
-          if (seg.type === 'text') {
-            return <Text key={`${idx}_t_${j}`}>{seg.value}</Text>;
-          }
-          const pctNum = seg.pctNumber;
-          const rmStored = getRM(seg.exercise);
-          const hasNumericPct = !Number.isNaN(pctNum);
-          const weight =
-            hasNumericPct && rmStored != null
-              ? calculateWeight(pctNum, rmStored, seg.reps)
-              : null;
-          const displayWeight =
-            weight != null && !Number.isNaN(weight)
-              ? `${formatRmWeightKg(weight)} kg`
-              : null;
-          const pctLabel = hasNumericPct ? `${pctNum}%` : `${seg.pctRaw}%`;
-          const tokenShown = displayWeight || seg.full;
-          const needsLeadingSpace =
-            j > 0 && segments[j - 1]?.type === 'rm' && displayWeight;
-
-          return (
-            <Text
-              key={`${idx}_rm_${j}`}
-              style={styles.blockLineRmToken}
-              onPress={() => openRMModal(seg.exercise, pctLabel)}
-            >
-              {needsLeadingSpace ? '  ' : null}
-              {tokenShown}
-              {displayWeight ? ' ' : null}
-              {!displayWeight && rmStored == null ? (
-                <Text style={styles.blockLineRmHint}> {tStr('trabajo_rm_tap_completar')}</Text>
-              ) : null}
-            </Text>
-          );
-        })}
-      </Text>
-    );
-  };
-
   // ================== UI ==================
   if (!isAdminLike && !workoutEntitlement.ok) {
     if (workoutEntitlement.reason === 'loading') {
@@ -1092,9 +1057,6 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                 ) : (
                   bloquesDelDia.map((bloque) => {
                     const isExpanded = expandedId === bloque.id;
-                    const lines = Array.isArray(bloque.contenido)
-                      ? bloque.contenido
-                      : String(bloque.contenido || '').split('\n');
 
                     const videoLinks = Array.isArray(bloque.videoLinks)
                       ? bloque.videoLinks
@@ -1132,14 +1094,16 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
 
                         {isExpanded && (
                           <View style={styles.blockBody}>
-                            {lines.map((line, idx) => {
-                              if (!line) return null;
-                              return (
-                                <View key={`${bloque.id}_line_${idx}`}>
-                                  {renderSetLine(line, idx)}
-                                </View>
-                              );
-                            })}
+                            <RoutineBlockContent
+                              text={bloque.contenido}
+                              getRM={getRM}
+                              calculateWeight={calculateWeight}
+                              onRmPress={openRMModal}
+                              textStyle={styles.blockContentRoot}
+                              rmStyle={styles.blockLineRmToken}
+                              rmHintStyle={styles.blockLineRmHint}
+                              tStr={tStr}
+                            />
 
                             {/* Coach notes */}
                             {!!coachNotes && (

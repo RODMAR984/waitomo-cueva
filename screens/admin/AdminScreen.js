@@ -976,8 +976,8 @@ export default function AdminScreen() {
       StyleSheet.create({
         screen: { flex: 1, backgroundColor: 'transparent' },
         scrollContainer: {
-          paddingTop: Platform.OS === 'web' ? 40 : 56,
-          paddingBottom: 40,
+          paddingTop: Platform.OS === 'web' ? 20 : 56,
+          paddingBottom: Platform.OS === 'web' ? 16 : 40,
         },
 
         panel: {
@@ -986,7 +986,7 @@ export default function AdminScreen() {
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
-          marginBottom: 30,
+          marginBottom: Platform.OS === 'web' ? 12 : 30,
           padding: 20,
           width: panelWidth,
         },
@@ -1168,10 +1168,19 @@ export default function AdminScreen() {
           columnGap: 12,
           rowGap: 12,
           marginTop: 8,
+          alignItems: 'flex-start',
+        },
+        managementGridSingle: {
+          flexDirection: 'column',
         },
         managementCol: {
           flex: 1,
           minWidth: 0,
+          alignSelf: 'stretch',
+        },
+        managementColFull: {
+          flex: 0,
+          width: '100%',
         },
         sectionCard: {
           borderRadius: MOBILE_RADII.md,
@@ -1179,6 +1188,7 @@ export default function AdminScreen() {
           borderColor: t.overlayBorder,
           backgroundColor: t.inputBg,
           padding: 12,
+          alignSelf: 'stretch',
         },
         sectionCardTitle: {
           color: t.text,
@@ -1187,7 +1197,7 @@ export default function AdminScreen() {
           marginBottom: 10,
         },
         sectionListScroll: {
-          maxHeight: isDesktopWeb ? 520 : undefined,
+          maxHeight: isDesktopWeb ? 480 : undefined,
         },
         sectionListContent: {
           paddingBottom: 4,
@@ -1479,7 +1489,11 @@ export default function AdminScreen() {
           flexWrap: 'wrap',
           alignItems: 'baseline',
         },
-        previewText: { color: t.text, ...RM_PREVIEW_BASE() },
+        previewText: {
+          color: t.text,
+          ...RM_PREVIEW_BASE(),
+          ...(Platform.OS === 'web' ? { whiteSpace: 'pre-wrap' } : null),
+        },
         rmText: {
           ...RM_PREVIEW_BASE(),
           backgroundColor: hexToRgbaLocal(RM_HIGHLIGHT_COLOR, 0.14),
@@ -2093,8 +2107,18 @@ export default function AdminScreen() {
                   <Text style={styles.blockListsSectionTitle}>{tStr('admin_lists_section_title')}</Text>
                   <Text style={styles.blockListsSectionSub}>{tStr('admin_lists_section_sub')}</Text>
 
-                  <View style={styles.managementGrid}>
-                    <View style={styles.managementCol}>
+                  <View
+                    style={[
+                      styles.managementGrid,
+                      historicBlocks.length === 0 && styles.managementGridSingle,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.managementCol,
+                        historicBlocks.length === 0 && styles.managementColFull,
+                      ]}
+                    >
                       <View style={styles.sectionCard}>
                         <Text style={styles.sectionCardTitle}>{tStr('admin_ultimos_dias')}</Text>
                         {lastWeekBlocks.length === 0 ? (
@@ -2114,12 +2138,10 @@ export default function AdminScreen() {
                       </View>
                     </View>
 
-                    <View style={styles.managementCol}>
-                      <View style={styles.sectionCard}>
-                        <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
-                        {historicBlocks.length === 0 ? (
-                          <Text style={styles.sectionEmptyText}>{tStr('admin_sin_historico')}</Text>
-                        ) : (
+                    {historicBlocks.length > 0 ? (
+                      <View style={styles.managementCol}>
+                        <View style={styles.sectionCard}>
+                          <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
                           <ScrollView
                             style={styles.sectionListScroll}
                             contentContainerStyle={styles.sectionListContent}
@@ -2130,9 +2152,9 @@ export default function AdminScreen() {
                               <BloqueCard key={b.id} b={b} />
                             ))}
                           </ScrollView>
-                        )}
+                        </View>
                       </View>
-                    </View>
+                    ) : null}
                   </View>
 
                   <TouchableOpacity
