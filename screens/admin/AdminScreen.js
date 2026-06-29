@@ -37,6 +37,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { normalizeBlockPlanKey, plansMatchForBlocks } from '../../utils/trainingBlockPlan';
 import { resolveTrainingBlocksOrgId } from '../../utils/resolveTrainingBlocksOrgId';
+import HistoricDayPicker from '../../components/HistoricDayPicker';
 import { formatYmdLocal } from '../../utils/formatYmdLocal';
 import { extractRmTags, splitTextWithRmTokens, RM_HIGHLIGHT_COLOR } from '../../utils/rmPattern';
 import {
@@ -592,17 +593,10 @@ export default function AdminScreen() {
     });
   }, [bloquesPlanOrdenados]);
 
-  const historicBlocks = useMemo(() => {
-    const now = new Date();
-    now.setHours(12, 0, 0, 0);
-    const sevenAgo = new Date(now);
-    sevenAgo.setDate(now.getDate() - 7);
-    return bloquesPlanOrdenados.filter((b) => {
-      const fk = b.fechaKey || fechaKeyFrom(new Date(b.fecha || 0));
-      const d = fk ? new Date(`${fk}T12:00:00`) : new Date(b.fecha || 0);
-      return d < sevenAgo;
-    });
-  }, [bloquesPlanOrdenados]);
+  const historicPlanLabel = useMemo(() => {
+    const p = plansDisponibles.find((x) => x.value === planSeleccionado);
+    return p?.label || planSeleccionado || '';
+  }, [plansDisponibles, planSeleccionado]);
 
   const chatPlanId =
     normalizeBlockPlanKey(planSeleccionado) ||
@@ -1170,17 +1164,10 @@ export default function AdminScreen() {
           marginTop: 8,
           alignItems: 'flex-start',
         },
-        managementGridSingle: {
-          flexDirection: 'column',
-        },
         managementCol: {
           flex: 1,
           minWidth: 0,
           alignSelf: 'stretch',
-        },
-        managementColFull: {
-          flex: 0,
-          width: '100%',
         },
         sectionCard: {
           borderRadius: MOBILE_RADII.md,
@@ -1206,6 +1193,115 @@ export default function AdminScreen() {
           color: t.placeholder,
           textAlign: 'center',
           paddingVertical: 10,
+        },
+        historicHint: {
+          color: t.subText,
+          fontSize: MOBILE_TYPE.caption,
+          lineHeight: 18,
+          marginBottom: 6,
+        },
+        historicPlanHint: {
+          color: t.placeholder,
+          fontSize: MOBILE_TYPE.micro,
+          marginBottom: 10,
+        },
+        historicMonthBlock: {
+          marginBottom: 12,
+        },
+        historicMonthTitle: {
+          color: t.text,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '700',
+          marginBottom: 6,
+          textTransform: 'capitalize',
+        },
+        historicDayGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+        },
+        historicDayCell: {
+          alignItems: 'center',
+          borderRadius: MOBILE_RADII.sm,
+          justifyContent: 'center',
+          marginBottom: 4,
+          minHeight: 34,
+          paddingVertical: 4,
+          width: '14.28%',
+        },
+        historicDayCellEmpty: {
+          opacity: 0.35,
+        },
+        historicDayCellHasData: {
+          backgroundColor: hexToRgbaLocal(t.brand, 0.12),
+        },
+        historicDayCellSelected: {
+          backgroundColor: hexToRgbaLocal(t.brand, 0.32),
+          borderColor: t.brand,
+          borderWidth: 1,
+        },
+        historicDayCellText: {
+          color: t.text,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '600',
+        },
+        historicDayCellTextMuted: {
+          color: t.placeholder,
+          fontWeight: '400',
+        },
+        historicDayCellTextSelected: {
+          color: t.text,
+          fontWeight: '800',
+        },
+        historicOlderRow: {
+          marginBottom: 10,
+          marginTop: 4,
+        },
+        historicOlderLabel: {
+          color: t.subText,
+          fontSize: MOBILE_TYPE.micro,
+          marginBottom: 6,
+        },
+        historicOlderScroll: {
+          gap: 6,
+        },
+        historicOlderChip: {
+          borderColor: t.overlayBorder,
+          borderRadius: MOBILE_RADII.pill,
+          borderWidth: 1,
+          marginRight: 6,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+        },
+        historicOlderChipSelected: {
+          backgroundColor: hexToRgbaLocal(t.brand, 0.22),
+          borderColor: t.brand,
+        },
+        historicOlderChipText: {
+          color: t.subText,
+          fontSize: MOBILE_TYPE.caption,
+        },
+        historicOlderChipTextSelected: {
+          color: t.text,
+          fontWeight: '700',
+        },
+        historicSelectedPanel: {
+          borderColor: t.overlayBorder,
+          borderRadius: MOBILE_RADII.sm,
+          borderTopWidth: 1,
+          marginTop: 8,
+          paddingTop: 10,
+        },
+        historicSelectedScroll: {
+          maxHeight: isDesktopWeb ? 360 : 280,
+        },
+        historicSelectedScrollContent: {
+          paddingBottom: 8,
+        },
+        historicSelectedDateLabel: {
+          color: t.brand,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '700',
+          marginBottom: 8,
         },
         primaryBtnTextOn: t.buttonPrimaryText,
         aiBtn: {
@@ -2107,18 +2203,8 @@ export default function AdminScreen() {
                   <Text style={styles.blockListsSectionTitle}>{tStr('admin_lists_section_title')}</Text>
                   <Text style={styles.blockListsSectionSub}>{tStr('admin_lists_section_sub')}</Text>
 
-                  <View
-                    style={[
-                      styles.managementGrid,
-                      historicBlocks.length === 0 && styles.managementGridSingle,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.managementCol,
-                        historicBlocks.length === 0 && styles.managementColFull,
-                      ]}
-                    >
+                  <View style={styles.managementGrid}>
+                    <View style={styles.managementCol}>
                       <View style={styles.sectionCard}>
                         <Text style={styles.sectionCardTitle}>{tStr('admin_ultimos_dias')}</Text>
                         {lastWeekBlocks.length === 0 ? (
@@ -2138,23 +2224,20 @@ export default function AdminScreen() {
                       </View>
                     </View>
 
-                    {historicBlocks.length > 0 ? (
-                      <View style={styles.managementCol}>
-                        <View style={styles.sectionCard}>
-                          <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
-                          <ScrollView
-                            style={styles.sectionListScroll}
-                            contentContainerStyle={styles.sectionListContent}
-                            nestedScrollEnabled
-                            showsVerticalScrollIndicator={isDesktopWeb}
-                          >
-                            {historicBlocks.map((b) => (
-                              <BloqueCard key={b.id} b={b} />
-                            ))}
-                          </ScrollView>
-                        </View>
+                    <View style={styles.managementCol}>
+                      <View style={styles.sectionCard}>
+                        <Text style={styles.sectionCardTitle}>{tStr('admin_historico')}</Text>
+                        <HistoricDayPicker
+                          blocks={bloquesPlanOrdenados}
+                          fechaKeyFrom={fechaKeyFrom}
+                          dateLocale={dateLocale}
+                          tStr={tStr}
+                          styles={styles}
+                          planLabel={historicPlanLabel}
+                          renderBlock={(b) => <BloqueCard key={b.id} b={b} />}
+                        />
                       </View>
-                    ) : null}
+                    </View>
                   </View>
 
                   <TouchableOpacity
