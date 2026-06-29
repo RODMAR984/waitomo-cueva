@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Linking, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  Linking,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { normalizeVideoLinkEntry, videoLinksToUrlList } from '../utils/videoLinkPreview';
 
@@ -13,7 +21,13 @@ export default function VideoLinksThumbs({ links, themeStyles, placeholderColor 
   if (!urls.length) return null;
   const ts = themeStyles || {};
   return (
-    <View style={ts.videoThumbRow}>
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      showsHorizontalScrollIndicator={false}
+      style={[ts.videoThumbRow, styles.scroll]}
+      contentContainerStyle={styles.scrollContent}
+    >
       {urls.map((url, idx) => (
         <VideoThumbCell
           key={`v_${idx}_${url.slice(0, 24)}`}
@@ -22,7 +36,7 @@ export default function VideoLinksThumbs({ links, themeStyles, placeholderColor 
           placeholderColor={placeholderColor}
         />
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -45,11 +59,11 @@ function VideoThumbCell({ url, themeStyles, placeholderColor }) {
           onError={() => setImgErr(true)}
         />
       ) : (
-        <View style={[styles.fallback, { height: themeStyles.videoImage?.height || 60 }]}>
-          <Ionicons name="link-outline" size={26} color={placeholderColor} />
+        <View style={[styles.fallback, { height: themeStyles.videoImage?.height || 56 }]}>
+          <Ionicons name="link-outline" size={22} color={placeholderColor} />
         </View>
       )}
-      <Text style={themeStyles.videoLabel} numberOfLines={2}>
+      <Text style={themeStyles.videoLabel} numberOfLines={1}>
         {v.label}
       </Text>
     </TouchableOpacity>
@@ -57,6 +71,14 @@ function VideoThumbCell({ url, themeStyles, placeholderColor }) {
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 0,
+  },
+  scrollContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 2,
+  },
   fallback: {
     width: '100%',
     alignItems: 'center',

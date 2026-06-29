@@ -284,8 +284,6 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
 
         // Enlaces a video
         videoThumbRow: {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
           marginTop: 8,
         },
         videoThumb: {
@@ -294,18 +292,18 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginRight: 8,
-          marginTop: 8,
           overflow: 'hidden',
-          width: 90,
+          width: 88,
         },
         videoImage: {
-          height: 60,
+          height: 50,
           width: '100%',
         },
         videoLabel: {
           color: t.text,
-          fontSize: MOBILE_TYPE.caption,
-          padding: 4,
+          fontSize: MOBILE_TYPE.micro,
+          paddingHorizontal: 4,
+          paddingVertical: 3,
         },
 
         // Coach notes

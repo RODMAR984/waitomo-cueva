@@ -1302,8 +1302,6 @@ export default function AdminScreen() {
         noteText: { color: t.text },
 
         videoThumbRow: {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
           marginTop: 8,
         },
         videoThumb: {
@@ -1312,18 +1310,18 @@ export default function AdminScreen() {
           borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
           marginRight: 8,
-          marginTop: 8,
           overflow: 'hidden',
-          width: 100,
+          width: 88,
         },
         videoImage: {
-          height: 56,
+          height: 50,
           width: '100%',
         },
         videoLabel: {
           color: t.text,
           fontSize: MOBILE_TYPE.micro,
-          padding: 4,
+          paddingHorizontal: 4,
+          paddingVertical: 3,
         },
 
         chatContainer: {
