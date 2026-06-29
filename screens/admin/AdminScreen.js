@@ -593,10 +593,6 @@ export default function AdminScreen() {
     });
   }, [bloquesPlanOrdenados]);
 
-  const historicPlanLabel = useMemo(() => {
-    const p = plansDisponibles.find((x) => x.value === planSeleccionado);
-    return p?.label || planSeleccionado || '';
-  }, [plansDisponibles, planSeleccionado]);
 
   const chatPlanId =
     normalizeBlockPlanKey(planSeleccionado) ||
