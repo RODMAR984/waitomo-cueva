@@ -144,6 +144,9 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
         },
         staffWebRail: {
           width: STAFF_WEB_RAIL,
+          flexShrink: 0,
+          flexGrow: 0,
+          zIndex: 2,
           alignSelf: 'stretch',
           flexDirection: 'column',
           paddingTop: 16,
@@ -221,8 +224,7 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
           minWidth: 0,
           ...(Platform.OS === 'web'
             ? {
-                width: '100%',
-                alignSelf: 'stretch',
+                flexShrink: 1,
                 minHeight: '100dvh',
                 backgroundColor: 'transparent',
               }

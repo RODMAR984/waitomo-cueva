@@ -1202,6 +1202,48 @@ export default function AdminScreen() {
           marginBottom: 10,
           paddingHorizontal: 4,
         },
+        historicCalendarToggle: {
+          alignItems: 'center',
+          backgroundColor: hexToRgbaLocal(t.brand, 0.1),
+          borderColor: t.overlayBorder,
+          borderRadius: MOBILE_RADII.sm,
+          borderWidth: 1,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+        },
+        historicCalendarToggleLeft: {
+          alignItems: 'center',
+          columnGap: 10,
+          flex: 1,
+          flexDirection: 'row',
+          minWidth: 0,
+        },
+        historicCalendarToggleTextWrap: {
+          flex: 1,
+          minWidth: 0,
+        },
+        historicCalendarToggleTitle: {
+          color: t.brand,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '800',
+        },
+        historicCalendarToggleSub: {
+          color: t.subText,
+          fontSize: MOBILE_TYPE.micro,
+          marginTop: 2,
+        },
+        historicCalendarPanel: {
+          marginBottom: 8,
+        },
+        historicCalendarScroll: {
+          maxHeight: isDesktopWeb ? 200 : 180,
+        },
+        historicCalendarScrollContent: {
+          paddingBottom: 4,
+        },
         historicHint: {
           color: t.subText,
           fontSize: MOBILE_TYPE.caption,
@@ -1300,7 +1342,7 @@ export default function AdminScreen() {
           paddingTop: 10,
         },
         historicSelectedScroll: {
-          maxHeight: isDesktopWeb ? 360 : 280,
+          maxHeight: isDesktopWeb ? 280 : 220,
         },
         historicSelectedScrollContent: {
           paddingBottom: 8,
@@ -2242,6 +2284,7 @@ export default function AdminScreen() {
                           tStr={tStr}
                           styles={styles}
                           planLabel={historicPlanLabel}
+                          brandColor={t.brand}
                           renderBlock={(b) => <BloqueCard key={b.id} b={b} />}
                         />
                       </View>
