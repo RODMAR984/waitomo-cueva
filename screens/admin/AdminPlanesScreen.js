@@ -31,6 +31,7 @@ import {
   WEB_DESKTOP_BREAKPOINT,
 } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { confirmAction } from '../../utils/confirmAction';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -339,6 +340,53 @@ export default function AdminPlanesScreen() {
       await loadPlans();
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_update_fail'));
+    }
+  };
+
+  const deletePlan = async (row) => {
+    if (!orgId || !isOwner) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_plans_no_permission'));
+      return;
+    }
+    const ok = await confirmAction({
+      title: tStr('admin_plans_delete_confirm_title'),
+      message: tStr('admin_plans_delete_confirm_body').replace('{{title}}', row.title || row.code || ''),
+      confirmLabel: tStr('admin_eliminar'),
+      cancelLabel: tStr('common_cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
+
+    try {
+      const planCode = row.code;
+      const { error: slotsErr } = await supabase
+        .from('plan_week_slots')
+        .delete()
+        .eq('organization_id', orgId)
+        .eq('plan_code', planCode);
+      if (slotsErr) throw slotsErr;
+
+      const { error: abonosErr } = await supabase
+        .from('abonos')
+        .delete()
+        .eq('organization_id', orgId)
+        .eq('plan_id', planCode);
+      if (abonosErr) throw abonosErr;
+
+      const { error: commErr } = await supabase
+        .from('coach_plan_commissions')
+        .delete()
+        .eq('organization_id', orgId)
+        .eq('plan_key', planCode);
+      if (commErr && !String(commErr.message || '').includes('does not exist')) throw commErr;
+
+      const { error } = await supabase.from('plans').delete().eq('id', row.id);
+      if (error) throw error;
+
+      if (editingId === row.id) cancelForm();
+      await loadPlans();
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_delete_fail'));
     }
   };
 
@@ -755,6 +803,9 @@ export default function AdminPlanesScreen() {
                           <Switch value={!!p.active} onValueChange={() => toggleActive(p)} trackColor={{ false: t.overlayBorder, true: t.brand }} />
                           <TouchableOpacity onPress={() => openEdit(p)} style={{ padding: 8 }}>
                             <Ionicons name="pencil" size={22} color={t.brand} />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => deletePlan(p)} style={{ padding: 8 }}>
+                            <Ionicons name="trash-outline" size={22} color={t.danger} />
                           </TouchableOpacity>
                         </>
                       )}

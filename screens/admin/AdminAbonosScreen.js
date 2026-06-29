@@ -28,6 +28,7 @@ import { supabase } from '../../supabaseClient';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { confirmAction } from '../../utils/confirmAction';
 
 const hexToRgba = (hex, alpha) => {
   const clean = String(hex || '').replace('#', '');
@@ -209,6 +210,30 @@ export default function AdminAbonosScreen() {
       await loadAbonos({ silent: true });
     } catch (e) {
       Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_update_fail'));
+    }
+  };
+
+  const deleteAbono = async (row) => {
+    if (!orgId || !isOwner) {
+      Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_abonos_no_permission'));
+      return;
+    }
+    const ok = await confirmAction({
+      title: tStr('admin_abonos_delete_confirm_title'),
+      message: tStr('admin_abonos_delete_confirm_body').replace('{{name}}', row.name || ''),
+      confirmLabel: tStr('admin_eliminar'),
+      cancelLabel: tStr('common_cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
+
+    try {
+      const { error } = await supabase.from('abonos').delete().eq('id', row.id);
+      if (error) throw error;
+      if (editingId === row.id) cancelForm();
+      await loadAbonos({ silent: true });
+    } catch (e) {
+      Alert.alert(tStr('gym_config_alert_title_error'), e?.message || tStr('admin_crud_delete_fail'));
     }
   };
 
@@ -454,6 +479,9 @@ export default function AdminAbonosScreen() {
                     />
                     <TouchableOpacity onPress={() => openEdit(a)} style={{ padding: 8 }}>
                       <Ionicons name="pencil" size={22} color={t.subText} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteAbono(a)} style={{ padding: 8 }}>
+                      <Ionicons name="trash-outline" size={22} color={t.danger} />
                     </TouchableOpacity>
                   </>
                 )}

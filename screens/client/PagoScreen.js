@@ -11,10 +11,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   Linking,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import PropTypes from 'prop-types';
 import * as Clipboard from 'expo-clipboard';
@@ -37,6 +37,7 @@ import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../t
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import NeoPanel from '../../components/NeoPanel';
 import { reportError, trackEvent } from '../../utils/observability';
+import { showAppAlert } from '../../utils/confirmAction';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -87,6 +88,7 @@ export default function PagoScreen({ navigation, route }) {
     Constants.expoConfig?.extra?.showPaidShortcut === true;
   const [paymentId, setPaymentId] = useState(null);
   const [paymentUrl, setPaymentUrl] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const userId = userData?.id || ctxUser?.id || null;
 
@@ -141,8 +143,69 @@ export default function PagoScreen({ navigation, route }) {
     paymentMethods.efectivo;
 
   const copiarDatos = async (texto) => {
-    await Clipboard.setStringAsync(texto);
-    Alert.alert(tStr('pago_copied_title'), `${texto}\n\n${tStr('pago_copied_hint')}`);
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(texto);
+      } else {
+        await Clipboard.setStringAsync(texto);
+      }
+    } catch (e) {
+      // En web sin permiso de portapapeles igual mostramos los datos en el diálogo.
+      console.warn('copiarDatos:', e?.message || e);
+    }
+    showAppAlert(tStr('pago_copied_title'), `${texto}\n\n${tStr('pago_copied_hint')}`);
+  };
+
+  const openCheckoutUrl = async (url) => {
+    if (!url) return false;
+    const href = String(url);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const popup = window.open(href, '_blank', 'noopener,noreferrer');
+      if (!popup) window.location.assign(href);
+      return true;
+    }
+    if (href.includes('mercadopago') || href.includes('stripe.com')) {
+      await WebBrowser.openBrowserAsync(href);
+    } else {
+      await Linking.openURL(href);
+    }
+    return true;
+  };
+
+  const runWithBusy = async (fn) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await fn();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleManualMethod = async (metodo, copyText) => {
+    if (!userId) {
+      showAppAlert(tStr('reg_complete_alert_no_session_title'), tStr('reg_complete_alert_no_session_body'));
+      return;
+    }
+    await runWithBusy(async () => {
+      try {
+        await crearIntentoPago(metodo);
+        if (metodo === 'efectivo') {
+          showAppAlert(
+            tStr('pago_manual_pending_title'),
+            `${tStr('pago_cash_alert')}\n\n${tStr('pago_manual_pending_body')}`,
+          );
+        } else if (copyText) {
+          await copiarDatos(copyText);
+          showAppAlert(tStr('pago_manual_pending_title'), tStr('pago_manual_pending_body'));
+        } else {
+          showAppAlert(tStr('pago_manual_pending_title'), tStr('pago_manual_pending_body'));
+        }
+      } catch (e) {
+        reportError('pago_manual_method_error', e, { metodo, plan_key: planCanon });
+        showAppAlert(tStr('security_error_title'), tStr('pago_manual_method_err'));
+      }
+    });
   };
 
   const crearIntentoPago = async (metodo) => {
@@ -195,7 +258,7 @@ export default function PagoScreen({ navigation, route }) {
         } catch (e) {
           console.warn('Checkout Pro MP:', e?.message || e);
           if (String(e?.message || '') === 'mercadopago_checkout_disabled') {
-            Alert.alert(tStr('pago_mp_checkout_disabled_title'), tStr('pago_mp_checkout_disabled_msg'));
+            showAppAlert(tStr('pago_mp_checkout_disabled_title'), tStr('pago_mp_checkout_disabled_msg'));
           }
           url = null;
         }
@@ -399,6 +462,13 @@ export default function PagoScreen({ navigation, route }) {
 
         volverWrap: { alignItems: 'center', marginTop: 6 },
         volverText: { color: t.text, fontSize: MOBILE_TYPE.subhead },
+        busyOverlay: {
+          ...StyleSheet.absoluteFillObject,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: hexToRgba('#000000', 0.35),
+          borderRadius: MOBILE_RADII.lg,
+        },
       }),
     [t],
   );
@@ -414,6 +484,12 @@ export default function PagoScreen({ navigation, route }) {
           <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('pago_title_select')}</Text>
 
+            {busy ? (
+              <View style={styles.busyOverlay} pointerEvents="none">
+                <ActivityIndicator size="large" color={t.brand} />
+              </View>
+            ) : null}
+
             {!anyPaymentMethod ? (
               <Text style={styles.mpHint}>{tStr('pago_no_methods_configured')}</Text>
             ) : null}
@@ -424,29 +500,37 @@ export default function PagoScreen({ navigation, route }) {
 
                 <TouchableOpacity
                   style={styles.btnPrimary}
-                  onPress={async () => {
-                    try {
-                      trackEvent('pago_mp_checkout_start', { plan_key: planCanon });
-                      const r = await crearIntentoPago('mercadopago');
-                      const url = r?.paymentUrl;
-                      if (url && String(url).includes('mercadopago')) {
-                        await WebBrowser.openBrowserAsync(url);
-                        trackEvent('pago_mp_checkout_browser_open', { plan_key: planCanon });
-                      } else if (url) {
-                        await Linking.openURL(url);
-                        trackEvent('pago_mp_checkout_link_open', { plan_key: planCanon });
-                      } else {
-                        trackEvent('pago_mp_checkout_no_url', { plan_key: planCanon });
-                        Alert.alert(
-                          tStr('pago_mp_checkout_unavailable_title'),
-                          tStr('pago_mp_checkout_unavailable_msg'),
-                        );
+                  disabled={busy}
+                  onPress={() =>
+                    runWithBusy(async () => {
+                      try {
+                        if (!userId) {
+                          showAppAlert(
+                            tStr('reg_complete_alert_no_session_title'),
+                            tStr('reg_complete_alert_no_session_body'),
+                          );
+                          return;
+                        }
+                        trackEvent('pago_mp_checkout_start', { plan_key: planCanon });
+                        const r = await crearIntentoPago('mercadopago');
+                        const url = r?.paymentUrl;
+                        if (url) {
+                          await openCheckoutUrl(url);
+                          trackEvent('pago_mp_checkout_browser_open', { plan_key: planCanon });
+                          showAppAlert(tStr('pago_mp_return_title'), tStr('pago_mp_return_body'));
+                        } else {
+                          trackEvent('pago_mp_checkout_no_url', { plan_key: planCanon });
+                          showAppAlert(
+                            tStr('pago_mp_checkout_unavailable_title'),
+                            tStr('pago_mp_checkout_unavailable_msg'),
+                          );
+                        }
+                      } catch (e) {
+                        reportError('pago_mp_checkout_error', e, { plan_key: planCanon });
+                        showAppAlert(tStr('security_error_title'), tStr('pago_mp_checkout_err'));
                       }
-                    } catch (e) {
-                      reportError('pago_mp_checkout_error', e, { plan_key: planCanon });
-                      Alert.alert(tStr('security_error_title'), tStr('pago_mp_checkout_err'));
-                    }
-                  }}
+                    })
+                  }
                 >
                   <Text style={styles.btnTextOn}>{tStr('pago_btn_mercadopago')}</Text>
                 </TouchableOpacity>
@@ -460,28 +544,44 @@ export default function PagoScreen({ navigation, route }) {
                 <Text style={styles.mpHint}>{tStr('pago_stripe_checkout_hint')}</Text>
                 <TouchableOpacity
                   style={styles.btnPrimary}
-                  onPress={async () => {
-                    try {
-                      trackEvent('pago_stripe_checkout_start', { plan_key: planCanon });
-                      const result = await createStripeCheckoutSession({
-                        organizationId: organization?.id,
-                        memberUserId: userId,
-                        planId: planCanon,
-                        periodo,
-                        amount: monto,
-                        currency: selectedCurrency,
-                        title: `FitEngine · ${planCanon}`,
-                      });
-                      if (result?.payment_id) setPaymentId(result.payment_id);
-                      if (result?.checkout_url) {
-                        await WebBrowser.openBrowserAsync(result.checkout_url);
-                        trackEvent('pago_stripe_checkout_browser_open', { plan_key: planCanon });
+                  disabled={busy}
+                  onPress={() =>
+                    runWithBusy(async () => {
+                      try {
+                        if (!userId) {
+                          showAppAlert(
+                            tStr('reg_complete_alert_no_session_title'),
+                            tStr('reg_complete_alert_no_session_body'),
+                          );
+                          return;
+                        }
+                        trackEvent('pago_stripe_checkout_start', { plan_key: planCanon });
+                        const result = await createStripeCheckoutSession({
+                          organizationId: organization?.id,
+                          memberUserId: userId,
+                          planId: planCanon,
+                          periodo,
+                          amount: monto,
+                          currency: selectedCurrency,
+                          title: `FitEngine · ${planCanon}`,
+                        });
+                        if (result?.payment_id) setPaymentId(result.payment_id);
+                        if (result?.checkout_url) {
+                          await openCheckoutUrl(result.checkout_url);
+                          trackEvent('pago_stripe_checkout_browser_open', { plan_key: planCanon });
+                          showAppAlert(tStr('pago_mp_return_title'), tStr('pago_stripe_return_body'));
+                        } else {
+                          showAppAlert(
+                            tStr('pago_mp_checkout_unavailable_title'),
+                            tStr('pago_stripe_checkout_err'),
+                          );
+                        }
+                      } catch (e) {
+                        reportError('pago_stripe_checkout_error', e, { plan_key: planCanon });
+                        showAppAlert(tStr('security_error_title'), tStr('pago_stripe_checkout_err'));
                       }
-                    } catch (e) {
-                      reportError('pago_stripe_checkout_error', e, { plan_key: planCanon });
-                      Alert.alert(tStr('security_error_title'), tStr('pago_stripe_checkout_err'));
-                    }
-                  }}
+                    })
+                  }
                 >
                   <Text style={styles.btnTextOn}>{tStr('pago_btn_stripe')}</Text>
                 </TouchableOpacity>
@@ -491,10 +591,8 @@ export default function PagoScreen({ navigation, route }) {
             {paymentMethods.transferencia ? (
               <TouchableOpacity
                 style={styles.btnPrimary}
-                onPress={async () => {
-                  await copiarDatos(paymentMethods.transfer_copy);
-                  await crearIntentoPago('transferencia');
-                }}
+                disabled={busy}
+                onPress={() => handleManualMethod('transferencia', paymentMethods.transfer_copy)}
               >
                 <Text style={styles.btnTextOn}>{tStr('pago_btn_transfer')}</Text>
               </TouchableOpacity>
@@ -503,10 +601,8 @@ export default function PagoScreen({ navigation, route }) {
             {paymentMethods.cuenta_dni ? (
               <TouchableOpacity
                 style={styles.btnPrimary}
-                onPress={async () => {
-                  await copiarDatos(paymentMethods.dni_copy);
-                  await crearIntentoPago('cuenta_dni');
-                }}
+                disabled={busy}
+                onPress={() => handleManualMethod('cuenta_dni', paymentMethods.dni_copy)}
               >
                 <Text style={styles.btnTextOn}>{tStr('pago_btn_dni')}</Text>
               </TouchableOpacity>
@@ -515,10 +611,8 @@ export default function PagoScreen({ navigation, route }) {
             {paymentMethods.modo ? (
               <TouchableOpacity
                 style={styles.btnPrimary}
-                onPress={async () => {
-                  await copiarDatos(paymentMethods.modo_copy);
-                  await crearIntentoPago('modo');
-                }}
+                disabled={busy}
+                onPress={() => handleManualMethod('modo', paymentMethods.modo_copy)}
               >
                 <Text style={styles.btnTextOn}>{tStr('pago_btn_modo')}</Text>
               </TouchableOpacity>
@@ -527,19 +621,23 @@ export default function PagoScreen({ navigation, route }) {
             {paymentMethods.efectivo ? (
               <TouchableOpacity
                 style={styles.btnPrimary}
-                onPress={async () => {
-                  Alert.alert(tStr('pago_cash_alert'));
-                  await crearIntentoPago('efectivo');
-                }}
+                disabled={busy}
+                onPress={() => handleManualMethod('efectivo')}
               >
                 <Text style={styles.btnTextOn}>{tStr('pago_btn_cash')}</Text>
               </TouchableOpacity>
             ) : null}
 
+            <TouchableOpacity
+              style={styles.btnSecondary}
+              disabled={busy}
+              onPress={() => runWithBusy(handlePagoConfirmado)}
+            >
+              <Text style={styles.btnText}>{tStr('pago_btn_paid')}</Text>
+            </TouchableOpacity>
+
             {showPaidShortcut ? (
-              <TouchableOpacity style={styles.btnSecondary} onPress={handlePagoConfirmado}>
-                <Text style={styles.btnText}>{tStr('pago_btn_paid')}</Text>
-              </TouchableOpacity>
+              <Text style={styles.mpHint}>{tStr('pago_dev_shortcut_hint')}</Text>
             ) : null}
 
             <View style={styles.volverWrap}>

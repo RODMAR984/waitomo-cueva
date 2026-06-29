@@ -253,6 +253,16 @@ export const translations = {
     pago_btn_cash: '💵 Efectivo en el box',
     pago_cash_alert: '💬 Pagá directamente en el box con efectivo.',
     pago_btn_paid: '✅ Ya pagué (avisar)',
+    pago_manual_pending_title: 'Datos listos',
+    pago_manual_pending_body:
+      'Cuando hagas el pago, tocá «Ya pagué (avisar)» abajo para continuar con tu registro.',
+    pago_manual_method_err: 'No se pudo registrar el intento de pago. Intentá de nuevo.',
+    pago_mp_return_title: 'Volvé a FitEngine',
+    pago_mp_return_body:
+      'Completá el pago en la ventana que se abrió. Cuando termines, volvé acá y tocá «Ya pagué (avisar)» para seguir.',
+    pago_stripe_return_body:
+      'Completá el pago en Stripe. Cuando termines, volvé acá y tocá «Ya pagué (avisar)» para seguir.',
+    pago_dev_shortcut_hint: 'Atajo de desarrollo: el botón de arriba también está visible en producción.',
     pago_back: '⬅ Volver',
     pago_copied_title: '📋 Copiado',
     pago_copied_hint: 'Ya podés pegarlo en tu app de pago.',
@@ -1133,6 +1143,12 @@ export const translations = {
     admin_plans_no_permission: 'Solo el dueño puede crear o editar planes.',
     admin_crud_save_fail: 'No se pudo guardar.',
     admin_crud_update_fail: 'No se pudo actualizar.',
+    admin_crud_delete_fail: 'No se pudo eliminar.',
+    admin_plans_delete_confirm_title: 'Eliminar plan',
+    admin_plans_delete_confirm_body:
+      'Se borrará «{{title}}» junto con sus abonos, horarios semanales y comisiones de coaches. Los clientes que ya tengan ese plan asignado no se modifican solos.',
+    admin_abonos_delete_confirm_title: 'Eliminar abono',
+    admin_abonos_delete_confirm_body: 'Se borrará «{{name}}». No se puede deshacer.',
 
     admin_abonos_screen_title: 'Abonos',
     admin_abonos_filter_label: 'Plan:',
@@ -2258,6 +2274,16 @@ export const translations = {
     pago_btn_cash: '💵 Cash at the box',
     pago_cash_alert: '💬 Pay in person at the box with cash.',
     pago_btn_paid: '✅ I already paid (notify)',
+    pago_manual_pending_title: 'You’re set',
+    pago_manual_pending_body:
+      'After you pay, tap «I already paid (notify)» below to continue registration.',
+    pago_manual_method_err: 'Could not record the payment attempt. Please try again.',
+    pago_mp_return_title: 'Return to FitEngine',
+    pago_mp_return_body:
+      'Complete payment in the window that opened. When done, come back here and tap «I already paid (notify)» to continue.',
+    pago_stripe_return_body:
+      'Complete payment in Stripe. When done, come back here and tap «I already paid (notify)» to continue.',
+    pago_dev_shortcut_hint: 'Dev shortcut note: the button above is also visible in production.',
     pago_back: '⬅ Back',
     pago_copied_title: '📋 Copied',
     pago_copied_hint: 'You can paste it in your payment app.',
@@ -3136,6 +3162,12 @@ export const translations = {
     admin_plans_no_permission: 'Only the owner can create or edit plans.',
     admin_crud_save_fail: 'Could not save.',
     admin_crud_update_fail: 'Could not update.',
+    admin_crud_delete_fail: 'Could not delete.',
+    admin_plans_delete_confirm_title: 'Delete plan',
+    admin_plans_delete_confirm_body:
+      '«{{title}}» and its memberships, weekly slots, and coach commissions will be removed. Clients already on this plan are not updated automatically.',
+    admin_abonos_delete_confirm_title: 'Delete membership',
+    admin_abonos_delete_confirm_body: '«{{name}}» will be deleted. This cannot be undone.',
 
     admin_abonos_screen_title: 'Memberships',
     admin_abonos_filter_label: 'Plan:',
