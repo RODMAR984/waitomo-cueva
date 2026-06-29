@@ -208,7 +208,7 @@ Horario de trabajo actual (si aplica): ${slot}
 Instrucciones / objetivo del ciclo (coach):
 ${coachBrief}
 
-Tabla de referencia de volumen por grupo muscular (si el coach la pegó o está guardada en GymConfig; usala para ubicar MEV/MAV/MRV):
+Tabla de referencia de volumen por grupo muscular (preset de la organización en GymConfig o texto pegado por el coach; cualquier idioma — mapeá por significado a MEV/MAV/MRV):
 ${landmarks}
 
 Análisis de volumen calculado en código (parser de series/reps de los bloques publicados — priorizá estos números sobre tu estimación visual):

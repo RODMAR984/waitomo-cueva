@@ -460,7 +460,7 @@ export const translations = {
     gym_config_tab_planning: 'Planificación IA',
     gym_config_ai_volume_landmarks_label: 'Tabla de volumen (landmarks MEV/MAV/MRV)',
     gym_config_ai_volume_landmarks_hint:
-      'Preset para el modo Ciclo del asistente IA en Planificación. Si el coach no pega otra tabla al generar, se usa esta. El servidor también calcula volumen real parseando series de los bloques publicados.',
+      'Preset por organización para el modo Ciclo del asistente IA. Cada sede define sus landmarks (cualquier idioma). Si el coach no pega otra tabla al generar, se usa esta. El servidor calcula volumen parseando series de los bloques publicados.',
     gym_config_ai_volume_landmarks_reset: 'Cargar plantilla sugerida',
     gym_config_tab_brand_ai: 'Branding IA',
     gym_config_tab_payments: 'Pagos',
@@ -1983,7 +1983,7 @@ export const translations = {
     admin_ai_mode_hint_message:
       'Mensaje: redactá qué querés comunicar a los alumnos; la IA devuelve un texto listo para copiar a WhatsApp o mail.',
     admin_ai_mode_hint_cycle_plan:
-      'Ciclo: lee la planificación real del rango de fechas, estima volumen por grupo muscular y arma un plan día a día con progresión de %RM. Elegí alcance (todo el gym, actividades o un socio).',
+      'Ciclo: lee la planificación real del rango de fechas de tu organización, usa el parser de volumen (5x3, AMRAP, 21-15-9, @%RM, etc.) y arma un plan día a día con progresión de %RM. Alcance: todo el gym, actividades o un socio.',
     admin_ai_mode_cycle: 'Ciclo',
     admin_ai_cycle_scope_title: 'Alcance',
     admin_ai_cycle_scope_all: 'Todo el gym',
@@ -1997,7 +1997,8 @@ export const translations = {
     admin_ai_cycle_plans_required: 'Marcá al menos una actividad.',
     admin_ai_cycle_volume_label: 'Tabla de volumen / landmarks',
     admin_ai_cycle_volume_preset_hint:
-      'Se precarga desde Configuración del gym → Planificación IA. Podés editarla solo para esta generación.',
+      'Se precarga desde Configuración del gym → Planificación IA (preset de tu organización). Podés editarla solo para esta generación.',
+    admin_ai_cycle_volume_parsing: 'Calculando volumen del rango…',
     admin_ai_cycle_volume_ph:
       'Tabla de volumen / landmarks (opcional): pegá acá series objetivo por grupo muscular o referencias del coach.',
     admin_ai_cycle_prompt_ph:
@@ -2514,7 +2515,7 @@ export const translations = {
     gym_config_tab_planning: 'AI planning',
     gym_config_ai_volume_landmarks_label: 'Volume table (MEV/MAV/MRV landmarks)',
     gym_config_ai_volume_landmarks_hint:
-      'Default for the Cycle mode in Planning AI. Used when the coach does not paste another table at generation time. The server also computes volume by parsing sets from published blocks.',
+      'Per-organization preset for Cycle mode in the AI assistant. Each gym defines its own landmarks (any language). Used when the coach does not paste another table at generation time. The server computes volume by parsing sets from published blocks.',
     gym_config_ai_volume_landmarks_reset: 'Load suggested template',
     gym_config_tab_brand_ai: 'AI branding',
     gym_config_tab_payments: 'Payments',
@@ -4025,7 +4026,7 @@ export const translations = {
     admin_ai_mode_hint_message:
       'Message: describe what you want to tell athletes; the AI returns copy-ready text for WhatsApp or email.',
     admin_ai_mode_hint_cycle_plan:
-      'Cycle: reads real planning in the date range, estimates volume by muscle group, and drafts a day-by-day plan with %RM progression. Pick scope (whole gym, activities, or one member).',
+      'Cycle: reads your organization’s planning in the date range, uses the volume parser (5x3, AMRAP, 21-15-9, @%RM, etc.), and drafts a day-by-day plan with %RM progression. Scope: whole gym, activities, or one member.',
     admin_ai_mode_cycle: 'Cycle',
     admin_ai_cycle_scope_title: 'Scope',
     admin_ai_cycle_scope_all: 'Whole gym',
@@ -4039,7 +4040,8 @@ export const translations = {
     admin_ai_cycle_plans_required: 'Select at least one activity.',
     admin_ai_cycle_volume_label: 'Volume table / landmarks',
     admin_ai_cycle_volume_preset_hint:
-      'Pre-filled from Gym settings → AI planning. You can override it for this generation only.',
+      'Pre-filled from Gym settings → AI planning (your organization preset). You can override it for this generation only.',
+    admin_ai_cycle_volume_parsing: 'Computing volume for date range…',
     admin_ai_cycle_volume_ph:
       'Volume table / landmarks (optional): paste target sets per muscle group or coach references here.',
     admin_ai_cycle_prompt_ph:

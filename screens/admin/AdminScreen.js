@@ -14,6 +14,7 @@ import {
   Platform,
   Modal,
   Keyboard,
+  ActivityIndicator,
   Dimensions,
   useWindowDimensions,
   TouchableWithoutFeedback,
@@ -44,6 +45,8 @@ import {
   normalizeRmPatternWithAi,
   draftCyclePlanWithAi,
 } from '../../utils/aiAssistant';
+import { analyzeBlocksVolume, formatVolumePreviewShort } from '../../utils/volumeFromBlocks';
+import { expandPlanKeysList } from '../../utils/planKeyQuery';
 import AdminAiPromptWithVoice from '../../components/AdminAiPromptWithVoice';
 import useStaffAdminNavTiles from '../../hooks/useStaffAdminNavTiles';
 import {
@@ -465,6 +468,8 @@ export default function AdminScreen() {
   const [aiDateFrom, setAiDateFrom] = useState('');
   const [aiDateTo, setAiDateTo] = useState('');
   const [aiVolumeLandmarks, setAiVolumeLandmarks] = useState('');
+  const [aiVolumePreview, setAiVolumePreview] = useState('');
+  const [aiVolumePreviewBusy, setAiVolumePreviewBusy] = useState(false);
   const [aiMemberOptions, setAiMemberOptions] = useState([]);
 
   const composerDirty = useMemo(() => {
@@ -708,6 +713,66 @@ export default function AdminScreen() {
       alive = false;
     };
   }, [aiModalVisible, orgIdForPlans]);
+
+  useEffect(() => {
+    if (!aiModalVisible || aiMode !== 'cycle_plan' || !orgIdForPlans) {
+      setAiVolumePreview('');
+      setAiVolumePreviewBusy(false);
+      return undefined;
+    }
+    const from = (aiDateFrom || '').trim();
+    const to = (aiDateTo || '').trim();
+    if (!from || !to) {
+      setAiVolumePreview('');
+      return undefined;
+    }
+
+    let alive = true;
+    const timer = setTimeout(async () => {
+      setAiVolumePreviewBusy(true);
+      try {
+        let q = supabase
+          .from('training_daily_blocks')
+          .select('fecha, titulo, contenido, notas, plan_key, coach_id')
+          .eq('organization_id', orgIdForPlans)
+          .gte('fecha', from)
+          .lte('fecha', to)
+          .order('fecha', { ascending: true })
+          .limit(120);
+        if (aiCycleScope === 'plans' && aiCyclePlanKeys.length) {
+          const pk = expandPlanKeysList(aiCyclePlanKeys);
+          if (pk.length === 1) q = q.eq('plan_key', pk[0]);
+          else if (pk.length > 1) q = q.in('plan_key', pk);
+        }
+        if (isCoach && myId) q = q.eq('coach_id', myId);
+        const { data, error } = await q;
+        if (!alive || error) {
+          if (alive) setAiVolumePreview('');
+          return;
+        }
+        setAiVolumePreview(formatVolumePreviewShort(analyzeBlocksVolume(data || [])));
+      } catch {
+        if (alive) setAiVolumePreview('');
+      } finally {
+        if (alive) setAiVolumePreviewBusy(false);
+      }
+    }, 450);
+
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [
+    aiModalVisible,
+    aiMode,
+    orgIdForPlans,
+    aiDateFrom,
+    aiDateTo,
+    aiCycleScope,
+    aiCyclePlanKeys,
+    isCoach,
+    myId,
+  ]);
 
   const toggleAiCyclePlanKey = (planValue) => {
     setAiCyclePlanKeys((prev) => {
@@ -1587,6 +1652,20 @@ export default function AdminScreen() {
           marginBottom: 12,
           fontSize: MOBILE_TYPE.caption,
         },
+        aiVolumePreviewRow: {
+          alignSelf: 'stretch',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 10,
+        },
+        aiVolumePreviewText: {
+          alignSelf: 'stretch',
+          color: t.subText,
+          fontSize: MOBILE_TYPE.caption,
+          lineHeight: 17,
+          marginBottom: 10,
+        },
         modalTitle: {
           color: t.text,
           fontSize: MOBILE_TYPE.headline,
@@ -2324,6 +2403,14 @@ export default function AdminScreen() {
                         autoCapitalize="none"
                       />
                     </View>
+                    {aiVolumePreviewBusy ? (
+                      <View style={styles.aiVolumePreviewRow}>
+                        <ActivityIndicator size="small" color={t.brand} />
+                        <Text style={styles.aiVolumePreviewText}>{tStr('admin_ai_cycle_volume_parsing')}</Text>
+                      </View>
+                    ) : aiVolumePreview ? (
+                      <Text style={styles.aiVolumePreviewText}>{aiVolumePreview}</Text>
+                    ) : null}
                     {aiCycleScope === 'plans' ? (
                       <>
                         <Text style={styles.aiCycleLabel}>{tStr('admin_ai_cycle_plans_hint')}</Text>
