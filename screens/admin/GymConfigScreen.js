@@ -40,6 +40,7 @@ import { buildClientInvitePublicLink, getFitEngineUrls } from '../../utils/fiten
 import { buildClientInviteShareMessage } from '../../utils/clientInviteShare';
 import { FULL_HEX_CHOICE_GYM } from '../../utils/gymColorPalette';
 import { DEFAULT_CLIENT_PAYMENT_COPY } from '../../utils/clientPaymentMethods';
+import { DEFAULT_AI_VOLUME_LANDMARKS } from '../../utils/volumeFromBlocks';
 import { draftMessageWithAi } from '../../utils/aiAssistant';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
@@ -145,6 +146,7 @@ function gymConfigBaselineString(org) {
     pubDir: !!org.public_directory_enabled,
     placeId: (org.google_place_id || '').trim(),
     pubDirAck: directoryListingTermsComplete(org, PUBLIC_DIRECTORY_TERMS_DOC_VERSION),
+    aiVolumeLandmarks: (f.ai_volume_landmarks || '').trim(),
   });
 }
 
@@ -180,6 +182,7 @@ function gymConfigStateStringFromLocals(p) {
     publicDirectoryEnabled,
     googlePlaceId,
     publicDirectoryTermsAck,
+    aiVolumeLandmarks,
   } = p;
 
   const maxRaw = (membershipFreezeMaxDays || '').trim();
@@ -226,6 +229,7 @@ function gymConfigStateStringFromLocals(p) {
     pubDir: !!publicDirectoryEnabled,
     placeId: (googlePlaceId || '').trim(),
     pubDirAck: !!publicDirectoryTermsAck,
+    aiVolumeLandmarks: (aiVolumeLandmarks || '').trim(),
   });
 }
 
@@ -264,6 +268,9 @@ export default function GymConfigScreen() {
   const [overlayColor, setOverlayColor] = useState(organization?.features?.ui_overlay_color || '');
   const [clientWelcomeMessage, setClientWelcomeMessage] = useState(
     organization?.features?.client_welcome_message || ''
+  );
+  const [aiVolumeLandmarks, setAiVolumeLandmarks] = useState(
+    organization?.features?.ai_volume_landmarks || '',
   );
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -369,6 +376,11 @@ export default function GymConfigScreen() {
       setBorderColor(organization.features?.ui_border_color || '');
       setOverlayColor(organization.features?.ui_overlay_color || '');
       setClientWelcomeMessage(organization.features?.client_welcome_message || '');
+      setAiVolumeLandmarks(
+        typeof organization.features?.ai_volume_landmarks === 'string'
+          ? organization.features.ai_volume_landmarks
+          : '',
+      );
       setLockClientTheme(!!organization.features?.lock_client_theme);
       const cp = organization.features?.client_payment_methods;
       if (cp && typeof cp === 'object' && !Array.isArray(cp)) {
@@ -524,6 +536,7 @@ export default function GymConfigScreen() {
         publicDirectoryEnabled,
         googlePlaceId,
         publicDirectoryTermsAck,
+        aiVolumeLandmarks,
       })
     );
   }, [
@@ -560,6 +573,7 @@ export default function GymConfigScreen() {
     publicDirectoryEnabled,
     googlePlaceId,
     publicDirectoryTermsAck,
+    aiVolumeLandmarks,
   ]);
 
   const onTogglePublicDirectory = useCallback(
@@ -805,6 +819,10 @@ export default function GymConfigScreen() {
       const welcomeTrim = (clientWelcomeMessage || '').trim();
       if (welcomeTrim) prevFeatures.client_welcome_message = welcomeTrim;
       else delete prevFeatures.client_welcome_message;
+
+      const volTrim = (aiVolumeLandmarks || '').trim();
+      if (volTrim) prevFeatures.ai_volume_landmarks = volTrim;
+      else delete prevFeatures.ai_volume_landmarks;
 
       if (lockClientTheme) prevFeatures.lock_client_theme = true;
       else delete prevFeatures.lock_client_theme;
@@ -1416,6 +1434,7 @@ export default function GymConfigScreen() {
         <View style={styles.tabBarWrap}>
           {[
             ['general', 'gym_config_tab_general'],
+            ['planning', 'gym_config_tab_planning'],
             ['brand_ai', 'gym_config_tab_brand_ai'],
             ['payments', 'gym_config_tab_payments'],
             ['medical', 'gym_config_tab_medical'],
@@ -1537,6 +1556,31 @@ export default function GymConfigScreen() {
                 </>
               ) : null}
             </View>
+          </View>
+        ) : null}
+
+        {gymConfigTab === 'planning' ? (
+          <View style={styles.block}>
+            <Text style={styles.label}>{tStr('gym_config_ai_volume_landmarks_label')}</Text>
+            <Text style={styles.hint}>{tStr('gym_config_ai_volume_landmarks_hint')}</Text>
+            <TextInput
+              style={[styles.input, { minHeight: 160, textAlignVertical: 'top' }]}
+              value={aiVolumeLandmarks}
+              onChangeText={setAiVolumeLandmarks}
+              placeholder={DEFAULT_AI_VOLUME_LANDMARKS}
+              placeholderTextColor={t.placeholder}
+              editable={canEdit}
+              multiline
+            />
+            {canEdit ? (
+              <TouchableOpacity
+                style={[styles.logoBtn, { marginTop: 10, alignSelf: 'flex-start' }]}
+                onPress={() => setAiVolumeLandmarks(DEFAULT_AI_VOLUME_LANDMARKS)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.logoBtnText}>{tStr('gym_config_ai_volume_landmarks_reset')}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         ) : null}
 

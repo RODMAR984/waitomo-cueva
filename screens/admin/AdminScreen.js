@@ -658,6 +658,10 @@ export default function AdminScreen() {
     if (!aiCyclePlanKeys.length && planSeleccionado) {
       setAiCyclePlanKeys([planSeleccionado]);
     }
+    const presetLandmarks = String(organization?.features?.ai_volume_landmarks || '').trim();
+    if (presetLandmarks) {
+      setAiVolumeLandmarks((prev) => (prev.trim() ? prev : presetLandmarks));
+    }
     setAiPrompt((prev) => {
       if (prev.trim()) return prev;
       if (aiMode === 'routine' || aiMode === 'cycle_plan') return '';
@@ -2362,6 +2366,10 @@ export default function AdminScreen() {
                         </View>
                       </>
                     ) : null}
+                    <Text style={styles.aiCycleLabel}>{tStr('admin_ai_cycle_volume_label')}</Text>
+                    <Text style={[styles.aiModeHintLine, { marginBottom: 6 }]}>
+                      {tStr('admin_ai_cycle_volume_preset_hint')}
+                    </Text>
                     <TextInput
                       style={styles.aiVolumeInput}
                       value={aiVolumeLandmarks}

@@ -457,6 +457,11 @@ export const translations = {
     gym_config_loading: 'Cargando...',
     gym_config_screen_title: 'Configuración del gym',
     gym_config_tab_general: 'General',
+    gym_config_tab_planning: 'Planificación IA',
+    gym_config_ai_volume_landmarks_label: 'Tabla de volumen (landmarks MEV/MAV/MRV)',
+    gym_config_ai_volume_landmarks_hint:
+      'Preset para el modo Ciclo del asistente IA en Planificación. Si el coach no pega otra tabla al generar, se usa esta. El servidor también calcula volumen real parseando series de los bloques publicados.',
+    gym_config_ai_volume_landmarks_reset: 'Cargar plantilla sugerida',
     gym_config_tab_brand_ai: 'Branding IA',
     gym_config_tab_payments: 'Pagos',
     gym_config_tab_invites: 'Invitaciones',
@@ -1990,6 +1995,9 @@ export const translations = {
     admin_ai_cycle_member_hint: 'Socio para programación 1:1',
     admin_ai_cycle_member_required: 'Elegí un socio para alcance individual.',
     admin_ai_cycle_plans_required: 'Marcá al menos una actividad.',
+    admin_ai_cycle_volume_label: 'Tabla de volumen / landmarks',
+    admin_ai_cycle_volume_preset_hint:
+      'Se precarga desde Configuración del gym → Planificación IA. Podés editarla solo para esta generación.',
     admin_ai_cycle_volume_ph:
       'Tabla de volumen / landmarks (opcional): pegá acá series objetivo por grupo muscular o referencias del coach.',
     admin_ai_cycle_prompt_ph:
@@ -2503,6 +2511,11 @@ export const translations = {
     gym_config_loading: 'Loading...',
     gym_config_screen_title: 'Gym settings',
     gym_config_tab_general: 'General',
+    gym_config_tab_planning: 'AI planning',
+    gym_config_ai_volume_landmarks_label: 'Volume table (MEV/MAV/MRV landmarks)',
+    gym_config_ai_volume_landmarks_hint:
+      'Default for the Cycle mode in Planning AI. Used when the coach does not paste another table at generation time. The server also computes volume by parsing sets from published blocks.',
+    gym_config_ai_volume_landmarks_reset: 'Load suggested template',
     gym_config_tab_brand_ai: 'AI branding',
     gym_config_tab_payments: 'Payments',
     gym_config_tab_invites: 'Invites',
@@ -4024,6 +4037,9 @@ export const translations = {
     admin_ai_cycle_member_hint: 'Member for 1:1 programming',
     admin_ai_cycle_member_required: 'Pick a member for individual scope.',
     admin_ai_cycle_plans_required: 'Select at least one activity.',
+    admin_ai_cycle_volume_label: 'Volume table / landmarks',
+    admin_ai_cycle_volume_preset_hint:
+      'Pre-filled from Gym settings → AI planning. You can override it for this generation only.',
     admin_ai_cycle_volume_ph:
       'Volume table / landmarks (optional): paste target sets per muscle group or coach references here.',
     admin_ai_cycle_prompt_ph:

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { analyzeBlocksVolume, formatVolumeAnalysisForPrompt } from "./volumeParser.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -149,6 +150,7 @@ function buildPrompt({
     dateTo: string;
     planKeysLabel: string;
     volumeLandmarks: string;
+    volumeAnalysisText: string;
   };
 }) {
   const date = String(body.session_date || "").trim() || "hoy";
@@ -206,17 +208,21 @@ Horario de trabajo actual (si aplica): ${slot}
 Instrucciones / objetivo del ciclo (coach):
 ${coachBrief}
 
-Tabla de referencia de volumen por grupo muscular (si el coach la pegó; usala para ubicar MEV/MAV/MRV):
+Tabla de referencia de volumen por grupo muscular (si el coach la pegó o está guardada en GymConfig; usala para ubicar MEV/MAV/MRV):
 ${landmarks}
+
+Análisis de volumen calculado en código (parser de series/reps de los bloques publicados — priorizá estos números sobre tu estimación visual):
+${cycleMeta.volumeAnalysisText}
 
 Bloques ya publicados en la ventana (fuente de verdad — leé progresión, series, reps y %RM):
 ${recent || "(ningún bloque publicado en ese rango; el coach programará desde cero según sus notas)"}
 
 Tareas:
-1) Resumí volumen estimado por grupo muscular (series efectivas aproximadas) según lo publicado + lo que proponés.
-2) Detectá progresión de cargas (%RM) semana a semana por ejercicio clave.
-3) Escribí la planificación DÍA A DÍA (o sesión a sesión) lista para copiar y pegar en bloques FitEngine, con título sugerido, contenido con series/reps/@%RM, y notas breves de coach cuando haga falta.
-4) Si el alcance es un socio, adaptá el lenguaje a programación individual; si es grupal, mantené formato de clase.
+1) Resumí volumen por grupo muscular usando PRIMERO el análisis del parser automático arriba; solo refiná con tu lectura del texto si hace falta.
+2) Compará esos totales con la tabla de landmarks (MEV/MAV/MRV) y señalá desvíos en warnings.
+3) Detectá progresión de cargas (%RM) semana a semana por ejercicio clave.
+4) Escribí la planificación DÍA A DÍA (o sesión a sesión) lista para copiar y pegar en bloques FitEngine, con título sugerido, contenido con series/reps/@%RM, y notas breves de coach cuando haga falta.
+5) Si el alcance es un socio, adaptá el lenguaje a programación individual; si es grupal, mantené formato de clase.
 
 Respondé SOLO JSON válido:
 {
@@ -404,7 +410,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(429, { error: "quota_exceeded", quota: quotaData });
   }
 
-  const [profileRes, recentRes] = await Promise.all([
+  const [profileRes, recentRes, orgRes] = await Promise.all([
     body.target_client_id
       ? supabaseAdmin
           .from("profiles")
@@ -444,6 +450,9 @@ Deno.serve(async (req: Request) => {
       }
       return q.order("fecha", { ascending: false }).limit(4);
     })(),
+    mode === "cycle_plan"
+      ? supabaseAdmin.from("organizations").select("features").eq("id", orgIdRaw).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (profileRes.error) {
@@ -455,6 +464,23 @@ Deno.serve(async (req: Request) => {
       hint: "Tabla training_daily_blocks / plan_key",
     });
   }
+  if (orgRes.error) {
+    return err500("org_features_fetch", orgRes.error.message, { code: orgRes.error.code });
+  }
+
+  const recentBlocks = Array.isArray(recentRes.data) ? recentRes.data : [];
+  const orgFeatures =
+    orgRes.data?.features && typeof orgRes.data.features === "object" && !Array.isArray(orgRes.data.features)
+      ? (orgRes.data.features as Record<string, unknown>)
+      : {};
+  const orgVolumeLandmarks = String(orgFeatures.ai_volume_landmarks || "").trim();
+  const resolvedVolumeLandmarks =
+    String(body.volume_landmarks || "").trim() || orgVolumeLandmarks;
+
+  const volumeAnalysisText =
+    mode === "cycle_plan"
+      ? formatVolumeAnalysisForPrompt(analyzeBlocksVolume(recentBlocks))
+      : "";
 
   const cycleMeta =
     mode === "cycle_plan"
@@ -468,16 +494,17 @@ Deno.serve(async (req: Request) => {
             dateFrom: from,
             dateTo: to,
             planKeysLabel,
-            volumeLandmarks: String(body.volume_landmarks || "").trim(),
+            volumeLandmarks: resolvedVolumeLandmarks,
+            volumeAnalysisText,
           };
         })()
       : undefined;
 
   const prompt = buildPrompt({
     mode,
-    body,
+    body: { ...body, volume_landmarks: resolvedVolumeLandmarks },
     profile: profileRes.data,
-    recentBlocks: Array.isArray(recentRes.data) ? recentRes.data : [],
+    recentBlocks,
     cycleMeta,
   });
 
