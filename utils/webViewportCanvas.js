@@ -3,6 +3,10 @@ import { Platform } from 'react-native';
 /** Mismo tono que `app.json` → `expo.web.backgroundColor`. */
 export const WEB_VIEWPORT_CANVAS_BG = '#021b23';
 
+/** Evita scroll vacío que deja ver el canvas oscuro bajo el contenido. */
+export const WEB_SCROLL_NO_STRETCH =
+  Platform.OS === 'web' ? { flexGrow: 0, flexShrink: 0 } : null;
+
 /**
  * Evita franjas blancas en los bordes del viewport cuando el árbol RN no cubre el 100% del ancho.
  */

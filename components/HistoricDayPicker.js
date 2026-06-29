@@ -33,6 +33,7 @@ function buildHistoricCalendarDays() {
 
 /**
  * Selector de día histórico (plan ya filtrado) + bloques del día elegido.
+ * Siempre muestra el calendario (~2 meses); los días con rutina se resaltan.
  */
 export default function HistoricDayPicker({
   blocks,
@@ -69,6 +70,7 @@ export default function HistoricDayPicker({
   }, [blocks, fechaKeyFrom, sevenAgo]);
 
   const datesWithBlocks = useMemo(() => new Set(blocksByDate.keys()), [blocksByDate]);
+  const hasAnyHistoric = blocksByDate.size > 0;
 
   const oldestInCalendar = calendarDays[0] || '';
 
@@ -121,12 +123,6 @@ export default function HistoricDayPicker({
     }
   };
 
-  if (blocksByDate.size === 0) {
-    return (
-      <Text style={styles.sectionEmptyText}>{tStr('admin_historico_sin_rutinas')}</Text>
-    );
-  }
-
   return (
     <View>
       <Text style={styles.historicHint}>{tStr('admin_historico_hint')}</Text>
@@ -135,6 +131,12 @@ export default function HistoricDayPicker({
           {planLabel}
         </Text>
       )}
+
+      {!hasAnyHistoric ? (
+        <Text style={[styles.sectionEmptyText, styles.historicEmptyBanner]}>
+          {tStr('admin_historico_sin_rutinas')}
+        </Text>
+      ) : null}
 
       {monthSections.map((sec) => (
         <View key={sec.monthLabel} style={styles.historicMonthBlock}>
@@ -213,10 +215,13 @@ export default function HistoricDayPicker({
               month: 'long',
             })}
           </Text>
-        ) : null}
-        {selectedBlocks.length === 0 ? (
+        ) : hasAnyHistoric ? null : (
+          <Text style={styles.sectionEmptyText}>{tStr('admin_historico_elegi_dia')}</Text>
+        )}
+        {selectedKey && selectedBlocks.length === 0 ? (
           <Text style={styles.sectionEmptyText}>{tStr('admin_historico_sin_fecha')}</Text>
-        ) : (
+        ) : null}
+        {selectedBlocks.length > 0 ? (
           <ScrollView
             nestedScrollEnabled
             style={styles.historicSelectedScroll}
@@ -225,7 +230,7 @@ export default function HistoricDayPicker({
           >
             {selectedBlocks.map((b) => renderBlock(b))}
           </ScrollView>
-        )}
+        ) : null}
       </View>
     </View>
   );

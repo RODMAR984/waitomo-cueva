@@ -1374,7 +1374,7 @@ export default function ClientScreen() {
       StyleSheet.create({
         root: { flex: 1 },
         scroll: {
-          flexGrow: 1,
+          ...(Platform.OS === 'web' ? { flexGrow: 0, flexShrink: 0 } : { flexGrow: 1 }),
           width: '100%',
           alignSelf: 'center',
           maxWidth: contentMaxWidth,

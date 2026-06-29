@@ -137,8 +137,8 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
             ? {
                 width: '100%',
                 alignSelf: 'stretch',
-                minHeight: '100vh',
-                backgroundColor: t.bg,
+                minHeight: '100dvh',
+                backgroundColor: 'transparent',
               }
             : null),
         },
@@ -223,7 +223,8 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
             ? {
                 width: '100%',
                 alignSelf: 'stretch',
-                minHeight: '100vh',
+                minHeight: '100dvh',
+                backgroundColor: 'transparent',
               }
             : null),
         },

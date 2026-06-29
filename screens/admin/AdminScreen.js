@@ -970,8 +970,10 @@ export default function AdminScreen() {
       StyleSheet.create({
         screen: { flex: 1, backgroundColor: 'transparent' },
         scrollContainer: {
+          flexGrow: Platform.OS === 'web' ? 0 : undefined,
+          flexShrink: Platform.OS === 'web' ? 0 : undefined,
           paddingTop: Platform.OS === 'web' ? 20 : 56,
-          paddingBottom: Platform.OS === 'web' ? 16 : 40,
+          paddingBottom: Platform.OS === 'web' ? 8 : 40,
         },
 
         panel: {
@@ -1157,16 +1159,18 @@ export default function AdminScreen() {
         actionBtnWide: {
           ...(isDesktopWeb ? { flex: 1, marginBottom: 0 } : { width: '100%', alignSelf: 'stretch' }),
         },
-        managementGrid: {
-          flexDirection: isDesktopWeb ? 'row' : 'column',
-          columnGap: 12,
-          rowGap: 12,
+        routinesWorkspace: {
+          alignSelf: 'stretch',
           marginTop: 8,
-          alignItems: 'flex-start',
+          rowGap: 14,
+        },
+        managementGrid: {
+          flexDirection: 'column',
+          rowGap: 14,
+          alignItems: 'stretch',
         },
         managementCol: {
-          flex: 1,
-          minWidth: 0,
+          width: '100%',
           alignSelf: 'stretch',
         },
         sectionCard: {
@@ -1184,7 +1188,7 @@ export default function AdminScreen() {
           marginBottom: 10,
         },
         sectionListScroll: {
-          maxHeight: isDesktopWeb ? 480 : undefined,
+          maxHeight: isDesktopWeb ? 340 : undefined,
         },
         sectionListContent: {
           paddingBottom: 4,
@@ -1193,6 +1197,10 @@ export default function AdminScreen() {
           color: t.placeholder,
           textAlign: 'center',
           paddingVertical: 10,
+        },
+        historicEmptyBanner: {
+          marginBottom: 10,
+          paddingHorizontal: 4,
         },
         historicHint: {
           color: t.subText,
@@ -2202,6 +2210,7 @@ export default function AdminScreen() {
                   <Text style={styles.blockListsSectionTitle}>{tStr('admin_lists_section_title')}</Text>
                   <Text style={styles.blockListsSectionSub}>{tStr('admin_lists_section_sub')}</Text>
 
+                  <View style={styles.routinesWorkspace}>
                   <View style={styles.managementGrid}>
                     <View style={styles.managementCol}>
                       <View style={styles.sectionCard}>
@@ -2237,6 +2246,7 @@ export default function AdminScreen() {
                         />
                       </View>
                     </View>
+                  </View>
                   </View>
 
                   <TouchableOpacity

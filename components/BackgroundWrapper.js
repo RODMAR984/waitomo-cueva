@@ -12,24 +12,30 @@ import {
   IMAGEN_WELCOME as welcomeImage,
 } from '../utils/imagenesFijas';
 
-/** En web, `ImageBackground` suele encogerse al ancho del contenido → franja clara a la derecha. */
+/** En web: imagen fija al viewport (no “socalo” al scrollear) + contenedor transparente. */
 const WEB_FULL_BLEED =
   Platform.OS === 'web'
     ? {
         width: '100%',
         alignSelf: 'stretch',
         flex: 1,
-        backgroundColor: '#021b23',
+        minHeight: '100dvh',
+        backgroundColor: 'transparent',
       }
     : null;
 const WEB_IMAGE_COVER =
   Platform.OS === 'web'
     ? {
-        width: '100%',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100dvh',
         minWidth: '100%',
-        height: '100%',
+        minHeight: '100%',
         objectFit: 'cover',
         objectPosition: 'center top',
+        zIndex: -1,
       }
     : null;
 
