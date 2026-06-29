@@ -1,7 +1,7 @@
 /**
  * Confirma pago MP tras volver del checkout (web) y activa abono en servidor.
  */
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../supabaseClient';
 
 export async function confirmMpCheckoutOnServer({
   paymentId,
