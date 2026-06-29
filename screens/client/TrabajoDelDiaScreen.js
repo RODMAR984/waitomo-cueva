@@ -30,8 +30,9 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
 import { plansMatchForBlocks } from '../../utils/trainingBlockPlan';
-import { RM_HIGHLIGHT_COLOR } from '../../utils/rmPattern';
+import { RM_HIGHLIGHT_COLOR, formatRmWeightKg } from '../../utils/rmPattern';
 import RoutineBlockContent from '../../components/RoutineBlockContent';
+import RmCalculatorPanel from '../../components/RmCalculatorPanel';
 import {
   fetchTrabajoDiaFeedMessages,
   insertTrabajoDiaFeedMessage,
@@ -90,6 +91,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
 
   // ================== STATE ==================
   const [modalVisible, setModalVisible] = useState(false);
+  const [rmModalCalcOpen, setRmModalCalcOpen] = useState(false);
   const [currentRM, setCurrentRM] = useState('');
   const [currentExercise, setCurrentExercise] = useState('');
   const [currentPercentage, setCurrentPercentage] = useState('');
@@ -435,6 +437,100 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         rmItemEdit: { color: t.brand, fontSize: MOBILE_TYPE.caption },
         noRMsText: { color: t.placeholder, fontStyle: 'italic', marginVertical: 10, textAlign: 'center' },
 
+        rmCalcBox: {
+          backgroundColor: t.boxBg,
+          borderColor: t.overlayBorder,
+          borderRadius: MOBILE_RADII.sm,
+          borderWidth: 1,
+          marginBottom: 12,
+          padding: 12,
+        },
+        rmCalcBoxCompact: {
+          marginBottom: 8,
+          marginTop: 4,
+          padding: 10,
+        },
+        rmCalcTitle: {
+          color: t.brand2,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '700',
+          marginBottom: 4,
+        },
+        rmCalcHint: {
+          color: t.placeholder,
+          fontSize: MOBILE_TYPE.micro,
+          lineHeight: 15,
+          marginBottom: 10,
+        },
+        rmCalcRow: {
+          columnGap: 8,
+          flexDirection: 'row',
+        },
+        rmCalcInput: {
+          backgroundColor: t.inactiveTabBg,
+          borderColor: t.overlayBorder,
+          borderRadius: MOBILE_RADII.compact,
+          borderWidth: 1,
+          color: t.text,
+          fontSize: MOBILE_TYPE.body,
+          marginBottom: 8,
+          paddingHorizontal: 10,
+          paddingVertical: Platform.OS === 'web' ? 10 : 8,
+        },
+        rmCalcInputHalf: {
+          flex: 1,
+        },
+        rmCalcResult: {
+          color: t.brand,
+          fontSize: MOBILE_TYPE.bodyStrong,
+          fontWeight: '800',
+          marginBottom: 10,
+          textAlign: 'center',
+        },
+        rmCalcActions: {
+          columnGap: 8,
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        },
+        rmCalcBtn: {
+          borderRadius: MOBILE_RADII.compact,
+          minWidth: 120,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+        },
+        rmCalcBtnPrimary: {
+          ...t.buttonPrimary,
+        },
+        rmCalcBtnSecondary: {
+          backgroundColor: t.boxBg,
+          borderColor: t.overlayBorder,
+          borderWidth: 1,
+        },
+        rmCalcBtnTextPrimary: {
+          ...t.buttonPrimaryText,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '700',
+          textAlign: 'center',
+        },
+        rmCalcBtnTextSecondary: {
+          color: t.brand,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '700',
+          textAlign: 'center',
+        },
+        rmCalcToggle: {
+          alignSelf: 'center',
+          marginBottom: 8,
+          paddingVertical: 4,
+        },
+        rmCalcToggleText: {
+          color: t.brand,
+          fontSize: MOBILE_TYPE.caption,
+          fontWeight: '700',
+          textAlign: 'center',
+        },
+
         // Chat
         chatTabContainer: { flex: 1, marginBottom: 20 },
         chatMessagesContainer: { height: 300, marginBottom: 10 },
@@ -520,8 +616,9 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.lg,
           borderWidth: 1,
+          maxHeight: '90%',
           padding: 20,
-          width: '80%',
+          width: '88%',
         },
         modalTitle: { color: t.brand, fontSize: MOBILE_TYPE.title, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
         modalSubtitle: { color: t.subText, fontSize: MOBILE_TYPE.body, marginBottom: 10, textAlign: 'center' },
@@ -802,8 +899,20 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
     setCurrentPercentage(percentageLabel);
     const existing = getRM(exercise);
     setCurrentRM(existing ? String(existing) : '');
+    setRmModalCalcOpen(false);
     setModalVisible(true);
   };
+
+  const saveRMFromCalculator = useCallback(
+    (exerciseName, oneRmKg) => {
+      const rounded = formatRmWeightKg(oneRmKg);
+      const parsed = parseFloat(String(rounded).replace(',', '.'));
+      if (Number.isNaN(parsed) || parsed <= 0) return;
+      updateRM(exerciseName, parsed);
+      Alert.alert(tStr('trabajo_rm_calc_saved_title'), tStr('trabajo_rm_calc_saved_body'));
+    },
+    [updateRM, tStr],
+  );
 
   const saveRM = () => {
     const parsed = parseFloat(currentRM.replace(',', '.'));
@@ -1175,6 +1284,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
 
                     {!rmCollapsed && (
                       <View style={styles.existingRMsContainer}>
+                        <RmCalculatorPanel
+                          tStr={tStr}
+                          styles={styles}
+                          placeholderColor={t.placeholder}
+                          onSaveOneRm={saveRMFromCalculator}
+                        />
                         <Text style={styles.sectionTitle}>📋 {tStr('trabajo_mis_rms_registrados')}</Text>
                         {getExistingRMs().length > 0 ? (
                           getExistingRMs().map(([exercise, rmValue]) => (
@@ -1330,6 +1445,11 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.modalBackdrop}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 16 }}
+                showsVerticalScrollIndicator={false}
+              >
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>{tStr('trabajo_modal_ajustar_rm')}</Text>
                 <Text style={styles.modalSubtitle}>
@@ -1343,8 +1463,36 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                   keyboardType="numeric"
                   value={currentRM}
                   onChangeText={setCurrentRM}
-                  autoFocus
+                  autoFocus={!rmModalCalcOpen}
                 />
+                <TouchableOpacity
+                  style={styles.rmCalcToggle}
+                  onPress={() => setRmModalCalcOpen((v) => !v)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.rmCalcToggleText}>
+                    {rmModalCalcOpen ? tStr('trabajo_rm_calc_hide') : tStr('trabajo_rm_calc_toggle')}
+                  </Text>
+                </TouchableOpacity>
+                {rmModalCalcOpen ? (
+                  <RmCalculatorPanel
+                    tStr={tStr}
+                    styles={styles}
+                    placeholderColor={t.placeholder}
+                    initialExercise={currentExercise}
+                    compact
+                    onApplyOneRm={(kg) => {
+                      const s = formatRmWeightKg(kg);
+                      if (s) setCurrentRM(s);
+                    }}
+                    onSaveOneRm={(name, kg) => {
+                      saveRMFromCalculator(name, kg);
+                      setCurrentExercise(name);
+                      const s = formatRmWeightKg(kg);
+                      if (s) setCurrentRM(s);
+                    }}
+                  />
+                ) : null}
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
                     style={[styles.modalButton, styles.cancelButton]}
@@ -1362,6 +1510,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                   </TouchableOpacity>
                 </View>
               </View>
+              </ScrollView>
             </View>
           </TouchableWithoutFeedback>
         </Modal>

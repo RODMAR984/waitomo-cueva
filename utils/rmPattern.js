@@ -60,6 +60,20 @@ export function formatRmWeightKg(kg) {
 }
 
 /**
+ * Estima 1RM desde una serie (Epley): peso × (1 + reps/30).
+ * Coherente con la literatura cross/oly para series al fallo o casi.
+ */
+export function estimateOneRmEpley(weightKg, reps) {
+  const w = Number(weightKg);
+  const r = Math.round(Number(reps));
+  if (!w || Number.isNaN(w) || w <= 0 || !r || Number.isNaN(r) || r < 1 || r > 30) {
+    return null;
+  }
+  if (r === 1) return w;
+  return w * (1 + r / 30);
+}
+
+/**
  * Parte un texto en segmentos literales y tokens RM (para preview / líneas).
  */
 export function splitTextWithRmTokens(text) {
