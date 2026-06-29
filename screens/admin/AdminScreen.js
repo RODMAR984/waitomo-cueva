@@ -35,7 +35,7 @@ import { supabase } from '../../supabaseClient';
 import { colors } from '../../theme/colors';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { normalizeBlockPlanKey } from '../../utils/trainingBlockPlan';
+import { normalizeBlockPlanKey, plansMatchForBlocks } from '../../utils/trainingBlockPlan';
 import { formatYmdLocal } from '../../utils/formatYmdLocal';
 import { extractRmTags, splitTextWithRmTokens, RM_HIGHLIGHT_COLOR } from '../../utils/rmPattern';
 import {
@@ -104,12 +104,8 @@ const LEGACY_BLOCK_PLAN_TO_CODE = {
 
 const blockPlanToCode = (stored) => LEGACY_BLOCK_PLAN_TO_CODE[stored] || stored;
 
-const planMatchesSelection = (storedPlan, selectedCode) => {
-  const s = storedPlan || '';
-  if (!selectedCode) return false;
-  if (s === selectedCode) return true;
-  return blockPlanToCode(s) === selectedCode;
-};
+const planMatchesSelection = (storedPlan, selectedCode) =>
+  plansMatchForBlocks(storedPlan, selectedCode);
 
 const generarHorarios = () => {
   const lista = [];
