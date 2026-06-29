@@ -21,6 +21,7 @@ import {
   syncTrainingBlocksToSupabase,
   fetchTrainingBlocksForOrg,
 } from '../utils/trainingBlocksSupabase';
+import { calculateWeightFromRm } from '../utils/rmPattern';
 import {
   upsertBillingPaymentRow,
   upsertBillingSubscriptionRow,
@@ -818,11 +819,7 @@ export function TrainingDataProvider({ children }) {
 
   // ======= util pública =======
   const calculateWeight = useCallback((percentage, rm, reps = 1) => {
-    const pct = Number(percentage) / 100;
-    if (!rm || Number.isNaN(rm)) return null;
-    if (reps === 1) return Math.round(rm * pct);
-    const calculatedRM = rm / (1 + (reps - 1) / 30);
-    return Math.round(calculatedRM * pct);
+    return calculateWeightFromRm(percentage, rm, reps);
   }, []);
 
   // ======= value memoizado =======

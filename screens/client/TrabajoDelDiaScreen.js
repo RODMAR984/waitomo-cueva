@@ -30,7 +30,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
 import { plansMatchForBlocks } from '../../utils/trainingBlockPlan';
-import { splitTextWithRmTokens, RM_HIGHLIGHT_COLOR } from '../../utils/rmPattern';
+import { splitTextWithRmTokens, RM_HIGHLIGHT_COLOR, formatRmWeightKg } from '../../utils/rmPattern';
 import {
   fetchTrabajoDiaFeedMessages,
   insertTrabajoDiaFeedMessage,
@@ -946,7 +946,9 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               ? calculateWeight(pctNum, rmStored, seg.reps)
               : null;
           const displayWeight =
-            weight != null && !Number.isNaN(weight) ? `${weight.toFixed(1)} kg` : null;
+            weight != null && !Number.isNaN(weight)
+              ? `${formatRmWeightKg(weight)} kg`
+              : null;
           const pctLabel = hasNumericPct ? `${pctNum}%` : `${seg.pctRaw}%`;
           const tokenShown = displayWeight || seg.full;
 
@@ -957,6 +959,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               onPress={() => openRMModal(seg.exercise, pctLabel)}
             >
               {tokenShown}
+              {displayWeight ? ' ' : null}
               {!displayWeight && rmStored == null ? (
                 <Text style={styles.blockLineRmHint}> {tStr('trabajo_rm_tap_completar')}</Text>
               ) : null}

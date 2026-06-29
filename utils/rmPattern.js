@@ -38,6 +38,28 @@ export function extractRmTags(texto) {
 }
 
 /**
+ * Peso en kg a partir de % y RM guardado (sin redondear a entero).
+ * Para nRM distinto de 1 aplica la misma fórmula que TrainingDataContext.
+ */
+export function calculateWeightFromRm(percentage, rm, reps = 1) {
+  const pct = Number(percentage) / 100;
+  const rmNum = Number(rm);
+  if (!rmNum || Number.isNaN(rmNum) || Number.isNaN(pct)) return null;
+  const effectiveRm = reps === 1 ? rmNum : rmNum / (1 + (reps - 1) / 30);
+  return effectiveRm * pct;
+}
+
+/** Formato legible en kg (hasta 2 decimales, sin ceros de más). */
+export function formatRmWeightKg(kg) {
+  if (kg == null || Number.isNaN(kg)) return null;
+  const rounded = Math.round(kg * 100) / 100;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) {
+    return String(Math.round(rounded));
+  }
+  return rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/**
  * Parte un texto en segmentos literales y tokens RM (para preview / líneas).
  */
 export function splitTextWithRmTokens(text) {
