@@ -22,6 +22,7 @@ import {
   fetchTrainingBlocksForOrg,
 } from '../utils/trainingBlocksSupabase';
 import { calculateWeightFromRm } from '../utils/rmPattern';
+import { resolveTrainingBlocksOrgId } from '../utils/resolveTrainingBlocksOrgId';
 import {
   upsertBillingPaymentRow,
   upsertBillingSubscriptionRow,
@@ -67,8 +68,34 @@ export function TrainingDataProvider({ children }) {
   // categorías
   const [categories, setCategories] = useState({});
 
-  const { organization, profile, user, activeAppMode, activeAppModeHydrated } = useAuth();
-  const orgId = organization?.id ?? profile?.organization_id ?? null;
+  const {
+    organization,
+    profile,
+    user,
+    activeAppMode,
+    activeAppModeHydrated,
+    organizationsOwnedByUser,
+    isDualHatUser,
+  } = useAuth();
+  const orgId = useMemo(
+    () =>
+      resolveTrainingBlocksOrgId({
+        organizationsOwnedByUser,
+        organization,
+        profile,
+        activeAppMode,
+        activeAppModeHydrated,
+        isDualHatUser,
+      }),
+    [
+      organizationsOwnedByUser,
+      organization?.id,
+      profile?.organization_id,
+      activeAppMode,
+      activeAppModeHydrated,
+      isDualHatUser,
+    ],
+  );
   const coachUid = user?.id ?? profile?.id ?? null;
   const bloquesRef = useRef([]);
   const mergeBlocksOpts = useMemo(() => {
@@ -243,7 +270,12 @@ export function TrainingDataProvider({ children }) {
     (async () => {
       try {
         const { data, error } = await fetchTrainingBlocksForOrg(orgId);
-        if (cancelled || error) return;
+        if (cancelled) return;
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.warn('training_daily_blocks pull', error.message || error);
+          return;
+        }
         setBloques((prev) => {
           const merged = mergeRemoteTrainingBlocks(prev, data, orgId, mergeBlocksOpts);
           persist(STORAGE_KEYS.BLOQUES, merged).catch(() => {});

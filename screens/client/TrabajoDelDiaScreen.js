@@ -949,6 +949,8 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               : null;
           const pctLabel = hasNumericPct ? `${pctNum}%` : `${seg.pctRaw}%`;
           const tokenShown = displayWeight || seg.full;
+          const needsLeadingSpace =
+            j > 0 && segments[j - 1]?.type === 'rm' && displayWeight;
 
           return (
             <Text
@@ -956,6 +958,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               style={styles.blockLineRmToken}
               onPress={() => openRMModal(seg.exercise, pctLabel)}
             >
+              {needsLeadingSpace ? '  ' : null}
               {tokenShown}
               {displayWeight ? ' ' : null}
               {!displayWeight && rmStored == null ? (

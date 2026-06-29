@@ -24,7 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, usePreventRemove } from '@react-navigation/native';
+import { useNavigation, useRoute, usePreventRemove, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 
 import BackgroundWrapper from '../../components/BackgroundWrapper';
@@ -36,6 +36,7 @@ import { colors } from '../../theme/colors';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { normalizeBlockPlanKey, plansMatchForBlocks } from '../../utils/trainingBlockPlan';
+import { resolveTrainingBlocksOrgId } from '../../utils/resolveTrainingBlocksOrgId';
 import { formatYmdLocal } from '../../utils/formatYmdLocal';
 import { extractRmTags, splitTextWithRmTokens, RM_HIGHLIGHT_COLOR } from '../../utils/rmPattern';
 import {
@@ -272,7 +273,11 @@ const MultiHorarioDropdown = memo(function MultiHorarioDropdown({
                     key={label}
                     activeOpacity={0.7}
                     onPress={() => toggleHour(label)}
-                    style={[styles.dropdownItem, selected && styles.dropdownItemSelected]}
+                    style={[
+                      styles.dropdownItem,
+                      styles.dropdownItemHourWeb,
+                      selected && styles.dropdownItemSelected,
+                    ]}
                   >
                     <Text style={styles.dropdownItemText}>{label}</Text>
                     {selected && <Ionicons name="checkmark" size={18} color={t.brand} />}
@@ -317,7 +322,7 @@ export default function AdminScreen() {
       ? panelWidth - 40
       : (panelWidth - 40 - (menuColumns - 1) * menuGap) / menuColumns;
 
-  const { bloques, saveBloques, refreshTrigger } = useTrainingData();
+  const { bloques, saveBloques, refreshTrigger, refreshTrainingBlocksFromServer } = useTrainingData();
   const {
     session,
     rolesByUser,
@@ -326,6 +331,9 @@ export default function AdminScreen() {
     profile,
     organization,
     organizationsOwnedByUser,
+    activeAppMode,
+    activeAppModeHydrated,
+    isDualHatUser,
   } = useAuth();
   const myId = session?.user?.id || profile?.id || null;
   const myRole = rolesByUser?.[myId];
@@ -333,11 +341,25 @@ export default function AdminScreen() {
   const isCoach = myRole === 'coach';
   const coachPlanActual = profile?.plan_actual ? String(profile.plan_actual) : null;
 
-  const orgIdForPlans = useMemo(() => {
-    const owned = organizationsOwnedByUser || [];
-    if (owned.length === 1) return owned[0].id;
-    return organization?.id || profile?.organization_id || null;
-  }, [organizationsOwnedByUser, organization?.id, profile?.organization_id]);
+  const orgIdForPlans = useMemo(
+    () =>
+      resolveTrainingBlocksOrgId({
+        organizationsOwnedByUser,
+        organization,
+        profile,
+        activeAppMode,
+        activeAppModeHydrated,
+        isDualHatUser,
+      }),
+    [
+      organizationsOwnedByUser,
+      organization?.id,
+      profile?.organization_id,
+      activeAppMode,
+      activeAppModeHydrated,
+      isDualHatUser,
+    ],
+  );
   const [orgPlansRows, setOrgPlansRows] = useState([]);
 
   useEffect(() => {
@@ -365,6 +387,14 @@ export default function AdminScreen() {
       alive = false;
     };
   }, [orgIdForPlans]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!orgIdForPlans || typeof refreshTrainingBlocksFromServer !== 'function') return undefined;
+      refreshTrainingBlocksFromServer();
+      return undefined;
+    }, [orgIdForPlans, refreshTrainingBlocksFromServer]),
+  );
 
   const handleLogout = async () => {
     try {
@@ -550,20 +580,28 @@ export default function AdminScreen() {
 
   const lastWeekBlocks = useMemo(() => {
     const now = new Date();
+    now.setHours(12, 0, 0, 0);
     const sevenAgo = new Date(now);
     sevenAgo.setDate(now.getDate() - 7);
-    return bloquesPlanOrdenados.filter(
-      (b) => new Date(b.fecha || 0) >= sevenAgo,
-    );
+    const ninetyAhead = new Date(now);
+    ninetyAhead.setDate(now.getDate() + 90);
+    return bloquesPlanOrdenados.filter((b) => {
+      const fk = b.fechaKey || fechaKeyFrom(new Date(b.fecha || 0));
+      const d = fk ? new Date(`${fk}T12:00:00`) : new Date(b.fecha || 0);
+      return d >= sevenAgo && d <= ninetyAhead;
+    });
   }, [bloquesPlanOrdenados]);
 
   const historicBlocks = useMemo(() => {
     const now = new Date();
+    now.setHours(12, 0, 0, 0);
     const sevenAgo = new Date(now);
     sevenAgo.setDate(now.getDate() - 7);
-    return bloquesPlanOrdenados.filter(
-      (b) => new Date(b.fecha || 0) < sevenAgo,
-    );
+    return bloquesPlanOrdenados.filter((b) => {
+      const fk = b.fechaKey || fechaKeyFrom(new Date(b.fecha || 0));
+      const d = fk ? new Date(`${fk}T12:00:00`) : new Date(b.fecha || 0);
+      return d < sevenAgo;
+    });
   }, [bloquesPlanOrdenados]);
 
   const chatPlanId =
@@ -1335,6 +1373,9 @@ export default function AdminScreen() {
           justifyContent: 'center',
           alignItems: 'center',
           paddingHorizontal: 18,
+          ...(Platform.OS === 'web'
+            ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000 }
+            : null),
         },
         modalHourPickerBackdrop: {
           ...StyleSheet.absoluteFillObject,
@@ -1387,7 +1428,11 @@ export default function AdminScreen() {
         },
         dropdownHoursScrollContent: {
           paddingBottom: 16,
+          ...(Platform.OS === 'web'
+            ? { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 }
+            : null),
         },
+        dropdownItemHourWeb: Platform.OS === 'web' ? { width: '31%', minWidth: 96 } : null,
         dropdownItem: {
           alignItems: 'center',
           borderBottomColor: hexToRgbaLocal('#ffffff', 0.1),
@@ -1708,6 +1753,10 @@ export default function AdminScreen() {
           flex: 1,
           marginHorizontal: 8,
         },
+        webDateInputWrap:
+          Platform.OS === 'web'
+            ? { flexDirection: 'row', alignItems: 'center', gap: 8 }
+            : {},
 
       }),
     [t, panelWidth, menuColumns, menuGap, menuTileWidth, windowWidth, isDesktopWeb, STAFF_WEB_RAIL],
@@ -2144,16 +2193,41 @@ export default function AdminScreen() {
                 <Ionicons name="chevron-back" size={20} color={t.brand} />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.dropdown, styles.dateCenter]}
-                onPress={() => setShowDatePicker(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.dropdownValue}>
-                  {new Date(fecha).toLocaleDateString(dateLocale)}
-                </Text>
-                <Ionicons name="calendar-outline" size={18} color={t.brand} />
-              </TouchableOpacity>
+              {Platform.OS === 'web' ? (
+                <View style={[styles.dropdown, styles.dateCenter, styles.webDateInputWrap]}>
+                  <input
+                    type="date"
+                    value={fechaKeyFrom(fecha)}
+                    onChange={(e) => {
+                      const v = e.target?.value;
+                      if (v) setFecha(new Date(`${v}T12:00:00`));
+                    }}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'inherit',
+                      fontSize: 16,
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <Ionicons name="calendar-outline" size={18} color={t.brand} />
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.dropdown, styles.dateCenter]}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.dropdownValue}>
+                    {new Date(fecha).toLocaleDateString(dateLocale)}
+                  </Text>
+                  <Ionicons name="calendar-outline" size={18} color={t.brand} />
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 onPress={() => setFecha((prev) => sumarDias(prev, 1))}
@@ -2163,7 +2237,7 @@ export default function AdminScreen() {
               </TouchableOpacity>
             </View>
 
-            {showDatePicker && (
+            {showDatePicker && Platform.OS !== 'web' && (
               <DateTimePicker
                 value={fecha instanceof Date ? fecha : new Date(fecha)}
                 mode="date"
