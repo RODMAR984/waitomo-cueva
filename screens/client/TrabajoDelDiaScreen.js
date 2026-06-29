@@ -118,10 +118,11 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       StyleSheet.create({
         container: { backgroundColor: 'transparent', flex: 1 },
         scroll: {
-          flexGrow: 1,
-          justifyContent: Platform.OS === 'web' ? 'flex-start' : 'center',
-          paddingTop: Platform.OS === 'web' ? 16 : 60,
-          paddingBottom: Platform.OS === 'web' ? 20 : 60,
+          flexGrow: 0,
+          flexShrink: 0,
+          justifyContent: 'flex-start',
+          paddingTop: Platform.OS === 'web' ? 12 : 24,
+          paddingBottom: Platform.OS === 'web' ? 16 : 24,
           width: '100%',
           alignSelf: 'center',
           maxWidth: panelMaxWidth,
@@ -272,8 +273,6 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         blockContentRoot: {
           color: t.text,
-          fontSize: MOBILE_TYPE.body,
-          lineHeight: 22,
         },
         blockLineHighlighted: {
           color: t.brand,
@@ -330,9 +329,8 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         },
         coachNotesContent: {
           color: t.text,
-          fontSize: MOBILE_TYPE.body,
-          lineHeight: 22,
-          ...(Platform.OS === 'web' ? { whiteSpace: 'pre-wrap' } : null),
+          fontSize: MOBILE_TYPE.bodyStrong,
+          lineHeight: 20,
         },
 
         // Notas

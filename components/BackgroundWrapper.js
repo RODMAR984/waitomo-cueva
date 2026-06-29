@@ -18,7 +18,7 @@ const WEB_FULL_BLEED =
     ? {
         width: '100%',
         alignSelf: 'stretch',
-        minHeight: '100%',
+        flex: 1,
         backgroundColor: '#021b23',
       }
     : null;
@@ -27,8 +27,9 @@ const WEB_IMAGE_COVER =
     ? {
         width: '100%',
         minWidth: '100%',
-        minHeight: '100%',
+        height: '100%',
         objectFit: 'cover',
+        objectPosition: 'center top',
       }
     : null;
 

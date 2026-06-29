@@ -1588,7 +1588,6 @@ export default function AdminScreen() {
         previewText: {
           color: t.text,
           ...RM_PREVIEW_BASE(),
-          ...(Platform.OS === 'web' ? { whiteSpace: 'pre-wrap' } : null),
         },
         rmText: {
           ...RM_PREVIEW_BASE(),
