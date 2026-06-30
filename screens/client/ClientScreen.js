@@ -9,21 +9,19 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
   Image,
   ActivityIndicator,
   Animated,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { WEB_SCROLL_NO_STRETCH } from '../../utils/webViewportCanvas';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import useUiSurface from '../../hooks/useUiSurface';
+import ScreenShell from '../../components/ScreenShell';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -35,7 +33,6 @@ import { formatYmdLocal } from '../../utils/formatYmdLocal';
 import { normalizeSlotLabel } from '../../utils/freeClassGrantStorage';
 import {
   WEB_CONTENT_MAX_WIDTH,
-  WEB_DESKTOP_BREAKPOINT,
 } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import {
@@ -149,9 +146,8 @@ const CHAT_LAST_OPEN = 'waitomo_chat_last_open';
 
 // ---------- SCREEN ----------
 export default function ClientScreen() {
-  const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
-  const isWebWide = isWeb && width >= WEB_DESKTOP_BREAKPOINT;
+  const { isDesktopWeb: isWebWide } = useUiSurface();
   const contentMaxWidth = isWebWide ? WEB_CONTENT_MAX_WIDTH : isWeb ? 900 : 760;
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
@@ -1375,7 +1371,6 @@ export default function ClientScreen() {
       StyleSheet.create({
         root: { flex: 1 },
         scroll: {
-          ...(Platform.OS === 'web' ? WEB_SCROLL_NO_STRETCH : { flexGrow: 1 }),
           width: '100%',
           alignSelf: 'center',
           maxWidth: contentMaxWidth,
@@ -2177,17 +2172,18 @@ export default function ClientScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
-      <ScrollView
-        testID="client-home-root"
-        style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {homeMainBody}
-        {!isWebWide ? novedadesSection : null}
-      </ScrollView>
-    </BackgroundWrapper>
+    <ScreenShell
+      screen="ClientScreen"
+      plan={planObj || undefined}
+      scroll
+      scrollProps={{
+        testID: 'client-home-root',
+        contentContainerStyle: styles.scroll,
+        showsVerticalScrollIndicator: false,
+      }}
+    >
+      {homeMainBody}
+      {!isWebWide ? novedadesSection : null}
+    </ScreenShell>
   );
 }

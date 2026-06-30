@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -192,7 +192,7 @@ const ConfigScreen = () => {
   );
 
   return (
-    <BackgroundWrapper plan={{ id: profile?.plan_actual }} screen="config">
+    <ScreenShell plan={{ id: profile?.plan_actual }} screen="config">
       <ScrollView contentContainerStyle={styles.container}>
         <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('config_title')}</Text>
@@ -375,7 +375,7 @@ const ConfigScreen = () => {
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </NeoPanel>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 };
 

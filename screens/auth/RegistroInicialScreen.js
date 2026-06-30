@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
 import PasswordInput from '../../components/PasswordInput';
@@ -458,7 +458,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
   const placeholderColor = hasPlanContext ? t.placeholder : fe.placeholder;
 
   return (
-    <BackgroundWrapper screen={hasPlanContext ? undefined : 'neutral'} plan={plan}>
+    <ScreenShell screen={hasPlanContext ? undefined : 'neutral'} plan={plan}>
       <AuthKeyboardAvoidingView style={styles.kav}>
         <AuthDismissKeyboardOutside>
           <ScrollView
@@ -563,6 +563,6 @@ export default function RegistroInicialScreen({ route, navigation }) {
           </ScrollView>
         </AuthDismissKeyboardOutside>
       </AuthKeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

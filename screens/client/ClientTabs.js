@@ -2,13 +2,13 @@
 // Mobile: sin tab bar (comportamiento actual)
 // Web desktop: navegación lateral visible para flujo más profesional
 import React, { useCallback, useMemo } from 'react';
-import { Platform, View, useWindowDimensions } from 'react-native';
+import { Platform, View } from 'react-native';
 import { createBottomTabNavigator, BottomTabBar } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
+import useUiSurface from '../../hooks/useUiSurface';
 import {
-  WEB_DESKTOP_BREAKPOINT,
   WEB_RAIL_WIDTH,
   WEB_RAIL_NOVEDADES_MAX_HEIGHT_CAP,
 } from '../../theme/webSpec';
@@ -23,10 +23,9 @@ import PublicDirectoryScreen from './PublicDirectoryScreen';
 const Tab = createBottomTabNavigator();
 
 export default function ClientTabs() {
-  const { width, height } = useWindowDimensions();
+  const { width, height, isDesktopWeb: isWebDesktop } = useUiSurface();
   const { t } = useThemeContext();
   const { locale, t: tStr } = useLocale();
-  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
 
   const webRailShellStyle = useMemo(
     () => ({

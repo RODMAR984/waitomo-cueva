@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import LogoCompleto from '../../components/LogoCompleto';
 import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import { useAuth } from '../../contexts/AuthContext';
@@ -188,7 +188,7 @@ export default function JoinWithInviteCodeScreen() {
   };
 
   return (
-    <BackgroundWrapper screen="neutral">
+    <ScreenShell screen="neutral">
       <View style={authMarketingChromeRoot}>
         <LogoTriangleBackground
           isDark={isDark}
@@ -245,6 +245,6 @@ export default function JoinWithInviteCodeScreen() {
           </AuthDismissKeyboardOutside>
         </AuthKeyboardAvoidingView>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

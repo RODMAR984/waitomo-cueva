@@ -13,7 +13,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
@@ -261,7 +261,7 @@ export default function ChatCanalesScreen() {
   };
 
   return (
-    <BackgroundWrapper screen="ClientScreen">
+    <ScreenShell screen="ClientScreen">
       <View style={styles.header}>
         <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{tStr('chat_title')}</Text>
@@ -323,6 +323,6 @@ export default function ChatCanalesScreen() {
           )}
         />
       )}
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

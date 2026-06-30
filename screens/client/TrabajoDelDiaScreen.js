@@ -21,11 +21,9 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   RefreshControl,
   ActivityIndicator,
-  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
@@ -38,7 +36,7 @@ import {
   insertTrabajoDiaFeedMessage,
   rowToFeedPayload,
 } from '../../utils/trabajoDiaFeedSupabase';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import VideoLinksThumbs from '../../components/VideoLinksThumbs';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,7 +49,8 @@ import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../../services/booking/trialClassGrant';
 import { evaluateWorkoutEntitlement } from '../../utils/clientWorkoutEntitlement';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import useUiSurface from '../../hooks/useUiSurface';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -67,8 +66,7 @@ const hexToRgba = (hex, alpha = 1) => {
 
 // ---------- screen ----------
 export default function TrabajoDelDiaScreen({ route, navigation }) {
-  const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
+  const { isDesktopWeb: isWebDesktop } = useUiSurface();
   const panelMaxWidth = isWebDesktop ? WEB_CONTENT_MAX_WIDTH : 860;
   // ================== PARAMS ==================
   const { plan, planKey, planValue, fecha, horario: paramHorario, hora: paramHora } = route.params || {};
@@ -120,8 +118,6 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       StyleSheet.create({
         container: { backgroundColor: 'transparent', flex: 1 },
         scroll: {
-          flexGrow: 0,
-          flexShrink: 0,
           justifyContent: 'flex-start',
           paddingTop: Platform.OS === 'web' ? 12 : 24,
           paddingBottom: Platform.OS === 'web' ? 16 : 24,
@@ -1086,17 +1082,22 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
   if (!isAdminLike && !workoutEntitlement.ok) {
     if (workoutEntitlement.reason === 'loading') {
       return (
-        <BackgroundWrapper screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
+        <ScreenShell screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
           <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
             <ActivityIndicator size="large" color={t.brand} />
           </View>
-        </BackgroundWrapper>
+        </ScreenShell>
       );
     }
     return (
-      <BackgroundWrapper screen="TrabajoDelDia" planKey={planKeyNormalized} seed={bgSeed}>
-        <View style={styles.container} testID="screen-trabajo-dia">
-          <ScrollView contentContainerStyle={styles.lockScroll} keyboardShouldPersistTaps="handled">
+      <ScreenShell
+        screen="TrabajoDelDia"
+        planKey={planKeyNormalized}
+        seed={bgSeed}
+        scroll
+        scrollProps={{ contentContainerStyle: styles.lockScroll }}
+        testID="screen-trabajo-dia"
+      >
             <NeoPanel style={[styles.panel, styles.lockPanel]}>
               <View style={styles.panelHeader}>
                 <Text style={styles.planTitle}>{tStr('client_trabajo_locked_title')}</Text>
@@ -1123,35 +1124,109 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                 style={[styles.backBtn, styles.lockBackBtn]}
               />
             </NeoPanel>
-          </ScrollView>
-        </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper
+    <ScreenShell
       screen="TrabajoDelDia"
       planKey={planKeyNormalized}
       seed={bgSeed}
-    >
-      <KeyboardAvoidingView
-        testID="screen-trabajo-dia"
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : undefined}
-          contentContainerStyle={styles.scroll}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={t.brand}
-              style={styles.refreshSpinner}
-            />
-          }
+      scroll
+      keyboardAvoid="default"
+      keyboardAvoidProps={{ testID: 'screen-trabajo-dia', style: styles.container }}
+      scrollProps={{
+        contentContainerStyle: styles.scroll,
+        refreshControl: (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={t.brand}
+            style={styles.refreshSpinner}
+          />
+        ),
+      }}
+      companion={
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}
         >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalBackdrop}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 16 }}
+                showsVerticalScrollIndicator={false}
+              >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{tStr('trabajo_modal_ajustar_rm')}</Text>
+                <Text style={styles.modalSubtitle}>
+                  {currentExercise}
+                  {currentPercentage ? ` · ${currentPercentage}` : ''}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={tStr('trabajo_placeholder_rm')}
+                  placeholderTextColor={t.placeholder}
+                  keyboardType="numeric"
+                  value={currentRM}
+                  onChangeText={setCurrentRM}
+                  autoFocus={!rmModalCalcOpen}
+                />
+                <TouchableOpacity
+                  style={styles.rmCalcToggle}
+                  onPress={() => setRmModalCalcOpen((v) => !v)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.rmCalcToggleText}>
+                    {rmModalCalcOpen ? tStr('trabajo_rm_calc_hide') : tStr('trabajo_rm_calc_toggle')}
+                  </Text>
+                </TouchableOpacity>
+                {rmModalCalcOpen ? (
+                  <RmCalculatorPanel
+                    tStr={tStr}
+                    styles={styles}
+                    placeholderColor={t.placeholder}
+                    initialExercise={currentExercise}
+                    compact
+                    onApplyOneRm={(kg) => {
+                      const s = formatRmWeightKg(kg);
+                      if (s) setCurrentRM(s);
+                    }}
+                    onSaveOneRm={(name, kg) => {
+                      saveRMFromCalculator(name, kg);
+                      setCurrentExercise(name);
+                      const s = formatRmWeightKg(kg);
+                      if (s) setCurrentRM(s);
+                    }}
+                  />
+                ) : null}
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={styles.buttonText}>{tStr('common_cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.saveButtonModal]}
+                    onPress={saveRM}
+                  >
+                    <Text style={styles.buttonText}>
+                      {getRM(currentExercise) ? tStr('trabajo_actualizar') : tStr('trabajo_guardar')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+      }
+    >
           <NeoPanel style={styles.panel}>
             {/* Header */}
             <View style={styles.panelHeader}>
@@ -1476,87 +1551,6 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
               </View>
             )}
           </NeoPanel>
-        </ScrollView>
-
-        {/* MODAL RM */}
-        <Modal
-          visible={modalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.modalBackdrop}>
-              <ScrollView
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 16 }}
-                showsVerticalScrollIndicator={false}
-              >
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>{tStr('trabajo_modal_ajustar_rm')}</Text>
-                <Text style={styles.modalSubtitle}>
-                  {currentExercise}
-                  {currentPercentage ? ` · ${currentPercentage}` : ''}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={tStr('trabajo_placeholder_rm')}
-                  placeholderTextColor={t.placeholder}
-                  keyboardType="numeric"
-                  value={currentRM}
-                  onChangeText={setCurrentRM}
-                  autoFocus={!rmModalCalcOpen}
-                />
-                <TouchableOpacity
-                  style={styles.rmCalcToggle}
-                  onPress={() => setRmModalCalcOpen((v) => !v)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.rmCalcToggleText}>
-                    {rmModalCalcOpen ? tStr('trabajo_rm_calc_hide') : tStr('trabajo_rm_calc_toggle')}
-                  </Text>
-                </TouchableOpacity>
-                {rmModalCalcOpen ? (
-                  <RmCalculatorPanel
-                    tStr={tStr}
-                    styles={styles}
-                    placeholderColor={t.placeholder}
-                    initialExercise={currentExercise}
-                    compact
-                    onApplyOneRm={(kg) => {
-                      const s = formatRmWeightKg(kg);
-                      if (s) setCurrentRM(s);
-                    }}
-                    onSaveOneRm={(name, kg) => {
-                      saveRMFromCalculator(name, kg);
-                      setCurrentExercise(name);
-                      const s = formatRmWeightKg(kg);
-                      if (s) setCurrentRM(s);
-                    }}
-                  />
-                ) : null}
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={() => setModalVisible(false)}
-                  >
-                    <Text style={styles.buttonText}>{tStr('common_cancel')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.saveButtonModal]}
-                    onPress={saveRM}
-                  >
-                    <Text style={styles.buttonText}>
-                      {getRM(currentExercise) ? tStr('trabajo_actualizar') : tStr('trabajo_guardar')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-      </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

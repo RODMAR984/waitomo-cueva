@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -324,7 +324,7 @@ export default function AdminAbonosScreen() {
   const formVisible = showNew || editingId;
 
   return (
-    <BackgroundWrapper screen="admin">
+    <ScreenShell screen="admin">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView
           style={styles.screen}
@@ -490,6 +490,6 @@ export default function AdminAbonosScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

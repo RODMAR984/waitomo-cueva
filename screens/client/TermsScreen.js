@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -73,7 +73,7 @@ export default function TermsScreen({ navigation }) {
   );
 
   return (
-    <BackgroundWrapper plan={{ id: profile?.plan_actual }} screen="config">
+    <ScreenShell plan={{ id: profile?.plan_actual }} screen="config">
       <ScrollView contentContainerStyle={styles.container}>
         <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('terms_title')}</Text>
@@ -83,6 +83,6 @@ export default function TermsScreen({ navigation }) {
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </NeoPanel>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

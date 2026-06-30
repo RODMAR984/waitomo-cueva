@@ -6,7 +6,6 @@ import {
   Text,
   Image,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -18,7 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
 import NeoPanel from '../../components/NeoPanel';
@@ -391,9 +390,9 @@ export default function PublicDirectoryScreen() {
     [handleJoinGym, joinBusyId, styles, t, tStr],
   );
 
-  return (
-    <BackgroundWrapper screen="PublicDirectory" plan={plan}>
-      <View testID="screen-directory" style={styles.kav}>
+  const listHeader = useCallback(
+    () => (
+      <>
         <View style={styles.head}>
           <LogoCompleto height={MOBILE_SIZES.localeControlHeight + MOBILE_SPACING.sm} />
         </View>
@@ -428,46 +427,62 @@ export default function PublicDirectoryScreen() {
             );
           })}
         </View>
+      </>
+    ),
+    [filterText, handleBack, styles, t, tStr, typeFilter],
+  );
 
-        {loading ? (
-          <ActivityIndicator style={{ marginTop: MOBILE_SPACING.xxl + MOBILE_SPACING.lg }} color={t.brand} size="large" />
-        ) : errMsg ? (
-          <Text style={styles.err}>{errMsg}</Text>
-        ) : (
-          <FlatList
-            data={displayRows}
-            keyExtractor={(it, index) => String(it?.id || `row-${index}`)}
-            renderItem={renderItem}
-            numColumns={1}
-            style={Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : undefined}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={t.subText}
-                colors={Platform.OS === 'android' ? [t.brand] : undefined}
-              />
-            }
-            ListEmptyComponent={<Text style={styles.empty}>{tStr('directory_empty')}</Text>}
-            contentContainerStyle={[
-              {
-                paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg,
-                paddingTop: MOBILE_SPACING.sm,
-              },
-              Platform.OS === 'web' ? styles.listContentWeb : null,
-            ]}
-            onEndReached={() => void loadMore()}
-            onEndReachedThreshold={0.35}
-            ListFooterComponent={
-              loadingMore ? (
-                <View style={styles.listFooter}>
-                  <ActivityIndicator color={t.brand} />
-                </View>
-              ) : null
-            }
+  const listEmpty = useCallback(() => {
+    if (loading) {
+      return (
+        <ActivityIndicator
+          style={{ marginTop: MOBILE_SPACING.xxl + MOBILE_SPACING.lg }}
+          color={t.brand}
+          size="large"
+        />
+      );
+    }
+    if (errMsg) return <Text style={styles.err}>{errMsg}</Text>;
+    return <Text style={styles.empty}>{tStr('directory_empty')}</Text>;
+  }, [errMsg, loading, styles, t.brand, tStr]);
+
+  return (
+    <ScreenShell
+      screen="PublicDirectory"
+      plan={plan}
+      list
+      testID="screen-directory"
+      rootStyle={styles.kav}
+      listProps={{
+        data: loading || errMsg ? [] : displayRows,
+        keyExtractor: (it, index) => String(it?.id || `row-${index}`),
+        renderItem,
+        numColumns: 1,
+        refreshControl: (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={t.subText}
+            colors={Platform.OS === 'android' ? [t.brand] : undefined}
           />
-        )}
-      </View>
-    </BackgroundWrapper>
+        ),
+        ListHeaderComponent: listHeader,
+        ListEmptyComponent: listEmpty,
+        contentContainerStyle: [
+          {
+            paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg,
+            paddingTop: MOBILE_SPACING.sm,
+          },
+          Platform.OS === 'web' ? styles.listContentWeb : null,
+        ],
+        onEndReached: () => void loadMore(),
+        onEndReachedThreshold: 0.35,
+        ListFooterComponent: loadingMore ? (
+          <View style={styles.listFooter}>
+            <ActivityIndicator color={t.brand} />
+          </View>
+        ) : null,
+      }}
+    />
   );
 }

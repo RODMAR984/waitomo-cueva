@@ -15,7 +15,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import NeoPanel from '../../components/NeoPanel';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -131,7 +131,7 @@ export default function ReservaClaseScreen({ route, navigation }) {
   );
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <ScrollView style={{ flex: 1, backgroundColor: 'transparent' }} contentContainerStyle={styles.scroll}>
         <NeoPanel style={styles.panel}>
           <BackNavButton onPress={() => navigation.goBack()} />
@@ -165,6 +165,6 @@ export default function ReservaClaseScreen({ route, navigation }) {
           ) : null}
         </NeoPanel>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

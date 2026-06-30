@@ -16,7 +16,7 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -204,28 +204,28 @@ export default function SuperadminTicketDetailScreen() {
 
   if (!allowed) {
     return (
-      <BackgroundWrapper screen="Admin">
+      <ScreenShell screen="Admin">
         <View style={[styles.scroll, { paddingTop: screenHeaderTopPadding(insets.top) }]}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.err}>{tStr('superadmin_access_denied')}</Text>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   if (!ticketId) {
     return (
-      <BackgroundWrapper screen="Admin">
+      <ScreenShell screen="Admin">
         <View style={[styles.scroll, { paddingTop: screenHeaderTopPadding(insets.top) }]}>
           <BackNavButton onPress={() => navigation.navigate('SuperadminTickets')} label={tStr('superadmin_tickets_title')} />
           <Text style={styles.err}>{tStr('superadmin_ticket_missing')}</Text>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper screen="Admin">
+    <ScreenShell screen="Admin">
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -308,7 +308,7 @@ export default function SuperadminTicketDetailScreen() {
           />
         )}
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

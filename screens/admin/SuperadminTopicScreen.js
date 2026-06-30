@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -53,7 +53,7 @@ export default function SuperadminTopicScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="Admin">
+    <ScreenShell screen="Admin">
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: screenHeaderTopPadding(insets.top) }]}
         keyboardShouldPersistTaps="handled"
@@ -73,6 +73,6 @@ export default function SuperadminTopicScreen() {
           </View>
         ) : null}
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

@@ -1,0 +1,27 @@
+---
+description: Layout y fondo en pantallas FitEngine — ScreenShell como única API pública.
+globs:
+  - screens/**/*.js
+  - components/ScreenShell.js
+  - components/ScreenRoot.js
+  - components/BackgroundWrapper.js
+  - utils/screenLayout.js
+  - hooks/useUiSurface.js
+---
+
+# Layout de pantallas (fondo + contenido)
+
+## Contrato
+
+1. **Pantallas**: solo `ScreenShell` (`components/ScreenShell.js`). No importar `BackgroundWrapper`.
+2. **Superficie**: `useUiSurface()` dentro del shell → `native` | `mobileWeb` | `desktopWeb`.
+3. **Scroll**: `scroll` + `scrollProps` — `contentContainerStyle` se combina con `scrollContentContainer(surface)` en el shell.
+4. **Listas**: `list` + `listProps` (FlatList con el mismo `contentContainerStyle` por superficie).
+5. **Teclado**: `keyboardAvoid="form"` (staff/auth, sin KAV en web) o `keyboardAvoid="default"` (KAV iOS).
+6. **Modales hermanos**: `companion={...}` dentro del KAV, o fragmento `<>...</>` con modales fuera del shell si son portales.
+
+## Anti-patrones
+
+- `flexGrow: 0` en toda la web en pantallas.
+- `scrollContentContainer` / `WEB_SCROLL_NO_STRETCH` en pantallas (solo en `screenLayout.js` vía shell).
+- Importar `BackgroundWrapper` en `screens/`.

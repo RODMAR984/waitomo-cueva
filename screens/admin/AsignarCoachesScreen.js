@@ -20,7 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -243,19 +243,19 @@ export default function AsignarCoachesScreen({ route }) {
 
   if (!autorizado) {
     return (
-      <BackgroundWrapper screen="admin">
+      <ScreenShell screen="admin">
         <View style={styles.root}>
           {headerEl}
           <View style={styles.centerWrap}>
             <Text style={styles.centerMsg}>{tStr('assign_coach_unauthorized')}</Text>
           </View>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper screen="admin">
+    <ScreenShell screen="admin">
       <View style={styles.root}>
         {headerEl}
         <ScrollView
@@ -312,7 +312,7 @@ export default function AsignarCoachesScreen({ route }) {
           })}
         </ScrollView>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

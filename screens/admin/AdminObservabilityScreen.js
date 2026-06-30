@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -316,7 +316,7 @@ export default function AdminObservabilityScreen({ navigation, observabilityBack
   ];
 
   return (
-    <BackgroundWrapper screen="admin">
+    <ScreenShell screen="admin">
       <View style={styles.root} testID="admin-observability-root">
         <View style={styles.contentMax}>
         <View style={styles.header}>
@@ -476,6 +476,6 @@ export default function AdminObservabilityScreen({ navigation, observabilityBack
         />
         </View>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

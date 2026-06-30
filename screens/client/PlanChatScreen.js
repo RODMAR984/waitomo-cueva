@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../supabaseClient';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -104,7 +104,7 @@ export default function PlanChatScreen({ route }) {
   );
 
   return (
-    <BackgroundWrapper screen="planchat" plan={plan}>
+    <ScreenShell screen="planchat" plan={plan}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -143,6 +143,6 @@ export default function PlanChatScreen({ route }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

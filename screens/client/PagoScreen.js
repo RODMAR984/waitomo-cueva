@@ -21,7 +21,7 @@ import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -483,7 +483,7 @@ export default function PagoScreen({ navigation, route }) {
   );
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 20}
@@ -671,7 +671,7 @@ export default function PagoScreen({ navigation, route }) {
           </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

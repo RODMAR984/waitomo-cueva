@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -503,7 +503,7 @@ export default function ChatScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="ClientScreen">
+    <ScreenShell screen="ClientScreen">
       <View style={styles.header}>
         <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{channelName}</Text>
@@ -601,6 +601,6 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

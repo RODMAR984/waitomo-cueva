@@ -13,7 +13,7 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { usePlanContext } from '../../contexts/PlanContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -211,17 +211,17 @@ export default function PlanDetailScreen({ route, navigation }) {
 
   if (!plan) {
     return (
-      <BackgroundWrapper>
+      <ScreenShell>
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyTitle}>{tStr('plan_detail_no_plan')}</Text>
           <BackNavButton onPress={handleVolver} label={tStr('config_back')} style={styles.buttonOutline} />
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.overlayHeader}>
           <Text style={styles.title}>{plan.title}</Text>
@@ -254,6 +254,6 @@ export default function PlanDetailScreen({ route, navigation }) {
           <BackNavButton onPress={handleVolver} label={tStr('plan_detail_back_plans')} style={styles.buttonOutline} />
         </NeoPanel>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

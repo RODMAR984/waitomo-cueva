@@ -14,7 +14,7 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import getRandomGeneralImage from '../../utils/getRandomGeneralImage';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -155,7 +155,7 @@ export default function ReservaScreen({ route, navigation }) {
   };
 
   return (
-    <BackgroundWrapper plan={plan} fondo={fondo}>
+    <ScreenShell plan={plan} fondo={fondo}>
       <View style={styles.root}>
         <View style={styles.content}>
           <View style={styles.panelTitle}>
@@ -188,6 +188,6 @@ export default function ReservaScreen({ route, navigation }) {
           </View>
         </View>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

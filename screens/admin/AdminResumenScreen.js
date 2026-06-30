@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1138,7 +1138,7 @@ export default function AdminResumenScreen() {
 
   if (!orgId) {
     return (
-      <BackgroundWrapper screen="admin">
+      <ScreenShell screen="admin">
         <View style={styles.root}>
           <View style={styles.topBar}>
             {!hideInlineBack ? (
@@ -1156,7 +1156,7 @@ export default function AdminResumenScreen() {
             <Text style={styles.emptyText}>{tStr('admin_resumen_no_org')}</Text>
           </View>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
@@ -1267,7 +1267,7 @@ export default function AdminResumenScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="admin">
+    <ScreenShell screen="admin">
       <View style={styles.root}>
         <View style={styles.contentMax} testID="screen-admin-resumen">
         <View style={styles.topBar}>
@@ -1628,6 +1628,6 @@ export default function AdminResumenScreen() {
         )}
         </View>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

@@ -20,7 +20,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import PasswordInput from '../../components/PasswordInput';
 import { useAuth } from '../../contexts/AuthContext';
@@ -305,7 +305,7 @@ const handleChangePassword = async () => {
   //   RENDER
   // =========================
   return (
-    <BackgroundWrapper plan={{ id: profile?.plan_actual }} screen="seguridad">
+    <ScreenShell plan={{ id: profile?.plan_actual }} screen="seguridad">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -446,7 +446,7 @@ const handleChangePassword = async () => {
           </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 };
 

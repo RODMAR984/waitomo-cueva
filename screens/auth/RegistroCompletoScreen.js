@@ -20,7 +20,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { colors } from '../../theme/colors';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -447,7 +447,7 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
   );
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <AuthKeyboardAvoidingView style={styles.kav}>
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -548,6 +548,6 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
           </NeoPanel>
         </ScrollView>
       </AuthKeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

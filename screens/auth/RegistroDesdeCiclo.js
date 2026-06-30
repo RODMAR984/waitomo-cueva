@@ -16,7 +16,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { showAppAlert } from '../../utils/confirmAction';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import getRandomGeneralImage from '../../utils/getRandomGeneralImage';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -110,7 +110,7 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
   );
 
   return (
-    <BackgroundWrapper fondo={getRandomGeneralImage()}>
+    <ScreenShell fondo={getRandomGeneralImage()}>
       <AuthKeyboardAvoidingView style={styles.kav}>
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -158,6 +158,6 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
           </View>
         </ScrollView>
       </AuthKeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

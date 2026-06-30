@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
 import LogoTriangleBackground from '../../components/LogoTriangleBackground';
@@ -306,7 +306,7 @@ export default function CreaCuentaStaffScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="neutral">
+    <ScreenShell screen="neutral">
       <View style={authMarketingChromeRoot}>
         <LogoTriangleBackground
           isDark={isDark}
@@ -326,6 +326,6 @@ export default function CreaCuentaStaffScreen() {
           </ScrollView>
         </AuthKeyboardAvoidingView>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

@@ -9,7 +9,7 @@ import { supabase } from '../../supabaseClient';
 import { fitengineLogoColors as fe } from '../../theme/colors';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import LogoCompleto from '../../components/LogoCompleto';
 import { AuthKeyboardAvoidingView, authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 
@@ -48,7 +48,7 @@ export default function FitEngineSpaceIntroScreen() {
   }, [navigation, session?.user?.user_metadata]);
 
   return (
-    <BackgroundWrapper screen="fitenginespaceintro" style={styles.flex}>
+    <ScreenShell screen="fitenginespaceintro" style={styles.flex}>
       <SafeAreaView style={styles.flex} edges={['top', 'left', 'right']}>
         <AuthKeyboardAvoidingView style={styles.flex}>
           <ScrollView
@@ -90,7 +90,7 @@ export default function FitEngineSpaceIntroScreen() {
           </ScrollView>
         </AuthKeyboardAvoidingView>
       </SafeAreaView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

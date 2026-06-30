@@ -18,7 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -248,7 +248,7 @@ export default function FreeClassRequestScreen({ route, navigation }) {
   const hoursNotice = String(FREE_CLASS_CANCEL_NOTICE_HOURS);
 
   return (
-    <BackgroundWrapper screen="ClientScreen" plan={plan}>
+    <ScreenShell screen="ClientScreen" plan={plan}>
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -359,6 +359,6 @@ export default function FreeClassRequestScreen({ route, navigation }) {
           </NeoPanel>
         </ScrollView>
       </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

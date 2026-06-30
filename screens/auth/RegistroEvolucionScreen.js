@@ -15,7 +15,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { confirmAction, showAppAlert } from '../../utils/confirmAction';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import getRandomGeneralImage from '../../utils/getRandomGeneralImage';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -213,7 +213,7 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
   );
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -285,6 +285,6 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
           ) : null}
         </NeoPanel>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

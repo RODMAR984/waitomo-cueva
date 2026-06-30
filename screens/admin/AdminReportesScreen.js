@@ -6,7 +6,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -100,7 +100,7 @@ export default function AdminReportesScreen() {
     : [];
 
   return (
-    <BackgroundWrapper screen="Admin">
+    <ScreenShell screen="Admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
@@ -127,6 +127,6 @@ export default function AdminReportesScreen() {
           </View>
         )}
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

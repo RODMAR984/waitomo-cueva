@@ -16,7 +16,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -205,17 +205,17 @@ export default function SuperadminOrgsScreen() {
 
   if (!allowed) {
     return (
-      <BackgroundWrapper screen="Admin">
+      <ScreenShell screen="Admin">
         <View style={[styles.listWrap, { paddingTop: screenHeaderTopPadding(insets.top) }]}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.err}>{tStr('superadmin_access_denied')}</Text>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper screen="Admin">
+    <ScreenShell screen="Admin">
       <View style={styles.root} testID="screen-superadmin-orgs">
         <View style={styles.header}>
           {!hideInlineBack ? (
@@ -250,6 +250,6 @@ export default function SuperadminOrgsScreen() {
           )}
         </View>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

@@ -7,7 +7,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -54,7 +54,7 @@ export default function HistorialScreen({ route, navigation }) {
   );
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <View style={styles.container}>
         <NeoPanel style={styles.panel}>
           <Text style={styles.text}>🗓️ {tStr('historial_empty')}</Text>
@@ -63,6 +63,6 @@ export default function HistorialScreen({ route, navigation }) {
           </View>
         </NeoPanel>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

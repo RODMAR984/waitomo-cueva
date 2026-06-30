@@ -27,7 +27,7 @@ import { getThemeTokens, hexToRgba } from '../../theme/colors';
 import { imageUriToArrayBuffer } from '../../utils/imageUriToArrayBuffer';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 
 const BUCKET_ORG_LOGOS = 'org-logos';
 const BUCKET_ORG_BACKGROUNDS = 'org-backgrounds';
@@ -647,7 +647,7 @@ export default function ConfiguraTuEspacioScreen() {
   };
 
   return (
-    <BackgroundWrapper screen="configuratuespacio" style={{ flex: 1 }}>
+    <ScreenShell screen="configuratuespacio" style={{ flex: 1 }}>
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <AuthKeyboardAvoidingView style={styles.kav}>
         <ScrollView
@@ -929,6 +929,6 @@ export default function ConfiguraTuEspacioScreen() {
         </ScrollView>
       </AuthKeyboardAvoidingView>
     </SafeAreaView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

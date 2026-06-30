@@ -24,7 +24,7 @@ import { useNavigation, useFocusEffect, usePreventRemove } from '@react-navigati
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -1406,16 +1406,16 @@ export default function GymConfigScreen() {
 
   if (!orgId) {
     return (
-      <BackgroundWrapper screen="gymconfig">
+      <ScreenShell screen="gymconfig">
         <View style={styles.screen}>
           <Text style={styles.title}>{tStr('gym_config_loading')}</Text>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper screen="gymconfig">
+    <ScreenShell screen="gymconfig">
       <ScrollView
         ref={gymConfigScrollRef}
         style={styles.screen}
@@ -2473,6 +2473,6 @@ export default function GymConfigScreen() {
           <Text style={[styles.hint, { fontSize: MOBILE_TYPE.meta, opacity: 0.8 }]}>{tStr('gym_config_footer')}</Text>
         </View>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

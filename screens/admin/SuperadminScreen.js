@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -74,7 +74,7 @@ export default function SuperadminScreen() {
 
   if (!allowed) {
     return (
-      <BackgroundWrapper screen="Admin">
+      <ScreenShell screen="Admin">
         <View style={styles.root}>
           <View style={[styles.header, { paddingTop: screenHeaderTopPadding(insets.top) }]}>
             <BackNavButton onPress={() => navigation.goBack()} />
@@ -89,12 +89,12 @@ export default function SuperadminScreen() {
             <Text style={styles.deny}>{tStr('superadmin_access_denied')}</Text>
           </ScrollView>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper screen="Admin">
+    <ScreenShell screen="Admin">
       <View testID="superadmin-hub-root" style={styles.root}>
         <View style={[styles.header, { paddingTop: screenHeaderTopPadding(insets.top) }]}>
           <BackNavButton
@@ -130,6 +130,6 @@ export default function SuperadminScreen() {
           </View>
         </ScrollView>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

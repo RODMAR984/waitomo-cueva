@@ -14,7 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -62,7 +62,7 @@ export default function WelcomeOrganizationScreen() {
   if (!organization?.id) {
     const showFallback = orgWaitTimedOut || (profile?.id && !profile?.organization_id);
     return (
-      <BackgroundWrapper screen="neutral">
+      <ScreenShell screen="neutral">
         <View style={[styles.center, { paddingTop: insets.top + 40 }]}>
           {!showFallback ? (
             <>
@@ -86,12 +86,12 @@ export default function WelcomeOrganizationScreen() {
             </>
           )}
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper screen="OrgWelcome">
+    <ScreenShell screen="OrgWelcome">
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
@@ -135,7 +135,7 @@ export default function WelcomeOrganizationScreen() {
 
         <Text style={[styles.hint, { color: t.placeholder }]}>{tStr('welcome_org_branding_hint')}</Text>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

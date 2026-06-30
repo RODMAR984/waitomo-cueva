@@ -18,7 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../../supabaseClient';
 import { getMercadoPagoConnectRedirectUri } from '../../utils/fitengineUrls';
@@ -335,7 +335,7 @@ export default function AdminMercadoPagoSettingsScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="Admin">
+    <ScreenShell screen="Admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
@@ -434,6 +434,6 @@ export default function AdminMercadoPagoSettingsScreen() {
           <Text style={[styles.hint, styles.noEditHint]}>{tStr('gym_config_no_permission_body')}</Text>
         ) : null}
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

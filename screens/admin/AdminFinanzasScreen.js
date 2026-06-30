@@ -15,7 +15,7 @@ import {
 import PropTypes from 'prop-types';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -499,7 +499,7 @@ export default function AdminFinanzasScreen({ route }) {
   };
 
   return (
-    <BackgroundWrapper screen="adminfinanzas">
+    <ScreenShell screen="adminfinanzas">
       <SafeAreaView style={styles.safe}>
         {!hideInlineBack ? (
           <View style={styles.topBackWrap}>
@@ -926,7 +926,7 @@ export default function AdminFinanzasScreen({ route }) {
           )}
         </ScrollView>
       </SafeAreaView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

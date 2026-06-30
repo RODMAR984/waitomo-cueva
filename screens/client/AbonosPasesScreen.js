@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PropTypes from 'prop-types';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import { usePlanContext } from '../../contexts/PlanContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
@@ -63,12 +63,12 @@ export default function AbonosPasesScreen({ navigation, route }) {
   if (!plan) {
     const testPlan = { id: 'cross', name: 'cross', title: 'CROSS TRAINING' };
     return (
-      <BackgroundWrapper plan={testPlan}>
+      <ScreenShell plan={testPlan}>
         <Text style={{ color: 'white', padding: 20 }}>
           No se recibió un plan. Volvé atrás y elegí uno.
         </Text>
         <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={{ marginTop: 16 }} />
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
@@ -605,7 +605,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
   );
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.container}
@@ -731,7 +731,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
         )}
 
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

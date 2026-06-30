@@ -16,7 +16,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import { FormKeyboardAvoidingView } from '../../components/AuthWebFormShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
@@ -256,7 +256,7 @@ export default function AdminNovedadesScreen() {
   const formVisible = showNewForm || editingId;
 
   return (
-    <BackgroundWrapper screen="admin">
+    <ScreenShell screen="admin">
       <FormKeyboardAvoidingView testID="screen-admin-novedades" style={{ flex: 1 }}>
         <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
@@ -384,6 +384,6 @@ export default function AdminNovedadesScreen() {
           )}
         </ScrollView>
       </FormKeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

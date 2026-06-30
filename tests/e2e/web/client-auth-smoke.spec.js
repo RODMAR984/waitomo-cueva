@@ -35,6 +35,18 @@ test.describe('Web smoke: cliente autenticado', () => {
     });
   });
 
+  test('home cliente visible en viewport móvil (iPhone)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId('client-home-root')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Bienvenido a tu panel de entrenamiento.', { exact: true })).toBeVisible();
+  });
+
+  test('perfil visible en viewport móvil (iPhone)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('tab', { name: /Mi perfil/ }).click();
+    await expect(page.getByTestId('screen-perfil')).toBeVisible({ timeout: 15_000 });
+  });
+
   test('abre perfil desde tabs', async ({ page }) => {
     await page.getByRole('tab', { name: /Mi perfil/ }).click();
     await expect(page.getByTestId('screen-perfil')).toBeVisible({ timeout: 15_000 });

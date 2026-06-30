@@ -19,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { getStripeConnectRedirectUri } from '../../utils/fitengineUrls';
@@ -221,7 +221,7 @@ export default function AdminStripeSettingsScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="Admin">
+    <ScreenShell screen="Admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
@@ -277,6 +277,6 @@ export default function AdminStripeSettingsScreen() {
           <Text style={[styles.hint, styles.noEditHint]}>{tStr('gym_config_no_permission_body')}</Text>
         )}
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

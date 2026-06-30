@@ -11,6 +11,9 @@ import {
   IMAGENES_POR_PLAN as planImages,
   IMAGEN_WELCOME as welcomeImage,
 } from '../utils/imagenesFijas';
+import { SCREEN_ROOT } from '../utils/screenLayout';
+
+/** Uso interno: importar ScreenShell desde pantallas. */
 
 /** En web: imagen fija al viewport (no “socalo” al scrollear) + contenedor transparente. */
 const WEB_FULL_BLEED =
@@ -435,10 +438,15 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   /** RN nativo: sin flex:1 el contenido dentro de ImageBackground colapsa a altura 0 (solo se ve el fondo). */
   contentChild: {
-    flex: 1,
-    minHeight: 0,
+    ...SCREEN_ROOT,
     ...(Platform.OS === 'web'
-      ? { width: '100%', alignSelf: 'stretch', position: 'relative', zIndex: 1 }
+      ? {
+          width: '100%',
+          alignSelf: 'stretch',
+          position: 'relative',
+          zIndex: 1,
+          minHeight: '100%',
+        }
       : null),
   },
 });

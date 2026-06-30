@@ -16,7 +16,6 @@ import {
   Keyboard,
   ActivityIndicator,
   Dimensions,
-  useWindowDimensions,
   TouchableWithoutFeedback,
   Pressable,
   DeviceEventEmitter,
@@ -27,7 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, usePreventRemove, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import VideoLinksThumbs from '../../components/VideoLinksThumbs';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -56,10 +55,10 @@ import {
   ADMIN_SCROLL_EDITOR,
   emitAdminScrollToEditor,
 } from '../../utils/adminScrollBus';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import useUiSurface from '../../hooks/useUiSurface';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
-import { FormKeyboardAvoidingView } from '../../components/AuthWebFormShell';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -302,12 +301,11 @@ export default function AdminScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, isDesktopWeb } = useUiSurface();
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
   const STAFF_WEB_RAIL = 232;
-  const isDesktopWeb = Platform.OS === 'web' && windowWidth >= WEB_DESKTOP_BREAKPOINT;
   /** Web ancho: navegación staff fija a la izquierda (negocio en escritorio). */
   const isStaffWebDesktop = isDesktopWeb;
   const panelWidth = isDesktopWeb
@@ -967,8 +965,6 @@ export default function AdminScreen() {
         screen: { flex: 1, backgroundColor: 'transparent' },
         screenScroll: { flex: 1, minHeight: 0 },
         scrollContainer: {
-          flexGrow: Platform.OS === 'web' ? 0 : undefined,
-          flexShrink: Platform.OS === 'web' ? 0 : undefined,
           paddingTop: Platform.OS === 'web' ? 20 : 56,
           paddingBottom: Platform.OS === 'web' ? 8 : 40,
         },
@@ -2219,24 +2215,27 @@ export default function AdminScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="admin" style={styles.screen}>
-      <FormKeyboardAvoidingView
-        testID="admin-dashboard-root"
-        style={[
+    <>
+    <ScreenShell
+      screen="admin"
+      style={styles.screen}
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{
+        testID: 'admin-dashboard-root',
+        style: [
           styles.screen,
           Platform.OS !== 'web'
             ? { paddingTop: screenHeaderTopPadding(insets.top), paddingBottom: insets.bottom }
             : null,
-        ]}
-      >
-        <ScrollView
-              ref={scrollViewRef}
-              style={Platform.OS !== 'web' ? styles.screenScroll : undefined}
-              contentContainerStyle={styles.scrollContainer}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={Platform.OS === 'web' ? 'none' : 'on-drag'}
-            >
+        ],
+      }}
+      scrollProps={{
+        ref: scrollViewRef,
+        contentContainerStyle: styles.scrollContainer,
+        keyboardDismissMode: Platform.OS === 'web' ? 'none' : 'on-drag',
+      }}
+    >
               <View style={styles.chromeHeader}>
                 <View style={styles.headerRow}>
                   <Text style={styles.headerTitle}>{tStr('admin_panel')}</Text>
@@ -2565,8 +2564,7 @@ export default function AdminScreen() {
               </TouchableOpacity>
             </View>
               </NeoPanel>
-            </ScrollView>
-      </FormKeyboardAvoidingView>
+    </ScreenShell>
 
       <Modal visible={aiModalVisible} transparent animationType="fade" onRequestClose={() => setAiModalVisible(false)}>
         <View style={styles.modalOverlay}>
@@ -2865,6 +2863,6 @@ export default function AdminScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </BackgroundWrapper>
+    </>
   );
 }

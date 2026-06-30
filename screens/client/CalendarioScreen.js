@@ -12,14 +12,13 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 import PropTypes from 'prop-types';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePlanContext } from '../../contexts/PlanContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTrainingData } from '../../contexts/TrainingDataContext';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import NeoPanel from '../../components/NeoPanel';
 import { colors } from '../../theme/colors';
@@ -31,7 +30,8 @@ import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import { fetchLatestUserAbono } from '../../utils/userAbonoFetch';
 import { normalizeSlotLabel } from '../../utils/freeClassGrantStorage';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import useUiSurface from '../../hooks/useUiSurface';
 import { resolveFreeClassGrant } from '../../services/booking/trialClassGrant';
 import {
   bookClassSlotServer,
@@ -41,7 +41,6 @@ import {
 } from '../../services/booking/classBooking';
 import { evaluateCalendarioAccess, evaluateWorkoutEntitlement } from '../../utils/clientWorkoutEntitlement';
 import { adminPlanValueFromCanon } from '../../utils/trainingBlockPlan';
-import { WEB_SCROLL_NO_STRETCH } from '../../utils/webViewportCanvas';
 import { reportError, trackEvent } from '../../utils/observability';
 
 // ---------- helpers ----------
@@ -113,8 +112,7 @@ function planFromProfile(planActual) {
 
 // ---------- screen ----------
 export default function CalendarioScreen({ route, navigation }) {
-  const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
+  const { isDesktopWeb: isWebDesktop } = useUiSurface();
   const panelMaxWidth = WEB_CONTENT_MAX_WIDTH;
   const { plan: contextPlan } = usePlanContext();
   const { profile, user, organization } = useAuth();
@@ -1085,8 +1083,6 @@ export default function CalendarioScreen({ route, navigation }) {
           marginBottom: 10,
         },
         scrollContent: {
-          // Web escritorio: sin estirar scroll vacío. Móvil web + nativo: flexGrow para que el panel no colapse (pantalla negra).
-          ...(Platform.OS === 'web' && isWebDesktop ? WEB_SCROLL_NO_STRETCH : { flexGrow: 1 }),
           paddingBottom: Platform.OS === 'web' ? 32 : 24,
           width: '100%',
         },
@@ -1116,28 +1112,29 @@ export default function CalendarioScreen({ route, navigation }) {
 
   if (user?.id && abonoLoading) {
     return (
-      <BackgroundWrapper screen="ClientScreen" plan={plan}>
+      <ScreenShell screen="ClientScreen" plan={plan}>
         <View style={{ flex: 1, minHeight: 0, justifyContent: 'center' }}>
           <NeoPanel style={[styles.panel, { marginTop: height * 0.12, minHeight: 120 }]}>
             <ActivityIndicator size="large" color={t.brand} />
           </NeoPanel>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   const calendarLocked = user?.id && !calendarAccess.ok;
 
   return (
-    <BackgroundWrapper screen="ClientScreen" plan={plan}>
-      <View testID="screen-calendario" style={{ flex: 1, minHeight: 0 }}>
-        <ScrollView
-          style={{ flex: 1, minHeight: 0 }}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          nestedScrollEnabled
-        >
+    <ScreenShell
+      screen="ClientScreen"
+      plan={plan}
+      scroll
+      scrollProps={{
+        testID: 'screen-calendario',
+        contentContainerStyle: styles.scrollContent,
+        nestedScrollEnabled: true,
+      }}
+    >
       <NeoPanel style={styles.panel}>
         <BackNavButton
           testID="calendario-nav-back"
@@ -1356,9 +1353,7 @@ export default function CalendarioScreen({ route, navigation }) {
         )}
 
       </NeoPanel>
-        </ScrollView>
-      </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }
 

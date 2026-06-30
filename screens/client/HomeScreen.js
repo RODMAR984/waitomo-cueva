@@ -1,7 +1,7 @@
 // HomeScreen — panel overlay y botón Admin; sin inline/literales
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
@@ -53,7 +53,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <BackgroundWrapper plan={plan}>
+    <ScreenShell plan={plan}>
       <View style={styles.container}>
         <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('home_title')}</Text>
@@ -62,6 +62,6 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </NeoPanel>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

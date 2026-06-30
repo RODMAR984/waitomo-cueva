@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import LogoCompleto from '../../components/LogoCompleto';
 import { useAuth } from '../../contexts/AuthContext';
@@ -124,7 +124,7 @@ export default function AboutFitEngineScreen() {
   );
 
   return (
-    <BackgroundWrapper plan={{ id: profile?.plan_actual }} screen="config">
+    <ScreenShell plan={{ id: profile?.plan_actual }} screen="config">
       <ScrollView contentContainerStyle={styles.container}>
         <NeoPanel style={styles.panel}>
           <View style={styles.logoWrap}>
@@ -190,6 +190,6 @@ export default function AboutFitEngineScreen() {
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </NeoPanel>
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

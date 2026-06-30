@@ -13,7 +13,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
@@ -181,7 +181,7 @@ export default function NovedadesScreen() {
   };
 
   return (
-    <BackgroundWrapper screen="ClientScreen">
+    <ScreenShell screen="ClientScreen">
       <View style={styles.header}>
         <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{tStr('novedades_title')}</Text>
@@ -246,6 +246,6 @@ export default function NovedadesScreen() {
           })
         )}
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

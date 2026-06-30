@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import { colors } from '../../theme/colors';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -230,7 +230,7 @@ export default function DetalleAbonoScreen({ navigation, route }) {
   );
 
   return (
-    <BackgroundWrapper screen="TrabajoDelDia">
+    <ScreenShell screen="TrabajoDelDia">
       <ScrollView style={styles.root} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <BackNavButton onPress={() => navigation.goBack()} />
         <NeoPanel style={styles.panel}>
@@ -305,6 +305,6 @@ export default function DetalleAbonoScreen({ navigation, route }) {
           </NeoPanel>
         )}
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

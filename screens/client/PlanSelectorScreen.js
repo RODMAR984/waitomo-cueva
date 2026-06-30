@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import NeoPanel from '../../components/NeoPanel';
 import { useThemeContext } from '../../contexts/ThemeContext';
@@ -493,7 +493,7 @@ export default function PlanSelectorScreen({ navigation, route }) {
   }, [displayPlans]);
 
   return (
-    <BackgroundWrapper screen={backdropScreen}>
+    <ScreenShell screen={backdropScreen}>
       <View style={styles.root}>
         <ScrollView
           contentContainerStyle={[
@@ -633,6 +633,6 @@ export default function PlanSelectorScreen({ navigation, route }) {
           ) : null}
         </ScrollView>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

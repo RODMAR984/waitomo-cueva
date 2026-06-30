@@ -15,7 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { draftMemberSummaryWithAi } from '../../utils/aiAssistant';
@@ -456,7 +456,7 @@ export default function OrgMemberDetailScreen() {
 
   if (!userId) {
     return (
-      <BackgroundWrapper screen="admin">
+      <ScreenShell screen="admin">
         <View
           style={{
             padding: 24,
@@ -471,12 +471,12 @@ export default function OrgMemberDetailScreen() {
           ) : null}
           <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.bodyStrong }}>{tStr('org_member_missing')}</Text>
         </View>
-      </BackgroundWrapper>
+      </ScreenShell>
     );
   }
 
   return (
-    <BackgroundWrapper screen="admin">
+    <ScreenShell screen="admin">
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
@@ -541,6 +541,6 @@ export default function OrgMemberDetailScreen() {
           </View>
         ) : null}
       </ScrollView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

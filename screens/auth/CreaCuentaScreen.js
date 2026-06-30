@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import LogoCompleto from '../../components/LogoCompleto';
 import LogoTriangleBackground from '../../components/LogoTriangleBackground';
 import { useAuth } from '../../contexts/AuthContext';
@@ -198,7 +198,7 @@ export default function CreaCuentaScreen() {
   };
 
   return (
-    <BackgroundWrapper screen="neutral">
+    <ScreenShell screen="neutral">
       <View style={authMarketingChromeRoot}>
         <LogoTriangleBackground
           isDark={isDark}
@@ -248,6 +248,6 @@ export default function CreaCuentaScreen() {
           </AuthDismissKeyboardOutside>
         </AuthKeyboardAvoidingView>
       </View>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 }

@@ -11,20 +11,17 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Image,
   ActivityIndicator,
-  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
@@ -33,7 +30,8 @@ import { useLocale } from '../../contexts/LocaleContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { navigationRef, resetNavigationRoot } from '../../navigationRef';
-import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
+import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
+import useUiSurface from '../../hooks/useUiSurface';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
@@ -42,8 +40,7 @@ const PerfilUsuarioScreen = () => {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const { profile, updateProfile, uploadAvatar, logout, user, ensureProfile, organization } = useAuth();
-  const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
+  const { isDesktopWeb: isWebDesktop } = useUiSurface();
 
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
@@ -346,7 +343,6 @@ const PerfilUsuarioScreen = () => {
       StyleSheet.create({
         flex: { flex: 1 },
         container: {
-          flexGrow: 1,
           padding: isWebDesktop ? 24 : 20,
           paddingBottom: 32,
           width: '100%',
@@ -470,17 +466,19 @@ const PerfilUsuarioScreen = () => {
   // Render
   // ---------------------------------------------
   return (
-    <BackgroundWrapper screen="ClientScreen">
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      >
-        <ScrollView
-          testID="screen-perfil"
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-        >
+    <ScreenShell
+      screen="ClientScreen"
+      scroll
+      keyboardAvoid="default"
+      keyboardAvoidProps={{
+        style: styles.flex,
+        keyboardVerticalOffset: Platform.OS === 'ios' ? 80 : 0,
+      }}
+      scrollProps={{
+        testID: 'screen-perfil',
+        contentContainerStyle: styles.container,
+      }}
+    >
           <NeoPanel style={styles.panel}>
             <Text style={styles.titulo}>{tStr('perfil_title')}</Text>
             <Text style={styles.subtitulo}>{tStr('perfil_subtitle')}</Text>
@@ -712,9 +710,7 @@ const PerfilUsuarioScreen = () => {
               />
             </View>
           </NeoPanel>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </BackgroundWrapper>
+    </ScreenShell>
   );
 };
 
