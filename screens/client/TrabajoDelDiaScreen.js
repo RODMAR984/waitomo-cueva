@@ -875,6 +875,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
       if (!samePlan || !sameDate) return false;
       if (!horarioEfectivo) return true;
       const bHora = normalizeHora(b.hora || b.horario);
+      if (!bHora) return true;
       return bHora === horarioEfectivo;
     });
   }, [bloques, planValueEfectivo, fechaEfectiva, horarioEfectivo, effectiveOrgId]);

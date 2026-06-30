@@ -40,3 +40,20 @@ export function plansMatchForBlocks(bloquePlan, routePlanValue) {
   if (!a || !b) return false;
   return a === b;
 }
+
+/** Valor `plan` que usa Admin al guardar bloques (cross_training, open_box, …). */
+const CANON_TO_ADMIN_VALUE = {
+  cross: 'cross_training',
+  openbox: 'open_box',
+  evolucion: 'ciclo_evolucion',
+  yoga: 'yoga',
+  stretching: 'stretching',
+  hyrox: 'hyrox',
+  oly: 'oly',
+  all_access: 'all_access',
+};
+
+export function adminPlanValueFromCanon(planCanon) {
+  const k = normalizeBlockPlanKey(planCanon);
+  return CANON_TO_ADMIN_VALUE[k] || k || '';
+}

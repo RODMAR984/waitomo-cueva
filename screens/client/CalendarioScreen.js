@@ -1,7 +1,7 @@
 // screens/CalendarioScreen.js — Waitomo Dark Only (brillo unificado en paneles / inputs)
 // Funcionalidad preservada: días, horarios, recordatorio apto médico, navegación a TrabajoDelDia
 
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -40,6 +40,8 @@ import {
   leaveClassWaitlistServer,
 } from '../../services/booking/classBooking';
 import { evaluateCalendarioAccess, evaluateWorkoutEntitlement } from '../../utils/clientWorkoutEntitlement';
+import { adminPlanValueFromCanon } from '../../utils/trainingBlockPlan';
+import { WEB_SCROLL_NO_STRETCH } from '../../utils/webViewportCanvas';
 import { reportError, trackEvent } from '../../utils/observability';
 
 // ---------- helpers ----------
@@ -144,6 +146,9 @@ export default function CalendarioScreen({ route, navigation }) {
   const [weeklySlots, setWeeklySlots] = useState([]);
   const [slotBusy, setSlotBusy] = useState('');
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [blocksByDate, setBlocksByDate] = useState({});
+  const weekScrollRef = useRef(null);
+  const dayLayoutsRef = useRef({});
   const prefillSlot = useMemo(() => normalizeSlotLabel(params?.prefillSlot), [params?.prefillSlot]);
   const dateLocale = locale === 'en' ? 'en-US' : 'es-AR';
   // Permite revisar historial reciente y próximos días.
@@ -169,6 +174,73 @@ export default function CalendarioScreen({ route, navigation }) {
     () => normalizePlanKey(params.planKey) || normalizePlanKey(plan?.id) || null,
     [params.planKey, plan?.id],
   );
+
+  const planValueForNav = useMemo(() => adminPlanValueFromCanon(planCanon), [planCanon]);
+
+  useEffect(() => {
+    let alive = true;
+    if (!orgId || !planCanon || !days.length) {
+      setBlocksByDate({});
+      return () => {
+        alive = false;
+      };
+    }
+    const start = days[0]?.full;
+    const end = days[days.length - 1]?.full;
+    if (!start || !end) return () => {
+      alive = false;
+    };
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('training_daily_blocks')
+          .select('fecha, slot_label, plan_key, titulo')
+          .eq('organization_id', orgId)
+          .gte('fecha', start)
+          .lte('fecha', end);
+        if (!alive || error) return;
+        const map = {};
+        (data || []).forEach((row) => {
+          if (normalizePlanKey(row.plan_key) !== planCanon) return;
+          const fk = String(row.fecha || '').slice(0, 10);
+          if (!fk) return;
+          const slot = normalizeSlotLabel(row.slot_label);
+          if (!map[fk]) map[fk] = { slots: new Set(), titles: {} };
+          if (slot) map[fk].slots.add(slot);
+          if (slot && row.titulo) map[fk].titles[slot] = row.titulo;
+        });
+        const plain = {};
+        Object.keys(map).forEach((fk) => {
+          plain[fk] = {
+            slots: Array.from(map[fk].slots).sort((a, b) => a.localeCompare(b, 'es')),
+            titles: map[fk].titles,
+          };
+        });
+        if (alive) setBlocksByDate(plain);
+      } catch {
+        if (alive) setBlocksByDate({});
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [orgId, planCanon, days]);
+
+  useEffect(() => {
+    const layout = dayLayoutsRef.current[diaSeleccionado];
+    if (!layout || !weekScrollRef.current?.scrollTo) return;
+    const timer = setTimeout(() => {
+      try {
+        weekScrollRef.current.scrollTo({
+          x: Math.max(0, layout.x - 24),
+          animated: true,
+        });
+      } catch {
+        /* noop */
+      }
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [diaSeleccionado, days.length]);
 
   useEffect(() => {
     if (isYmd(params?.prefillDate)) {
@@ -311,7 +383,7 @@ export default function CalendarioScreen({ route, navigation }) {
       try {
         const { data: blocksData, error: blocksErr } = await supabase
           .from('training_daily_blocks')
-          .select('id, plan_key, slot_label, capacity')
+          .select('id, plan_key, slot_label, capacity, titulo')
           .eq('organization_id', orgId)
           .eq('fecha', diaSeleccionado)
           .order('slot_label', { ascending: true });
@@ -478,16 +550,27 @@ export default function CalendarioScreen({ route, navigation }) {
 
   const visibleSlots = useMemo(() => {
     if (publishedSlots.length) return publishedSlots;
+    const fromRange = blocksByDate[diaSeleccionado]?.slots || [];
+    if (fromRange.length) return fromRange;
     if (weeklySlotsForDay.length) return weeklySlotsForDay;
     return isBookingRequired ? [] : horarios;
-  }, [publishedSlots, weeklySlotsForDay, isBookingRequired, horarios]);
+  }, [
+    publishedSlots,
+    blocksByDate,
+    diaSeleccionado,
+    weeklySlotsForDay,
+    isBookingRequired,
+    horarios,
+  ]);
 
   const goTrabajoDia = (hora) => {
     navigation.navigate('TrabajoDelDia', {
       fecha: diaSeleccionado,
       hora,
-      plan,
+      horario: hora,
+      plan: planValueForNav ? { ...plan, planValue: planValueForNav } : plan,
       planKey: params.planKey || plan?.id,
+      planValue: planValueForNav || undefined,
     });
   };
 
@@ -816,6 +899,11 @@ export default function CalendarioScreen({ route, navigation }) {
           borderWidth: 1,
           borderColor: t.overlayBorder,
           paddingVertical: 8,
+          overflow: 'hidden',
+        },
+        weekScroll: {
+          flexGrow: 0,
+          width: '100%',
         },
         weekRow: {
           alignItems: 'flex-end',
@@ -827,11 +915,17 @@ export default function CalendarioScreen({ route, navigation }) {
         diaContainer: {
           alignItems: 'center',
           minWidth: 52,
-          paddingVertical: 2,
+          paddingHorizontal: 4,
+          paddingVertical: 4,
         },
-        diaContainerOff: { opacity: 0.38 },
+        diaContainerOff: { opacity: 0.42 },
         diaContainerHas: {},
-        diaSeleccionado: {},
+        diaSeleccionado: {
+          backgroundColor: hexToRgba(t.brand, 0.16),
+          borderColor: hexToRgba(t.brand, 0.55),
+          borderRadius: MOBILE_RADII.md,
+          borderWidth: 1.5,
+        },
         diaLabel: {
           color: t.subText,
           fontSize: MOBILE_TYPE.caption,
@@ -890,6 +984,13 @@ export default function CalendarioScreen({ route, navigation }) {
           marginTop: 4,
           width: 6,
         },
+        puntoSemanal: {
+          backgroundColor: hexToRgba(t.subText, 0.85),
+          borderRadius: 3,
+          height: 5,
+          marginTop: 5,
+          width: 5,
+        },
         bookingLegend: {
           color: t.subText,
           fontSize: MOBILE_TYPE.caption,
@@ -933,6 +1034,10 @@ export default function CalendarioScreen({ route, navigation }) {
           borderColor: t.brand,
           borderWidth: 1.8,
         },
+        horarioConRutina: {
+          borderColor: hexToRgba(t.brand, 0.75),
+          backgroundColor: hexToRgba(t.brand, 0.1),
+        },
         horarioTexto: {
           color: t.text,
           fontWeight: 'bold',
@@ -975,18 +1080,16 @@ export default function CalendarioScreen({ route, navigation }) {
         slotStateTxtOpen: { color: t.brand },
         slotStateTxtNearFull: { color: '#92400e' },
 
-        // volver
-        volver: {
-          alignItems: 'center',
-          ...t.buttonPrimary,
-          borderRadius: MOBILE_RADII.sm,
-          minHeight: MOBILE_SIZES.controlHeight,
-          marginTop: 30,
-          paddingVertical: MOBILE_SPACING.md,
-          paddingHorizontal: MOBILE_SPACING.lg,
-          justifyContent: 'center',
+        // volver (compacto arriba; el ancho completo quedó obsoleto en móvil web)
+        volverTop: {
+          alignSelf: 'flex-start',
+          marginBottom: 10,
         },
-        volverTxt: { ...t.buttonPrimaryText, fontSize: MOBILE_TYPE.bodyStrong },
+        scrollContent: {
+          ...(WEB_SCROLL_NO_STRETCH || {}),
+          paddingBottom: Platform.OS === 'web' ? 32 : 24,
+          width: '100%',
+        },
         lockText: {
           color: t.subText,
           fontSize: MOBILE_TYPE.body,
@@ -1013,10 +1116,12 @@ export default function CalendarioScreen({ route, navigation }) {
 
   if (user?.id && abonoLoading) {
     return (
-      <BackgroundWrapper plan={plan}>
-        <NeoPanel style={[styles.panel, { marginTop: height * 0.25, minHeight: 120 }]}>
-          <ActivityIndicator size="large" color={t.brand} />
-        </NeoPanel>
+      <BackgroundWrapper screen="ClientScreen" plan={plan}>
+        <View style={{ flex: 1, minHeight: 0, justifyContent: 'center' }}>
+          <NeoPanel style={[styles.panel, { marginTop: height * 0.12, minHeight: 120 }]}>
+            <ActivityIndicator size="large" color={t.brand} />
+          </NeoPanel>
+        </View>
       </BackgroundWrapper>
     );
   }
@@ -1024,9 +1129,22 @@ export default function CalendarioScreen({ route, navigation }) {
   const calendarLocked = user?.id && !calendarAccess.ok;
 
   return (
-    <BackgroundWrapper plan={plan}>
-      <View testID="screen-calendario" style={{ flex: 1 }}>
+    <BackgroundWrapper screen="ClientScreen" plan={plan}>
+      <View testID="screen-calendario" style={{ flex: 1, minHeight: 0 }}>
+        <ScrollView
+          style={Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : { flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+        >
       <NeoPanel style={styles.panel}>
+        <BackNavButton
+          testID="calendario-nav-back"
+          onPress={() => navigation.goBack()}
+          label={tStr('config_back')}
+          style={styles.volverTop}
+        />
         <Text style={styles.mes}>{mes.toUpperCase()}</Text>
         {selectedDateLabel ? <Text style={styles.fechaSeleccionada}>{selectedDateLabel}</Text> : null}
 
@@ -1059,13 +1177,18 @@ export default function CalendarioScreen({ route, navigation }) {
           <>
             <View style={styles.weekStrip}>
               <ScrollView
+                ref={weekScrollRef}
                 horizontal
+                nestedScrollEnabled
                 showsHorizontalScrollIndicator
+                style={styles.weekScroll}
                 contentContainerStyle={styles.weekRow}
               >
                 {days.map((d) => {
                   const weekday = getIsoWeekdayFromYmd(d.full);
-                  const tieneContenido = offeredWeekdays.has(weekday);
+                  const publishedOnDay = (blocksByDate[d.full]?.slots?.length || 0) > 0;
+                  const tieneHorarioSemanal = offeredWeekdays.has(weekday);
+                  const tieneContenido = publishedOnDay || tieneHorarioSemanal;
                   const seleccionado = diaSeleccionado === d.full;
                   const esHoy = d.full === todayYmd;
 
@@ -1073,6 +1196,9 @@ export default function CalendarioScreen({ route, navigation }) {
                     <TouchableOpacity
                       key={d.full}
                       onPress={() => setDiaSeleccionado(d.full)}
+                      onLayout={(e) => {
+                        dayLayoutsRef.current[d.full] = e.nativeEvent.layout;
+                      }}
                       accessibilityRole="button"
                       accessibilityState={{ selected: seleccionado }}
                       style={[
@@ -1105,8 +1231,10 @@ export default function CalendarioScreen({ route, navigation }) {
                       </View>
                       {esHoy ? (
                         <Text style={styles.hoyTag}>{locale === 'en' ? 'TODAY' : 'HOY'}</Text>
-                      ) : tieneContenido ? (
+                      ) : publishedOnDay ? (
                         <View style={styles.punto} />
+                      ) : tieneHorarioSemanal ? (
+                        <View style={styles.puntoSemanal} />
                       ) : null}
                     </TouchableOpacity>
                   );
@@ -1153,6 +1281,9 @@ export default function CalendarioScreen({ route, navigation }) {
                       const mine = !!myScheduledBySlot[slot];
                       const waiting = !!myWaitingBySlot[slot];
                       const blockForSlot = blockBySlot[slot];
+                      const tituloRutina =
+                        blockForSlot?.titulo || blocksByDate[diaSeleccionado]?.titles?.[slot] || '';
+                      const tieneRutina = Boolean(blockForSlot || tituloRutina);
                       const cap = blockForSlot?.capacity ?? planCfg.defaultCapacity ?? null;
                       const occ = slotOccupancy[slot] || 0;
                       const waitN = waitCountBySlot[slot] || 0;
@@ -1189,6 +1320,7 @@ export default function CalendarioScreen({ route, navigation }) {
                           key={h}
                           style={[
                             styles.horario,
+                            tieneRutina && styles.horarioConRutina,
                             prefillSlot && slot === prefillSlot && diaSeleccionado === params?.prefillDate
                               ? styles.horarioPrefill
                               : null,
@@ -1202,7 +1334,11 @@ export default function CalendarioScreen({ route, navigation }) {
                               ? tStr('calendario_booking_pending')
                               : isBookingRequired
                                 ? `${mine ? tStr('calendario_action_cancel') : waiting ? tStr('calendario_action_waiting_leave') : tStr('calendario_action_book')}${cap ? ` · ${occ}/${cap}` : ''}${waitN > 0 ? ` · ${tStr('calendario_waitlist_count_short').replace('{{n}}', String(waitN))}` : ''}`
-                                : tStr('calendario_action_view')}
+                                : tituloRutina
+                                  ? tituloRutina
+                                  : tieneRutina
+                                    ? tStr('calendario_slot_routine_ready')
+                                    : tStr('calendario_action_view')}
                           </Text>
                           {isBookingRequired ? (
                             <View style={[styles.slotStateTag, stateTagStyle]}>
@@ -1219,13 +1355,8 @@ export default function CalendarioScreen({ route, navigation }) {
           </>
         )}
 
-        <BackNavButton
-          testID="calendario-nav-back"
-          onPress={() => navigation.goBack()}
-          label={tStr('config_back')}
-          style={styles.volver}
-        />
       </NeoPanel>
+        </ScrollView>
       </View>
     </BackgroundWrapper>
   );
