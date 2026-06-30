@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import { estimateOneRmEpley, formatRmWeightKg } from '../utils/rmPattern';
+
+const WEB_INPUT =
+  Platform.OS === 'web' ? { boxSizing: 'border-box', maxWidth: '100%' } : null;
 
 /**
  * Calculadora 1RM (Epley): peso + reps → estimado, opcional guardar o aplicar al modal.
@@ -51,39 +54,51 @@ export default function RmCalculatorPanel({
     onApplyOneRm?.(estimatedKg);
   };
 
+  const hasDualActions = Boolean(onApplyOneRm && onSaveOneRm);
+
   return (
     <View style={[styles.rmCalcBox, compact && styles.rmCalcBoxCompact]}>
       {!compact ? <Text style={styles.rmCalcTitle}>{tStr('trabajo_rm_calc_title')}</Text> : null}
       <Text style={styles.rmCalcHint}>{tStr('trabajo_rm_calc_hint')}</Text>
 
-      <TextInput
-        style={styles.rmCalcInput}
-        value={exercise}
-        onChangeText={setExercise}
-        placeholder={tStr('trabajo_rm_calc_exercise_ph')}
-        placeholderTextColor={placeholderColor}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+      <View style={styles.rmCalcField}>
+        <Text style={styles.rmCalcLabel}>{tStr('trabajo_rm_calc_exercise_label')}</Text>
+        <TextInput
+          style={[styles.rmCalcInput, WEB_INPUT]}
+          value={exercise}
+          onChangeText={setExercise}
+          placeholder={tStr('trabajo_rm_calc_exercise_ph')}
+          placeholderTextColor={placeholderColor}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
 
       <View style={styles.rmCalcRow}>
-        <TextInput
-          style={[styles.rmCalcInput, styles.rmCalcInputHalf]}
-          value={weight}
-          onChangeText={setWeight}
-          placeholder={tStr('trabajo_rm_calc_weight_ph')}
-          placeholderTextColor={placeholderColor}
-          keyboardType="decimal-pad"
-        />
-        <TextInput
-          style={[styles.rmCalcInput, styles.rmCalcInputHalf]}
-          value={reps}
-          onChangeText={setReps}
-          placeholder={tStr('trabajo_rm_calc_reps_ph')}
-          placeholderTextColor={placeholderColor}
-          keyboardType="number-pad"
-          maxLength={2}
-        />
+        <View style={[styles.rmCalcField, styles.rmCalcFieldGrow]}>
+          <Text style={styles.rmCalcLabel}>{tStr('trabajo_rm_calc_weight_label')}</Text>
+          <TextInput
+            style={[styles.rmCalcInput, WEB_INPUT]}
+            value={weight}
+            onChangeText={setWeight}
+            placeholder="80"
+            placeholderTextColor={placeholderColor}
+            keyboardType="decimal-pad"
+          />
+        </View>
+        <View style={[styles.rmCalcField, styles.rmCalcFieldReps]}>
+          <Text style={styles.rmCalcLabel}>{tStr('trabajo_rm_calc_reps_label')}</Text>
+          <TextInput
+            style={[styles.rmCalcInput, styles.rmCalcInputReps, WEB_INPUT]}
+            value={reps}
+            onChangeText={setReps}
+            placeholder="5"
+            placeholderTextColor={placeholderColor}
+            keyboardType="number-pad"
+            maxLength={2}
+            textAlign="center"
+          />
+        </View>
       </View>
 
       {formattedEstimate != null ? (
@@ -92,10 +107,14 @@ export default function RmCalculatorPanel({
         </Text>
       ) : null}
 
-      <View style={styles.rmCalcActions}>
+      <View style={[styles.rmCalcActions, !hasDualActions && styles.rmCalcActionsSingle]}>
         {onApplyOneRm ? (
           <TouchableOpacity
-            style={[styles.rmCalcBtn, styles.rmCalcBtnSecondary]}
+            style={[
+              styles.rmCalcBtn,
+              styles.rmCalcBtnSecondary,
+              hasDualActions ? styles.rmCalcBtnHalf : styles.rmCalcBtnFull,
+            ]}
             onPress={handleApply}
             activeOpacity={0.88}
             disabled={formattedEstimate == null}
@@ -105,7 +124,11 @@ export default function RmCalculatorPanel({
         ) : null}
         {onSaveOneRm ? (
           <TouchableOpacity
-            style={[styles.rmCalcBtn, styles.rmCalcBtnPrimary]}
+            style={[
+              styles.rmCalcBtn,
+              styles.rmCalcBtnPrimary,
+              hasDualActions ? styles.rmCalcBtnHalf : styles.rmCalcBtnFull,
+            ]}
             onPress={handleSave}
             activeOpacity={0.88}
             disabled={formattedEstimate == null}

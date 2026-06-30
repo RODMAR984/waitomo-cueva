@@ -52,7 +52,7 @@ import { fetchLatestUserAbono } from '../../utils/userAbonoFetch';
 import { resolveFreeClassGrant } from '../../services/booking/trialClassGrant';
 import { evaluateWorkoutEntitlement } from '../../utils/clientWorkoutEntitlement';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
-import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
+import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 
 // ---------- helpers ----------
@@ -438,12 +438,15 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         noRMsText: { color: t.placeholder, fontStyle: 'italic', marginVertical: 10, textAlign: 'center' },
 
         rmCalcBox: {
+          alignSelf: 'stretch',
           backgroundColor: t.boxBg,
           borderColor: t.overlayBorder,
           borderRadius: MOBILE_RADII.sm,
           borderWidth: 1,
-          marginBottom: 12,
+          marginBottom: 10,
+          overflow: 'hidden',
           padding: 12,
+          width: '100%',
         },
         rmCalcBoxCompact: {
           marginBottom: 8,
@@ -462,9 +465,32 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           lineHeight: 15,
           marginBottom: 10,
         },
+        rmCalcField: {
+          marginBottom: 8,
+          width: '100%',
+        },
+        rmCalcFieldGrow: {
+          flex: 1,
+          marginBottom: 0,
+          minWidth: 0,
+        },
+        rmCalcFieldReps: {
+          flexGrow: 0,
+          flexShrink: 0,
+          marginBottom: 0,
+          width: 72,
+        },
+        rmCalcLabel: {
+          color: t.subText,
+          fontSize: MOBILE_TYPE.micro,
+          fontWeight: '600',
+          marginBottom: 4,
+        },
         rmCalcRow: {
           columnGap: 8,
           flexDirection: 'row',
+          marginBottom: 8,
+          width: '100%',
         },
         rmCalcInput: {
           backgroundColor: t.inactiveTabBg,
@@ -473,12 +499,12 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
           borderWidth: 1,
           color: t.text,
           fontSize: MOBILE_TYPE.body,
-          marginBottom: 8,
           paddingHorizontal: 10,
           paddingVertical: Platform.OS === 'web' ? 10 : 8,
+          width: '100%',
         },
-        rmCalcInputHalf: {
-          flex: 1,
+        rmCalcInputReps: {
+          paddingHorizontal: 6,
         },
         rmCalcResult: {
           color: t.brand,
@@ -490,14 +516,26 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         rmCalcActions: {
           columnGap: 8,
           flexDirection: 'row',
-          flexWrap: 'wrap',
+          width: '100%',
+        },
+        rmCalcActionsSingle: {
           justifyContent: 'center',
         },
         rmCalcBtn: {
+          alignItems: 'center',
           borderRadius: MOBILE_RADII.compact,
-          minWidth: 120,
+          justifyContent: 'center',
+          minHeight: MOBILE_SIZES.controlHeight,
           paddingHorizontal: 12,
           paddingVertical: 10,
+        },
+        rmCalcBtnFull: {
+          alignSelf: 'stretch',
+          width: '100%',
+        },
+        rmCalcBtnHalf: {
+          flex: 1,
+          minWidth: 0,
         },
         rmCalcBtnPrimary: {
           ...t.buttonPrimary,
@@ -1284,13 +1322,14 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                     </TouchableOpacity>
 
                     {!rmCollapsed && (
-                      <View style={styles.existingRMsContainer}>
+                      <>
                         <RmCalculatorPanel
                           tStr={tStr}
                           styles={styles}
                           placeholderColor={t.placeholder}
                           onSaveOneRm={saveRMFromCalculator}
                         />
+                        <View style={styles.existingRMsContainer}>
                         <Text style={styles.sectionTitle}>📋 {tStr('trabajo_mis_rms_registrados')}</Text>
                         {getExistingRMs().length > 0 ? (
                           getExistingRMs().map(([exercise, rmValue]) => (
@@ -1312,7 +1351,8 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
                         ) : (
                           <Text style={styles.noRMsText}>{tStr('trabajo_no_rms_registrados')}</Text>
                         )}
-                      </View>
+                        </View>
+                      </>
                     )}
                   </View>
                 )}
