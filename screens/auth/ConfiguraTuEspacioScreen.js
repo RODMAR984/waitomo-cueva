@@ -19,7 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackNavButton from '../../components/BackNavButton';
-import { AuthKeyboardAvoidingView, authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
+import { authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { supabase } from '../../supabaseClient';
@@ -647,16 +647,19 @@ export default function ConfiguraTuEspacioScreen() {
   };
 
   return (
-    <ScreenShell screen="configuratuespacio" style={{ flex: 1 }}>
+    <ScreenShell
+      screen="configuratuespacio"
+      style={{ flex: 1 }}
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ style: styles.kav }}
+      scrollProps={{
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+        contentContainerStyle: styles.scrollContent,
+        nestedScrollEnabled: true,
+      }}
+    >
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <AuthKeyboardAvoidingView style={styles.kav}>
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={authScrollKeyboardDismissMode}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          nestedScrollEnabled
-        >
           <View style={styles.mainPanel}>
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
           <Text style={styles.title}>{tStr('fe_setup_title')}</Text>
@@ -926,8 +929,6 @@ export default function ConfiguraTuEspacioScreen() {
             )}
           </TouchableOpacity>
           </View>
-        </ScrollView>
-      </AuthKeyboardAvoidingView>
     </SafeAreaView>
     </ScreenShell>
   );

@@ -1,6 +1,6 @@
 // Pantalla intermedia: antes de "Configura tu espacio" — dos caminos claros (FitEngine branding).
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,7 +11,7 @@ import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import ScreenShell from '../../components/ScreenShell';
 import LogoCompleto from '../../components/LogoCompleto';
-import { AuthKeyboardAvoidingView, authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
+import { authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 
 export default function FitEngineSpaceIntroScreen() {
   const navigation = useNavigation();
@@ -48,14 +48,18 @@ export default function FitEngineSpaceIntroScreen() {
   }, [navigation, session?.user?.user_metadata]);
 
   return (
-    <ScreenShell screen="fitenginespaceintro" style={styles.flex}>
+    <ScreenShell
+      screen="fitenginespaceintro"
+      style={styles.flex}
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ style: styles.flex }}
+      scrollProps={{
+        contentContainerStyle: styles.scroll,
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+      }}
+    >
       <SafeAreaView style={styles.flex} edges={['top', 'left', 'right']}>
-        <AuthKeyboardAvoidingView style={styles.flex}>
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={authScrollKeyboardDismissMode}
-          >
             <View style={styles.inner}>
               <LogoCompleto width={220} />
               <Text style={styles.title}>{t('fe_space_intro_title')}</Text>
@@ -87,8 +91,6 @@ export default function FitEngineSpaceIntroScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </AuthKeyboardAvoidingView>
       </SafeAreaView>
     </ScreenShell>
   );
@@ -97,7 +99,6 @@ export default function FitEngineSpaceIntroScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: {
-    flexGrow: 1,
     paddingHorizontal: MOBILE_SPACING.lg,
     paddingBottom: MOBILE_SPACING.xl,
     paddingTop: MOBILE_SPACING.md,

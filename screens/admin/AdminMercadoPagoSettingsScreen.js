@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Switch,
   Alert,
@@ -335,14 +334,13 @@ export default function AdminMercadoPagoSettingsScreen() {
   );
 
   return (
-    <ScreenShell screen="Admin">
+    <ScreenShell screen="Admin" scroll scrollProps={{ contentContainerStyle: styles.body }}>
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_mp_title')}</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.body}>
         {mpLinked ? (
           <View
             style={checkoutLive ? styles.connectedBanner : styles.pausedBanner}
@@ -433,7 +431,6 @@ export default function AdminMercadoPagoSettingsScreen() {
         {!canEdit ? (
           <Text style={[styles.hint, styles.noEditHint]}>{tStr('gym_config_no_permission_body')}</Text>
         ) : null}
-      </ScrollView>
     </ScreenShell>
   );
 }

@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -476,7 +475,12 @@ export default function OrgMemberDetailScreen() {
   }
 
   return (
-    <ScreenShell screen="admin">
+    <ScreenShell
+      screen="admin"
+      scroll
+      keyboardAvoid="form"
+      scrollProps={{ contentContainerStyle: styles.body }}
+    >
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
@@ -485,7 +489,6 @@ export default function OrgMemberDetailScreen() {
           {tStr('org_member_detail_title')}
         </Text>
       </View>
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <Text style={styles.name} numberOfLines={2}>
           {displayName}
         </Text>
@@ -540,7 +543,6 @@ export default function OrgMemberDetailScreen() {
             </Text>
           </View>
         ) : null}
-      </ScrollView>
     </ScreenShell>
   );
 }

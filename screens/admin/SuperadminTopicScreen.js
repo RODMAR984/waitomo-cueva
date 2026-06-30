@@ -1,7 +1,7 @@
 // Pantallas tema del panel plataforma hasta conectar datos reales (vista SQL / CRUD).
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,11 +53,14 @@ export default function SuperadminTopicScreen() {
   );
 
   return (
-    <ScreenShell screen="Admin">
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: screenHeaderTopPadding(insets.top) }]}
-        keyboardShouldPersistTaps="handled"
-      >
+    <ScreenShell
+      screen="Admin"
+      scroll
+      scrollProps={{
+        contentContainerStyle: [styles.scroll, { paddingTop: screenHeaderTopPadding(insets.top) }],
+        keyboardShouldPersistTaps: 'handled',
+      }}
+    >
         <View style={styles.backRow}>
           <BackNavButton onPress={() => navigation.navigate('Superadmin')} label={tStr('superadmin_back_hub')} />
         </View>
@@ -72,7 +75,6 @@ export default function SuperadminTopicScreen() {
             <Text style={[styles.body, { marginBottom: 0 }]}>{tStr('superadmin_topic_broadcast_legal')}</Text>
           </View>
         ) : null}
-      </ScrollView>
     </ScreenShell>
   );
 }

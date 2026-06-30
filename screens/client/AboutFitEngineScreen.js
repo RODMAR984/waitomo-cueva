@@ -1,7 +1,7 @@
 // Pantalla "Acerca de": versión, marca, enlaces legales (navegador) y contacto opcional.
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
@@ -53,7 +53,6 @@ export default function AboutFitEngineScreen() {
     () =>
       StyleSheet.create({
         container: {
-          flexGrow: 1,
           paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 80,
           paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg,
@@ -124,8 +123,12 @@ export default function AboutFitEngineScreen() {
   );
 
   return (
-    <ScreenShell plan={{ id: profile?.plan_actual }} screen="config">
-      <ScrollView contentContainerStyle={styles.container}>
+    <ScreenShell
+      plan={{ id: profile?.plan_actual }}
+      screen="config"
+      scroll
+      scrollProps={{ contentContainerStyle: styles.container }}
+    >
         <NeoPanel style={styles.panel}>
           <View style={styles.logoWrap}>
             <LogoCompleto height={44} />
@@ -189,7 +192,6 @@ export default function AboutFitEngineScreen() {
 
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </NeoPanel>
-      </ScrollView>
     </ScreenShell>
   );
 }

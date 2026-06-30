@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
@@ -347,63 +346,15 @@ export default function AdminMembershipFreezeScreen() {
   );
 
   return (
-    <ScreenShell screen="Admin">
-      <View style={styles.header}>
-        {!hideInlineBack ? (
-          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
-        ) : null}
-        <Text style={styles.title}>{tStr('admin_freeze_screen_title')}</Text>
-      </View>
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollInner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.hint}>{tStr('admin_freeze_screen_hint')}</Text>
-
-        {!freezeEnabled ? (
-          <View style={styles.card}>
-            <Text style={styles.rowTitle}>{tStr('admin_freeze_disabled_title')}</Text>
-            <Text style={styles.rowSub}>{tStr('admin_freeze_disabled_hint')}</Text>
-          </View>
-        ) : null}
-
-        <TouchableOpacity style={styles.primaryBtn} onPress={openFreezeWizard} activeOpacity={0.9}>
-          <Ionicons name="snow-outline" size={18} color={t.text} />
-          <Text style={styles.primaryBtnText}>{tStr('admin_freeze_new_cta')}</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.rowTitle, { marginTop: 20, marginBottom: 8 }]}>{tStr('admin_freeze_list_title')}</Text>
-        {loading ? (
-          <ActivityIndicator color={t.brand} />
-        ) : frozenRows.length === 0 ? (
-          <Text style={styles.rowSub}>{tStr('admin_freeze_list_empty')}</Text>
-        ) : (
-          frozenRows.map((item) => {
-            const id = item.user_abono_id;
-            const busy = busyId === id;
-            return (
-              <View key={String(id)} style={styles.card}>
-                <Text style={styles.rowTitle}>{item.display_name || item.user_id}</Text>
-                <Text style={styles.rowSub}>
-                  {item.abono_name || item.plan_id} · {displayDate(item.freeze_start)} → {displayDate(item.freeze_end)}
-                </Text>
-                <TouchableOpacity
-                  style={styles.ghostBtn}
-                  onPress={() => runUnfreeze(id)}
-                  disabled={busy}
-                  activeOpacity={0.85}
-                >
-                  {busy ? (
-                    <ActivityIndicator size="small" color={t.brand} />
-                  ) : (
-                    <Text style={styles.ghostBtnText}>{tStr('admin_unfreeze_cta')}</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
-
-      <Modal visible={modalOpen} animationType="fade" transparent onRequestClose={() => setModalOpen(false)}>
+    <ScreenShell
+      screen="Admin"
+      scroll
+      scrollProps={{
+        style: styles.scroll,
+        contentContainerStyle: styles.scrollInner,
+      }}
+      companion={
+        <Modal visible={modalOpen} animationType="fade" transparent onRequestClose={() => setModalOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{tStr('admin_freeze_modal_title')}</Text>
@@ -494,7 +445,61 @@ export default function AdminMembershipFreezeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+        </Modal>
+      }
+    >
+      <View style={styles.header}>
+        {!hideInlineBack ? (
+          <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
+        ) : null}
+        <Text style={styles.title}>{tStr('admin_freeze_screen_title')}</Text>
+      </View>
+
+      <Text style={styles.hint}>{tStr('admin_freeze_screen_hint')}</Text>
+
+      {!freezeEnabled ? (
+        <View style={styles.card}>
+          <Text style={styles.rowTitle}>{tStr('admin_freeze_disabled_title')}</Text>
+          <Text style={styles.rowSub}>{tStr('admin_freeze_disabled_hint')}</Text>
+        </View>
+      ) : null}
+
+      <TouchableOpacity style={styles.primaryBtn} onPress={openFreezeWizard} activeOpacity={0.9}>
+        <Ionicons name="snow-outline" size={18} color={t.text} />
+        <Text style={styles.primaryBtnText}>{tStr('admin_freeze_new_cta')}</Text>
+      </TouchableOpacity>
+
+      <Text style={[styles.rowTitle, { marginTop: 20, marginBottom: 8 }]}>{tStr('admin_freeze_list_title')}</Text>
+      {loading ? (
+        <ActivityIndicator color={t.brand} />
+      ) : frozenRows.length === 0 ? (
+        <Text style={styles.rowSub}>{tStr('admin_freeze_list_empty')}</Text>
+      ) : (
+        frozenRows.map((item) => {
+          const id = item.user_abono_id;
+          const busy = busyId === id;
+          return (
+            <View key={String(id)} style={styles.card}>
+              <Text style={styles.rowTitle}>{item.display_name || item.user_id}</Text>
+              <Text style={styles.rowSub}>
+                {item.abono_name || item.plan_id} · {displayDate(item.freeze_start)} → {displayDate(item.freeze_end)}
+              </Text>
+              <TouchableOpacity
+                style={styles.ghostBtn}
+                onPress={() => runUnfreeze(id)}
+                disabled={busy}
+                activeOpacity={0.85}
+              >
+                {busy ? (
+                  <ActivityIndicator size="small" color={t.brand} />
+                ) : (
+                  <Text style={styles.ghostBtnText}>{tStr('admin_unfreeze_cta')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          );
+        })
+      )}
     </ScreenShell>
   );
 }

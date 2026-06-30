@@ -2,7 +2,7 @@
 // - Usa perfil real desde AuthContext (Supabase)
 // - Edita: nombre, usuario, teléfono, edad, peso, objetivos, lesiones, sexo, observaciones
 // - Muestra / usa avatar_url si existe
-// - Fondo visual: BackgroundWrapper con screen="ClientScreen" (igual familia que ClientScreen)
+// - Fondo visual: ScreenShell con screen="ClientScreen" (igual familia que ClientScreen)
 // - Botones extra: Cerrar sesión + Volver + Seguridad (email y contraseña)
 // - ✅ Agrega: Apto médico (subir desde Perfil) + estado OK/Pendiente (flag apto_medico_url)
 

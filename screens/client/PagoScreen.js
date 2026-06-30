@@ -11,8 +11,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Linking,
-  ScrollView,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -483,13 +481,16 @@ export default function PagoScreen({ navigation, route }) {
   );
 
   return (
-    <ScreenShell plan={plan}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 20}
-        style={styles.root}
-      >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <ScreenShell
+      plan={plan}
+      scroll
+      keyboardAvoid="default"
+      keyboardAvoidProps={{
+        style: styles.root,
+        keyboardVerticalOffset: Platform.OS === 'ios' ? 60 : 20,
+      }}
+      scrollProps={{ contentContainerStyle: styles.scroll, keyboardShouldPersistTaps: 'handled' }}
+    >
           <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('pago_title_select')}</Text>
 
@@ -669,8 +670,6 @@ export default function PagoScreen({ navigation, route }) {
               <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} />
             </View>
           </NeoPanel>
-        </ScrollView>
-      </KeyboardAvoidingView>
     </ScreenShell>
   );
 }

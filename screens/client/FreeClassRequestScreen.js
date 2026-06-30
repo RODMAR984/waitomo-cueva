@@ -13,8 +13,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -248,17 +246,21 @@ export default function FreeClassRequestScreen({ route, navigation }) {
   const hoursNotice = String(FREE_CLASS_CANCEL_NOTICE_HOURS);
 
   return (
-    <ScreenShell screen="ClientScreen" plan={plan}>
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 20}
-      >
-        <ScrollView
-          style={{ flex: 1, backgroundColor: 'transparent' }}
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
+    <ScreenShell
+      screen="ClientScreen"
+      plan={plan}
+      scroll
+      keyboardAvoid="default"
+      keyboardAvoidProps={{
+        style: styles.kav,
+        keyboardVerticalOffset: Platform.OS === 'ios' ? 60 : 20,
+      }}
+      scrollProps={{
+        style: { flex: 1, backgroundColor: 'transparent' },
+        contentContainerStyle: styles.scroll,
+        keyboardShouldPersistTaps: 'handled',
+      }}
+    >
           <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('freeclass_screen_title')}</Text>
 
@@ -357,8 +359,6 @@ export default function FreeClassRequestScreen({ route, navigation }) {
               <Text style={styles.cancelText}>{tStr('freeclass_cancel')}</Text>
             </TouchableOpacity>
           </NeoPanel>
-        </ScrollView>
-      </KeyboardAvoidingView>
     </ScreenShell>
   );
 }

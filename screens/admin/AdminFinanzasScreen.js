@@ -499,7 +499,14 @@ export default function AdminFinanzasScreen({ route }) {
   };
 
   return (
-    <ScreenShell screen="adminfinanzas">
+    <ScreenShell
+      screen="adminfinanzas"
+      scroll
+      scrollProps={{
+        contentContainerStyle: styles.contentContainer,
+        contentInsetAdjustmentBehavior: 'always',
+      }}
+    >
       <SafeAreaView style={styles.safe}>
         {!hideInlineBack ? (
           <View style={styles.topBackWrap}>
@@ -521,11 +528,6 @@ export default function AdminFinanzasScreen({ route }) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.contentContainer}
-          contentInsetAdjustmentBehavior="always"
-          showsVerticalScrollIndicator={false}
-        >
           {tab === 'caja' && (
             <View>
               <Text style={styles.sectionTitle}>{tStr('fin_section_ledger')}</Text>
@@ -924,7 +926,6 @@ export default function AdminFinanzasScreen({ route }) {
               )}
             </View>
           )}
-        </ScrollView>
       </SafeAreaView>
     </ScreenShell>
   );

@@ -9,7 +9,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
@@ -33,7 +32,6 @@ import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 import {
-  AuthKeyboardAvoidingView,
   AuthDismissKeyboardOutside,
   authScrollKeyboardDismissMode,
   authScrollContentJustify,
@@ -458,14 +456,18 @@ export default function RegistroInicialScreen({ route, navigation }) {
   const placeholderColor = hasPlanContext ? t.placeholder : fe.placeholder;
 
   return (
-    <ScreenShell screen={hasPlanContext ? undefined : 'neutral'} plan={plan}>
-      <AuthKeyboardAvoidingView style={styles.kav}>
+    <ScreenShell
+      screen={hasPlanContext ? undefined : 'neutral'}
+      plan={plan}
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ style: styles.kav }}
+      scrollProps={{
+        contentContainerStyle: styles.scroll,
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+      }}
+    >
         <AuthDismissKeyboardOutside>
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={authScrollKeyboardDismissMode}
-          >
             {!hasPlanContext ? (
               <View style={styles.brandRow}>
                 <LogoCompleto height={48} />
@@ -560,9 +562,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
                 style={{ marginTop: MOBILE_SPACING.lg }}
               />
             </NeoPanel>
-          </ScrollView>
         </AuthDismissKeyboardOutside>
-      </AuthKeyboardAvoidingView>
     </ScreenShell>
   );
 }

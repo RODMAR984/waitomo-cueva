@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
@@ -198,14 +197,13 @@ export default function AdminCommissionsScreen() {
   );
 
   return (
-    <ScreenShell screen="Admin">
+    <ScreenShell screen="Admin" scroll scrollProps={{ contentContainerStyle: styles.body }}>
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_commissions_title')}</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.hint}>{tStr('admin_commissions_hint')}</Text>
         {loading ? (
           <ActivityIndicator color={t.brand} />
@@ -262,7 +260,6 @@ export default function AdminCommissionsScreen() {
             ))}
           </>
         )}
-      </ScrollView>
     </ScreenShell>
   );
 }

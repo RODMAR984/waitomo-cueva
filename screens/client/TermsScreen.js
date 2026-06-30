@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
@@ -22,7 +22,6 @@ export default function TermsScreen({ navigation }) {
     () =>
       StyleSheet.create({
         container: {
-          flexGrow: 1,
           paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 80,
           paddingBottom: MOBILE_SPACING.xxl + MOBILE_SPACING.lg,
@@ -73,8 +72,12 @@ export default function TermsScreen({ navigation }) {
   );
 
   return (
-    <ScreenShell plan={{ id: profile?.plan_actual }} screen="config">
-      <ScrollView contentContainerStyle={styles.container}>
+    <ScreenShell
+      plan={{ id: profile?.plan_actual }}
+      screen="config"
+      scroll
+      scrollProps={{ contentContainerStyle: styles.container }}
+    >
         <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('terms_title')}</Text>
           <Text style={styles.subtitle}>{tStr('legal_last_updated_label')} 2026-04-16</Text>
@@ -82,7 +85,6 @@ export default function TermsScreen({ navigation }) {
 
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </NeoPanel>
-      </ScrollView>
     </ScreenShell>
   );
 }

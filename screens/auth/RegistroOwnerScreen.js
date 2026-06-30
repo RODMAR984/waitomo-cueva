@@ -19,7 +19,8 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { fitengineLogoColors as fe } from '../../theme/colors';
 import { supabase } from '../../supabaseClient';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
-import { AuthKeyboardAvoidingView, AuthDismissKeyboardOutside } from '../../components/AuthWebFormShell';
+import ScreenShell from '../../components/ScreenShell';
+import { AuthDismissKeyboardOutside } from '../../components/AuthWebFormShell';
 
 /** Ancho máximo del formulario gym/coach (no usar WEB_CONTENT_MAX_WIDTH de dashboard). */
 const REGISTRO_OWNER_FORM_MAX_WIDTH = 400;
@@ -183,6 +184,7 @@ export default function RegistroOwnerScreen() {
   };
 
   return (
+    <ScreenShell screen="neutral" keyboardAvoid="form" keyboardAvoidProps={{ style: { flex: 1 } }}>
     <SafeAreaView style={styles.container} edges={[]}>
       <LogoTriangleBackground
         isDark={isDark}
@@ -193,7 +195,6 @@ export default function RegistroOwnerScreen() {
         offsetY={-36}
       />
       <View style={{ flex: 1, zIndex: 1 }}>
-        <AuthKeyboardAvoidingView style={styles.kav}>
           <AuthDismissKeyboardOutside>
             <View style={styles.centerWrap}>
               <View style={styles.formNudge}>
@@ -242,12 +243,12 @@ export default function RegistroOwnerScreen() {
               </View>
             </View>
           </AuthDismissKeyboardOutside>
-        </AuthKeyboardAvoidingView>
         <View style={[styles.brandBottom, { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.md) }]}>
           <LogoCompleto height={28} style={{ marginBottom: 6, opacity: 0.85 }} />
           <Text style={styles.brandFooter}>{tStr('gym_config_footer')}</Text>
         </View>
       </View>
     </SafeAreaView>
+    </ScreenShell>
   );
 }

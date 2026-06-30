@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -230,8 +229,14 @@ export default function DetalleAbonoScreen({ navigation, route }) {
   );
 
   return (
-    <ScreenShell screen="TrabajoDelDia">
-      <ScrollView style={styles.root} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <ScreenShell
+      screen="TrabajoDelDia"
+      scroll
+      scrollProps={{
+        style: styles.root,
+        contentContainerStyle: styles.scroll,
+      }}
+    >
         <BackNavButton onPress={() => navigation.goBack()} />
         <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('detalle_abono_title')}</Text>
@@ -304,7 +309,6 @@ export default function DetalleAbonoScreen({ navigation, route }) {
             </TouchableOpacity>
           </NeoPanel>
         )}
-      </ScrollView>
     </ScreenShell>
   );
 }

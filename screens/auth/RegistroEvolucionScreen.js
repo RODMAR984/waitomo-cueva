@@ -10,7 +10,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   Alert,
   Dimensions,
 } from 'react-native';
@@ -213,12 +212,15 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
   );
 
   return (
-    <ScreenShell plan={plan}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={authScrollKeyboardDismissMode}
-      >
+    <ScreenShell
+      plan={plan}
+      scroll
+      keyboardAvoid="form"
+      scrollProps={{
+        contentContainerStyle: styles.scroll,
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+      }}
+    >
         <NeoPanel style={styles.panel}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{tStr('registro_evolucion_title')}</Text>
@@ -284,7 +286,6 @@ export default function RegistroEvolucionScreen({ route, navigation }) {
             </TouchableOpacity>
           ) : null}
         </NeoPanel>
-      </ScrollView>
     </ScreenShell>
   );
 }

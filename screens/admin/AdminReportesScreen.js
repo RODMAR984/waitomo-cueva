@@ -1,7 +1,7 @@
 // 5.3 — Cuatro métricas operativas (RPC staff_org_dashboard_metrics).
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -100,17 +100,20 @@ export default function AdminReportesScreen() {
     : [];
 
   return (
-    <ScreenShell screen="Admin">
+    <ScreenShell
+      screen="Admin"
+      scroll
+      scrollProps={{
+        contentContainerStyle: styles.scroll,
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />,
+      }}
+    >
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_reportes_title')}</Text>
       </View>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-      >
         <Text style={styles.hint}>{tStr('admin_reportes_hint')}</Text>
         {loading ? (
           <ActivityIndicator color={t.brand} />
@@ -126,7 +129,6 @@ export default function AdminReportesScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
     </ScreenShell>
   );
 }

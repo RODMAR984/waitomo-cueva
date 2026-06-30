@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -1267,9 +1266,17 @@ export default function AdminResumenScreen() {
   );
 
   return (
-    <ScreenShell screen="admin">
-      <View style={styles.root}>
-        <View style={styles.contentMax} testID="screen-admin-resumen">
+    <ScreenShell
+      screen="admin"
+      scroll
+      rootStyle={styles.root}
+      scrollProps={{
+        style: { flex: 1, minHeight: 0 },
+        contentContainerStyle: { paddingBottom: Math.max(insets.bottom, 20) + 24 },
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.brand} />,
+      }}
+    >
+      <View style={styles.contentMax} testID="screen-admin-resumen">
         <View style={styles.topBar}>
           {!hideInlineBack ? (
             <BackNavButton
@@ -1323,12 +1330,7 @@ export default function AdminResumenScreen() {
             <ActivityIndicator size="large" color={t.brand} />
           </View>
         ) : (
-          <ScrollView
-            style={{ flex: 1, minHeight: 0 }}
-            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 20) + 24 }}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.brand} />}
-            showsVerticalScrollIndicator={false}
-          >
+          <>
             {error ? <Text style={styles.err}>{error}</Text> : null}
             <View style={styles.mainLayout}>
               <View style={styles.mainColPrimary}>
@@ -1624,10 +1626,9 @@ export default function AdminResumenScreen() {
                 </View>
               </View>
             </View>
-          </ScrollView>
+          </>
         )}
         </View>
-      </View>
     </ScreenShell>
   );
 }

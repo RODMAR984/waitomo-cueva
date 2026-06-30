@@ -26,7 +26,6 @@ import { WEB_CONTENT_MAX_WIDTH, WEB_AUTH_SIGNUP_MAX_WIDTH } from '../../theme/we
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 import {
-  AuthKeyboardAvoidingView,
   AuthDismissKeyboardOutside,
   authScrollContentJustify,
 } from '../../components/AuthWebFormShell';
@@ -198,7 +197,11 @@ export default function CreaCuentaScreen() {
   };
 
   return (
-    <ScreenShell screen="neutral">
+    <ScreenShell
+      screen="neutral"
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ style: { flex: 1, zIndex: 1 } }}
+    >
       <View style={authMarketingChromeRoot}>
         <LogoTriangleBackground
           isDark={isDark}
@@ -207,8 +210,7 @@ export default function CreaCuentaScreen() {
           sizeScale={2.8}
           opacityOverride={isDark ? 0.42 : 0.28}
         />
-        <AuthKeyboardAvoidingView style={[styles.kav, { flex: 1, zIndex: 1 }]}>
-          <AuthDismissKeyboardOutside>
+        <AuthDismissKeyboardOutside>
             <View style={styles.outer}>
               <View style={{ width: '100%', alignItems: 'center', marginBottom: MOBILE_SPACING.md + 2 }}>
                 <LogoCompleto height={52} />
@@ -246,7 +248,6 @@ export default function CreaCuentaScreen() {
               </NeoPanel>
             </View>
           </AuthDismissKeyboardOutside>
-        </AuthKeyboardAvoidingView>
       </View>
     </ScreenShell>
   );

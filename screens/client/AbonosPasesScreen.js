@@ -8,7 +8,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Platform,
   useWindowDimensions,
@@ -320,7 +319,6 @@ export default function AbonosPasesScreen({ navigation, route }) {
           flex: 1,
         },
         container: {
-          flexGrow: 1,
           paddingHorizontal: MOBILE_SPACING.lg,
           paddingTop: MOBILE_SPACING.lg,
           paddingBottom: 24 + bottomSafe,
@@ -605,13 +603,15 @@ export default function AbonosPasesScreen({ navigation, route }) {
   );
 
   return (
-    <ScreenShell plan={plan}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-      >
+    <ScreenShell
+      plan={plan}
+      scroll
+      scrollProps={{
+        style: styles.scrollView,
+        contentContainerStyle: styles.container,
+        bounces: true,
+      }}
+    >
         <View style={styles.header}>
           <View style={styles.headerBackWrap}>
             <BackNavButton onPress={() => navigation.goBack()} label={tStr('abonos_volver')} style={styles.backBtn} />
@@ -730,7 +730,6 @@ export default function AbonosPasesScreen({ navigation, route }) {
           </>
         )}
 
-      </ScrollView>
     </ScreenShell>
   );
 }

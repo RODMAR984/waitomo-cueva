@@ -1,7 +1,7 @@
 // Lectura de `platform_audit_log` (append-only) para admins de plataforma.
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -140,38 +140,42 @@ export default function SuperadminAuditLogScreen() {
   }
 
   return (
-    <ScreenShell screen="Admin">
-      <View style={styles.root} testID="screen-superadmin-audit">
-        <View style={styles.header}>
-          {!hideInlineBack ? (
-            <BackNavButton
-              testID="superadmin-nav-to-hub"
-              onPress={() => navigation.navigate('Superadmin')}
-              label={tStr('superadmin_back_hub')}
-            />
-          ) : null}
-          <Text style={styles.title}>{tStr('superadmin_audit_title')}</Text>
-        </View>
-        <View style={styles.listWrap}>
-          <Text style={styles.hint}>{tStr('superadmin_audit_hint')}</Text>
-          {error === 'migration' ? <Text style={styles.err}>{tStr('superadmin_data_migration_hint')}</Text> : null}
-          {error && error !== 'migration' ? <Text style={styles.err}>{tStr('superadmin_audit_load_error')}</Text> : null}
-          {loading && !refreshing ? (
-            <ActivityIndicator color={t.brand} style={{ marginTop: 24 }} />
-          ) : (
-            <FlatList
-              data={rows}
-              keyExtractor={(it) => String(it.id)}
-              renderItem={renderItem}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-              ListEmptyComponent={
-                !loading && !error ? <Text style={styles.empty}>{tStr('superadmin_audit_empty')}</Text> : null
-              }
-              contentContainerStyle={{ paddingBottom: 40 }}
-            />
-          )}
-        </View>
-      </View>
-    </ScreenShell>
+    <ScreenShell
+      screen="Admin"
+      list
+      rootStyle={styles.root}
+      testID="screen-superadmin-audit"
+      listProps={{
+        data: loading && !refreshing ? [] : rows,
+        keyExtractor: (it) => String(it.id),
+        renderItem,
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
+        ListHeaderComponent: (
+          <>
+            <View style={styles.header}>
+              {!hideInlineBack ? (
+                <BackNavButton
+                  testID="superadmin-nav-to-hub"
+                  onPress={() => navigation.navigate('Superadmin')}
+                  label={tStr('superadmin_back_hub')}
+                />
+              ) : null}
+              <Text style={styles.title}>{tStr('superadmin_audit_title')}</Text>
+            </View>
+            <View style={styles.listWrap}>
+              <Text style={styles.hint}>{tStr('superadmin_audit_hint')}</Text>
+              {error === 'migration' ? <Text style={styles.err}>{tStr('superadmin_data_migration_hint')}</Text> : null}
+              {error && error !== 'migration' ? <Text style={styles.err}>{tStr('superadmin_audit_load_error')}</Text> : null}
+              {loading && !refreshing ? (
+                <ActivityIndicator color={t.brand} style={{ marginTop: 24 }} />
+              ) : null}
+            </View>
+          </>
+        ),
+        ListEmptyComponent:
+          !loading && !error ? <Text style={styles.empty}>{tStr('superadmin_audit_empty')}</Text> : null,
+        contentContainerStyle: { paddingBottom: 40 },
+      }}
+    />
   );
 }

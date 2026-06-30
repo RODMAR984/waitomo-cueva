@@ -11,7 +11,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   Alert,
 } from 'react-native';
 import ScreenShell from '../../components/ScreenShell';
@@ -155,21 +154,22 @@ export default function ReservaScreen({ route, navigation }) {
   };
 
   return (
-    <ScreenShell plan={plan} fondo={fondo}>
-      <View style={styles.root}>
-        <View style={styles.content}>
+    <ScreenShell
+      plan={plan}
+      fondo={fondo}
+      list
+      listProps={{
+        data: horarios,
+        keyExtractor: (it) => it.id,
+        renderItem,
+        contentContainerStyle: [styles.content, styles.lista],
+        showsVerticalScrollIndicator: false,
+        ListHeaderComponent: (
           <View style={styles.panelTitle}>
             <Text style={styles.titulo}>{tStr('reserva_pick_title')}</Text>
           </View>
-
-          <FlatList
-            data={horarios}
-            keyExtractor={(it) => it.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.lista}
-            showsVerticalScrollIndicator={false}
-          />
-
+        ),
+        ListFooterComponent: (
           <View style={styles.actions}>
             <TouchableOpacity
               onPress={() => {
@@ -186,8 +186,9 @@ export default function ReservaScreen({ route, navigation }) {
 
             <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.volver} />
           </View>
-        </View>
-      </View>
-    </ScreenShell>
+        ),
+      }}
+      rootStyle={styles.root}
+    />
   );
 }

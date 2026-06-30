@@ -1,7 +1,7 @@
 // Hub panel plataforma FitEngine — ver docs/ROADMAP_SUPERADMIN_PLATFORM_PANEL.md
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,42 +74,47 @@ export default function SuperadminScreen() {
 
   if (!allowed) {
     return (
-      <ScreenShell screen="Admin">
-        <View style={styles.root}>
+      <ScreenShell
+        screen="Admin"
+        scroll
+        rootStyle={styles.root}
+        scrollProps={{
+          contentContainerStyle: [
+            styles.scrollBody,
+            { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.xl) },
+          ],
+          keyboardShouldPersistTaps: 'handled',
+        }}
+      >
           <View style={[styles.header, { paddingTop: screenHeaderTopPadding(insets.top) }]}>
             <BackNavButton onPress={() => navigation.goBack()} />
           </View>
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollBody,
-              { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.xl) },
-            ]}
-            keyboardShouldPersistTaps="handled"
-          >
             <Text style={styles.deny}>{tStr('superadmin_access_denied')}</Text>
-          </ScrollView>
-        </View>
       </ScreenShell>
     );
   }
 
   return (
-    <ScreenShell screen="Admin">
-      <View testID="superadmin-hub-root" style={styles.root}>
+    <ScreenShell
+      screen="Admin"
+      scroll
+      rootStyle={styles.root}
+      testID="superadmin-hub-root"
+      scrollProps={{
+        style: { flex: 1 },
+        contentContainerStyle: [
+          styles.scrollBody,
+          { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.xl) },
+        ],
+        keyboardShouldPersistTaps: 'handled',
+      }}
+    >
         <View style={[styles.header, { paddingTop: screenHeaderTopPadding(insets.top) }]}>
           <BackNavButton
             onPress={() => navigation.navigate('AdminLite')}
             label={tStr('superadmin_back_admin')}
           />
         </View>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={[
-            styles.scrollBody,
-            { paddingBottom: Math.max(insets.bottom, MOBILE_SPACING.xl) },
-          ]}
-          keyboardShouldPersistTaps="handled"
-        >
           <Text style={styles.title}>{tStr('superadmin_screen_title')}</Text>
           <Text style={styles.body}>{tStr('superadmin_screen_intro')}</Text>
           <View style={styles.grid}>
@@ -128,8 +133,6 @@ export default function SuperadminScreen() {
               </View>
             ))}
           </View>
-        </ScrollView>
-      </View>
     </ScreenShell>
   );
 }

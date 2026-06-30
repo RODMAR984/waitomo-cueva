@@ -1,6 +1,6 @@
 // screens/PlanChatScreen.js
 // Chat por Plan – aislado del chat del día.
-// Usa el fondo rotativo del BackgroundWrapper.
+// Fondo rotativo vía ScreenShell.
 
 import React, { useMemo, useState, useEffect } from 'react';
 import {
@@ -9,8 +9,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  FlatList,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -104,31 +102,35 @@ export default function PlanChatScreen({ route }) {
   );
 
   return (
-    <ScreenShell screen="planchat" plan={plan}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <BackNavButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>
-          {plan.title}
-          {tStr('plan_chat_title_suffix')}
-        </Text>
-
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.msg}>
-              <Text style={styles.msgUser}>
-                {item.user_id === user.id ? tStr('plan_chat_you') : tStr('plan_chat_other')}:
-              </Text>
-              <Text style={styles.msgText}>{item.message}</Text>
-            </View>
-          )}
-          style={styles.msgList}
-        />
-
+    <ScreenShell
+      screen="planchat"
+      plan={plan}
+      list
+      keyboardAvoid="default"
+      keyboardAvoidProps={{ style: styles.container }}
+      listProps={{
+        data: messages,
+        keyExtractor: (item) => item.id,
+        renderItem: ({ item }) => (
+          <View style={styles.msg}>
+            <Text style={styles.msgUser}>
+              {item.user_id === user.id ? tStr('plan_chat_you') : tStr('plan_chat_other')}:
+            </Text>
+            <Text style={styles.msgText}>{item.message}</Text>
+          </View>
+        ),
+        style: styles.msgList,
+        ListHeaderComponent: (
+          <>
+            <BackNavButton onPress={() => navigation.goBack()} />
+            <Text style={styles.title}>
+              {plan.title}
+              {tStr('plan_chat_title_suffix')}
+            </Text>
+          </>
+        ),
+      }}
+      companion={
         <View style={styles.row}>
           <TextInput
             value={text}
@@ -142,7 +144,7 @@ export default function PlanChatScreen({ route }) {
             <Ionicons name="send" color={t.primaryText} size={24} />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </ScreenShell>
+      }
+    />
   );
 }

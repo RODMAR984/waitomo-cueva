@@ -5,7 +5,6 @@ import React, { useMemo, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   Animated,
@@ -493,14 +492,17 @@ export default function PlanSelectorScreen({ navigation, route }) {
   }, [displayPlans]);
 
   return (
-    <ScreenShell screen={backdropScreen}>
-      <View style={styles.root}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingTop: Math.max(insets.top, MOBILE_SPACING.md) + MOBILE_SPACING.sm },
-          ]}
-        >
+    <ScreenShell
+      screen={backdropScreen}
+      scroll
+      scrollProps={{
+        contentContainerStyle: [
+          styles.scroll,
+          { paddingTop: Math.max(insets.top, MOBILE_SPACING.md) + MOBILE_SPACING.sm },
+        ],
+      }}
+      rootStyle={styles.root}
+    >
           {!waitingOrgForAuthedUser ? (
             <BackNavButton
               onPress={() => {
@@ -631,8 +633,6 @@ export default function PlanSelectorScreen({ navigation, route }) {
               <Text style={styles.skipLinkText}>{tStr('welcome_org_skip_to_panel')}</Text>
             </TouchableOpacity>
           ) : null}
-        </ScrollView>
-      </View>
     </ScreenShell>
   );
 }

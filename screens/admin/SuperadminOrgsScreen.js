@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -215,41 +214,45 @@ export default function SuperadminOrgsScreen() {
   }
 
   return (
-    <ScreenShell screen="Admin">
-      <View style={styles.root} testID="screen-superadmin-orgs">
-        <View style={styles.header}>
-          {!hideInlineBack ? (
-            <BackNavButton
-              testID="superadmin-nav-to-hub"
-              onPress={() => navigation.navigate('Superadmin')}
-              label={tStr('superadmin_back_hub')}
-            />
-          ) : null}
-          <Text style={styles.title}>{tStr('superadmin_orgs_title')}</Text>
-          <TouchableOpacity onPress={onRefresh} accessibilityRole="button">
-            <Ionicons name="refresh-outline" size={24} color={t.brand} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.listWrap}>
-          <Text style={styles.hint}>{tStr('superadmin_orgs_hint')}</Text>
-          {error === 'migration' ? <Text style={styles.err}>{tStr('superadmin_data_migration_hint')}</Text> : null}
-          {error && error !== 'migration' ? <Text style={styles.err}>{tStr('superadmin_orgs_load_error')}</Text> : null}
-          {loading && !refreshing ? (
-            <ActivityIndicator color={t.brand} style={{ marginTop: 24 }} />
-          ) : (
-            <FlatList
-              data={rows}
-              keyExtractor={(it) => String(it.organization_id)}
-              renderItem={renderItem}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-              ListEmptyComponent={
-                !loading && !error ? <Text style={styles.empty}>{tStr('superadmin_orgs_empty')}</Text> : null
-              }
-              contentContainerStyle={{ paddingBottom: 40 }}
-            />
-          )}
-        </View>
-      </View>
-    </ScreenShell>
+    <ScreenShell
+      screen="Admin"
+      list
+      rootStyle={styles.root}
+      testID="screen-superadmin-orgs"
+      listProps={{
+        data: loading && !refreshing ? [] : rows,
+        keyExtractor: (it) => String(it.organization_id),
+        renderItem,
+        refreshControl: <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />,
+        ListHeaderComponent: (
+          <>
+            <View style={styles.header}>
+              {!hideInlineBack ? (
+                <BackNavButton
+                  testID="superadmin-nav-to-hub"
+                  onPress={() => navigation.navigate('Superadmin')}
+                  label={tStr('superadmin_back_hub')}
+                />
+              ) : null}
+              <Text style={styles.title}>{tStr('superadmin_orgs_title')}</Text>
+              <TouchableOpacity onPress={onRefresh} accessibilityRole="button">
+                <Ionicons name="refresh-outline" size={24} color={t.brand} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.listWrap}>
+              <Text style={styles.hint}>{tStr('superadmin_orgs_hint')}</Text>
+              {error === 'migration' ? <Text style={styles.err}>{tStr('superadmin_data_migration_hint')}</Text> : null}
+              {error && error !== 'migration' ? <Text style={styles.err}>{tStr('superadmin_orgs_load_error')}</Text> : null}
+              {loading && !refreshing ? (
+                <ActivityIndicator color={t.brand} style={{ marginTop: 24 }} />
+              ) : null}
+            </View>
+          </>
+        ),
+        ListEmptyComponent:
+          !loading && !error ? <Text style={styles.empty}>{tStr('superadmin_orgs_empty')}</Text> : null,
+        contentContainerStyle: { paddingBottom: 40 },
+      }}
+    />
   );
 }

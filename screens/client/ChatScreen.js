@@ -5,11 +5,8 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -502,105 +499,120 @@ export default function ChatScreen() {
     [tStr],
   );
 
-  return (
-    <ScreenShell screen="ClientScreen">
-      <View style={styles.header}>
-        <BackNavButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>{channelName}</Text>
+  const listHeader = (
+    <View style={styles.header}>
+      <BackNavButton onPress={() => navigation.goBack()} />
+      <Text style={styles.title}>{channelName}</Text>
+    </View>
+  );
+
+  const listEmpty = () => {
+    if (accessLoading) {
+      return (
+        <View style={[styles.empty, { flex: 1, justifyContent: 'center' }]}>
+          <ActivityIndicator size="large" color={t.brand} />
+        </View>
+      );
+    }
+    if (!accessOk) {
+      return (
+        <View style={[styles.empty, { flex: 1, justifyContent: 'center', paddingHorizontal: 22 }]}>
+          <Text style={[styles.emptyText, { textAlign: 'center', fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', color: t.text }]}>
+            {tStr('client_community_locked_title')}
+          </Text>
+          <Text style={[styles.emptyText, { textAlign: 'center', marginTop: 10, lineHeight: 20 }]}>
+            {tStr('client_community_locked_body')}
+          </Text>
+        </View>
+      );
+    }
+    if (loading) {
+      return (
+        <View style={[styles.empty, { flex: 1, justifyContent: 'center' }]}>
+          <ActivityIndicator size="large" color={t.brand} />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyText}>{tStr('chat_empty_thread')}</Text>
       </View>
+    );
+  };
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
-        <View style={{ flex: 1 }}>
-          {accessLoading ? (
-            <View style={[styles.empty, { flex: 1, justifyContent: 'center' }]}>
-              <ActivityIndicator size="large" color={t.brand} />
-            </View>
-          ) : !accessOk ? (
-            <View style={[styles.empty, { flex: 1, justifyContent: 'center', paddingHorizontal: 22 }]}>
-              <Text style={[styles.emptyText, { textAlign: 'center', fontSize: MOBILE_TYPE.bodyStrong, fontWeight: '800', color: t.text }]}>
-                {tStr('client_community_locked_title')}
-              </Text>
-              <Text style={[styles.emptyText, { textAlign: 'center', marginTop: 10, lineHeight: 20 }]}>
-                {tStr('client_community_locked_body')}
-              </Text>
-            </View>
-          ) : loading ? (
-            <View style={[styles.empty, { flex: 1, justifyContent: 'center' }]}>
-              <ActivityIndicator size="large" color={t.brand} />
-            </View>
-          ) : (
-          <FlatList
-            ref={listRef}
-            style={styles.list}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>{tStr('chat_empty_thread')}</Text>
-              </View>
-            }
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-          />
-          )}
+  const chatCompanion = (
+    <>
+      {isStaffHere ? (
+        <View style={styles.templatesRow}>
+          {templateOptions.map((opt) => {
+            const on = aiTemplate === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id || 'none'}
+                style={[styles.templateChip, on && styles.templateChipOn]}
+                onPress={() => setAiTemplate(opt.id)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.templateChipText, on && styles.templateChipTextOn]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
+      ) : null}
 
+      <View style={styles.inputRow}>
         {isStaffHere ? (
-          <View style={styles.templatesRow}>
-            {templateOptions.map((opt) => {
-              const on = aiTemplate === opt.id;
-              return (
-                <TouchableOpacity
-                  key={opt.id || 'none'}
-                  style={[styles.templateChip, on && styles.templateChipOn]}
-                  onPress={() => setAiTemplate(opt.id)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={[styles.templateChipText, on && styles.templateChipTextOn]}>{opt.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : null}
-
-        <View style={styles.inputRow}>
-          {isStaffHere ? (
-            <TouchableOpacity
-              style={[styles.aiBtn, (aiBusy || sending || !accessOk) && { opacity: 0.5 }]}
-              onPress={suggestReply}
-              disabled={aiBusy || sending || !accessOk}
-              activeOpacity={0.85}
-            >
-              {aiBusy ? (
-                <ActivityIndicator size="small" color={t.brand} />
-              ) : (
-                <Ionicons name="sparkles-outline" size={20} color={t.brand} />
-              )}
-            </TouchableOpacity>
-          ) : null}
-          <TextInput
-            style={styles.input}
-            placeholder={isStaffHere ? tStr('chat_placeholder_staff') : tStr('chat_placeholder')}
-            placeholderTextColor={t.placeholder}
-            value={body}
-            onChangeText={setBody}
-            multiline
-            maxLength={2000}
-            editable={!sending}
-          />
           <TouchableOpacity
-            style={[styles.sendBtn, (!body.trim() || sending) && { opacity: 0.5 }]}
-            onPress={send}
-            disabled={!body.trim() || sending}
+            style={[styles.aiBtn, (aiBusy || sending || !accessOk) && { opacity: 0.5 }]}
+            onPress={suggestReply}
+            disabled={aiBusy || sending || !accessOk}
+            activeOpacity={0.85}
           >
-            <Ionicons name="send" size={20} color={t.brand} />
+            {aiBusy ? (
+              <ActivityIndicator size="small" color={t.brand} />
+            ) : (
+              <Ionicons name="sparkles-outline" size={20} color={t.brand} />
+            )}
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </ScreenShell>
+        ) : null}
+        <TextInput
+          style={styles.input}
+          placeholder={isStaffHere ? tStr('chat_placeholder_staff') : tStr('chat_placeholder')}
+          placeholderTextColor={t.placeholder}
+          value={body}
+          onChangeText={setBody}
+          multiline
+          maxLength={2000}
+          editable={!sending}
+        />
+        <TouchableOpacity
+          style={[styles.sendBtn, (!body.trim() || sending) && { opacity: 0.5 }]}
+          onPress={send}
+          disabled={!body.trim() || sending}
+        >
+          <Ionicons name="send" size={20} color={t.brand} />
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  return (
+    <ScreenShell
+      screen="ClientScreen"
+      list
+      keyboardAvoid="default"
+      keyboardAvoidProps={{ style: { flex: 1 }, keyboardVerticalOffset: 0 }}
+      listProps={{
+        ref: listRef,
+        style: styles.list,
+        data: accessOk && !accessLoading && !loading ? messages : [],
+        keyExtractor: (item) => item.id,
+        renderItem: renderMessage,
+        ListHeaderComponent: listHeader,
+        ListEmptyComponent: listEmpty,
+        onContentSizeChange: () => listRef.current?.scrollToEnd({ animated: true }),
+      }}
+      companion={chatCompanion}
+    />
   );
 }

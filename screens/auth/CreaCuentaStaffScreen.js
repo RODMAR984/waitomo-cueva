@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
-  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,7 +26,6 @@ import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
 import {
-  AuthKeyboardAvoidingView,
   AuthDismissKeyboardOutside,
   authScrollKeyboardDismissMode,
   authScrollContentJustify,
@@ -306,7 +304,16 @@ export default function CreaCuentaStaffScreen() {
   );
 
   return (
-    <ScreenShell screen="neutral">
+    <ScreenShell
+      screen="neutral"
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ style: [styles.kav, { flex: 1, zIndex: 1 }] }}
+      scrollProps={{
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+        contentContainerStyle: styles.scrollContent,
+      }}
+    >
       <View style={authMarketingChromeRoot}>
         <LogoTriangleBackground
           isDark={isDark}
@@ -315,16 +322,7 @@ export default function CreaCuentaStaffScreen() {
           sizeScale={2.8}
           opacityOverride={isDark ? 0.42 : 0.28}
         />
-        <AuthKeyboardAvoidingView style={[styles.kav, { flex: 1, zIndex: 1 }]}>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={authScrollKeyboardDismissMode}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <AuthDismissKeyboardOutside>{formInner}</AuthDismissKeyboardOutside>
-          </ScrollView>
-        </AuthKeyboardAvoidingView>
+        <AuthDismissKeyboardOutside>{formInner}</AuthDismissKeyboardOutside>
       </View>
     </ScreenShell>
   );

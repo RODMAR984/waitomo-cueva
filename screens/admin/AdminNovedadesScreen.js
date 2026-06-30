@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -17,7 +16,6 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import ScreenShell from '../../components/ScreenShell';
-import { FormKeyboardAvoidingView } from '../../components/AuthWebFormShell';
 import BackNavButton from '../../components/BackNavButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -256,9 +254,13 @@ export default function AdminNovedadesScreen() {
   const formVisible = showNewForm || editingId;
 
   return (
-    <ScreenShell screen="admin">
-      <FormKeyboardAvoidingView testID="screen-admin-novedades" style={{ flex: 1 }}>
-        <ScrollView style={styles.screen} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+    <ScreenShell
+      screen="admin"
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ testID: 'screen-admin-novedades', style: { flex: 1 } }}
+      scrollProps={{ style: styles.screen, contentContainerStyle: styles.list }}
+    >
           <View style={styles.header}>
             {!hideInlineBack ? (
               <BackNavButton
@@ -382,8 +384,6 @@ export default function AdminNovedadesScreen() {
               </View>
             ))
           )}
-        </ScrollView>
-      </FormKeyboardAvoidingView>
     </ScreenShell>
   );
 }

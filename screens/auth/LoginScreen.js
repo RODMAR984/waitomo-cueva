@@ -11,7 +11,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  ScrollView,
   Alert,
   useWindowDimensions,
 } from 'react-native';
@@ -35,10 +34,8 @@ import { resolvePostAuthDestination } from '../../utils/authRoutingGuard';
 import { navigationRef, resetNavigationRoot } from '../../navigationRef';
 import { reportError, trackEvent } from '../../utils/observability';
 import NeoPanel from '../../components/NeoPanel';
-import {
-  AuthKeyboardAvoidingView,
-  authScrollKeyboardDismissMode,
-} from '../../components/AuthWebFormShell';
+import ScreenShell from '../../components/ScreenShell';
+import { authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -607,7 +604,17 @@ export default function LoginScreen() {
   const disabledReset = isSendingReset || disabled;
 
   return (
-    <View style={{ flex: 1, backgroundColor: FITENGINE_APP_CANVAS_BG, overflow: 'hidden' }}>
+    <ScreenShell
+      screen="neutral"
+      scroll
+      keyboardAvoid="form"
+      style={{ flex: 1, backgroundColor: FITENGINE_APP_CANVAS_BG, overflow: 'hidden' }}
+      keyboardAvoidProps={{ style: [styles.kav, { zIndex: 1 }] }}
+      scrollProps={{
+        contentContainerStyle: styles.scrollContent,
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+      }}
+    >
       <LogoTriangleBackground
         isDark={isDark}
         variant="registro"
@@ -615,13 +622,6 @@ export default function LoginScreen() {
         sizeScale={2.8}
         opacityOverride={isDark ? 0.42 : 0.28}
       />
-      <AuthKeyboardAvoidingView style={[styles.kav, { zIndex: 1 }]}>
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={authScrollKeyboardDismissMode}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
           <View style={styles.pageColumn}>
             <View style={styles.brandTop}>
               <LogoCompleto height={72} />
@@ -766,8 +766,6 @@ export default function LoginScreen() {
               <Text style={styles.brandFooter}>{tStr('gym_config_footer')}</Text>
             </View>
           </View>
-        </ScrollView>
-      </AuthKeyboardAvoidingView>
-    </View>
+    </ScreenShell>
   );
 }

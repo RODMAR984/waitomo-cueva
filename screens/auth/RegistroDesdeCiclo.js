@@ -13,7 +13,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ScrollView,
 } from 'react-native';
 import { showAppAlert } from '../../utils/confirmAction';
 import ScreenShell from '../../components/ScreenShell';
@@ -24,7 +23,6 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import {
-  AuthKeyboardAvoidingView,
   authScrollKeyboardDismissMode,
   authScrollContentJustify,
 } from '../../components/AuthWebFormShell';
@@ -110,13 +108,16 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
   );
 
   return (
-    <ScreenShell fondo={getRandomGeneralImage()}>
-      <AuthKeyboardAvoidingView style={styles.kav}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={authScrollKeyboardDismissMode}
-        >
+    <ScreenShell
+      fondo={getRandomGeneralImage()}
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ style: styles.kav }}
+      scrollProps={{
+        contentContainerStyle: styles.scroll,
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+      }}
+    >
           <View style={styles.container}>
             <BackNavButton onPress={() => navigation.goBack()} />
             <Text style={styles.title}>{tStr('reg_ciclo_title')}</Text>
@@ -156,8 +157,6 @@ export default function RegistroDesdeCiclo({ navigation, route }) {
               </TouchableOpacity>
             ) : null}
           </View>
-        </ScrollView>
-      </AuthKeyboardAvoidingView>
     </ScreenShell>
   );
 }

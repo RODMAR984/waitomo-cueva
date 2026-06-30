@@ -6,10 +6,10 @@
 // - Funcionalidad preservada: fondo + mensaje centrado
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import BackNavButton from '../../components/BackNavButton';
-import getRandomPlanImage from '../../utils/getRandomPlanImage';
+import ScreenShell from '../../components/ScreenShell';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
@@ -26,13 +26,11 @@ const hexToRgba = (hex, alpha = 1) => {
 
 export default function ProgresoScreen() {
   const navigation = useNavigation();
-  const fondo = getRandomPlanImage('admin');
   const { t } = useThemeContext();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        background: { flex: 1 },
         container: {
           flex: 1,
           justifyContent: 'center',
@@ -69,13 +67,13 @@ export default function ProgresoScreen() {
   );
 
   return (
-    <ImageBackground source={fondo} style={styles.background} resizeMode="cover">
+    <ScreenShell screen="ClientScreen">
       <View style={styles.container}>
         <NeoPanel style={styles.panel}>
           <BackNavButton onPress={() => navigation.goBack()} style={styles.backBtn} />
           <Text style={styles.text}>📈 Próximamente podrás ver tu progreso.</Text>
         </NeoPanel>
       </View>
-    </ImageBackground>
+    </ScreenShell>
   );
 }

@@ -2,18 +2,16 @@
 // Pantalla de seguridad de cuenta:
 // - Cambiar contraseña (requiere contraseña actual)
 // - Cambiar email (requiere contraseña actual)
-// Usa AuthContext (changePassword / changeEmail) y BackgroundWrapper con fondo por plan.
+// Usa AuthContext (changePassword / changeEmail) y ScreenShell con fondo por plan.
 
 import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
   TouchableOpacity,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -305,13 +303,17 @@ const handleChangePassword = async () => {
   //   RENDER
   // =========================
   return (
-    <ScreenShell plan={{ id: profile?.plan_actual }} screen="seguridad">
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      >
-        <ScrollView contentContainerStyle={styles.container}>
+    <ScreenShell
+      plan={{ id: profile?.plan_actual }}
+      screen="seguridad"
+      scroll
+      keyboardAvoid="default"
+      keyboardAvoidProps={{
+        style: styles.flex,
+        keyboardVerticalOffset: Platform.OS === 'ios' ? 80 : 0,
+      }}
+      scrollProps={{ contentContainerStyle: styles.container }}
+    >
           <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('security_screen_title')}</Text>
             <Text style={styles.subtitle}>{tStr('security_subtitle')}</Text>
@@ -444,8 +446,6 @@ const handleChangePassword = async () => {
             {/* VOLVER */}
             <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backButton} />
           </NeoPanel>
-        </ScrollView>
-      </KeyboardAvoidingView>
     </ScreenShell>
   );
 };

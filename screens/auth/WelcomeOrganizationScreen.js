@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -91,14 +90,17 @@ export default function WelcomeOrganizationScreen() {
   }
 
   return (
-    <ScreenShell screen="OrgWelcome">
-      <ScrollView
-        contentContainerStyle={[
+    <ScreenShell
+      screen="OrgWelcome"
+      scroll
+      scrollProps={{
+        contentContainerStyle: [
           styles.scroll,
           { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 32 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
+        ],
+        keyboardShouldPersistTaps: 'handled',
+      }}
+    >
         <NeoPanel style={[styles.panel, { backgroundColor: t.boxBg, borderColor: t.overlayBorder }]}>
           <View style={styles.hero}>
           {logoUri ? (
@@ -134,7 +136,6 @@ export default function WelcomeOrganizationScreen() {
         ) : null}
 
         <Text style={[styles.hint, { color: t.placeholder }]}>{tStr('welcome_org_branding_hint')}</Text>
-      </ScrollView>
     </ScreenShell>
   );
 }
@@ -143,7 +144,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: MOBILE_SPACING.xxl },
   muted: { fontSize: MOBILE_TYPE.body },
   scroll: {
-    flexGrow: 1,
     paddingHorizontal: MOBILE_SPACING.xxl,
     width: '100%',
     maxWidth: WEB_CONTENT_MAX_WIDTH,

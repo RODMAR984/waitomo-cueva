@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -260,69 +259,93 @@ export default function ChatCanalesScreen() {
     navigation.navigate('Chat', { channelId: ch.id, channelName: ch.name });
   };
 
-  return (
-    <ScreenShell screen="ClientScreen">
+  const listHeader = useMemo(
+    () => (
       <View style={styles.header}>
         <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{tStr('chat_title')}</Text>
       </View>
+    ),
+    [navigation, styles.header, styles.title, tStr],
+  );
 
-      {loading ? (
+  const listEmpty = useMemo(() => {
+    if (loading) {
+      return (
         <View style={styles.empty}>
           <ActivityIndicator size="large" color={t.brand} />
         </View>
-      ) : channels.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>
-            {!communityAccess.ok ? tStr('client_community_locked_title') : tStr('chat_no_channels')}
-          </Text>
-          <Text style={styles.emptyHint}>{emptyHint}</Text>
-          {!orgId ? null : !communityAccess.ok ? (
-            <>
-              <TouchableOpacity
-                style={styles.cta}
-                onPress={() => navigation.navigate('AbonosPases')}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.ctaText}>{tStr('client_entitlement_go_pay')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cta}
-                onPress={() => navigation.navigate('PlanSelector')}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.ctaText}>{tStr('client_entitlement_go_plans')}</Text>
-              </TouchableOpacity>
-            </>
-          ) : !hasDbPlan ? (
+      );
+    }
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyText}>
+          {!communityAccess.ok ? tStr('client_community_locked_title') : tStr('chat_no_channels')}
+        </Text>
+        <Text style={styles.emptyHint}>{emptyHint}</Text>
+        {!orgId ? null : !communityAccess.ok ? (
+          <>
+            <TouchableOpacity
+              style={styles.cta}
+              onPress={() => navigation.navigate('AbonosPases')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.ctaText}>{tStr('client_entitlement_go_pay')}</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.cta}
               onPress={() => navigation.navigate('PlanSelector')}
               activeOpacity={0.9}
             >
-              <Text style={styles.ctaText}>{tStr('chat_btn_choose_plan')}</Text>
+              <Text style={styles.ctaText}>{tStr('client_entitlement_go_plans')}</Text>
             </TouchableOpacity>
-          ) : null}
-        </View>
-      ) : (
-        <FlatList
-          style={styles.list}
-          data={channels}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} onPress={() => openChannel(item)} activeOpacity={0.9}>
-              <View style={styles.cardIcon}>
-                <Ionicons name="chatbubbles" size={24} color={t.brand} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardName}>{item.name || item.plan_id}</Text>
-                <Text style={styles.cardPlan}>{item.plan_id}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color={t.placeholder} />
-            </TouchableOpacity>
-          )}
-        />
-      )}
-    </ScreenShell>
+          </>
+        ) : !hasDbPlan ? (
+          <TouchableOpacity
+            style={styles.cta}
+            onPress={() => navigation.navigate('PlanSelector')}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.ctaText}>{tStr('chat_btn_choose_plan')}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  }, [
+    communityAccess.ok,
+    emptyHint,
+    hasDbPlan,
+    loading,
+    navigation,
+    orgId,
+    styles,
+    t.brand,
+    tStr,
+  ]);
+
+  return (
+    <ScreenShell
+      screen="ClientScreen"
+      list
+      listProps={{
+        style: styles.list,
+        data: loading ? [] : channels,
+        keyExtractor: (item) => item.id,
+        ListHeaderComponent: listHeader,
+        ListEmptyComponent: listEmpty,
+        renderItem: ({ item }) => (
+          <TouchableOpacity style={styles.card} onPress={() => openChannel(item)} activeOpacity={0.9}>
+            <View style={styles.cardIcon}>
+              <Ionicons name="chatbubbles" size={24} color={t.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardName}>{item.name || item.plan_id}</Text>
+              <Text style={styles.cardPlan}>{item.plan_id}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={t.placeholder} />
+          </TouchableOpacity>
+        ),
+      }}
+    />
   );
 }

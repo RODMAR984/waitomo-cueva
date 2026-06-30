@@ -10,7 +10,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import ScreenShell from '../../components/ScreenShell';
@@ -165,7 +164,6 @@ export default function PlanDetailScreen({ route, navigation }) {
         },
         scroll: {
           backgroundColor: 'transparent',
-          flexGrow: 1,
           justifyContent: 'center',
           paddingTop: 24,
           paddingBottom: 32,
@@ -221,8 +219,11 @@ export default function PlanDetailScreen({ route, navigation }) {
   }
 
   return (
-    <ScreenShell plan={plan}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <ScreenShell
+      plan={plan}
+      scroll
+      scrollProps={{ contentContainerStyle: styles.scroll }}
+    >
         <View style={styles.overlayHeader}>
           <Text style={styles.title}>{plan.title}</Text>
           {!!plan.subtitle && <Text style={styles.subtitle}>{plan.subtitle}</Text>}
@@ -253,7 +254,6 @@ export default function PlanDetailScreen({ route, navigation }) {
 
           <BackNavButton onPress={handleVolver} label={tStr('plan_detail_back_plans')} style={styles.buttonOutline} />
         </NeoPanel>
-      </ScrollView>
     </ScreenShell>
   );
 }

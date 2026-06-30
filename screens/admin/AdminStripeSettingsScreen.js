@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Switch,
@@ -221,14 +220,13 @@ export default function AdminStripeSettingsScreen() {
   );
 
   return (
-    <ScreenShell screen="Admin">
+    <ScreenShell screen="Admin" scroll scrollProps={{ contentContainerStyle: styles.body }}>
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_stripe_title')}</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.body}>
         {stripeConnectedLive ? (
           <View style={styles.connectedBanner} accessibilityRole="summary">
             <Ionicons name="checkmark-circle" size={28} color={t.brand} style={{ marginRight: 10, marginTop: 2 }} />
@@ -276,7 +274,6 @@ export default function AdminStripeSettingsScreen() {
         ) : (
           <Text style={[styles.hint, styles.noEditHint]}>{tStr('gym_config_no_permission_body')}</Text>
         )}
-      </ScrollView>
     </ScreenShell>
   );
 }

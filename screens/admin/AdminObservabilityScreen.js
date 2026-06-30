@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Platform,
   Pressable,
   StyleSheet,
@@ -316,9 +315,18 @@ export default function AdminObservabilityScreen({ navigation, observabilityBack
   ];
 
   return (
-    <ScreenShell screen="admin">
-      <View style={styles.root} testID="admin-observability-root">
-        <View style={styles.contentMax}>
+    <ScreenShell
+      screen="admin"
+      list
+      rootStyle={styles.root}
+      testID="admin-observability-root"
+      listProps={{
+        style: styles.list,
+        data: filteredEvents,
+        keyExtractor: (item) => String(item.id),
+        contentContainerStyle: { paddingBottom: 6 },
+        ListHeaderComponent: (
+          <View style={styles.contentMax}>
         <View style={styles.header}>
           {!hideInlineBack ? (
             <BackNavButton
@@ -449,20 +457,16 @@ export default function AdminObservabilityScreen({ navigation, observabilityBack
         <Text style={styles.resultLine}>
           {tStr('admin_observ_results').replace('{{n}}', String(filteredEvents.length))}
         </Text>
-
-        <FlatList
-          style={styles.list}
-          data={filteredEvents}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingBottom: 6 }}
-          ListEmptyComponent={
+          </View>
+        ),
+        ListEmptyComponent: (
             <View style={styles.row}>
               <Text style={styles.rowSub}>
                 {snapshot.events.length === 0 ? tStr('admin_observ_empty') : tStr('admin_observ_filtered_empty')}
               </Text>
             </View>
-          }
-          renderItem={({ item: e }) => (
+          ),
+        renderItem: ({ item: e }) => (
             <View style={styles.row}>
               <Text style={styles.rowTitle}>
                 {String(e.type || 'event').toUpperCase()} · {e.name} {e.synced ? '✓' : '•'}
@@ -472,10 +476,8 @@ export default function AdminObservabilityScreen({ navigation, observabilityBack
                 {JSON.stringify(e.payload || {})}
               </Text>
             </View>
-          )}
-        />
-        </View>
-      </View>
-    </ScreenShell>
+          ),
+      }}
+    />
   );
 }

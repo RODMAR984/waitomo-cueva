@@ -5,13 +5,11 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
   Platform,
   Alert,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -225,36 +223,39 @@ export default function SuperadminTicketDetailScreen() {
   }
 
   return (
-    <ScreenShell screen="Admin">
-      <KeyboardAvoidingView
-        style={styles.root}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={insets.top + 8}
-      >
-        <View style={styles.header}>
-          {!hideInlineBack ? (
-            <BackNavButton onPress={() => navigation.navigate('SuperadminTickets')} label={tStr('superadmin_tickets_title')} />
-          ) : null}
-          <Text style={styles.title} numberOfLines={1}>
-            {tStr('superadmin_ticket_detail_title')}
-          </Text>
-        </View>
-        {loading ? (
-          <ActivityIndicator color={t.brand} style={{ marginTop: 24 }} />
-        ) : error === 'migration' ? (
-          <View style={styles.scroll}>
-            <Text style={styles.err}>{tStr('superadmin_data_migration_hint')}</Text>
-          </View>
-        ) : error === 'missing' || !ticket ? (
-          <View style={styles.scroll}>
-            <Text style={styles.err}>{tStr('superadmin_ticket_missing')}</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={messages}
-            keyExtractor={(m) => String(m.id)}
-            style={styles.scroll}
-            ListHeaderComponent={
+    <ScreenShell
+      screen="Admin"
+      list
+      keyboardAvoid="default"
+      keyboardAvoidProps={{
+        style: styles.root,
+        keyboardVerticalOffset: insets.top + 8,
+      }}
+      listProps={{
+        data: loading || error || !ticket ? [] : messages,
+        keyExtractor: (m) => String(m.id),
+        style: styles.scroll,
+        ListHeaderComponent: (
+          <>
+            <View style={styles.header}>
+              {!hideInlineBack ? (
+                <BackNavButton onPress={() => navigation.navigate('SuperadminTickets')} label={tStr('superadmin_tickets_title')} />
+              ) : null}
+              <Text style={styles.title} numberOfLines={1}>
+                {tStr('superadmin_ticket_detail_title')}
+              </Text>
+            </View>
+            {loading ? (
+              <ActivityIndicator color={t.brand} style={{ marginTop: 24 }} />
+            ) : error === 'migration' ? (
+              <View style={styles.scroll}>
+                <Text style={styles.err}>{tStr('superadmin_data_migration_hint')}</Text>
+              </View>
+            ) : error === 'missing' || !ticket ? (
+              <View style={styles.scroll}>
+                <Text style={styles.err}>{tStr('superadmin_ticket_missing')}</Text>
+              </View>
+            ) : (
               <View>
                 <Text style={styles.subj}>{ticket.subject}</Text>
                 <Text style={styles.meta}>
@@ -278,37 +279,39 @@ export default function SuperadminTicketDetailScreen() {
                 {ticket.body ? <Text style={styles.body}>{ticket.body}</Text> : null}
                 <Text style={styles.section}>{tStr('superadmin_ticket_messages')}</Text>
               </View>
-            }
-            renderItem={({ item }) => (
-              <View style={styles.msg}>
-                <Text style={styles.msgBody}>{item.body}</Text>
-                <Text style={styles.msgMeta}>
-                  {item.author_id?.slice(0, 8)}… · {String(item.created_at || '').replace('T', ' ').slice(0, 19)}
-                </Text>
-              </View>
             )}
-            ListEmptyComponent={<Text style={styles.meta}>{tStr('superadmin_ticket_no_messages')}</Text>}
-            ListFooterComponent={
-              <View>
-                <TextInput
-                  style={styles.input}
-                  multiline
-                  placeholder={tStr('superadmin_ticket_reply_placeholder')}
-                  placeholderTextColor={t.placeholder}
-                  value={reply}
-                  onChangeText={setReply}
-                  editable={!sending}
-                />
-                <TouchableOpacity style={styles.sendBtn} onPress={sendReply} disabled={sending || !reply.trim()}>
-                  <Text style={styles.sendText}>{tStr('superadmin_ticket_reply_send')}</Text>
-                </TouchableOpacity>
-              </View>
-            }
-            contentContainerStyle={{ paddingBottom: 40 }}
-          />
-        )}
-      </KeyboardAvoidingView>
-    </ScreenShell>
+          </>
+        ),
+        renderItem: ({ item }) => (
+          <View style={styles.msg}>
+            <Text style={styles.msgBody}>{item.body}</Text>
+            <Text style={styles.msgMeta}>
+              {item.author_id?.slice(0, 8)}… · {String(item.created_at || '').replace('T', ' ').slice(0, 19)}
+            </Text>
+          </View>
+        ),
+        ListEmptyComponent: ticket && !loading && !error ? (
+          <Text style={styles.meta}>{tStr('superadmin_ticket_no_messages')}</Text>
+        ) : null,
+        ListFooterComponent: ticket && !loading && !error ? (
+          <View>
+            <TextInput
+              style={styles.input}
+              multiline
+              placeholder={tStr('superadmin_ticket_reply_placeholder')}
+              placeholderTextColor={t.placeholder}
+              value={reply}
+              onChangeText={setReply}
+              editable={!sending}
+            />
+            <TouchableOpacity style={styles.sendBtn} onPress={sendReply} disabled={sending || !reply.trim()}>
+              <Text style={styles.sendText}>{tStr('superadmin_ticket_reply_send')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null,
+        contentContainerStyle: { paddingBottom: 40 },
+      }}
+    />
   );
 }
 

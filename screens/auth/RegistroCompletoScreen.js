@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView,
   Image,
   ActivityIndicator,
 } from 'react-native';
@@ -30,7 +29,7 @@ import { getClientPostAuthRouteName } from '../../utils/clientPostAuthRoute';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
-import { AuthKeyboardAvoidingView, authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
+import { authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 
 // ---------- helpers ----------
 const hexToRgba = (hex, alpha = 1) => {
@@ -447,13 +446,16 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
   );
 
   return (
-    <ScreenShell plan={plan}>
-      <AuthKeyboardAvoidingView style={styles.kav}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={authScrollKeyboardDismissMode}
-        >
+    <ScreenShell
+      plan={plan}
+      scroll
+      keyboardAvoid="form"
+      keyboardAvoidProps={{ style: styles.kav }}
+      scrollProps={{
+        contentContainerStyle: styles.scroll,
+        keyboardDismissMode: authScrollKeyboardDismissMode,
+      }}
+    >
           <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('reg_complete_title')}</Text>
 
@@ -546,8 +548,6 @@ console.log('🟡 [RegistroCompleto] payload =>', payload);
             </TouchableOpacity>
             <BackNavButton onPress={() => navigation.goBack()} style={{ marginTop: MOBILE_SPACING.md }} />
           </NeoPanel>
-        </ScrollView>
-      </AuthKeyboardAvoidingView>
     </ScreenShell>
   );
 }

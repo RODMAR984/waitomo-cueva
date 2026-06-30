@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
@@ -202,84 +201,84 @@ export default function OrgMembersScreen() {
   }, [rows, tStr]);
 
   return (
-    <ScreenShell screen="admin">
-      <View style={{ flex: 1 }} testID="screen-org-members">
-      <View style={styles.header}>
-        {!hideInlineBack ? (
-          <BackNavButton
-            testID="org-members-nav-back"
-            onPress={() => navigation.goBack()}
-            label={tStr('common_back')}
-            style={styles.backBtn}
-          />
-        ) : null}
-        <Text style={styles.title} numberOfLines={1}>
-          {tStr('admin_miembros')}
-        </Text>
-        <TouchableOpacity onPress={exportCsv} style={styles.iconBtn} accessibilityLabel="Export CSV">
-          <Ionicons name="download-outline" size={22} color={t.brand} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={load} style={styles.iconBtn} accessibilityLabel="Refrescar">
-          <Ionicons name="refresh" size={22} color={t.brand} />
-        </TouchableOpacity>
-      </View>
-
-      {loading ? (
-        <View style={styles.empty}>
-          <ActivityIndicator size="large" color={t.brand} />
-        </View>
-      ) : error ? (
-        <View style={[styles.list, styles.empty]}>
-          <Text style={styles.err}>{error}</Text>
-          <Text style={styles.emptyText}>
-            Si acabás de desplegar la base, ejecutá la migración «Staff read org memberships» en Supabase.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          style={styles.list}
-          data={rows}
-          keyExtractor={(item) => item.user_id}
-          ListHeaderComponent={
-            rows.length ? (
+    <ScreenShell
+      screen="admin"
+      list
+      testID="screen-org-members"
+      listProps={{
+        style: styles.list,
+        data: loading || error ? [] : rows,
+        keyExtractor: (item) => item.user_id,
+        ListHeaderComponent: (
+          <>
+            <View style={styles.header}>
+              {!hideInlineBack ? (
+                <BackNavButton
+                  testID="org-members-nav-back"
+                  onPress={() => navigation.goBack()}
+                  label={tStr('common_back')}
+                  style={styles.backBtn}
+                />
+              ) : null}
+              <Text style={styles.title} numberOfLines={1}>
+                {tStr('admin_miembros')}
+              </Text>
+              <TouchableOpacity onPress={exportCsv} style={styles.iconBtn} accessibilityLabel="Export CSV">
+                <Ionicons name="download-outline" size={22} color={t.brand} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={load} style={styles.iconBtn} accessibilityLabel="Refrescar">
+                <Ionicons name="refresh" size={22} color={t.brand} />
+              </TouchableOpacity>
+            </View>
+            {rows.length ? (
               <Text style={{ color: t.subText, fontSize: MOBILE_TYPE.label, lineHeight: 18, marginBottom: 12 }}>
                 {tStr('org_member_list_hint')}
               </Text>
-            ) : null
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>{tStr('admin_miembros_empty')}</Text>
+            ) : null}
+          </>
+        ),
+        ListEmptyComponent: loading ? (
+          <View style={styles.empty}>
+            <ActivityIndicator size="large" color={t.brand} />
+          </View>
+        ) : error ? (
+          <View style={[styles.list, styles.empty]}>
+            <Text style={styles.err}>{error}</Text>
+            <Text style={styles.emptyText}>
+              Si acabás de desplegar la base, ejecutá la migración «Staff read org memberships» en Supabase.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{tStr('admin_miembros_empty')}</Text>
+          </View>
+        ),
+        renderItem: ({ item }) => (
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.82}
+            onPress={() =>
+              navigation.navigate('OrgMemberDetail', {
+                userId: item.user_id,
+                displayName: item.displayName,
+              })
+            }
+          >
+            <Text style={styles.name}>{item.displayName}</Text>
+            <Text style={styles.meta} selectable>
+              {item.user_id}
+            </Text>
+            <View style={styles.rolesRow}>
+              {item.roles.map((r) => (
+                <View key={r} style={styles.pill}>
+                  <Text style={styles.pillText}>{ROLE_LABEL[r] || r}</Text>
+                </View>
+              ))}
             </View>
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.82}
-              onPress={() =>
-                navigation.navigate('OrgMemberDetail', {
-                  userId: item.user_id,
-                  displayName: item.displayName,
-                })
-              }
-            >
-              <Text style={styles.name}>{item.displayName}</Text>
-              <Text style={styles.meta} selectable>
-                {item.user_id}
-              </Text>
-              <View style={styles.rolesRow}>
-                {item.roles.map((r) => (
-                  <View key={r} style={styles.pill}>
-                    <Text style={styles.pillText}>{ROLE_LABEL[r] || r}</Text>
-                  </View>
-                ))}
-              </View>
-              {!item.active ? <Text style={styles.inactive}>Inactivo</Text> : null}
-            </TouchableOpacity>
-          )}
-        />
-      )}
-      </View>
-    </ScreenShell>
+            {!item.active ? <Text style={styles.inactive}>Inactivo</Text> : null}
+          </TouchableOpacity>
+        ),
+      }}
+    />
   );
 }

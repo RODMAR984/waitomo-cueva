@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Image,
@@ -181,13 +180,16 @@ export default function NovedadesScreen() {
   };
 
   return (
-    <ScreenShell screen="ClientScreen">
+    <ScreenShell
+      screen="ClientScreen"
+      scroll
+      scrollProps={{ style: styles.list }}
+    >
       <View style={styles.header}>
         <BackNavButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>{tStr('novedades_title')}</Text>
       </View>
 
-      <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.empty}>
             <ActivityIndicator size="large" color={t.brand} />
@@ -245,7 +247,6 @@ export default function NovedadesScreen() {
             );
           })
         )}
-      </ScrollView>
     </ScreenShell>
   );
 }

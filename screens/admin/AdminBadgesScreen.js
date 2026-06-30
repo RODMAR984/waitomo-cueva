@@ -1,7 +1,7 @@
 // 5.9 — Badges por asistencias: definiciones seed + recalcular premios por org.
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -91,14 +91,13 @@ export default function AdminBadgesScreen() {
   );
 
   return (
-    <ScreenShell screen="Admin">
+    <ScreenShell screen="Admin" scroll scrollProps={{ contentContainerStyle: styles.body }}>
       <View style={styles.header}>
         {!hideInlineBack ? (
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
         ) : null}
         <Text style={styles.title}>{tStr('admin_badges_title')}</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.hint}>{tStr('admin_badges_hint')}</Text>
         {defs.map((d) => (
           <View key={d.id} style={styles.card}>
@@ -111,7 +110,6 @@ export default function AdminBadgesScreen() {
         <TouchableOpacity style={[styles.btn, busy && styles.btnBusy]} onPress={refreshBadges} disabled={busy || !orgId}>
           <Text style={styles.btnText}>{tStr('admin_badges_recalc')}</Text>
         </TouchableOpacity>
-      </ScrollView>
     </ScreenShell>
   );
 }

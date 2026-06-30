@@ -5,13 +5,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Alert,
   ActivityIndicator,
   Switch,
-  KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -324,15 +322,16 @@ export default function AdminAbonosScreen() {
   const formVisible = showNew || editingId;
 
   return (
-    <ScreenShell screen="admin">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView
-          style={styles.screen}
-          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
+    <ScreenShell
+      screen="admin"
+      scroll
+      keyboardAvoid="form"
+      scrollProps={{
+        style: styles.screen,
+        contentContainerStyle: [styles.list, { paddingBottom: bottomPad }],
+        keyboardDismissMode: 'on-drag',
+      }}
+    >
           <View style={styles.header}>
             {!hideInlineBack ? (
               <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
@@ -488,8 +487,6 @@ export default function AdminAbonosScreen() {
               </View>
             ))
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
     </ScreenShell>
   );
 }

@@ -11,7 +11,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
 } from 'react-native';
 import PropTypes from 'prop-types';
@@ -255,15 +254,17 @@ export default function AsignarCoachesScreen({ route }) {
   }
 
   return (
-    <ScreenShell screen="admin">
+    <ScreenShell
+      screen="admin"
+      scroll
+      keyboardAvoid="form"
+      scrollProps={{
+        style: styles.scroll,
+        contentContainerStyle: styles.scrollContent,
+      }}
+    >
       <View style={styles.root}>
         {headerEl}
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
           {plans.map((item) => {
             const list = coachesByPlan?.[item.id] || [];
             return (
@@ -310,7 +311,6 @@ export default function AsignarCoachesScreen({ route }) {
               </View>
             );
           })}
-        </ScrollView>
       </View>
     </ScreenShell>
   );

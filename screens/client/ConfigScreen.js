@@ -9,7 +9,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Switch,
   ActivityIndicator,
@@ -117,7 +116,6 @@ const ConfigScreen = () => {
       StyleSheet.create({
         flex: { flex: 1 },
         container: {
-          flexGrow: 1,
           paddingHorizontal: MOBILE_SPACING.xl,
           paddingTop: 80,
           paddingBottom: 40,
@@ -192,8 +190,12 @@ const ConfigScreen = () => {
   );
 
   return (
-    <ScreenShell plan={{ id: profile?.plan_actual }} screen="config">
-      <ScrollView contentContainerStyle={styles.container}>
+    <ScreenShell
+      plan={{ id: profile?.plan_actual }}
+      screen="config"
+      scroll
+      scrollProps={{ contentContainerStyle: styles.container }}
+    >
         <NeoPanel style={styles.panel}>
           <Text style={styles.title}>{tStr('config_title')}</Text>
           <Text style={styles.subtitle}>{tStr('config_subtitle')}</Text>
@@ -374,7 +376,6 @@ const ConfigScreen = () => {
 
           <BackNavButton onPress={() => navigation.goBack()} label={tStr('config_back')} style={styles.backButton} />
         </NeoPanel>
-      </ScrollView>
     </ScreenShell>
   );
 };

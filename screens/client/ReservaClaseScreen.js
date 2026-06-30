@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView,
 } from 'react-native';
 import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
@@ -131,8 +130,14 @@ export default function ReservaClaseScreen({ route, navigation }) {
   );
 
   return (
-    <ScreenShell plan={plan}>
-      <ScrollView style={{ flex: 1, backgroundColor: 'transparent' }} contentContainerStyle={styles.scroll}>
+    <ScreenShell
+      plan={plan}
+      scroll
+      scrollProps={{
+        style: { flex: 1, backgroundColor: 'transparent' },
+        contentContainerStyle: styles.scroll,
+      }}
+    >
         <NeoPanel style={styles.panel}>
           <BackNavButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{tStr('reserva_clase_title').replace('{{date}}', fecha)}</Text>
@@ -164,7 +169,6 @@ export default function ReservaClaseScreen({ route, navigation }) {
             </TouchableOpacity>
           ) : null}
         </NeoPanel>
-      </ScrollView>
     </ScreenShell>
   );
 }

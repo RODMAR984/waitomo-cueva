@@ -1415,15 +1415,16 @@ export default function GymConfigScreen() {
   }
 
   return (
-    <ScreenShell screen="gymconfig">
-      <ScrollView
-        ref={gymConfigScrollRef}
-        style={styles.screen}
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
-        keyboardShouldPersistTaps="handled"
-      >
+    <ScreenShell
+      screen="gymconfig"
+      scroll
+      scrollProps={{
+        ref: gymConfigScrollRef,
+        style: styles.screen,
+        contentContainerStyle: styles.scroll,
+        nestedScrollEnabled: true,
+      }}
+    >
         <View style={styles.header}>
           {!hideInlineBack ? (
             <BackNavButton onPress={() => navigation.goBack()} label={tStr('common_back')} style={styles.backBtn} />
@@ -2472,7 +2473,6 @@ export default function GymConfigScreen() {
           <LogoCompleto height={30} style={{ marginBottom: 6 }} />
           <Text style={[styles.hint, { fontSize: MOBILE_TYPE.meta, opacity: 0.8 }]}>{tStr('gym_config_footer')}</Text>
         </View>
-      </ScrollView>
     </ScreenShell>
   );
 }
