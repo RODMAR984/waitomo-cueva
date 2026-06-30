@@ -207,7 +207,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        {children}
+        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
       </ImageBackground>
     );
   }
@@ -229,13 +229,13 @@ export default function BackgroundWrapper({
           resizeMode="cover"
         >
           <View style={overlayStyle} />
-          {children}
+          <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
         </ImageBackground>
       );
     }
     return (
       <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
-        {children}
+        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
       </View>
     );
   }
@@ -254,7 +254,7 @@ export default function BackgroundWrapper({
       >
         <View style={orgImageScrimStyle} />
         <View style={overlayStyle} />
-        {children}
+        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
       </ImageBackground>
     );
   }
@@ -316,7 +316,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        {children}
+        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
       </ImageBackground>
     );
   }
@@ -338,7 +338,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        {children}
+        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
       </ImageBackground>
     );
   }
@@ -349,7 +349,7 @@ export default function BackgroundWrapper({
     if (user?.id && !organization?.id) {
       return (
         <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
-          {children}
+          <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
         </View>
       );
     }
@@ -368,7 +368,7 @@ export default function BackgroundWrapper({
           resizeMode="cover"
         >
           <View style={overlayStyle} />
-          {children}
+          <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
         </ImageBackground>
       );
     }
@@ -383,7 +383,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        {children}
+        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
       </ImageBackground>
     );
   }
@@ -399,7 +399,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        {children}
+        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
       </ImageBackground>
     );
   }
@@ -426,11 +426,15 @@ export default function BackgroundWrapper({
       resizeMode="cover"
     >
       <View style={overlayStyle} />
-      {children}
+      <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  webFlexChild:
+    Platform.OS === 'web'
+      ? { flex: 1, minHeight: 0, width: '100%', alignSelf: 'stretch' }
+      : undefined,
 });

@@ -1102,6 +1102,7 @@ export default function TrabajoDelDiaScreen({ route, navigation }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          style={Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : undefined}
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl

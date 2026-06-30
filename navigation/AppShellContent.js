@@ -137,7 +137,10 @@ export default function AppShellContent() {
   const defaultScreenOptions = useMemo(
     () => ({
       headerShown: false,
-      contentStyle: { backgroundColor: 'transparent' },
+      contentStyle: {
+        backgroundColor: 'transparent',
+        ...(Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : null),
+      },
       headerStyle: {
         backgroundColor: t.overlayBg,
         borderBottomColor: t.overlayBorder,

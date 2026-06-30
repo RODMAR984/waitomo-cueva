@@ -22,6 +22,7 @@ export function applyWebViewportCanvas() {
       min-height: 100dvh;
       background-color: ${WEB_VIEWPORT_CANVAS_BG};
       overflow-x: hidden;
+      overscroll-behavior-y: none;
     }
   `;
 

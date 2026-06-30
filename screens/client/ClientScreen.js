@@ -22,6 +22,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { WEB_SCROLL_NO_STRETCH } from '../../utils/webViewportCanvas';
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1374,7 +1375,7 @@ export default function ClientScreen() {
       StyleSheet.create({
         root: { flex: 1 },
         scroll: {
-          ...(Platform.OS === 'web' ? { flexGrow: 0, flexShrink: 0 } : { flexGrow: 1 }),
+          ...(Platform.OS === 'web' ? WEB_SCROLL_NO_STRETCH : { flexGrow: 1 }),
           width: '100%',
           alignSelf: 'center',
           maxWidth: contentMaxWidth,
@@ -2179,9 +2180,10 @@ export default function ClientScreen() {
     <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
       <ScrollView
         testID="client-home-root"
-        style={isWeb ? { flexGrow: 0, flexShrink: 0 } : undefined}
+        style={isWeb ? { flex: 1, minHeight: 0 } : undefined}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {homeMainBody}
         {!isWebWide ? novedadesSection : null}

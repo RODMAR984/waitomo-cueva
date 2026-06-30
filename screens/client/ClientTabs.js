@@ -60,6 +60,11 @@ export default function ClientTabs() {
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
+      sceneContainerStyle: {
+        flex: 1,
+        minHeight: 0,
+        backgroundColor: 'transparent',
+      },
       tabBarShowLabel: isWebDesktop,
       tabBarPosition: isWebDesktop ? 'left' : 'bottom',
       tabBarStyle: isWebDesktop
