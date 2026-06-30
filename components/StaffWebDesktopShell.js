@@ -128,6 +128,10 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        staffNativeRoot: {
+          flex: 1,
+          minHeight: 0,
+        },
         staffWebShell: {
           flex: 1,
           flexDirection: 'row',
@@ -235,10 +239,10 @@ export default function StaffWebDesktopShell({ navigation, route, children }) {
   );
 
   const main = (
-    <>
+    <View style={styles.staffNativeRoot}>
       <ImpersonationBanner />
       {children}
-    </>
+    </View>
   );
 
   if (!isDesktopWeb) {

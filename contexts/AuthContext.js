@@ -441,6 +441,7 @@ export const AuthProvider = ({ children }) => {
 
   const applyProfileFromRow = async (row) => {
     if (!row?.id) return null;
+    profileRef.current = row;
     setProfile(row);
     setRole(row?.role || null);
     const pAct = row?.plan_actual ? String(row.plan_actual) : null;
@@ -1252,8 +1253,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (session?.user?.id) return undefined;
     if (!profile?.id) return undefined;
+    // Carrera post-login: sync expone JWT en el siguiente tick; no borrar perfil recién aplicado.
+    if (explicitLoginInFlightRef.current) return undefined;
+    if (profileSyncInFlightRef.current) return undefined;
+    if (restoreBootstrapInFlightRef.current) return undefined;
+    const pid = String(profile.id);
+    if (sessionUserLayoutRef.current && String(sessionUserLayoutRef.current) === pid) {
+      return undefined;
+    }
+    if (lastFetchedUserIdRef.current && String(lastFetchedUserIdRef.current) === pid) {
+      return undefined;
+    }
     authTrace('orphan_profile_cleared', {
-      profileId: `${String(profile.id).slice(0, 8)}…`,
+      profileId: `${pid.slice(0, 8)}…`,
     });
     setProfile(null);
     setRole(null);
@@ -2196,7 +2208,11 @@ export const AuthProvider = ({ children }) => {
 
     // No usar `!profile` aquí: en llamadas seguidas (restore + onAuthStateChange) el closure
     // sigue viendo profile=null y re-dispara fetch en bucle.
-    if (lastFetchedUserIdRef.current === userId && profileRef.current?.id === userId) {
+    if (
+      lastFetchedUserIdRef.current === userId &&
+      (profileRef.current?.id === userId || sessionUserLayoutRef.current === userId)
+    ) {
+      sessionUserLayoutRef.current = userId;
       setSession(nextSession || null);
       setInitialProfileSyncDone(true);
       setAuthSessionRestored(true);
@@ -2352,10 +2368,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       clearTimeout(profileSyncUiCap);
       if (syncGenerationRef.current !== myGen) {
-        if (profileRef.current?.id === userId) {
-          setProfile(null);
-          setRole(null);
-        }
+        authTrace('syncFromSession_stale_generation', {
+          userId: userId ? `${String(userId).slice(0, 8)}…` : null,
+        });
         return null;
       }
       const profileOk =
@@ -2366,9 +2381,9 @@ export const AuthProvider = ({ children }) => {
         String(sessionForState.user.id) === String(userId);
 
       if (profileOk) {
-        await applyProfileFromRow(syncedProfile);
         sessionUserLayoutRef.current = userId;
         setSession(sessionForState || null);
+        await applyProfileFromRow(syncedProfile);
         setInitialProfileSyncDone(true);
         setAuthSessionRestored(true);
         authTrace('sync_session_exposed', {
@@ -2718,7 +2733,8 @@ export const AuthProvider = ({ children }) => {
         const uid = nextSession.user.id;
         if (
           profileSyncInFlightRef.current === uid ||
-          (lastFetchedUserIdRef.current === uid && profileRef.current?.id === uid)
+          (lastFetchedUserIdRef.current === uid &&
+            (profileRef.current?.id === uid || sessionUserLayoutRef.current === uid))
         ) {
           authTrace('onAuthStateChange_skip', { event, reason: 'login_sync_in_flight_or_done' });
           return;
@@ -3061,7 +3077,9 @@ export const AuthProvider = ({ children }) => {
         const { data: sessionData } = await supabase.auth.getSession();
         nextSession = sessionData?.session || null;
       }
-      let syncedProfile = await syncFromSession(nextSession);
+      let syncedProfile = await syncFromSession(nextSession, {
+        allowSessionWithoutProfile: true,
+      });
       const userId = data?.user?.id || nextSession?.user?.id || null;
       const token = nextSession?.access_token || null;
       if (!syncedProfile?.id && userId) {

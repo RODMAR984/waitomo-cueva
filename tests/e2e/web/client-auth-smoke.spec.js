@@ -22,6 +22,17 @@ test.describe('Web smoke: cliente autenticado', () => {
   test('abre calendario desde tabs', async ({ page }) => {
     await page.getByTestId('client-home-cta-calendario').click();
     await expect(page.getByTestId('screen-calendario')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('calendario-nav-back')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('calendario visible en viewport móvil (iPhone)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByTestId('client-home-cta-calendario').click();
+    await expect(page.getByTestId('screen-calendario')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('calendario-nav-back')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="screen-calendario"]').locator('text=/Horarios|Times/i').first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('abre perfil desde tabs', async ({ page }) => {

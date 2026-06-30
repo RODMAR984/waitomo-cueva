@@ -31,7 +31,6 @@ export function traceEnabled() {
     if (ls === false) return false;
     // Web producción: trazas en F12 por defecto (fe_auth_trace=0 para silenciar).
     if (Platform.OS === 'web') return true;
-    if (typeof __DEV__ !== 'undefined' && __DEV__) return true;
     return String(process.env.EXPO_PUBLIC_AUTH_TRACE || '').trim() === '1';
   } catch {
     return false;
@@ -106,7 +105,7 @@ function bootBanner() {
     ? '[AUTH_TRACE] consola F12 + panel visible (fe_auth_trace_overlay=1)'
     : '[AUTH_TRACE] solo consola F12 — panel oculto (fe_auth_trace_overlay≠1)';
   // eslint-disable-next-line no-console
-  console.error(msg);
+  console.log(msg);
   if (authTraceOverlayEnabled()) emitLine(msg);
 }
 
@@ -131,7 +130,7 @@ export function authTrace(phase, payload = {}) {
   const line = `${short}${detail}`;
   if (authTraceOverlayEnabled()) emitLine(line);
   // eslint-disable-next-line no-console
-  console.error(`[AUTH_TRACE] ${line}`);
+  console.log(`[AUTH_TRACE] ${line}`);
 }
 
 /** Estado compacto del AuthContext (sin email ni tokens). */

@@ -118,6 +118,7 @@ export default function CalendarioScreen({ route, navigation }) {
   const panelMaxWidth = WEB_CONTENT_MAX_WIDTH;
   const { plan: contextPlan } = usePlanContext();
   const { profile, user, organization } = useAuth();
+  const orgId = organization?.id || profile?.organization_id || null;
   const { refreshTrainingBlocksFromServer } = useTrainingData() || {};
   const params = route?.params || {};
   const planParam = params?.plan || null;
@@ -283,8 +284,6 @@ export default function CalendarioScreen({ route, navigation }) {
       };
     }, [user?.id]),
   );
-
-  const orgId = organization?.id || profile?.organization_id || null;
 
   useFocusEffect(
     useCallback(() => {
@@ -1086,7 +1085,8 @@ export default function CalendarioScreen({ route, navigation }) {
           marginBottom: 10,
         },
         scrollContent: {
-          ...(WEB_SCROLL_NO_STRETCH || {}),
+          // Web escritorio: sin estirar scroll vacío. Móvil web + nativo: flexGrow para que el panel no colapse (pantalla negra).
+          ...(Platform.OS === 'web' && isWebDesktop ? WEB_SCROLL_NO_STRETCH : { flexGrow: 1 }),
           paddingBottom: Platform.OS === 'web' ? 32 : 24,
           width: '100%',
         },
@@ -1132,7 +1132,7 @@ export default function CalendarioScreen({ route, navigation }) {
     <BackgroundWrapper screen="ClientScreen" plan={plan}>
       <View testID="screen-calendario" style={{ flex: 1, minHeight: 0 }}>
         <ScrollView
-          style={Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : { flex: 1 }}
+          style={{ flex: 1, minHeight: 0 }}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

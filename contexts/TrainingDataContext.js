@@ -116,6 +116,10 @@ export function TrainingDataProvider({ children }) {
 
   // ======= Hydration =======
   useEffect(() => {
+    let cancelled = false;
+    const hydrateCap = setTimeout(() => {
+      if (!cancelled) setHydrated(true);
+    }, 2500);
     (async () => {
       try {
         const keys = await AsyncStorage.getAllKeys();
@@ -201,9 +205,13 @@ export function TrainingDataProvider({ children }) {
         // eslint-disable-next-line no-console
         console.warn('TrainingDataProvider hydrate error', e?.message);
       } finally {
-        setHydrated(true);
+        if (!cancelled) setHydrated(true);
       }
     })();
+    return () => {
+      cancelled = true;
+      clearTimeout(hydrateCap);
+    };
   }, []);
 
   // Sync finanzas desde Supabase (ledger + caja inicial) cuando hay sesión

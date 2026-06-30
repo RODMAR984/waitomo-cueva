@@ -191,7 +191,7 @@ export default function BackgroundWrapper({
   if (isNeutralFitEngine) {
     return (
       <View style={[styles.flex, style, { backgroundColor: FITENGINE_APP_CANVAS_BG }]}>
-        {children}
+        <View style={styles.contentChild}>{children}</View>
       </View>
     );
   }
@@ -207,7 +207,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+        <View style={styles.contentChild}>{children}</View>
       </ImageBackground>
     );
   }
@@ -229,13 +229,13 @@ export default function BackgroundWrapper({
           resizeMode="cover"
         >
           <View style={overlayStyle} />
-          <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+          <View style={styles.contentChild}>{children}</View>
         </ImageBackground>
       );
     }
     return (
       <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
-        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+        <View style={styles.contentChild}>{children}</View>
       </View>
     );
   }
@@ -254,7 +254,7 @@ export default function BackgroundWrapper({
       >
         <View style={orgImageScrimStyle} />
         <View style={overlayStyle} />
-        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+        <View style={styles.contentChild}>{children}</View>
       </ImageBackground>
     );
   }
@@ -274,7 +274,7 @@ export default function BackgroundWrapper({
           <Rect width={gw} height={gh} fill={`url(#${gradId})`} />
         </Svg>
         <View style={overlayStyle} />
-        {children}
+        <View style={styles.contentChild}>{children}</View>
       </View>
     );
   }
@@ -283,7 +283,7 @@ export default function BackgroundWrapper({
   if (screenLower === 'gymconfig') {
     return (
       <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
-        {children}
+        <View style={styles.contentChild}>{children}</View>
       </View>
     );
   }
@@ -316,7 +316,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+        <View style={styles.contentChild}>{children}</View>
       </ImageBackground>
     );
   }
@@ -338,7 +338,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+        <View style={styles.contentChild}>{children}</View>
       </ImageBackground>
     );
   }
@@ -349,7 +349,7 @@ export default function BackgroundWrapper({
     if (user?.id && !organization?.id) {
       return (
         <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
-          <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+          <View style={styles.contentChild}>{children}</View>
         </View>
       );
     }
@@ -368,7 +368,7 @@ export default function BackgroundWrapper({
           resizeMode="cover"
         >
           <View style={overlayStyle} />
-          <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+          <View style={styles.contentChild}>{children}</View>
         </ImageBackground>
       );
     }
@@ -383,7 +383,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+        <View style={styles.contentChild}>{children}</View>
       </ImageBackground>
     );
   }
@@ -399,7 +399,7 @@ export default function BackgroundWrapper({
         resizeMode="cover"
       >
         <View style={overlayStyle} />
-        <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+        <View style={styles.contentChild}>{children}</View>
       </ImageBackground>
     );
   }
@@ -411,12 +411,12 @@ export default function BackgroundWrapper({
   if (!source) {
     return (
       <View style={[styles.flex, style, { backgroundColor: t.bg }]}>
-        {children}
+        <View style={styles.contentChild}>{children}</View>
       </View>
     );
   }
 
-  // Welcome: zoom ligero en la imagen para efecto “recortado” (mano + kettlebell más protagonistas)
+  // Welcome: zoom ligero
   const bgProps = webImageBgProps(style, imageStyle);
   return (
     <ImageBackground
@@ -426,15 +426,19 @@ export default function BackgroundWrapper({
       resizeMode="cover"
     >
       <View style={overlayStyle} />
-      <View style={Platform.OS === 'web' ? styles.webFlexChild : undefined}>{children}</View>
+      <View style={styles.contentChild}>{children}</View>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  webFlexChild:
-    Platform.OS === 'web'
-      ? { flex: 1, minHeight: 0, width: '100%', alignSelf: 'stretch' }
-      : undefined,
+  /** RN nativo: sin flex:1 el contenido dentro de ImageBackground colapsa a altura 0 (solo se ve el fondo). */
+  contentChild: {
+    flex: 1,
+    minHeight: 0,
+    ...(Platform.OS === 'web'
+      ? { width: '100%', alignSelf: 'stretch', position: 'relative', zIndex: 1 }
+      : null),
+  },
 });

@@ -2180,7 +2180,7 @@ export default function ClientScreen() {
     <BackgroundWrapper screen="ClientScreen" plan={planObj || undefined}>
       <ScrollView
         testID="client-home-root"
-        style={isWeb ? { flex: 1, minHeight: 0 } : undefined}
+        style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

@@ -24,7 +24,11 @@ export function FormKeyboardAvoidingView({ style, children, ...rest }) {
     );
   }
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={style} {...rest}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={style}
+      {...rest}
+    >
       {children}
     </KeyboardAvoidingView>
   );

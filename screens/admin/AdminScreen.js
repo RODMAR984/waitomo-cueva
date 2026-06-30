@@ -965,6 +965,7 @@ export default function AdminScreen() {
     () =>
       StyleSheet.create({
         screen: { flex: 1, backgroundColor: 'transparent' },
+        screenScroll: { flex: 1, minHeight: 0 },
         scrollContainer: {
           flexGrow: Platform.OS === 'web' ? 0 : undefined,
           flexShrink: Platform.OS === 'web' ? 0 : undefined,
@@ -2218,7 +2219,7 @@ export default function AdminScreen() {
   );
 
   return (
-    <BackgroundWrapper screen="admin">
+    <BackgroundWrapper screen="admin" style={styles.screen}>
       <FormKeyboardAvoidingView
         testID="admin-dashboard-root"
         style={[
@@ -2230,6 +2231,7 @@ export default function AdminScreen() {
       >
         <ScrollView
               ref={scrollViewRef}
+              style={Platform.OS !== 'web' ? styles.screenScroll : undefined}
               contentContainerStyle={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"

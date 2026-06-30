@@ -139,7 +139,8 @@ export default function AppShellContent() {
       headerShown: false,
       contentStyle: {
         backgroundColor: 'transparent',
-        ...(Platform.OS === 'web' ? { flex: 1, minHeight: 0 } : null),
+        flex: 1,
+        minHeight: 0,
       },
       headerStyle: {
         backgroundColor: t.overlayBg,
