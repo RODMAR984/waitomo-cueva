@@ -34,7 +34,7 @@ import { AuthDismissKeyboardOutside, authScrollKeyboardDismissMode } from '../..
 import { isTrialSignupQuery, parseWebTrialSignupFromWindow, TRIAL_SIGNUP_QUERY } from '../../utils/webAppLinking';
 import { TRIAL_SIGNUP_COUNTRIES, localeDefaultsForCountry } from '../../utils/orgLocaleDefaults';
 import { completeOwnerTrialSignup } from '../../services/signup/ownerTrialSignup';
-import { sendTrialWelcomeEmail } from '../../services/signup/trialWelcomeEmail';
+import { sendAppWelcomeEmail } from '../../services/signup/appWelcomeEmail';
 
 const FORM_MAX = 440;
 const STEPS = 4;
@@ -303,7 +303,7 @@ export default function OwnerTrialSignupScreen() {
           ? refreshOrganization(result.organizationId)
           : Promise.resolve(),
       ]);
-      void sendTrialWelcomeEmail(result.organizationId);
+      void sendAppWelcomeEmail('owner_trial', { organizationId: result.organizationId });
       const go = () => navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
       if (result.storageSkipped) {
         Alert.alert(tStr('fe_alert_space_created_title'), tStr('fe_alert_space_created_body'), [

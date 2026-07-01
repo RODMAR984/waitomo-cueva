@@ -39,6 +39,7 @@ import {
 } from '../../components/AuthWebFormShell';
 import { showAppAlert } from '../../utils/confirmAction';
 import { resetToRoute } from '../../utils/resetToRoute';
+import { sendAppWelcomeEmail } from '../../services/signup/appWelcomeEmail';
 
 function mapJoinInviteErrorToMessage(res, tStr) {
   const e = res?.error;
@@ -115,6 +116,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
       }
 
       const code = await getPendingClientInviteCode();
+      let joinedOrgId = null;
       if (code) {
         const res = await joinOrganizationWithInviteCode(code);
         if (!res?.ok) {
@@ -129,6 +131,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
         }
         await clearPendingClientInviteCode();
         await clearPendingClientOrganizationId();
+        joinedOrgId = res?.organization_id || null;
       } else {
         const orgId = await getPendingClientOrganizationId();
         if (orgId) {
@@ -144,6 +147,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
             return;
           }
           await clearPendingClientOrganizationId();
+          joinedOrgId = res?.organization_id || orgId || null;
         }
       }
 
@@ -154,6 +158,13 @@ export default function RegistroInicialScreen({ route, navigation }) {
         .select('plan_actual, organization_id')
         .eq('id', userId)
         .maybeSingle();
+
+      const orgForWelcome = joinedOrgId || prof?.organization_id || null;
+      if (orgForWelcome) {
+        void sendAppWelcomeEmail('client_joined', { organizationId: orgForWelcome });
+      } else {
+        void sendAppWelcomeEmail('client');
+      }
 
       const { data: mems } = await supabase
         .from('organization_memberships')
@@ -239,6 +250,11 @@ export default function RegistroInicialScreen({ route, navigation }) {
             .eq('id', createdUser.id);
         } catch (_) {
           /* no bloquea el flujo */
+        }
+
+        const { data: sessionAfterSignup } = await supabase.auth.getSession();
+        if (sessionAfterSignup?.session) {
+          void sendAppWelcomeEmail('client');
         }
 
         const userData = {

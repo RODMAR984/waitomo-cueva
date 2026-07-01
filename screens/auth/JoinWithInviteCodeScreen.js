@@ -38,6 +38,7 @@ import {
   AuthDismissKeyboardOutside,
   authScrollContentJustify,
 } from '../../components/AuthWebFormShell';
+import { sendAppWelcomeEmail } from '../../services/signup/appWelcomeEmail';
 
 export default function JoinWithInviteCodeScreen() {
   const navigation = useNavigation();
@@ -179,6 +180,11 @@ export default function JoinWithInviteCodeScreen() {
       if (!res?.ok) {
         Alert.alert(tStr('invite_title'), mapError(res));
         return;
+      }
+      if (res.organization_id) {
+        void sendAppWelcomeEmail('client_joined', { organizationId: res.organization_id });
+      } else {
+        void sendAppWelcomeEmail('client_joined');
       }
       await goPostJoin();
     } finally {

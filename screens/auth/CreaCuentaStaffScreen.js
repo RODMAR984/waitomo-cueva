@@ -30,6 +30,7 @@ import {
   authScrollKeyboardDismissMode,
   authScrollContentJustify,
 } from '../../components/AuthWebFormShell';
+import { sendAppWelcomeEmail } from '../../services/signup/appWelcomeEmail';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -61,6 +62,7 @@ export default function CreaCuentaStaffScreen() {
     const role = profile?.role;
     if (role === 'coach' || role === 'admin' || role === 'superadmin') {
       if (oauthSubmitting && mountedRef.current) setOauthSubmitting(false);
+      void sendAppWelcomeEmail('staff');
       const route = needsFitEngineSpaceSetup
         ? { name: 'FitEngineSpaceIntro', params: { email: session.user.email } }
         : { name: 'AdminLite' };
@@ -127,6 +129,7 @@ export default function CreaCuentaStaffScreen() {
         fullName: n || null,
         role: 'coach',
       });
+      void sendAppWelcomeEmail('staff');
       Alert.alert(
         tStr('creacuenta_staff_success_title'),
         tStr('creacuenta_staff_success_body'),

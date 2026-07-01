@@ -59,10 +59,12 @@ Landing "Probar gratis"
 
 - [x] Listado orgs muestra estado trial y vencimiento
 - [x] Evento `org_created_with_trial` en `platform_audit_log`
-- [x] Edge Function `trial-emails` (Resend): bienvenida + recordatorios 3d / 1d / vencido
-- [x] Cron diario `trial-email-reminders-daily`
-- [ ] Configurar secrets: `RESEND_API_KEY`, `FITENGINE_EMAIL_FROM` (dominio verificado)
-- [ ] Email confirmación Supabase Auth (template dashboard, opcional)
+- [x] Edge Function `app-emails` (Resend): bienvenida cliente, staff, unión a gym, owner trial + recordatorios 3d / 1d / vencido
+- [x] Edge Function `auth-send-email` (hook Send Email): confirmación signup + recovery con pasos claros
+- [x] Cron diario `trial-email-reminders-daily` → `app-emails`
+- [ ] Migración `20260610190000_app_welcome_emails.sql` (tabla `app_email_sent`)
+- [ ] Configurar secrets: `RESEND_API_KEY`, `FITENGINE_EMAIL_FROM`, `SEND_EMAIL_HOOK_SECRET`
+- [ ] Activar hook Auth → Send Email → `auth-send-email` en dashboard Supabase
 
 ### Fase E — Internacional (continuación)
 

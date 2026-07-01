@@ -19,6 +19,12 @@ verify_jwt = false
 [functions.observability-alerts]
 verify_jwt = false
 
-# trial-emails: welcome (JWT usuario) + process_reminders (service role en cron)
-# Deploy: npx supabase functions deploy trial-emails --project-ref nfjjkvjsssgxxsuocmhj
-# Secrets: RESEND_API_KEY, FITENGINE_EMAIL_FROM (opcional), FITENGINE_SALES_EMAIL (opcional)
+[functions.auth-send-email]
+verify_jwt = false
+
+# trial-emails / app-emails: bienvenidas + recordatorios trial (Resend)
+# auth-send-email: hook Send Email de Supabase Auth (confirmación + recovery)
+# Deploy:
+#   npx supabase functions deploy app-emails trial-emails auth-send-email --project-ref nfjjkvjsssgxxsuocmhj
+# Secrets: RESEND_API_KEY, SEND_EMAIL_HOOK_SECRET (hook auth),
+#   FITENGINE_EMAIL_FROM, FITENGINE_SALES_EMAIL, FITENGINE_SUPPORT_EMAIL (opcional)
