@@ -1,44 +1,5 @@
--- Trial SaaS 14 días: columnas organizations + RPC signup_owner_with_trial + vista superadmin.
-
-ALTER TABLE public.organizations
-  ADD COLUMN IF NOT EXISTS trial_expires_at timestamptz,
-  ADD COLUMN IF NOT EXISTS subscription_status text NOT NULL DEFAULT 'active',
-  ADD COLUMN IF NOT EXISTS country text,
-  ADD COLUMN IF NOT EXISTS city text,
-  ADD COLUMN IF NOT EXISTS activity_type text,
-  ADD COLUMN IF NOT EXISTS business_model text,
-  ADD COLUMN IF NOT EXISTS size_range text;
-
--- Orgs históricas sin trial_expires_at siguen activas (no heredan trial SaaS).
-UPDATE public.organizations
-SET subscription_status = 'active'
-WHERE trial_expires_at IS NULL
-  AND subscription_status IS DISTINCT FROM 'active';
-
-ALTER TABLE public.organizations
-  DROP CONSTRAINT IF EXISTS organizations_subscription_status_check;
-
-ALTER TABLE public.organizations
-  ADD CONSTRAINT organizations_subscription_status_check
-  CHECK (subscription_status IN ('trial', 'active', 'expired', 'canceled', 'suspended'));
-
-ALTER TABLE public.organizations
-  DROP CONSTRAINT IF EXISTS organizations_business_model_check;
-
-ALTER TABLE public.organizations
-  ADD CONSTRAINT organizations_business_model_check
-  CHECK (
-    business_model IS NULL
-    OR business_model IN ('gym_presential', 'coach_online', 'combined')
-  );
-
-CREATE INDEX IF NOT EXISTS organizations_trial_expires_idx
-  ON public.organizations (trial_expires_at)
-  WHERE subscription_status = 'trial';
-
-COMMENT ON COLUMN public.organizations.trial_expires_at IS 'Fin del trial SaaS FitEngine (plataforma).';
-COMMENT ON COLUMN public.organizations.subscription_status IS 'Estado comercial SaaS: trial, active, expired, canceled, suspended.';
-COMMENT ON COLUMN public.organizations.business_model IS 'Modelo de negocio: gym_presential, coach_online, combined.';
+-- Corrige INSERT en platform_audit_log dentro de signup_owner_with_trial
+-- (columnas reales: entity_type, entity_id, payload — no target_type/metadata).
 
 CREATE OR REPLACE FUNCTION public.signup_owner_with_trial(
   p_org_name text,
@@ -199,40 +160,3 @@ BEGIN
   );
 END;
 $$;
-
-COMMENT ON FUNCTION public.signup_owner_with_trial IS
-  'Alta owner con org nueva y trial SaaS 14 días; membership owner + audit log.';
-
-REVOKE ALL ON FUNCTION public.signup_owner_with_trial FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.signup_owner_with_trial TO authenticated;
-
-CREATE OR REPLACE VIEW public.platform_orgs_overview AS
-SELECT
-  o.id AS organization_id,
-  o.name,
-  o.type,
-  o.active,
-  o.plan_fitengine,
-  o.owner_id,
-  o.created_at,
-  (
-    SELECT COUNT(*)::bigint
-    FROM public.organization_memberships m
-    WHERE m.organization_id = o.id
-      AND m.active = true
-      AND m.role = 'cliente'
-  ) AS client_memberships_count,
-  (
-    SELECT COUNT(*)::bigint
-    FROM public.organization_memberships m
-    WHERE m.organization_id = o.id
-      AND m.active = true
-      AND m.role IN ('coach', 'admin', 'owner', 'superadmin')
-  ) AS staff_memberships_count,
-  o.subscription_status,
-  o.trial_expires_at,
-  o.country,
-  o.business_model
-FROM public.organizations o;
-
-COMMENT ON VIEW public.platform_orgs_overview IS 'Resumen multi-org para panel plataforma; incluye trial SaaS.';
