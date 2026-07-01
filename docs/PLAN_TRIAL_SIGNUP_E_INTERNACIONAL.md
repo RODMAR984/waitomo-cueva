@@ -74,7 +74,7 @@ Landing "Probar gratis"
 - [x] Stripe checkout: moneda por defecto desde `billing_currency` de la org
 - [x] Portugués oculto en selectores de idioma (sigue en trial signup; fallback ES)
 - [ ] Portugués completo en toda la app
-- [ ] `formatMoney` en pantallas de precio restantes (finanzas admin, etc.)
+- [x] `formatMoney` en pantallas de precio restantes (finanzas admin, etc.)
 
 ### Fase D — pendiente operación
 

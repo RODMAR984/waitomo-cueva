@@ -27,20 +27,9 @@ import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import { ADMIN_PANEL_GUTTER, ADMIN_SECTION_GAP } from '../../theme/adminSpec';
+import { formatMoneyAmount } from '../../utils/formatMoney';
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD', 'EUR'];
-
-const formatMonto = (num, moneda = 'ARS') => {
-  const n = Number(num);
-  if (Number.isNaN(n)) return '0';
-  const decimals = moneda === 'ARS' ? 0 : 2;
-  const locale = moneda === 'ARS' ? 'es-AR' : 'en-US';
-  const s = Math.abs(n).toLocaleString(locale, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-  return `${n < 0 ? '-' : ''}${s} ${moneda}`;
-};
 
 export default function AdminFinanzasScreen({ route }) {
   const navigation = useNavigation();
@@ -49,6 +38,16 @@ export default function AdminFinanzasScreen({ route }) {
   const { t } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const { organization } = useAuth() || {};
+  const orgCurrency = String(organization?.billing_currency || 'ARS').toUpperCase();
+
+  const formatMonto = useCallback(
+    (num, moneda = orgCurrency) => {
+      const n = Number(num);
+      if (Number.isNaN(n)) return formatMoneyAmount(0, moneda || orgCurrency, { userLocale: locale });
+      return formatMoneyAmount(n, moneda || orgCurrency, { userLocale: locale });
+    },
+    [orgCurrency, locale],
+  );
 
   const payMethods = useMemo(
     () => [
@@ -137,14 +136,14 @@ export default function AdminFinanzasScreen({ route }) {
   const [filtroMetodo, setFiltroMetodo] = useState('');
   const [showNuevoCobro, setShowNuevoCobro] = useState(false);
   const [nuevoCobroMonto, setNuevoCobroMonto] = useState('');
-  const [nuevoCobroMoneda, setNuevoCobroMoneda] = useState('ARS');
+  const [nuevoCobroMoneda, setNuevoCobroMoneda] = useState(orgCurrency);
   const [nuevoCobroMetodo, setNuevoCobroMetodo] = useState('efectivo');
   const [nuevoCobroRef, setNuevoCobroRef] = useState('');
   const [showNuevaSub, setShowNuevaSub] = useState(false);
   const [nuevaSubUserId, setNuevaSubUserId] = useState('');
   const [nuevaSubPlanId, setNuevaSubPlanId] = useState('');
   const [nuevaSubPrecio, setNuevaSubPrecio] = useState('');
-  const [nuevaSubMoneda, setNuevaSubMoneda] = useState('ARS');
+  const [nuevaSubMoneda, setNuevaSubMoneda] = useState(orgCurrency);
   const [nuevaSubDiaVenc, setNuevaSubDiaVenc] = useState('5');
   const [orgMemberPicklist, setOrgMemberPicklist] = useState([]);
 

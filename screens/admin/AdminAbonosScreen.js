@@ -180,7 +180,7 @@ export default function AdminAbonosScreen() {
         duration_days: !Number.isNaN(durationParsed) && durationParsed > 0 ? durationParsed : 30,
         included_sessions: formIncludedSessions ? parseInt(formIncludedSessions, 10) : null,
         price_cents: pesosInputToCents(formPricePesos),
-        currency: 'ARS',
+        currency: String(organization?.billing_currency || 'ARS').toUpperCase(),
         is_active: true,
         card_highlights: hl ? hl : null,
       };

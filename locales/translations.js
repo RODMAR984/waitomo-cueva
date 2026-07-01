@@ -1184,7 +1184,7 @@ export const translations = {
     admin_abonos_ph_days: 'Ej.: 30',
     admin_abonos_label_sessions: 'Clases incluidas (vacío = ilimitado)',
     admin_abonos_ph_sessions: 'Ej.: 4, 8, 12',
-    admin_abonos_label_price: 'Precio (pesos ARS, sin símbolo)',
+    admin_abonos_label_price: 'Precio (sin símbolo, moneda del gym)',
     admin_abonos_ph_price: 'Ej.: 25000',
     admin_abonos_label_card_highlights: 'Tildes en la tarjeta del abono (cliente)',
     admin_abonos_ph_card_highlights:
@@ -3336,7 +3336,7 @@ export const translations = {
     admin_abonos_ph_days: 'E.g. 30',
     admin_abonos_label_sessions: 'Sessions included (empty = unlimited)',
     admin_abonos_ph_sessions: 'E.g. 4, 8, 12',
-    admin_abonos_label_price: 'Price (ARS, no symbol)',
+    admin_abonos_label_price: 'Price (no symbol, gym billing currency)',
     admin_abonos_ph_price: 'E.g. 25000',
     admin_abonos_label_card_highlights: 'Checkmarks on client membership card',
     admin_abonos_ph_card_highlights:

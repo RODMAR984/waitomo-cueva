@@ -231,7 +231,7 @@ export default function PagoScreen({ navigation, route }) {
         planId,
         periodo,
         monto,
-        moneda: 'ARS',
+        moneda: selectedCurrency,
         metodo,
         status: 'pendiente',
       });
