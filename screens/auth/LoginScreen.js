@@ -481,7 +481,7 @@ export default function LoginScreen() {
         msg.includes('Invalid login credentials') ||
         msg.toLowerCase().includes('invalid login');
 
-      // Otra sesión activa + intentás entrar con otro mail y falla → cerrar sesión vieja para no ver el panel equivocado
+      // Otra sesión activa + intentás entrar con otro mail y falla → cerrar sesión vieja
       if (invalidCreds && session?.user?.email) {
         const attempted = normalizeEmail(email);
         const current = normalizeEmail(session.user.email);
@@ -495,6 +495,14 @@ export default function LoginScreen() {
           );
           return;
         }
+      }
+
+      if (invalidCreds) {
+        Alert.alert(
+          tStr('login_alert_invalid_creds_title'),
+          tStr('login_alert_invalid_creds_body'),
+        );
+        return;
       }
 
       const message = error?.message || tStr('login_error_signin_generic');

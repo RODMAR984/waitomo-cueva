@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Switch,
 } from 'react-native';
 import ScreenShell from '../../components/ScreenShell';
 import BackNavButton from '../../components/BackNavButton';
@@ -83,6 +84,7 @@ export default function RegistroInicialScreen({ route, navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // -------------------------
@@ -186,10 +188,19 @@ export default function RegistroInicialScreen({ route, navigation }) {
         showAppAlert(tStr('reg_ini_alert_faltan_title'), tStr('reg_ini_alert_faltan_body'));
         return;
       }
+      if (password.length < 6) {
+        showAppAlert(tStr('registro_owner_pass_corta'), tStr('registro_owner_pass_min_body'));
+        return;
+      }
       if (password !== confirmPassword) {
         showAppAlert(tStr('reg_ini_alert_pass_title'), tStr('reg_ini_alert_pass_body'));
         return;
       }
+    }
+
+    if (!acceptTerms) {
+      showAppAlert(tStr('trial_alert_terms_title'), tStr('trial_alert_terms_body'));
+      return;
     }
 
     const planActual = (plan && (plan.id || plan.name || plan.title)) || null;
@@ -434,6 +445,9 @@ export default function RegistroInicialScreen({ route, navigation }) {
         textAlign: 'center',
         textDecorationLine: 'underline',
       },
+      termsRow: { flexDirection: 'row', alignItems: 'center', marginVertical: MOBILE_SPACING.sm, gap: 10 },
+      termsText: { color: subCol, flex: 1, fontSize: MOBILE_TYPE.caption },
+      termsLink: { color: shellFe ? fe.cyan : t.brand, textDecorationLine: 'underline' },
       inlineRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -533,6 +547,20 @@ export default function RegistroInicialScreen({ route, navigation }) {
                   />
                 </>
               )}
+
+              <View style={styles.termsRow}>
+                <Switch value={acceptTerms} onValueChange={setAcceptTerms} trackColor={{ true: '#86C4C7' }} />
+                <Text style={styles.termsText}>
+                  {tStr('trial_terms_prefix')}{' '}
+                  <Text style={styles.termsLink} onPress={() => navigation.navigate('TermsOfUse')}>
+                    {tStr('welcome_footer_terms')}
+                  </Text>{' '}
+                  {tStr('trial_terms_and')}{' '}
+                  <Text style={styles.termsLink} onPress={() => navigation.navigate('PrivacyPolicy')}>
+                    {tStr('welcome_footer_privacy')}
+                  </Text>
+                </Text>
+              </View>
 
               <TouchableOpacity
                 style={styles.button}

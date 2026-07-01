@@ -59,8 +59,10 @@ Landing "Probar gratis"
 
 - [x] Listado orgs muestra estado trial y vencimiento
 - [x] Evento `org_created_with_trial` en `platform_audit_log`
-- [ ] Template email bienvenida en dashboard Supabase Auth (manual)
-- [ ] Resend custom (fase 2)
+- [x] Edge Function `trial-emails` (Resend): bienvenida + recordatorios 3d / 1d / vencido
+- [x] Cron diario `trial-email-reminders-daily`
+- [ ] Configurar secrets: `RESEND_API_KEY`, `FITENGINE_EMAIL_FROM` (dominio verificado)
+- [ ] Email confirmación Supabase Auth (template dashboard, opcional)
 
 ### Fase E — Internacional (continuación)
 
@@ -87,7 +89,7 @@ Landing "Probar gratis"
 
 - Cobro automático post-trial
 - Plan free tras vencimiento
-- Email "quedan 3 días"
+- Email "quedan 3 días" automático por **SMS**
 - Pricing tiers / compare
 - GDPR tooling (export/borrado masivo)
 

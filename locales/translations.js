@@ -161,6 +161,9 @@ export const translations = {
     login_switch_to_staff: 'Soy gym o coach — ingresar al panel staff',
     login_alert_missing_title: 'Falta info',
     login_alert_missing_body: 'Completá email y contraseña.',
+    login_alert_invalid_creds_title: 'Email o contraseña incorrectos',
+    login_alert_invalid_creds_body:
+      'Revisá que el email y la contraseña sean correctos. Si olvidaste la clave, usá «¿Olvidaste tu contraseña?».',
     login_alert_wrong_creds_other_session_title: 'Credenciales incorrectas',
     login_alert_wrong_creds_other_session_body:
       'Había una sesión con otro correo. La cerramos para que puedas iniciar con la cuenta correcta. Volvé a ingresar email y contraseña.',
@@ -2311,6 +2314,9 @@ export const translations = {
     login_switch_to_staff: 'Gym or coach — sign in to staff panel',
     login_alert_missing_title: 'Missing info',
     login_alert_missing_body: 'Enter email and password.',
+    login_alert_invalid_creds_title: 'Incorrect email or password',
+    login_alert_invalid_creds_body:
+      'Check your email and password. If you forgot your password, use “Forgot your password?”.',
     login_alert_wrong_creds_other_session_title: 'Incorrect credentials',
     login_alert_wrong_creds_other_session_body:
       'There was a session with another email. We signed you out so you can sign in with the right account. Enter email and password again.',
