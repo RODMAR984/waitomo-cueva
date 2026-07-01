@@ -25,7 +25,7 @@ import { useThemeContext } from '../../contexts/ThemeContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import BackNavButton from '../../components/BackNavButton';
-import NeoPanel from '../../components/NeoPanel';
+import { formatMoneyFromCents } from '../../utils/formatMoney';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
@@ -49,7 +49,7 @@ export default function AbonosPasesScreen({ navigation, route }) {
   const organizationId = organization?.id || profile?.organization_id || null;
 
   const { t } = useThemeContext();
-  const { t: tStr } = useLocale();
+  const { t: tStr, locale } = useLocale();
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web' && width >= WEB_DESKTOP_BREAKPOINT;
 
@@ -106,22 +106,8 @@ export default function AbonosPasesScreen({ navigation, route }) {
     return () => loop.stop();
   }, [abonosLoading, cardPulse]);
 
-  const formatMoney = (priceCents, currency = 'ARS') => {
-    if (priceCents == null) return null;
-    const amount = Number(priceCents) / 100;
-    try {
-      // Intl suele funcionar en Expo. Si no, caemos a formato simple.
-      return new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency,
-        maximumFractionDigits: 0,
-      }).format(amount);
-    } catch (_) {
-      const pesos = Math.round(amount);
-      const n = String(pesos).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      return `$ ${n}`;
-    }
-  };
+  const formatMoney = (priceCents, currency = 'ARS') =>
+    formatMoneyFromCents(priceCents, currency, { userLocale: locale });
 
   const toUI = (row) => {
     const isUnlimited = row?.included_sessions == null;

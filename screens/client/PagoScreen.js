@@ -30,6 +30,7 @@ import { supabase } from '../../supabaseClient';
 import { normalizePlanKey } from '../../utils/planKeyNormalize';
 import { createCheckoutPreference } from '../../services/billing/mercadoPagoCheckout';
 import { createStripeCheckoutSession } from '../../services/billing/stripeCheckout';
+import { formatMoneyAmount, stripeCurrencyFromBilling } from '../../utils/formatMoney';
 import { resolveClientPaymentMethods } from '../../utils/clientPaymentMethods';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
@@ -69,7 +70,7 @@ export default function PagoScreen({ navigation, route }) {
   const { createPayment, markAsPaid } = useTrainingData();
   const { user: ctxUser, updateProfile, organization } = useAuth() || {};
   const { t } = useThemeContext();
-  const { t: tStr } = useLocale();
+  const { t: tStr, locale } = useLocale();
 
   const defaultPlan = { id: 'admin', title: 'Pago', nombre: 'admin' };
   const {
@@ -133,6 +134,11 @@ export default function PagoScreen({ navigation, route }) {
   }, [planCanon, organization?.stripe_checkout_enabled, organization?.stripe_connect_account_id, paymentMethods, monto]);
   const stripeReady = !!organization?.stripe_checkout_enabled && !!organization?.stripe_connect_account_id;
   const selectedCurrency = String(organization?.billing_currency || 'ARS').toUpperCase();
+  const stripeCurrency = stripeCurrencyFromBilling(selectedCurrency);
+  const montoLabel =
+    typeof monto === 'number' && monto > 0
+      ? formatMoneyAmount(monto, selectedCurrency, { userLocale: locale })
+      : null;
   const anyPaymentMethod =
     paymentMethods.mercadopago ||
     paymentMethods.transferencia ||
@@ -493,6 +499,11 @@ export default function PagoScreen({ navigation, route }) {
     >
           <NeoPanel style={styles.panel}>
             <Text style={styles.title}>{tStr('pago_title_select')}</Text>
+            {montoLabel ? (
+              <Text style={styles.mpHint}>
+                {tStr('pago_amount_label')}: {montoLabel}
+              </Text>
+            ) : null}
 
             {busy ? (
               <View style={styles.busyOverlay} pointerEvents="none">
@@ -578,7 +589,7 @@ export default function PagoScreen({ navigation, route }) {
                           planId: planCanon,
                           periodo,
                           amount: monto,
-                          currency: selectedCurrency,
+                          currency: stripeCurrency,
                           title: `FitEngine · ${planCanon}`,
                         });
                         if (result?.payment_id) setPaymentId(result.payment_id);

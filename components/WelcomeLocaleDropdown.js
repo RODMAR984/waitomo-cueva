@@ -1,10 +1,11 @@
 // Desplegable de idioma anclado al trigger (popover discreto), no modal centrado.
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Dimensions, Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LOCALE_SELECTOR_LOCALES } from '../contexts/LocaleContext';
 
-const OPTIONS = [
+const ALL_OPTIONS = [
   { code: 'es', label: 'Español', testID: 'locale-opt-es' },
   { code: 'en', label: 'English', testID: 'locale-opt-en' },
   { code: 'pt', label: 'Português', testID: 'locale-opt-pt' },
@@ -17,7 +18,11 @@ export default function WelcomeLocaleDropdown({ locale, setLocale, layoutStyles,
   const triggerRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState(null);
-  const current = OPTIONS.find((o) => o.code === locale) || OPTIONS[0];
+  const options = useMemo(
+    () => ALL_OPTIONS.filter((o) => LOCALE_SELECTOR_LOCALES.includes(o.code)),
+    [],
+  );
+  const current = options.find((o) => o.code === locale) || options[0];
 
   const close = useCallback(() => {
     setOpen(false);
@@ -83,14 +88,14 @@ export default function WelcomeLocaleDropdown({ locale, setLocale, layoutStyles,
               ]}
               onPress={(e) => e.stopPropagation()}
             >
-              {OPTIONS.map((o, i) => {
+              {options.map((o, i) => {
                 const active = locale === o.code;
                 return (
                   <TouchableOpacity
                     key={o.code}
                     style={[
                       layoutStyles.localePopoverOption,
-                      i === OPTIONS.length - 1 && layoutStyles.localePopoverOptionLast,
+                      i === options.length - 1 && layoutStyles.localePopoverOptionLast,
                       active && layoutStyles.localePopoverOptionActive,
                     ]}
                     onPress={() => pick(o.code)}

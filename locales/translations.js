@@ -252,6 +252,7 @@ export const translations = {
 
     // Pago (checkout)
     pago_title_select: 'Seleccioná tu forma de pago',
+    pago_amount_label: 'Total',
     pago_btn_mercadopago: '💳 Pagar con MercadoPago',
     pago_btn_transfer: '🏦 Transferencia bancaria',
     pago_btn_dni: '🟡 Cuenta DNI',
@@ -2405,6 +2406,7 @@ export const translations = {
     security_err_email_confirm: 'Check your inbox to confirm the new email.',
 
     pago_title_select: 'Choose how to pay',
+    pago_amount_label: 'Total',
     pago_btn_mercadopago: '💳 Pay with Mercado Pago',
     pago_btn_transfer: '🏦 Bank transfer',
     pago_btn_dni: '🟡 Cuenta DNI',

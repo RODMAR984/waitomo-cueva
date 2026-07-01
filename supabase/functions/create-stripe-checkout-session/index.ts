@@ -46,7 +46,6 @@ Deno.serve(async (req: Request) => {
   const planId = String(body.plan_id || "admin").trim();
   const periodo = String(body.periodo || new Date().toISOString().slice(0, 7)).trim();
   const amount = Number(body.amount || 0);
-  const currency = String(body.currency || "usd").trim().toLowerCase();
   const title = String(body.title || "FitEngine").slice(0, 120);
   if (!organizationId || !(amount > 0)) {
     return new Response(JSON.stringify({ error: "invalid_args" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
@@ -70,7 +69,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: org, error: orgErr } = await supabaseAdmin
     .from("organizations")
-    .select("stripe_connect_account_id, stripe_checkout_enabled")
+    .select("stripe_connect_account_id, stripe_checkout_enabled, billing_currency")
     .eq("id", organizationId)
     .maybeSingle();
   if (orgErr) {
@@ -84,6 +83,9 @@ Deno.serve(async (req: Request) => {
       headers: { ...cors, "Content-Type": "application/json" },
     });
   }
+
+  const orgCurrency = String(org?.billing_currency || "USD").trim().toLowerCase();
+  const currency = String(body.currency || orgCurrency || "usd").trim().toLowerCase();
 
   const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" });
   const webBase = resolveCheckoutBackUrlBase();

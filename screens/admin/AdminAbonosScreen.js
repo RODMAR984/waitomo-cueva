@@ -23,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useThemeContext } from '../../contexts/ThemeContext';
 import { supabase } from '../../supabaseClient';
+import { formatMoneyFromCents } from '../../utils/formatMoney';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
@@ -237,8 +238,8 @@ export default function AdminAbonosScreen() {
 
   const formatPrice = (cents) => {
     if (cents == null) return tStr('detalle_abono_dash');
-    const loc = locale === 'en' ? 'en-US' : 'es-AR';
-    return `$${Math.round(cents / 100).toLocaleString(loc)}`;
+    const currency = String(organization?.billing_currency || 'ARS').toUpperCase();
+    return formatMoneyFromCents(cents, currency, { userLocale: locale });
   };
 
   const phColor = useMemo(() => hexToRgba(t.subText, 0.48), [t.subText]);

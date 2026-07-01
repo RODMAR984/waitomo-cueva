@@ -6,6 +6,8 @@ import { translations, SUPPORTED_LOCALES } from '../locales/translations';
 export const LOCALE_ES = 'es';
 export const LOCALE_EN = 'en';
 export const LOCALE_PT = 'pt';
+/** Idiomas visibles en selectores de UI (PT oculto hasta traducción completa). */
+export const LOCALE_SELECTOR_LOCALES = [LOCALE_ES, LOCALE_EN];
 
 const STORAGE_KEY = 'app_locale';
 
@@ -54,7 +56,17 @@ export function LocaleProvider({ children }) {
 
   const isEnglish = locale === 'en';
   const value = useMemo(
-    () => ({ locale, setLocale, t, isEnglish, LOCALE_ES: 'es', LOCALE_EN: 'en', SUPPORTED_LOCALES }),
+    () => ({
+      locale,
+      setLocale,
+      t,
+      isEnglish,
+      LOCALE_ES: 'es',
+      LOCALE_EN: 'en',
+      LOCALE_PT: 'pt',
+      LOCALE_SELECTOR_LOCALES,
+      SUPPORTED_LOCALES,
+    }),
     [locale, setLocale, t, isEnglish]
   );
 
