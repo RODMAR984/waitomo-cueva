@@ -60,7 +60,7 @@ export default function SuperadminOrgsScreen() {
       const { data, error: e } = await supabase
         .from('platform_orgs_overview')
         .select(
-          'organization_id, name, type, active, plan_fitengine, owner_id, created_at, client_memberships_count, staff_memberships_count',
+          'organization_id, name, type, active, plan_fitengine, subscription_status, trial_expires_at, country, business_model, owner_id, created_at, client_memberships_count, staff_memberships_count',
         )
         .order('name', { ascending: true });
       if (e) throw e;
@@ -171,7 +171,13 @@ export default function SuperadminOrgsScreen() {
           {!item.active ? <Text style={styles.inactive}>{tStr('superadmin_orgs_inactive')}</Text> : null}
         </View>
         <Text style={styles.rowMeta}>
-          {item.type || '—'} · {item.plan_fitengine || '—'} · id…{String(item.organization_id || '').slice(0, 8)}
+          {item.type || '—'} · {item.plan_fitengine || '—'}
+          {item.subscription_status ? ` · ${item.subscription_status}` : ''}
+          {item.trial_expires_at
+            ? ` · trial ${new Date(item.trial_expires_at).toLocaleDateString()}`
+            : ''}
+          {' · id…'}
+          {String(item.organization_id || '').slice(0, 8)}
         </Text>
         <Text style={styles.rowCounts}>
           {tStr('superadmin_orgs_col_clients')}: {item.client_memberships_count ?? 0} ·{' '}

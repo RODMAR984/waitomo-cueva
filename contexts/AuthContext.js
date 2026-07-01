@@ -697,7 +697,7 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('organizations')
         .select(
-          'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,client_invite_code,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
+          'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,subscription_status,trial_expires_at,country,city,business_model,size_range,activity_type,billing_currency,timezone,features,created_at,client_invite_code,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
         )
         .eq('id', orgId)
         .maybeSingle();
@@ -974,7 +974,7 @@ export const AuthProvider = ({ children }) => {
         const { data: memberships, error: membershipsError } = await supabase
           .from('organization_memberships')
           .select(
-            'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary)'
+            'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,subscription_status,trial_expires_at,country,city,business_model,size_range,activity_type,billing_currency,timezone,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary)'
           )
           .eq('user_id', session.user.id)
           .eq('active', true);
@@ -996,7 +996,7 @@ export const AuthProvider = ({ children }) => {
           const { data: ownerOrgRows, error: ownerOrgErr } = await supabase
             .from('organizations')
             .select(
-              'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
+              'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,subscription_status,trial_expires_at,country,city,business_model,size_range,activity_type,billing_currency,timezone,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
             )
             .eq('owner_id', session.user.id);
           if (!ownerOrgErr && Array.isArray(ownerOrgRows)) {
@@ -1054,7 +1054,7 @@ export const AuthProvider = ({ children }) => {
         const { data, error } = await supabase
           .from('organizations')
           .select(
-            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
+            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,subscription_status,trial_expires_at,country,city,business_model,size_range,activity_type,billing_currency,timezone,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
           )
           .eq('owner_id', session.user.id);
         if (cancelled) return;
@@ -1946,7 +1946,7 @@ export const AuthProvider = ({ children }) => {
       const { data: memberships, error: membershipsError } = await supabase
         .from('organization_memberships')
         .select(
-          'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary)'
+          'id,organization_id,role,active,is_default,organization:organizations(id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,subscription_status,trial_expires_at,country,city,business_model,size_range,activity_type,billing_currency,timezone,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary)'
         )
         .eq('user_id', userId)
         .eq('active', true);
@@ -1966,7 +1966,7 @@ export const AuthProvider = ({ children }) => {
         const { data: ownerOrgRows, error: ownerOrgErr } = await supabase
           .from('organizations')
           .select(
-            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
+            'id,name,type,logo_url,accent_color,theme_preset,background_type,background_url,owner_id,active,plan_fitengine,subscription_status,trial_expires_at,country,city,business_model,size_range,activity_type,billing_currency,timezone,features,created_at,membership_freeze_enabled,membership_freeze_max_days,stripe_connect_account_id,stripe_checkout_enabled,mercadopago_checkout_enabled,mercadopago_oauth_linked,mercadopago_mp_user_id,public_directory_enabled,google_place_id,google_place_summary'
           )
           .eq('owner_id', userId);
         if (!ownerOrgErr && Array.isArray(ownerOrgRows)) {

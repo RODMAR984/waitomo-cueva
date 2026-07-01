@@ -63,25 +63,24 @@ test.describe('Web smoke: welcome y auth base', () => {
     await page.getByTestId('invite-nav-back').click();
     await expect(page.getByText('Unite a tu gym', { exact: true })).toBeVisible();
 
-    await page.getByTestId('welcome-client-join-directory').click();
-    await expect(
-      page.getByText(/Solo aparecen espacios que eligieron listarse en FitEngine/),
-    ).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByPlaceholder('Filtrar por nombre o dirección…')).toBeVisible();
-    const backDirectory = page.getByTestId('directory-nav-back');
-    await expect(backDirectory).toBeVisible({ timeout: 15_000 });
-    await backDirectory.click({ force: true });
     await page.getByTestId('welcome-client-join-back').click();
     await expect(page.getByText('Iniciar sesión', { exact: true })).toBeVisible();
 
     await page.getByTestId('welcome-cta-gym-or-coach').click();
-    await expect(page.getByText('Crear cuenta (gym / coach)', { exact: true })).toBeVisible();
+    await expect(page.getByText('Probá FitEngine gratis', { exact: true })).toBeVisible();
     await expect(
-      page.getByText('Después configurás tu espacio (nombre, tipo, logo).', { exact: true }),
+      page.getByText('14 días para configurar tu gym. Sin tarjeta.', { exact: true }),
     ).toBeVisible();
-    await expect(page.getByPlaceholder('Email')).toBeVisible();
-    await expect(page.getByPlaceholder('Contraseña')).toBeVisible();
-    await expect(page.getByPlaceholder('Nombre completo')).toBeVisible();
-    await expect(page.getByText('Siguiente', { exact: true })).toBeVisible();
+    await expect(page.getByText('Nombre completo', { exact: true })).toBeVisible();
+    await expect(page.getByText('Email', { exact: true })).toBeVisible();
+    await expect(page.getByText('Continuar', { exact: true })).toBeVisible();
+  });
+
+  test('deep link /signup?trial=14d abre alta trial', async ({ page }) => {
+    await page.goto('/signup?trial=14d');
+    await expect(page.getByText('Probá FitEngine gratis', { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Continuar', { exact: true })).toBeVisible();
   });
 });

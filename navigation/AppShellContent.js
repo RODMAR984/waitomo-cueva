@@ -26,6 +26,7 @@ import {
 import { initWebNavigationHistoryGuard, pushWebSpaHistoryEntry } from '../utils/webNavigationHistory';
 import { resetNavigationRoot } from '../navigationRef';
 
+import { webAppLinking } from '../utils/webAppLinking';
 import AppRootStack from './AppRootStack';
 import ClientInviteLinkHandler from '../components/ClientInviteLinkHandler';
 import MpCheckoutReturnHandler from '../components/MpCheckoutReturnHandler';
@@ -158,7 +159,7 @@ export default function AppShellContent() {
         <NavigationContainer
           ref={navigationRef}
           theme={theme}
-          linking={undefined}
+          linking={Platform.OS === 'web' ? webAppLinking : undefined}
           onReady={() => {
             const r = navigationRef.getCurrentRoute?.();
             routeNameRef.current = r?.name || null;

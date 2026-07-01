@@ -59,6 +59,8 @@ import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import useUiSurface from '../../hooks/useUiSurface';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import NeoPanel from '../../components/NeoPanel';
+import TrialPlatformBanner from '../../components/TrialPlatformBanner';
+import useTrialWriteGuard from '../../hooks/useTrialWriteGuard';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -334,6 +336,7 @@ export default function AdminScreen() {
     activeAppModeHydrated,
     isDualHatUser,
   } = useAuth();
+  const { guardWrite } = useTrialWriteGuard();
   const myId = session?.user?.id || profile?.id || null;
   const myRole = rolesByUser?.[myId];
   const isSA = typeof isSuperAdmin === 'function' ? isSuperAdmin() : false;
@@ -1966,6 +1969,7 @@ export default function AdminScreen() {
 
   const crearBloques = async () => {
     Keyboard.dismiss();
+    if (!guardWrite()) return;
     if (!titulo.trim() || !contenido.trim()) {
       Alert.alert(tStr('admin_alert_block_missing_title'), tStr('admin_alert_block_missing_body'));
       return;
@@ -2246,6 +2250,7 @@ export default function AdminScreen() {
                   ) : null}
                 </View>
               </View>
+              <TrialPlatformBanner organizationId={organization?.id} />
               <NeoPanel style={styles.panel}>
                 <Text style={styles.title} testID="admin-main-title">
                   {tStr('admin_title')}

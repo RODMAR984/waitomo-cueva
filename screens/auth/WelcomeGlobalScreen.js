@@ -167,7 +167,7 @@ export default function WelcomeGlobalScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={layoutStyles.ctaSecondaryOutlineBrand}
-                onPress={() => navigation.navigate('RegistroOwner')}
+                onPress={() => navigation.navigate('TrialSignup', { trial: '14d' })}
                 activeOpacity={0.85}
                 testID="welcome-cta-gym-or-coach"
               >

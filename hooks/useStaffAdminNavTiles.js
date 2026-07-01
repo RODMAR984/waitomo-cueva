@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { emitAdminScrollToLists } from '../utils/adminScrollBus';
+import useTrialWriteGuard from './useTrialWriteGuard';
 
 function getFocusedRouteName(state) {
   if (!state || typeof state.index !== 'number' || !Array.isArray(state.routes)) return null;
@@ -16,6 +17,7 @@ function getFocusedRouteName(state) {
 export default function useStaffAdminNavTiles(navigation, tStr) {
   const { session, profile, isSuperAdmin, isPlatformAdmin, organization, organizationsOwnedByUser } =
     useAuth();
+  const { guardWrite } = useTrialWriteGuard();
 
   const myId = session?.user?.id || profile?.id || null;
   const isSA = typeof isSuperAdmin === 'function' ? isSuperAdmin() : false;
@@ -61,6 +63,8 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
       navigation.navigate('AdminLite', { adminFocus: 'lists' });
     };
 
+    const wrap = (fn) => () => guardWrite(fn);
+
     const groups = [
       ...(hasPlatformPanel
         ? [
@@ -85,7 +89,7 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
         title: tStr('admin_group_operacion'),
         tiles: [
           { key: 'resumen', ion: 'today-outline', title: tStr('admin_resumen_title'), sub: tStr('admin_resumen_sub'), onPress: () => navigation.navigate('AdminResumen'), show: true },
-          { key: 'bloques', ion: 'list-outline', title: tStr('admin_nav_panel_bloques'), sub: tStr('admin_menu_panel_bloques_sub'), onPress: mkBloquesOnPress, show: true },
+          { key: 'bloques', ion: 'list-outline', title: tStr('admin_nav_panel_bloques'), sub: tStr('admin_menu_panel_bloques_sub'), onPress: wrap(mkBloquesOnPress), show: true },
           { key: 'mem', ion: 'people-outline', title: tStr('admin_miembros'), sub: tStr('admin_menu_miembros_sub'), onPress: () => navigation.navigate('OrgMembers'), show: !isLite },
           { key: 'novedades', ion: 'newspaper-outline', title: tStr('admin_menu_novedades_title'), sub: tStr('admin_menu_novedades_sub'), onPress: () => navigation.navigate('AdminNovedades'), show: !isLite },
         ],
@@ -94,8 +98,8 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
         key: 'oferta',
         title: tStr('admin_group_oferta'),
         tiles: [
-          { key: 'planes', ion: 'pricetags-outline', title: tStr('admin_nav_plans'), sub: tStr('admin_menu_planes_sub'), onPress: () => navigation.navigate('AdminPlanes'), show: !isLite },
-          { key: 'abonos', ion: 'card-outline', title: tStr('admin_nav_abonos'), sub: tStr('admin_menu_abonos_sub'), onPress: () => navigation.navigate('AdminAbonos'), show: !isLite },
+          { key: 'planes', ion: 'pricetags-outline', title: tStr('admin_nav_plans'), sub: tStr('admin_menu_planes_sub'), onPress: wrap(() => navigation.navigate('AdminPlanes')), show: !isLite },
+          { key: 'abonos', ion: 'card-outline', title: tStr('admin_nav_abonos'), sub: tStr('admin_menu_abonos_sub'), onPress: wrap(() => navigation.navigate('AdminAbonos')), show: !isLite },
           { key: 'freeze', ion: 'snow-outline', title: tStr('admin_nav_membership_freeze'), sub: tStr('admin_menu_freeze_sub'), onPress: () => navigation.navigate('AdminMembershipFreeze'), show: !isLite },
           { key: 'coaches', ion: 'person-add-outline', title: tStr('admin_nav_assign_coaches'), sub: tStr('admin_menu_coaches_sub'), onPress: () => navigation.navigate('AsignarCoaches'), show: !isLite && !!canEditGymConfig },
           { key: 'badges', ion: 'trophy-outline', title: tStr('admin_menu_badges_title'), sub: tStr('admin_menu_badges_sub'), onPress: () => navigation.navigate('AdminBadges'), show: !isLite },
@@ -106,7 +110,7 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
         key: 'cobros',
         title: tStr('admin_group_cobros'),
         tiles: [
-          { key: 'fin', ion: 'cash-outline', title: tStr('admin_finanzas'), sub: tStr('admin_menu_finanzas_sub'), onPress: () => navigation.navigate('AdminFinanzas', { tab: 'cobros' }), show: !isLite },
+          { key: 'fin', ion: 'cash-outline', title: tStr('admin_finanzas'), sub: tStr('admin_menu_finanzas_sub'), onPress: wrap(() => navigation.navigate('AdminFinanzas', { tab: 'cobros' })), show: !isLite },
           { key: 'mp', ion: 'wallet-outline', title: tStr('admin_nav_mercadopago'), sub: tStr('admin_menu_mercadopago_sub'), onPress: () => navigation.navigate('AdminMercadoPagoSettings'), show: !isLite && !!canEditGymConfig },
           { key: 'stripe', ion: 'globe-outline', title: tStr('admin_nav_stripe'), sub: tStr('admin_menu_stripe_sub'), onPress: () => navigation.navigate('AdminStripeSettings'), show: !isLite && !!canEditGymConfig },
           { key: 'commissions', ion: 'receipt-outline', title: tStr('admin_nav_commissions'), sub: tStr('admin_menu_commissions_sub'), onPress: () => navigation.navigate('AdminCommissions'), show: !isLite },
@@ -127,5 +131,5 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
 
     const tiles = groups.flatMap((g) => g.tiles);
     return { tiles, groups };
-  }, [navigation, tStr, canEditGymConfig, isLite, hasPlatformPanel]);
+  }, [navigation, tStr, canEditGymConfig, isLite, hasPlatformPanel, guardWrite]);
 }

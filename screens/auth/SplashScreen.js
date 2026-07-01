@@ -9,6 +9,7 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import { authTrace } from '../../utils/authTrace';
+import { parseWebTrialSignupFromWindow } from '../../utils/webAppLinking';
 import {
   hasPendingPaymentConnectResult,
   parsePaymentConnectReturnFromWindow,
@@ -59,6 +60,17 @@ export default function SplashScreen() {
     const timer = setTimeout(() => {
       if (goneRef.current) return;
       goneRef.current = true;
+      const signup = parseWebTrialSignupFromWindow();
+      if (signup?.trial) {
+        authTrace('splash_replace', { to: 'TrialSignup', delayMs });
+        navigation.replace('TrialSignup', { trial: signup.trial });
+        return;
+      }
+      if (signup?.redirectWelcome) {
+        authTrace('splash_replace', { to: 'WelcomeGlobal', reason: 'signup_without_trial' });
+        navigation.replace('WelcomeGlobal');
+        return;
+      }
       authTrace('splash_replace', { to: 'WelcomeGlobal', delayMs });
       navigation.replace('WelcomeGlobal');
     }, delayMs);

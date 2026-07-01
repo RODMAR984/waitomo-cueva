@@ -18,6 +18,7 @@ const ENTRY_ROUTE_NAMES = new Set([
   'PublicDirectory',
   'Directory',
   'RegistroOwner',
+  'TrialSignup',
   'ConfiguraTuEspacio',
   'FitEngineSpaceIntro',
   'RegistroInicial',

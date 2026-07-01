@@ -80,6 +80,7 @@ import SplashScreen from '../screens/auth/SplashScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import CreaCuentaStaffScreen from '../screens/auth/CreaCuentaStaffScreen';
 import RegistroOwnerScreen from '../screens/auth/RegistroOwnerScreen';
+import OwnerTrialSignupScreen from '../screens/gym-onboarding/OwnerTrialSignupScreen';
 import ConfiguraTuEspacioScreen from '../screens/auth/ConfiguraTuEspacioScreen';
 import FitEngineSpaceIntroScreen from '../screens/auth/FitEngineSpaceIntroScreen';
 import JoinWithInviteCodeScreen from '../screens/auth/JoinWithInviteCodeScreen';
@@ -120,6 +121,17 @@ export default function AppRootStack({ screenOptions, registroOwnerBackgroundCol
         <Stack.Screen name="CreaCuentaStaff" component={CreaCuentaStaffScreen} />
         <Stack.Screen name="CreaCuentaStaffScreen" component={CreaCuentaStaffScreen} />
 
+        <Stack.Screen
+          name="TrialSignup"
+          component={OwnerTrialSignupScreen}
+          options={{
+            contentStyle: {
+              backgroundColor: registroOwnerBackgroundColor,
+              flex: 1,
+              overflow: 'hidden',
+            },
+          }}
+        />
         <Stack.Screen
           name="RegistroOwner"
           component={RegistroOwnerScreen}

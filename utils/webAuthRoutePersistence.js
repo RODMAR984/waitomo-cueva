@@ -17,6 +17,7 @@ const ENTRY_ROUTES = new Set([
   'PublicDirectory',
   'Directory',
   'RegistroOwner',
+  'TrialSignup',
   'ConfiguraTuEspacio',
   'FitEngineSpaceIntro',
   'RegistroInicial',
