@@ -63,7 +63,7 @@ export default function OwnerTrialSignupScreen() {
   const insets = useSafeAreaInsets();
   const { t, isDark } = useThemeContext();
   const { t: tStr, locale, setLocale } = useLocale();
-  const { user, session, refreshProfile, refreshOrganization } = useAuth() || {};
+  const { user, session, refreshProfile, refreshOrganization, logout } = useAuth() || {};
 
   const trialParam = resolveTrialParam(route.params?.trial);
   const trialOk = isTrialSignupQuery(trialParam);
@@ -88,6 +88,26 @@ export default function OwnerTrialSignupScreen() {
   const [activityType, setActivityType] = useState('');
   const [logoLocalUri, setLogoLocalUri] = useState(null);
   const [pickingLogo, setPickingLogo] = useState(false);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
+
+  const sessionEmail = String(user?.email || session?.user?.email || '')
+    .trim()
+    .toLowerCase();
+  const hasSession = !!(session?.user?.id || user?.id);
+  const emailLocked = hasSession && !!sessionEmail;
+
+  useEffect(() => {
+    if (!hasSession) return;
+    if (sessionEmail) {
+      setEmail((prev) => (prev.trim() ? prev : sessionEmail));
+    }
+    const metaName = String(
+      user?.user_metadata?.full_name || session?.user?.user_metadata?.full_name || '',
+    ).trim();
+    if (metaName) {
+      setFullName((prev) => (prev.trim() ? prev : metaName));
+    }
+  }, [hasSession, sessionEmail, user?.user_metadata?.full_name, session?.user?.user_metadata?.full_name]);
 
   useEffect(() => {
     const explicit = route.params?.trial;
@@ -195,32 +215,60 @@ export default function OwnerTrialSignupScreen() {
           marginBottom: MOBILE_SPACING.sm,
         },
         logoImg: { width: '100%', height: '100%' },
+        inputLocked: { opacity: 0.92 },
+        sessionHint: { color: fe.subText, fontSize: MOBILE_TYPE.caption, marginTop: -6, marginBottom: 10 },
+        switchAccountLink: { alignSelf: 'flex-start', marginTop: -4, marginBottom: 12, paddingVertical: 4 },
+        switchAccountText: { color: '#86C4C7', fontSize: MOBILE_TYPE.caption, fontWeight: '600' },
+        formContent: { zIndex: 1, position: 'relative' },
       }),
     [insets.top, insets.bottom],
   );
 
-  const hasSession = !!(session?.user?.id || user?.id);
-
   const validateStep1 = () => {
     const n = fullName.trim();
-    const e = email.trim().toLowerCase();
-    if (!n || !e || !password) {
+    const e = (email.trim() || sessionEmail).toLowerCase();
+    if (!n || !e) {
       Alert.alert(tStr('trial_alert_missing_title'), tStr('trial_alert_missing_body'));
       return false;
     }
-    if (password.length < 6) {
-      Alert.alert(tStr('registro_owner_pass_corta'), tStr('registro_owner_pass_min_body'));
-      return false;
-    }
-    if (password !== password2) {
-      Alert.alert(tStr('trial_alert_pass_mismatch_title'), tStr('trial_alert_pass_mismatch_body'));
-      return false;
+    if (!hasSession) {
+      if (!password) {
+        Alert.alert(tStr('trial_alert_missing_title'), tStr('trial_alert_missing_body'));
+        return false;
+      }
+      if (password.length < 6) {
+        Alert.alert(tStr('registro_owner_pass_corta'), tStr('registro_owner_pass_min_body'));
+        return false;
+      }
+      if (password !== password2) {
+        Alert.alert(tStr('trial_alert_pass_mismatch_title'), tStr('trial_alert_pass_mismatch_body'));
+        return false;
+      }
     }
     if (!acceptTerms) {
       Alert.alert(tStr('trial_alert_terms_title'), tStr('trial_alert_terms_body'));
       return false;
     }
     return true;
+  };
+
+  const handleSwitchAccount = async () => {
+    if (switchingAccount) return;
+    setSwitchingAccount(true);
+    try {
+      if (typeof logout === 'function') await logout();
+      setEmail('');
+      setPassword('');
+      setPassword2('');
+      setFullName('');
+      setAcceptTerms(false);
+      setAwaitingEmailConfirm(false);
+      setStep(1);
+    } catch (err) {
+      Alert.alert(tStr('gym_config_alert_title_error'), err?.message || tStr('perfil_logout_error'));
+    } finally {
+      setSwitchingAccount(false);
+    }
   };
 
   const handleStep1Next = async () => {
@@ -231,7 +279,7 @@ export default function OwnerTrialSignupScreen() {
     }
     setLoading(true);
     try {
-      const e = email.trim().toLowerCase();
+      const e = (email.trim() || sessionEmail).toLowerCase();
       const { data, error } = await supabase.auth.signUp({
         email: e,
         password,
@@ -347,13 +395,33 @@ export default function OwnerTrialSignupScreen() {
     <TextInput style={styles.input} value={fullName} onChangeText={setFullName} autoCapitalize="words" />
     <Text style={styles.label}>{tStr('trial_field_email')}</Text>
     <TextInput
-      style={styles.input}
-      value={email}
+      style={[styles.input, emailLocked && styles.inputLocked]}
+      value={email || sessionEmail}
       onChangeText={setEmail}
       keyboardType="email-address"
       autoCapitalize="none"
-      editable={!hasSession}
+      autoComplete="email"
+      textContentType="emailAddress"
+      editable={!emailLocked}
     />
+    {emailLocked ? (
+      <>
+        <Text style={styles.sessionHint}>{tStr('trial_email_session_hint')}</Text>
+        <TouchableOpacity
+          style={styles.switchAccountLink}
+          onPress={handleSwitchAccount}
+          disabled={switchingAccount}
+        >
+          {switchingAccount ? (
+            <ActivityIndicator color="#86C4C7" size="small" />
+          ) : (
+            <Text style={styles.switchAccountText}>{tStr('welcome_logout_use_other')}</Text>
+          )}
+        </TouchableOpacity>
+      </>
+    ) : null}
+    {!hasSession ? (
+      <>
     <Text style={styles.label}>{tStr('trial_field_password')}</Text>
     <PasswordInput
       value={password}
@@ -370,6 +438,8 @@ export default function OwnerTrialSignupScreen() {
       placeholderTextColor={fe.subText}
       style={styles.input}
     />
+      </>
+    ) : null}
     <View style={styles.termsRow}>
       <Switch value={acceptTerms} onValueChange={setAcceptTerms} trackColor={{ true: '#86C4C7' }} />
       <Text style={styles.termsText}>
@@ -547,7 +617,7 @@ export default function OwnerTrialSignupScreen() {
           offsetY={-24}
         />
         <AuthDismissKeyboardOutside>
-          <View style={styles.inner}>
+          <View style={[styles.inner, styles.formContent]}>
             <View style={styles.localeRow}>
               <WelcomeLocaleDropdown
                 locale={locale}
