@@ -161,9 +161,12 @@ export const translations = {
     login_switch_to_staff: 'Soy gym o coach — ingresar al panel staff',
     login_alert_missing_title: 'Falta info',
     login_alert_missing_body: 'Completá email y contraseña.',
-    login_alert_invalid_creds_title: 'Email o contraseña incorrectos',
+    login_alert_invalid_creds_title: 'Contraseña incorrecta',
     login_alert_invalid_creds_body:
-      'Revisá que el email y la contraseña sean correctos. Si olvidaste la clave, usá «¿Olvidaste tu contraseña?».',
+      'El email o la contraseña no coinciden con tu cuenta. Revisá mayúsculas y que el email sea el correcto. Si olvidaste la clave, tocá «¿Olvidaste tu contraseña?».',
+    login_alert_email_not_confirmed_title: 'Confirmá tu email',
+    login_alert_email_not_confirmed_body:
+      'Tu cuenta existe pero el email todavía no está confirmado. Revisá tu bandeja (y spam) y abrí el enlace de FitEngine antes de iniciar sesión.',
     login_alert_wrong_creds_other_session_title: 'Credenciales incorrectas',
     login_alert_wrong_creds_other_session_body:
       'Había una sesión con otro correo. La cerramos para que puedas iniciar con la cuenta correcta. Volvé a ingresar email y contraseña.',
@@ -2314,9 +2317,12 @@ export const translations = {
     login_switch_to_staff: 'Gym or coach — sign in to staff panel',
     login_alert_missing_title: 'Missing info',
     login_alert_missing_body: 'Enter email and password.',
-    login_alert_invalid_creds_title: 'Incorrect email or password',
+    login_alert_invalid_creds_title: 'Incorrect password',
     login_alert_invalid_creds_body:
-      'Check your email and password. If you forgot your password, use “Forgot your password?”.',
+      'The email or password does not match your account. Check caps lock and the email address. If you forgot your password, tap “Forgot your password?”.',
+    login_alert_email_not_confirmed_title: 'Confirm your email',
+    login_alert_email_not_confirmed_body:
+      'Your account exists but your email is not confirmed yet. Check your inbox (and spam) and open the FitEngine link before signing in.',
     login_alert_wrong_creds_other_session_title: 'Incorrect credentials',
     login_alert_wrong_creds_other_session_body:
       'There was a session with another email. We signed you out so you can sign in with the right account. Enter email and password again.',
@@ -4424,5 +4430,14 @@ translations[LOCALE_PT] = {
   trial_btn_create: 'Criar minha academia',
   trial_banner_expired_title: 'Seu teste grátis terminou',
   trial_banner_expired_body: 'Escreva para ventas@fitengine.app para continuar. Seus dados permanecem.',
+  login_alert_invalid_creds_title: 'Senha incorreta',
+  login_alert_invalid_creds_body:
+    'O e-mail ou a senha não correspondem à sua conta. Verifique maiúsculas e o e-mail. Se esqueceu a senha, toque em «Esqueceu sua senha?».',
+  login_alert_email_not_confirmed_title: 'Confirme seu e-mail',
+  login_alert_email_not_confirmed_body:
+    'Sua conta existe, mas o e-mail ainda não foi confirmado. Verifique a caixa de entrada (e spam) e abra o link do FitEngine antes de entrar.',
+  login_alert_wrong_creds_other_session_title: 'Credenciais incorretas',
+  login_alert_wrong_creds_other_session_body:
+    'Havia uma sessão com outro e-mail. Encerramos para você entrar com a conta certa. Digite e-mail e senha novamente.',
 };
 export const SUPPORTED_LOCALES = [LOCALE_ES, LOCALE_EN, LOCALE_PT];

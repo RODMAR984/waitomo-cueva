@@ -36,6 +36,10 @@ import { reportError, trackEvent } from '../../utils/observability';
 import NeoPanel from '../../components/NeoPanel';
 import ScreenShell from '../../components/ScreenShell';
 import { authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
+import {
+  isEmailNotConfirmedError,
+  isInvalidLoginCredentialsError,
+} from '../../utils/authLoginErrors';
 
 const OAUTH_SIGNUP_STAFF_KEY = 'waitomo_oauth_signup_staff';
 
@@ -475,11 +479,8 @@ export default function LoginScreen() {
         forStaff: !!forStaff,
       });
       console.log('Error login Supabase:', error);
-      const msg = String(error?.message || '');
-      const invalidCreds =
-        error?.code === 'invalid_credentials' ||
-        msg.includes('Invalid login credentials') ||
-        msg.toLowerCase().includes('invalid login');
+      const invalidCreds = isInvalidLoginCredentialsError(error);
+      const emailNotConfirmed = isEmailNotConfirmedError(error);
 
       // Otra sesión activa + intentás entrar con otro mail y falla → cerrar sesión vieja
       if (invalidCreds && session?.user?.email) {
@@ -495,6 +496,14 @@ export default function LoginScreen() {
           );
           return;
         }
+      }
+
+      if (emailNotConfirmed) {
+        Alert.alert(
+          tStr('login_alert_email_not_confirmed_title'),
+          tStr('login_alert_email_not_confirmed_body'),
+        );
+        return;
       }
 
       if (invalidCreds) {
