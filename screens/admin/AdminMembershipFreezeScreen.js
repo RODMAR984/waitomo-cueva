@@ -26,6 +26,9 @@ import { useLocale } from '../../contexts/LocaleContext';
 import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
+import useTrialProGuard from '../../hooks/useTrialProGuard';
+import TrialProUnlockPanel from '../../components/TrialProUnlockPanel';
+import { TRIAL_PRO_FEATURE_KEYS } from '../../utils/trialProFeatures';
 
 const fmtIsoDate = (d) => {
   if (!d) return '';
@@ -47,6 +50,7 @@ export default function AdminMembershipFreezeScreen() {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const { organization, refreshOrganization } = useAuth();
+  const { proLocked } = useTrialProGuard();
 
   const orgId = organization?.id;
   const freezeEnabled = !!organization?.membership_freeze_enabled;
@@ -455,6 +459,10 @@ export default function AdminMembershipFreezeScreen() {
         <Text style={styles.title}>{tStr('admin_freeze_screen_title')}</Text>
       </View>
 
+      {proLocked ? (
+        <TrialProUnlockPanel featureKey={TRIAL_PRO_FEATURE_KEYS.MEMBERSHIP_FREEZE} />
+      ) : (
+        <>
       <Text style={styles.hint}>{tStr('admin_freeze_screen_hint')}</Text>
 
       {!freezeEnabled ? (
@@ -499,6 +507,8 @@ export default function AdminMembershipFreezeScreen() {
             </View>
           );
         })
+      )}
+        </>
       )}
     </ScreenShell>
   );

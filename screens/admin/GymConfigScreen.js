@@ -42,6 +42,8 @@ import { FULL_HEX_CHOICE_GYM } from '../../utils/gymColorPalette';
 import { DEFAULT_CLIENT_PAYMENT_COPY } from '../../utils/clientPaymentMethods';
 import { DEFAULT_AI_VOLUME_LANDMARKS } from '../../utils/volumeFromBlocks';
 import { draftMessageWithAi } from '../../utils/aiAssistant';
+import useTrialProGuard from '../../hooks/useTrialProGuard';
+import { TRIAL_PRO_FEATURE_KEYS, TRIAL_PRO_GYM_CONFIG_TABS } from '../../utils/trialProFeatures';
 import { WEB_CONTENT_MAX_WIDTH, WEB_DESKTOP_BREAKPOINT } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 
@@ -242,6 +244,7 @@ export default function GymConfigScreen() {
   const { t, mode } = useThemeContext();
   const { t: tStr, locale } = useLocale();
   const { user, profile, organization, refreshOrganization } = useAuth() || {};
+  const { proLocked, guardPro } = useTrialProGuard();
   const orgId = organization?.id || profile?.organization_id;
 
   const [name, setName] = useState(organization?.name || '');
@@ -330,6 +333,23 @@ export default function GymConfigScreen() {
   /** Una pestaña = un tema; solo se monta el panel activo (toda la config sigue en el mismo save). */
   const [gymConfigTab, setGymConfigTab] = useState('general');
   const gymConfigScrollRef = useRef(null);
+
+  useEffect(() => {
+    if (proLocked && TRIAL_PRO_GYM_CONFIG_TABS.has(gymConfigTab)) {
+      setGymConfigTab('general');
+    }
+  }, [proLocked, gymConfigTab]);
+
+  const selectGymConfigTab = useCallback(
+    (id) => {
+      if (proLocked && TRIAL_PRO_GYM_CONFIG_TABS.has(id)) {
+        guardPro(TRIAL_PRO_FEATURE_KEYS.GYM_APPEARANCE, () => setGymConfigTab(id));
+        return;
+      }
+      setGymConfigTab(id);
+    },
+    [proLocked, guardPro],
+  );
   const [brandBrief, setBrandBrief] = useState('');
   const [brandBusy, setBrandBusy] = useState(false);
   const [brandDraft, setBrandDraft] = useState('');
@@ -1446,14 +1466,18 @@ export default function GymConfigScreen() {
             ['branding', 'gym_config_tab_branding'],
           ].map(([id, labelKey]) => {
             const on = gymConfigTab === id;
+            const isProTab = TRIAL_PRO_GYM_CONFIG_TABS.has(id);
             return (
               <TouchableOpacity
                 key={id}
-                onPress={() => setGymConfigTab(id)}
+                onPress={() => selectGymConfigTab(id)}
                 style={[styles.tabChip, on && styles.tabChipActive]}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.tabChipText, on && styles.tabChipTextActive]}>{tStr(labelKey)}</Text>
+                <Text style={[styles.tabChipText, on && styles.tabChipTextActive]}>
+                  {tStr(labelKey)}
+                  {proLocked && isProTab ? tStr('trial_pro_nav_suffix') : ''}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -1550,7 +1574,7 @@ export default function GymConfigScreen() {
                     <TouchableOpacity style={styles.logoBtn} onPress={save} activeOpacity={0.85}>
                       <Text style={styles.logoBtnText}>{tStr('gym_branding_save_now')}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.logoBtn} onPress={() => setGymConfigTab('appearance')} activeOpacity={0.85}>
+                    <TouchableOpacity style={styles.logoBtn} onPress={() => selectGymConfigTab('appearance')} activeOpacity={0.85}>
                       <Text style={styles.logoBtnText}>{tStr('gym_branding_go_appearance')}</Text>
                     </TouchableOpacity>
                   </View>

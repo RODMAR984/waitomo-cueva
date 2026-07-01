@@ -16,6 +16,9 @@ import useStaffWebHideInlineBack from '../../hooks/useStaffWebHideInlineBack';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTopPadding } from '../../theme/mobileSpec';
 import { ADMIN_PANEL_GUTTER, ADMIN_SECTION_GAP } from '../../theme/adminSpec';
+import useTrialProGuard from '../../hooks/useTrialProGuard';
+import TrialProUnlockPanel from '../../components/TrialProUnlockPanel';
+import { TRIAL_PRO_FEATURE_KEYS } from '../../utils/trialProFeatures';
 
 export default function AdminReportesScreen() {
   const navigation = useNavigation();
@@ -24,6 +27,7 @@ export default function AdminReportesScreen() {
   const { t } = useThemeContext();
   const { t: tStr } = useLocale();
   const { organization, profile } = useAuth() || {};
+  const { proLocked } = useTrialProGuard();
   const orgId = organization?.id ?? profile?.organization_id ?? null;
 
   const [loading, setLoading] = useState(true);
@@ -114,6 +118,10 @@ export default function AdminReportesScreen() {
         ) : null}
         <Text style={styles.title}>{tStr('admin_reportes_title')}</Text>
       </View>
+        {proLocked ? (
+          <TrialProUnlockPanel featureKey={TRIAL_PRO_FEATURE_KEYS.STATS_TOTAL} />
+        ) : (
+          <>
         <Text style={styles.hint}>{tStr('admin_reportes_hint')}</Text>
         {loading ? (
           <ActivityIndicator color={t.brand} />
@@ -128,6 +136,8 @@ export default function AdminReportesScreen() {
               </View>
             ))}
           </View>
+        )}
+          </>
         )}
     </ScreenShell>
   );

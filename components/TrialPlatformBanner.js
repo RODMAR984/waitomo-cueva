@@ -67,7 +67,11 @@ export default function TrialPlatformBanner({ organizationId }) {
     return (
       <View style={[styles.wrap, styles.warn]} testID="trial-platform-banner-active">
         <Text style={styles.title}>{fmtTemplate(tStr('trial_banner_active_title'), { days: daysLeft })}</Text>
-        <Text style={styles.body}>{tStr('trial_banner_active_body')}</Text>
+        <Text style={styles.body}>
+          {tStr('trial_banner_active_body')}
+          {' '}
+          {tStr('trial_pro_banner_hint')}
+        </Text>
       </View>
     );
   }

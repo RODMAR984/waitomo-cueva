@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   Switch,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -180,6 +181,20 @@ export default function OwnerTrialSignupScreen() {
         summaryLine: { color: fe.text, fontSize: MOBILE_TYPE.body },
         backLink: { alignSelf: 'center', marginTop: MOBILE_SPACING.lg, padding: 8 },
         backLinkText: { color: fe.subText, fontSize: MOBILE_TYPE.body },
+        logoWrap: {
+          width: 96,
+          height: 96,
+          borderRadius: MOBILE_RADII.lg,
+          backgroundColor: fe.inputBg,
+          borderWidth: 1,
+          borderColor: fe.inputBorder,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          alignSelf: 'center',
+          marginBottom: MOBILE_SPACING.sm,
+        },
+        logoImg: { width: '100%', height: '100%' },
       }),
     [insets.top, insets.bottom],
   );
@@ -444,10 +459,21 @@ export default function OwnerTrialSignupScreen() {
   const renderStep3 = () => (
   <>
     <Text style={styles.label}>{tStr('trial_field_logo')}</Text>
+    <View style={styles.logoWrap}>
+      {logoLocalUri ? (
+        <Image source={{ uri: logoLocalUri }} style={styles.logoImg} resizeMode="cover" />
+      ) : (
+        <Ionicons name="business" size={36} color={fe.subText} />
+      )}
+    </View>
     <TouchableOpacity style={styles.btnSecondary} onPress={pickLogo} disabled={pickingLogo}>
-      <Text style={styles.btnTextSecondary}>
-        {logoLocalUri ? tStr('trial_logo_change') : tStr('trial_logo_pick')}
-      </Text>
+      {pickingLogo ? (
+        <ActivityIndicator color={fe.text} />
+      ) : (
+        <Text style={styles.btnTextSecondary}>
+          {logoLocalUri ? tStr('trial_logo_change') : tStr('trial_logo_pick')}
+        </Text>
+      )}
     </TouchableOpacity>
     <Text style={[styles.label, { marginTop: 16 }]}>{tStr('trial_field_accent')}</Text>
     <View style={styles.palette}>

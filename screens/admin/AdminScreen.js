@@ -61,6 +61,8 @@ import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE, screenHeaderTo
 import NeoPanel from '../../components/NeoPanel';
 import TrialPlatformBanner from '../../components/TrialPlatformBanner';
 import useTrialWriteGuard from '../../hooks/useTrialWriteGuard';
+import useTrialProGuard from '../../hooks/useTrialProGuard';
+import { TRIAL_PRO_FEATURE_KEYS } from '../../utils/trialProFeatures';
 
 const PLAN_VALUE_TO_CHAT_PLAN_ID = {
   cross_training: 'cross',
@@ -337,6 +339,7 @@ export default function AdminScreen() {
     isDualHatUser,
   } = useAuth();
   const { guardWrite } = useTrialWriteGuard();
+  const { guardPro, proLocked, showProUnlock } = useTrialProGuard();
   const myId = session?.user?.id || profile?.id || null;
   const myRole = rolesByUser?.[myId];
   const isSA = typeof isSuperAdmin === 'function' ? isSuperAdmin() : false;
@@ -676,6 +679,7 @@ export default function AdminScreen() {
   };
 
   const openAiModal = () => {
+    guardPro(TRIAL_PRO_FEATURE_KEYS.AI_ASSISTANT, () => {
     const dateForAi = formatYmdLocal(fecha);
     setAiModalVisible(true);
     setAiOutput('');
@@ -696,6 +700,7 @@ export default function AdminScreen() {
       if (prev.trim()) return prev;
       if (aiMode === 'routine' || aiMode === 'cycle_plan') return '';
       return contenido || '';
+    });
     });
   };
 
@@ -819,6 +824,10 @@ export default function AdminScreen() {
   };
 
   const generateWithAi = async () => {
+    if (proLocked) {
+      showProUnlock(TRIAL_PRO_FEATURE_KEYS.AI_ASSISTANT);
+      return;
+    }
     if (!orgIdForPlans) {
       Alert.alert(tStr('gym_config_alert_title_error'), tStr('admin_ai_no_org'));
       return;
@@ -2533,7 +2542,10 @@ export default function AdminScreen() {
                   />
                 ) : null}
                 <TouchableOpacity onPress={openAiModal} style={styles.aiBtn} activeOpacity={0.88}>
-                  <Text style={styles.aiBtnText}>{tStr('admin_ai_cta')}</Text>
+                  <Text style={styles.aiBtnText}>
+                    {tStr('admin_ai_cta')}
+                    {proLocked ? tStr('trial_pro_nav_suffix') : ''}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

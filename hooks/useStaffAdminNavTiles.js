@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { emitAdminScrollToLists } from '../utils/adminScrollBus';
 import useTrialWriteGuard from './useTrialWriteGuard';
+import useTrialProGuard from './useTrialProGuard';
+import { TRIAL_PRO_FEATURE_KEYS } from '../utils/trialProFeatures';
 
 function getFocusedRouteName(state) {
   if (!state || typeof state.index !== 'number' || !Array.isArray(state.routes)) return null;
@@ -18,6 +20,7 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
   const { session, profile, isSuperAdmin, isPlatformAdmin, organization, organizationsOwnedByUser } =
     useAuth();
   const { guardWrite } = useTrialWriteGuard();
+  const { guardPro, proLocked } = useTrialProGuard();
 
   const myId = session?.user?.id || profile?.id || null;
   const isSA = typeof isSuperAdmin === 'function' ? isSuperAdmin() : false;
@@ -64,6 +67,8 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
     };
 
     const wrap = (fn) => () => guardWrite(fn);
+    const proSuffix = proLocked ? tStr('trial_pro_nav_suffix') : '';
+    const proTitle = (base) => (proLocked ? `${base}${proSuffix}` : base);
 
     const groups = [
       ...(hasPlatformPanel
@@ -100,7 +105,7 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
         tiles: [
           { key: 'planes', ion: 'pricetags-outline', title: tStr('admin_nav_plans'), sub: tStr('admin_menu_planes_sub'), onPress: wrap(() => navigation.navigate('AdminPlanes')), show: !isLite },
           { key: 'abonos', ion: 'card-outline', title: tStr('admin_nav_abonos'), sub: tStr('admin_menu_abonos_sub'), onPress: wrap(() => navigation.navigate('AdminAbonos')), show: !isLite },
-          { key: 'freeze', ion: 'snow-outline', title: tStr('admin_nav_membership_freeze'), sub: tStr('admin_menu_freeze_sub'), onPress: () => navigation.navigate('AdminMembershipFreeze'), show: !isLite },
+          { key: 'freeze', ion: 'snow-outline', title: proTitle(tStr('admin_nav_membership_freeze')), sub: tStr('admin_menu_freeze_sub'), onPress: () => guardPro(TRIAL_PRO_FEATURE_KEYS.MEMBERSHIP_FREEZE, () => navigation.navigate('AdminMembershipFreeze')), show: !isLite, proLocked: proLocked },
           { key: 'coaches', ion: 'person-add-outline', title: tStr('admin_nav_assign_coaches'), sub: tStr('admin_menu_coaches_sub'), onPress: () => navigation.navigate('AsignarCoaches'), show: !isLite && !!canEditGymConfig },
           { key: 'badges', ion: 'trophy-outline', title: tStr('admin_menu_badges_title'), sub: tStr('admin_menu_badges_sub'), onPress: () => navigation.navigate('AdminBadges'), show: !isLite },
           { key: 'retention', ion: 'mail-outline', title: tStr('admin_menu_retention_title'), sub: tStr('admin_menu_retention_sub'), onPress: () => navigation.navigate('AdminRetention'), show: !isLite },
@@ -114,7 +119,7 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
           { key: 'mp', ion: 'wallet-outline', title: tStr('admin_nav_mercadopago'), sub: tStr('admin_menu_mercadopago_sub'), onPress: () => navigation.navigate('AdminMercadoPagoSettings'), show: !isLite && !!canEditGymConfig },
           { key: 'stripe', ion: 'globe-outline', title: tStr('admin_nav_stripe'), sub: tStr('admin_menu_stripe_sub'), onPress: () => navigation.navigate('AdminStripeSettings'), show: !isLite && !!canEditGymConfig },
           { key: 'commissions', ion: 'receipt-outline', title: tStr('admin_nav_commissions'), sub: tStr('admin_menu_commissions_sub'), onPress: () => navigation.navigate('AdminCommissions'), show: !isLite },
-          { key: 'reportes', ion: 'bar-chart-outline', title: tStr('admin_nav_reportes'), sub: tStr('admin_menu_reportes_sub'), onPress: () => navigation.navigate('AdminReportes'), show: !isLite },
+          { key: 'reportes', ion: 'bar-chart-outline', title: proTitle(tStr('admin_nav_reportes')), sub: tStr('admin_menu_reportes_sub'), onPress: () => guardPro(TRIAL_PRO_FEATURE_KEYS.STATS_TOTAL, () => navigation.navigate('AdminReportes')), show: !isLite, proLocked: proLocked },
         ],
       },
       {
@@ -131,5 +136,5 @@ export default function useStaffAdminNavTiles(navigation, tStr) {
 
     const tiles = groups.flatMap((g) => g.tiles);
     return { tiles, groups };
-  }, [navigation, tStr, canEditGymConfig, isLite, hasPlatformPanel, guardWrite]);
+  }, [navigation, tStr, canEditGymConfig, isLite, hasPlatformPanel, guardWrite, guardPro, proLocked]);
 }
