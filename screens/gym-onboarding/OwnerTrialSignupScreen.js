@@ -340,9 +340,21 @@ export default function OwnerTrialSignupScreen() {
       editable={!hasSession}
     />
     <Text style={styles.label}>{tStr('trial_field_password')}</Text>
-    <PasswordInput value={password} onChangeText={setPassword} placeholder="" />
+    <PasswordInput
+      value={password}
+      onChangeText={setPassword}
+      placeholder=""
+      placeholderTextColor={fe.subText}
+      style={styles.input}
+    />
     <Text style={styles.label}>{tStr('trial_field_password_confirm')}</Text>
-    <PasswordInput value={password2} onChangeText={setPassword2} placeholder="" />
+    <PasswordInput
+      value={password2}
+      onChangeText={setPassword2}
+      placeholder=""
+      placeholderTextColor={fe.subText}
+      style={styles.input}
+    />
     <View style={styles.termsRow}>
       <Switch value={acceptTerms} onValueChange={setAcceptTerms} trackColor={{ true: '#86C4C7' }} />
       <Text style={styles.termsText}>
