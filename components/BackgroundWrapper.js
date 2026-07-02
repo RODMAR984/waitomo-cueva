@@ -165,6 +165,11 @@ export default function BackgroundWrapper({
    */
   const isFePlatformShellOrg =
     !!orgForBackground?.id && usesFitEnginePlatformShell(orgForBackground);
+  /**
+   * Imágenes de marca Waitomo (cueva, welcome glow, fotos de planes) SOLO dentro de la org Waitomo.
+   * Cualquier otra org — o sin org (trial a medio crear, plataforma) — usa el shell neutro FitEngine.
+   */
+  const isWaitomoContext = !!orgForBackground?.id && isWaitomoOrg(orgForBackground);
   const isWelcome = screenLower.includes('welcome');
   const overlayColor = forceDarkOverlay ? 'rgba(0,0,0,0.24)' : t.screenOverlay;
   const overlayStyle = { ...StyleSheet.absoluteFillObject, backgroundColor: overlayColor };
@@ -180,6 +185,27 @@ export default function BackgroundWrapper({
     !isFitEnginePlatformBackgroundScreen(screenLower);
   const orgBgType = useOrgBackground ? (orgForBackground.background_type || 'solid') : null;
   const orgBgUrl = useOrgBackground ? orgForBackground.background_url : null;
+
+  /** Shell neutro FitEngine (triángulo / fotos de producto FitEngine) — sin marca Waitomo. */
+  const renderFitEngineShell = () => {
+    const feSrc = pickFitEngineShellBackgroundSource({
+      screenLower,
+      userId: user?.id,
+      orgId: orgForBackground?.id,
+    });
+    const bgProps = webImageBgProps(style, imageStyle, t.bg);
+    return (
+      <ImageBackground
+        source={feSrc}
+        style={bgProps.style}
+        imageStyle={bgProps.imageStyle}
+        resizeMode="cover"
+      >
+        <View style={overlayStyle} />
+        <View style={styles.contentChild}>{children}</View>
+      </ImageBackground>
+    );
+  };
 
   // Siempre antes de cualquier return: misma cantidad de hooks en todos los renders.
   const [randomIndex] = React.useState(() => {
@@ -375,6 +401,10 @@ export default function BackgroundWrapper({
         </ImageBackground>
       );
     }
+    // Fuera de la org Waitomo: nunca las fotos stock Waitomo (cueva, etc.) → shell neutro FitEngine.
+    if (!isWaitomoContext) {
+      return renderFitEngineShell();
+    }
     const source = TRABAJO_DIA_BACKGROUNDS[randomIndex];
     const bgProps = webImageBgProps(style, imageStyle);
 
@@ -393,6 +423,9 @@ export default function BackgroundWrapper({
 
   // SEGUNDO: pantalla específica con imagen propia (selector de planes)
   if (screenLower.includes('planselector')) {
+    if (!isWaitomoContext) {
+      return renderFitEngineShell();
+    }
     const bgProps = webImageBgProps(style, imageStyle);
     return (
       <ImageBackground
@@ -405,6 +438,12 @@ export default function BackgroundWrapper({
         <View style={styles.contentChild}>{children}</View>
       </ImageBackground>
     );
+  }
+
+  // Fuera de la org Waitomo (Config, Perfil, admin sin org, etc.): nunca la imagen de marca Waitomo
+  // (welcome glow / fotos de planes). Se mantiene el flujo Welcome/Login para no tocar branding de auth.
+  if (!isWaitomoContext && !isWelcome) {
+    return renderFitEngineShell();
   }
 
   // FINALMENTE: imagen por plan; si no hay plan o no hay imagen, fondo Welcome (flujo crear cuenta/pago/perfil)

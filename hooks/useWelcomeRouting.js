@@ -4,6 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { navigationRef, resetNavigationRoot } from '../navigationRef';
 import { getClientPostAuthRouteName } from '../utils/clientPostAuthRoute';
 import { resolveStaffDestination } from '../utils/authRoutingGuard';
+import {
+  isIncompleteTrialOwner,
+  readSignupIntent,
+  trialSignupStackRoute,
+} from '../utils/trialSignupRouting';
+import { TRIAL_SIGNUP_QUERY } from '../utils/webAppLinking';
 import { authTrace } from '../utils/authTrace';
 
 function resetStackTo(navigation, routes) {
@@ -54,11 +60,14 @@ export function useWelcomeRouting() {
       isPlatformAdmin: typeof isPlatformAdmin === 'function' && isPlatformAdmin(),
       hasStaffMembership,
       profileOrganizationId: profile?.organization_id,
+      signupIntent: readSignupIntent(session),
     });
     const params =
-      destination === 'ConfiguraTuEspacio' || destination === 'FitEngineSpaceIntro'
-        ? { email: session?.user?.email }
-        : undefined;
+      destination === 'TrialSignup'
+        ? { trial: TRIAL_SIGNUP_QUERY }
+        : destination === 'ConfiguraTuEspacio' || destination === 'FitEngineSpaceIntro'
+          ? { email: session?.user?.email }
+          : undefined;
     resetStackTo(navigation, [{ name: destination, params }]);
   }, [
     navigation,
@@ -223,6 +232,17 @@ export function useWelcomeRouting() {
         !hasStaffMembership &&
         (ownedOrganizations?.length || 0) === 0
       ) {
+        if (
+          isIncompleteTrialOwner({
+            signupIntent: readSignupIntent(session),
+            profileOrganizationId: profile?.organization_id,
+            ownedOrganizationsCount: ownedOrganizations?.length || 0,
+            hasStaffMembership,
+          })
+        ) {
+          resetStackTo(navigation, [trialSignupStackRoute()]);
+          return;
+        }
         resetStackTo(navigation, [
           { name: 'FitEngineSpaceIntro', params: { email: session?.user?.email } },
         ]);

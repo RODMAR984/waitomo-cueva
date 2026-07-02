@@ -1,6 +1,6 @@
 // Alta owner con prueba gratis 14 días — reemplaza RegistroOwner + ConfiguraTuEspacio para landing /signup?trial=14d
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,10 @@ import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpe
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { AuthDismissKeyboardOutside, authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
 import { isTrialSignupQuery, parseWebTrialSignupFromWindow, TRIAL_SIGNUP_QUERY } from '../../utils/webAppLinking';
+import {
+  isIncompleteTrialOwner,
+  readSignupIntent,
+} from '../../utils/trialSignupRouting';
 import { TRIAL_SIGNUP_COUNTRIES, localeDefaultsForCountry } from '../../utils/orgLocaleDefaults';
 import { completeOwnerTrialSignup } from '../../services/signup/ownerTrialSignup';
 import { sendAppWelcomeEmail } from '../../services/signup/appWelcomeEmail';
@@ -63,7 +67,7 @@ export default function OwnerTrialSignupScreen() {
   const insets = useSafeAreaInsets();
   const { t, isDark } = useThemeContext();
   const { t: tStr, locale, setLocale } = useLocale();
-  const { user, session, refreshProfile, refreshOrganization, logout } = useAuth() || {};
+  const { user, session, profile, hasStaffMembership, ownedOrganizations, initialProfileSyncDone, refreshProfile, refreshOrganization, logout } = useAuth() || {};
 
   const trialParam = resolveTrialParam(route.params?.trial);
   const trialOk = isTrialSignupQuery(trialParam);
@@ -89,6 +93,22 @@ export default function OwnerTrialSignupScreen() {
   const [logoLocalUri, setLogoLocalUri] = useState(null);
   const [pickingLogo, setPickingLogo] = useState(false);
   const [switchingAccount, setSwitchingAccount] = useState(false);
+  const trialResumeDoneRef = useRef(false);
+
+  const resetTrialGymDraft = useCallback(() => {
+    setOrgName('');
+    setCity('');
+    setCountry('AR');
+    setSizeRange('1-20');
+    setBusinessModel('gym_presential');
+    setAccentColor('#86C4C7');
+    setActivityType('');
+    setLogoLocalUri(null);
+    setPassword('');
+    setPassword2('');
+    setAwaitingEmailConfirm(false);
+    setLoading(false);
+  }, []);
 
   const sessionEmail = String(user?.email || session?.user?.email || '')
     .trim()
@@ -121,6 +141,49 @@ export default function OwnerTrialSignupScreen() {
       navigation.replace('WelcomeGlobal');
     }
   }, [route.params?.trial, navigation]);
+
+  /** Cuenta trial sin gym: retomar desde paso 2 con borrador de gym en cero. */
+  useEffect(() => {
+    if (!trialOk || !hasSession) return;
+    if (initialProfileSyncDone === false) return;
+    if (trialResumeDoneRef.current) return;
+
+    const orgId = profile?.organization_id && String(profile.organization_id).trim();
+    const ownedCount = Array.isArray(ownedOrganizations) ? ownedOrganizations.length : 0;
+    if (orgId || ownedCount > 0 || hasStaffMembership) {
+      trialResumeDoneRef.current = true;
+      navigation.reset({ index: 0, routes: [{ name: 'AdminLite' }] });
+      return;
+    }
+
+    const intent = readSignupIntent(session, user);
+    if (
+      !isIncompleteTrialOwner({
+        signupIntent: intent,
+        profileOrganizationId: profile?.organization_id,
+        ownedOrganizationsCount: ownedCount,
+        hasStaffMembership,
+      })
+    ) {
+      return;
+    }
+
+    trialResumeDoneRef.current = true;
+    resetTrialGymDraft();
+    setAcceptTerms(true);
+    setStep(2);
+  }, [
+    trialOk,
+    hasSession,
+    initialProfileSyncDone,
+    profile?.organization_id,
+    ownedOrganizations,
+    hasStaffMembership,
+    session,
+    user,
+    navigation,
+    resetTrialGymDraft,
+  ]);
 
   const welcomeLayoutStyles = useMemo(
     () => createWelcomeGlobalLayoutStyles(fitT, fe, insets.top, { isWide: false }),

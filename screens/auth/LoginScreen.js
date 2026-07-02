@@ -31,6 +31,8 @@ import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../t
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { supabase } from '../../supabaseClient';
 import { resolvePostAuthDestination } from '../../utils/authRoutingGuard';
+import { readSignupIntent } from '../../utils/trialSignupRouting';
+import { TRIAL_SIGNUP_QUERY } from '../../utils/webAppLinking';
 import { navigationRef, resetNavigationRoot } from '../../navigationRef';
 import { reportError, trackEvent } from '../../utils/observability';
 import NeoPanel from '../../components/NeoPanel';
@@ -314,13 +316,16 @@ export default function LoginScreen() {
         isPlatformAdmin: typeof isPlatformAdmin === 'function' && isPlatformAdmin(),
         hasStaffMembership: !!hasStaffMembership,
         ownedOrganizationsCount: ownedOrganizations?.length || 0,
+        signupIntent: readSignupIntent(session),
       });
       if (!destination) return;
 
       const params =
-        destination === 'ConfiguraTuEspacio' || destination === 'FitEngineSpaceIntro'
-          ? { email }
-          : undefined;
+        destination === 'TrialSignup'
+          ? { trial: TRIAL_SIGNUP_QUERY }
+          : destination === 'ConfiguraTuEspacio' || destination === 'FitEngineSpaceIntro'
+            ? { email }
+            : undefined;
 
       const state = { index: 0, routes: [{ name: destination, params }] };
       if (navigationRef.isReady() && resetNavigationRoot(state)) return;
@@ -343,6 +348,7 @@ export default function LoginScreen() {
       platformAdminActive,
       hasStaffMembership,
       ownedOrganizations?.length,
+      session,
     ],
   );
 

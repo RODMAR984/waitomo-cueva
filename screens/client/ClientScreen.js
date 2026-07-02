@@ -46,6 +46,11 @@ import { clearFreeClassGrant } from '../../utils/freeClassGrantStorage';
 import { FREE_CLASS_CANCEL_NOTICE_HOURS } from '../../utils/freeClassPolicy';
 import { cancelTrialClassGrantServer, resolveFreeClassGrant } from '../../services/booking/trialClassGrant';
 import { reportError, trackEvent } from '../../utils/observability';
+import {
+  isIncompleteTrialOwner,
+  readSignupIntent,
+  trialSignupStackRoute,
+} from '../../utils/trialSignupRouting';
 import NeoPanel from '../../components/NeoPanel';
 
 // ---------- helpers ----------
@@ -156,6 +161,7 @@ export default function ClientScreen() {
   const {
     profile,
     user,
+    session,
     logout,
     activePlanId,
     organization,
@@ -1267,8 +1273,16 @@ export default function ClientScreen() {
           !!(profile?.organization_id && String(profile.organization_id).trim());
         const staffNeedsConfigure =
           needsFitEngineSpaceSetup && !hasStaffOrgRoutingHint;
+        const incompleteTrial = isIncompleteTrialOwner({
+          signupIntent: readSignupIntent(session, user),
+          profileOrganizationId: profile?.organization_id,
+          ownedOrganizationsCount: ownedOrganizations?.length || 0,
+          hasStaffMembership,
+        });
         const staffRoute = staffNeedsConfigure
-          ? { name: 'FitEngineSpaceIntro', params: { email: user?.email } }
+          ? incompleteTrial
+            ? trialSignupStackRoute()
+            : { name: 'FitEngineSpaceIntro', params: { email: user?.email } }
           : { name: 'AdminLite' };
         if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [staffRoute] })) {
           return;
@@ -1285,8 +1299,16 @@ export default function ClientScreen() {
         (organizationsOwnedByUser?.length || 0) > 0 ||
         !!(profile?.organization_id && String(profile.organization_id).trim());
       const staffNeedsConfigure = needsFitEngineSpaceSetup && !hasStaffOrgRoutingHint;
+      const incompleteTrial = isIncompleteTrialOwner({
+        signupIntent: readSignupIntent(session, user),
+        profileOrganizationId: profile?.organization_id,
+        ownedOrganizationsCount: ownedOrganizations?.length || 0,
+        hasStaffMembership,
+      });
       const staffRoute = staffNeedsConfigure
-        ? { name: 'FitEngineSpaceIntro', params: { email: user?.email } }
+        ? incompleteTrial
+          ? trialSignupStackRoute()
+          : { name: 'FitEngineSpaceIntro', params: { email: user?.email } }
         : { name: 'AdminLite' };
       if (navigationRef.isReady() && resetNavigationRoot({ index: 0, routes: [staffRoute] })) {
         return;
@@ -1303,10 +1325,12 @@ export default function ClientScreen() {
     organizationsOwnedByUser,
     needsFitEngineSpaceSetup,
     profile?.role,
+    profile?.organization_id,
     navigation,
     hasStaffMembership,
     hasClientMembership,
     persistActiveAppMode,
+    session,
   ]);
 
   const resetToWelcome = () => {

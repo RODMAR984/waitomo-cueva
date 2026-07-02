@@ -1,5 +1,5 @@
 // Pantalla intermedia: antes de "Configura tu espacio" — dos caminos claros (FitEngine branding).
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,15 +12,42 @@ import { MOBILE_RADII, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpe
 import ScreenShell from '../../components/ScreenShell';
 import LogoCompleto from '../../components/LogoCompleto';
 import { authScrollKeyboardDismissMode } from '../../components/AuthWebFormShell';
+import {
+  isIncompleteTrialOwner,
+  readSignupIntent,
+  trialSignupStackRoute,
+} from '../../utils/trialSignupRouting';
 
 export default function FitEngineSpaceIntroScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { t } = useLocale();
-  const { session } = useAuth() || {};
+  const { session, profile, hasStaffMembership, ownedOrganizations, authNavigationReady } = useAuth() || {};
   const [busy, setBusy] = useState(false);
 
   const email = route?.params?.email || session?.user?.email || '';
+
+  useEffect(() => {
+    if (!session?.user?.id || !authNavigationReady) return;
+    if (
+      isIncompleteTrialOwner({
+        signupIntent: readSignupIntent(session),
+        profileOrganizationId: profile?.organization_id,
+        ownedOrganizationsCount: ownedOrganizations?.length || 0,
+        hasStaffMembership,
+      })
+    ) {
+      navigation.reset({ index: 0, routes: [trialSignupStackRoute()] });
+    }
+  }, [
+    session?.user?.id,
+    authNavigationReady,
+    profile?.organization_id,
+    ownedOrganizations,
+    hasStaffMembership,
+    navigation,
+    session,
+  ]);
 
   const goConfigure = useCallback(() => {
     navigation.replace('ConfiguraTuEspacio', {
@@ -30,6 +57,19 @@ export default function FitEngineSpaceIntroScreen() {
   }, [navigation, email, route?.params?.fullName]);
 
   const goLater = useCallback(async () => {
+    // Trial sin gym creado: "configurar más tarde" no puede terminar en AdminLite sin org.
+    // Se lo manda a completar el gym (el flujo de trial retoma en el paso del espacio).
+    if (
+      isIncompleteTrialOwner({
+        signupIntent: readSignupIntent(session),
+        profileOrganizationId: profile?.organization_id,
+        ownedOrganizationsCount: ownedOrganizations?.length || 0,
+        hasStaffMembership,
+      })
+    ) {
+      navigation.reset({ index: 0, routes: [trialSignupStackRoute()] });
+      return;
+    }
     setBusy(true);
     try {
       const prev = session?.user?.user_metadata || {};
@@ -45,7 +85,13 @@ export default function FitEngineSpaceIntroScreen() {
     } finally {
       setBusy(false);
     }
-  }, [navigation, session?.user?.user_metadata]);
+  }, [
+    navigation,
+    session,
+    profile?.organization_id,
+    ownedOrganizations,
+    hasStaffMembership,
+  ]);
 
   return (
     <ScreenShell

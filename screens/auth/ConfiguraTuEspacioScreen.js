@@ -25,6 +25,11 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { supabase } from '../../supabaseClient';
 import { getThemeTokens, hexToRgba } from '../../theme/colors';
 import { imageUriToArrayBuffer } from '../../utils/imageUriToArrayBuffer';
+import {
+  isIncompleteTrialOwner,
+  readSignupIntent,
+  trialSignupStackRoute,
+} from '../../utils/trialSignupRouting';
 import { WEB_CONTENT_MAX_WIDTH } from '../../theme/webSpec';
 import { MOBILE_RADII, MOBILE_SIZES, MOBILE_SPACING, MOBILE_TYPE } from '../../theme/mobileSpec';
 import ScreenShell from '../../components/ScreenShell';
@@ -100,6 +105,7 @@ export default function ConfiguraTuEspacioScreen() {
   const { t: tStr } = useLocale();
   const {
     user,
+    session,
     profile,
     role,
     needsFitEngineSpaceSetup,
@@ -112,6 +118,28 @@ export default function ConfiguraTuEspacioScreen() {
   } = useAuth() || {};
   /** Evita bucle reset ↔ remount si algo vuelve a apilar esta ruta. */
   const staffRedirectDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (!user?.id || !authNavigationReady) return;
+    if (
+      isIncompleteTrialOwner({
+        signupIntent: readSignupIntent(session, user),
+        profileOrganizationId: profile?.organization_id,
+        ownedOrganizationsCount: ownedOrganizations?.length || 0,
+        hasStaffMembership,
+      })
+    ) {
+      navigation.reset({ index: 0, routes: [trialSignupStackRoute()] });
+    }
+  }, [
+    user?.id,
+    session,
+    authNavigationReady,
+    profile?.organization_id,
+    ownedOrganizations,
+    hasStaffMembership,
+    navigation,
+  ]);
 
   useEffect(() => {
     if (!user?.id) {

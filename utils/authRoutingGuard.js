@@ -1,4 +1,5 @@
 import { getClientPostAuthRouteName } from './clientPostAuthRoute';
+import { isIncompleteTrialOwner } from './trialSignupRouting';
 
 const STAFF_ROLES = new Set(['coach', 'admin']);
 
@@ -16,11 +17,23 @@ export function resolveStaffDestination({
   hasStaffMembership = false,
   /** `profiles.organization_id` — vínculo a un centro aunque memberships/embeds aún no cargaron. */
   profileOrganizationId = null,
+  signupIntent = null,
 }) {
   const normalizedRole = normalizeRole(role);
   const orgIdHint = !!(profileOrganizationId && String(profileOrganizationId).trim());
   const hasStaffOrgHint =
     (ownedOrganizationsCount || 0) > 0 || hasStaffMembership || orgIdHint;
+
+  if (
+    isIncompleteTrialOwner({
+      signupIntent,
+      profileOrganizationId,
+      ownedOrganizationsCount,
+      hasStaffMembership,
+    })
+  ) {
+    return 'TrialSignup';
+  }
 
   // Plataforma: sin gym propio → hub. Si también sos dueño/staff de un centro (p. ej. Waitomo) → admin del gym.
   if (normalizedRole === 'superadmin' || isPlatformAdmin) {
@@ -55,12 +68,24 @@ export function resolvePostAuthDestination({
   isPlatformAdmin = false,
   hasStaffMembership = false,
   ownedOrganizationsCount = 0,
+  signupIntent = null,
 }) {
   const normalizedRole = normalizeRole(role || profile?.role);
   const hasProfile = !!profile;
   const orgIdHint = !!(profile?.organization_id && String(profile.organization_id).trim());
   const hasStaffOrgHint =
     (ownedOrganizationsCount || 0) > 0 || hasStaffMembership === true || orgIdHint;
+
+  if (
+    isIncompleteTrialOwner({
+      signupIntent,
+      profileOrganizationId: profile?.organization_id,
+      ownedOrganizationsCount,
+      hasStaffMembership,
+    })
+  ) {
+    return 'TrialSignup';
+  }
 
   // Plataforma: sin gym propio → hub. Dueño/admin de Waitomo u otro centro → AdminLite (plataforma desde menú).
   if (normalizedRole === 'superadmin' || isPlatformAdmin) {
