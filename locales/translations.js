@@ -422,7 +422,7 @@ export const translations = {
     admin_menu_marca_sub:
       'Logo, fondo, colores, invitaciones, formas de pago a socios y mensaje opcional en el selector de planes',
     gym_invite_hint_long:
-      '«Compartir mensaje» incluye el enlace https://fitengine.app/join?code=… (web y app instalada). «Copiar enlace» pega solo la URL.',
+      '«Compartir mensaje» incluye el enlace https://app.fitengine.app/join?code=… (web y app instalada). «Copiar enlace» pega solo la URL.',
     gym_invite_copy_code: 'Copiar solo el código',
     gym_invite_copy_link: 'Copiar enlace (HTTPS)',
     gym_invite_share: 'Compartir mensaje',
@@ -889,7 +889,7 @@ export const translations = {
     admin_retention_default_body: 'Te extrañamos en el gym. Reservá tu próxima clase desde la app.',
     staff_web_only_title: 'Panel staff solo en la web',
     staff_web_only_body:
-      'Para administrar tu gym usá FitEngine en el navegador (fitengine.app). En la app móvil nativa el panel staff no está disponible por seguridad y usabilidad.',
+      'Para administrar tu gym usá FitEngine en el navegador (app.fitengine.app). En la app móvil nativa el panel staff no está disponible por seguridad y usabilidad.',
     staff_web_only_cta: 'Volver',
     admin_commissions_title: 'Comisiones',
     admin_commissions_hint: 'Porcentaje en puntos base (100 = 1%). Ej. 1500 = 15%.',
@@ -2588,7 +2588,7 @@ export const translations = {
     admin_menu_marca_sub:
       'Logo, background, colors, invites, member payment methods, and optional welcome line on the plan picker',
     gym_invite_hint_long:
-      '“Share message” includes the https://fitengine.app/join?code=… link (web or installed app). “Copy link” copies the URL only.',
+      '“Share message” includes the https://app.fitengine.app/join?code=… link (web or installed app). “Copy link” copies the URL only.',
     gym_invite_copy_code: 'Copy code only',
     gym_invite_copy_link: 'Copy HTTPS link',
     gym_invite_share: 'Share message',
@@ -3056,7 +3056,7 @@ export const translations = {
     admin_retention_default_body: 'We miss you at the gym. Book your next class from the app.',
     staff_web_only_title: 'Staff panel is web-only',
     staff_web_only_body:
-      'To manage your gym, use FitEngine in the browser (fitengine.app). The native mobile app does not include the staff panel for security and usability.',
+      'To manage your gym, use FitEngine in the browser (app.fitengine.app). The native mobile app does not include the staff panel for security and usability.',
     staff_web_only_cta: 'Go back',
     admin_commissions_title: 'Commissions',
     admin_commissions_hint: 'Percentage in basis points (100 = 1%). e.g. 1500 = 15%.',

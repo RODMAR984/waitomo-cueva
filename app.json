@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.waitomofitengine.cueva",
       "associatedDomains": [
+        "applinks:app.fitengine.app",
         "applinks:fitengine.app",
         "applinks:www.fitengine.app"
       ]
@@ -33,6 +34,11 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
+            {
+              "scheme": "https",
+              "host": "app.fitengine.app",
+              "pathPrefix": "/join"
+            },
             {
               "scheme": "https",
               "host": "fitengine.app",
@@ -73,11 +79,11 @@
     ],
     "extra": {
       "waitomoOrganizationId": "",
-      "fitengineLinksBaseUrl": "https://fitengine.app",
+      "fitengineLinksBaseUrl": "https://app.fitengine.app",
       "fitengineWebAppUrl": "https://app.fitengine.app",
-      "fitengineMarketingSiteUrl": "https://waitomofitengine.com",
-      "fitenginePrivacyUrl": "https://waitomofitengine.com/privacidad",
-      "fitengineTermsUrl": "https://waitomofitengine.com/terminos",
+      "fitengineMarketingSiteUrl": "https://fitengine.app",
+      "fitenginePrivacyUrl": "https://fitengine.app/privacidad",
+      "fitengineTermsUrl": "https://fitengine.app/terminos",
       "fitengineSupportEmail": "soporte@fitengine.app",
       "fitengineSupportPhone": "+54 9 2268 635566",
       "fitengineIosAppStoreUrl": "",

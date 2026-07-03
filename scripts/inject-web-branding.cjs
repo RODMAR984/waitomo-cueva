@@ -89,6 +89,13 @@ const manifest = {
 
 fs.writeFileSync(path.join(dist, manifestName), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
+// App en app.fitengine.app: no indexar en buscadores (la landing vive en fitengine.app).
+fs.writeFileSync(
+  path.join(dist, 'robots.txt'),
+  'User-agent: *\nDisallow: /\n',
+  'utf8',
+);
+
 const pwaMeta = isPwa
   ? `
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -99,6 +106,7 @@ const pwaMeta = isPwa
 
 const injectBlock = `
     <!-- FitEngine web branding (scripts/inject-web-branding.cjs) -->
+    <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="${THEME_COLOR}" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#0b3d4a" media="(prefers-color-scheme: light)" />
     <link rel="manifest" href="/${manifestName}" />
@@ -140,7 +148,7 @@ if (wantsServiceWorker) {
 
 fs.writeFileSync(indexPath, html, 'utf8');
 
-// OAuth (Supabase): https://fitengine.app/auth/callback — debe existir en el deploy estático.
+// OAuth (Supabase): callback en el mismo origen que la app (app.fitengine.app/auth/callback).
 const oauthStub = path.join(root, 'deploy', 'legal-stub-public', 'auth-callback.html');
 const oauthOutDir = path.join(dist, 'auth', 'callback');
 if (fs.existsSync(oauthStub)) {

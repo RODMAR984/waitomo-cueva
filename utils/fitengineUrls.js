@@ -1,9 +1,9 @@
 /**
  * URLs canónicas FitEngine / Waitomo (fuente: app.json → expo.extra + overrides por env en CI).
  *
- * - linksBaseUrl: enlaces cortos e invitaciones (HTTPS público; canonical apex fitengine.app)
+ * - linksBaseUrl: enlaces de app (invitaciones, trial) en app.fitengine.app
  * - webAppUrl: app web en app.fitengine.app
- * - marketingSiteUrl: sitio informativo waitomofitengine.com
+ * - marketingSiteUrl: landing pública en fitengine.app
  */
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
@@ -30,13 +30,13 @@ export function getFitEngineUrls() {
   const marketing = pick(
     'fitengineMarketingSiteUrl',
     'EXPO_PUBLIC_FITENGINE_MARKETING_SITE_URL',
-    'https://waitomofitengine.com',
+    'https://fitengine.app',
   );
   return {
     linksBaseUrl: pick(
       'fitengineLinksBaseUrl',
       'EXPO_PUBLIC_FITENGINE_LINKS_BASE_URL',
-      'https://fitengine.app',
+      'https://app.fitengine.app',
     ),
     webAppUrl: pick('fitengineWebAppUrl', 'EXPO_PUBLIC_FITENGINE_WEB_APP_URL', 'https://app.fitengine.app'),
     marketingSiteUrl: marketing,

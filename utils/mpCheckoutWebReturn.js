@@ -128,5 +128,5 @@ export function getCheckoutBackUrlBase() {
     }
   }
   const { linksBaseUrl, webAppUrl } = getFitEngineUrls();
-  return linksBaseUrl || webAppUrl || 'https://fitengine.app';
+  return webAppUrl || linksBaseUrl || 'https://app.fitengine.app';
 }
