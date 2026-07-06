@@ -1,0 +1,109 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* FitEngine dark palette */
+  --background: oklch(0.16 0.012 220);          /* #050a0d-ish */
+  --foreground: oklch(0.97 0.005 220);          /* #f4f8f9 */
+  --card: oklch(0.20 0.012 220);
+  --card-foreground: oklch(0.97 0.005 220);
+  --popover: oklch(0.18 0.012 220);
+  --popover-foreground: oklch(0.97 0.005 220);
+  --primary: oklch(0.80 0.055 195);             /* teal #86C4C7 */
+  --primary-foreground: oklch(0.16 0.012 220);
+  --secondary: oklch(0.25 0.010 220);
+  --secondary-foreground: oklch(0.97 0.005 220);
+  --muted: oklch(0.22 0.010 220);
+  --muted-foreground: oklch(0.68 0.005 220);    /* #9A9D9F */
+  --accent: oklch(0.80 0.055 195);
+  --accent-foreground: oklch(0.16 0.012 220);
+  --destructive: oklch(0.65 0.18 25);
+  --destructive-foreground: oklch(0.97 0.005 220);
+  --border: oklch(0.30 0.010 220 / 0.6);
+  --input: oklch(0.30 0.010 220);
+  --ring: oklch(0.80 0.055 195);
+}
+
+@theme inline {
+  --color-fe-bg: #050a0d;
+  --color-fe-surface: rgba(134, 196, 199, 0.08);
+  --color-fe-surface-strong: rgba(134, 196, 199, 0.12);
+  --color-fe-border: rgba(134, 196, 199, 0.18);
+  --color-fe-teal: #86C4C7;
+  --color-fe-text: #f4f8f9;
+  --color-fe-muted: #9A9D9F;
+}
+
+@keyframes fe-fade-up {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@utility fe-reveal {
+  opacity: 0;
+  animation: fe-fade-up 0.7s ease-out forwards;
+}
+
+@utility fe-card {
+  background: rgba(134, 196, 199, 0.06);
+  border: 1px solid rgba(134, 196, 199, 0.14);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    background-color: #050a0d;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #050a0d;
+    color: var(--color-fe-text);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}

@@ -2,6 +2,9 @@
 
 # dependencies
 node_modules/
+landing/.vercel/
+landing/.output/
+landing/.nitro/
 
 # Expo
 .expo/
