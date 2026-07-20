@@ -1,0 +1,11 @@
+ACA ESTAN LOS 2 ARCHIVOS DEL BOT
+
+1) bot_rsi.py          <- el bot (este se ejecuta)
+2) auditor_bot_rsi.py  <- el auditor (tiene que estar junto al bot)
+
+Como correr:
+  cd BOTS
+  pip install requests numpy pandas
+  python3 bot_rsi.py
+
+Los dos archivos deben quedar en LA MISMA carpeta.
