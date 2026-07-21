@@ -36,6 +36,10 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# Python
+__pycache__/
+*.pyc
+
 # local env files (nunca subir claves Supabase)
 .env
 .env*.local
