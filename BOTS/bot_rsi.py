@@ -1,10 +1,39 @@
 #!/usr/bin/env python3
 # ==========================================================
-#  bot_rsi.py — SNIPER RSI v2 (edicion infraestructura)
+#  bot_rsi.py — SNIPER RSI v3 (config del auditor v4, lados independientes)
 #
-#  Misma estrategia validada (niveles, TP, SL, grid, capital).
-#  Cambios: operabilidad, RSI Wilder unificado, leverage seguro,
-#  multi-escalon coherente, API/DB mas solidas. Sin spam de ordenes.
+#  Cambios v3 (acordados con Ro):
+#   - Config POR LADO desde el auditor v4: base RSI long y short
+#     INDEPENDIENTES (no espejo), TP, SL (colchon optimo), apalancamiento
+#     optimo por lado, y lados deshabilitados (None) si no dieron numeros.
+#   - 29 activos aprobados por el auditor (12 dos lados, 2 solo long,
+#     15 solo short).
+#   - Cupo ESTRICTO de 5 senales (1 moneda con posicion = 1 senal);
+#     con cola, prioridad por winrate del activo.
+#   - Tras TP parcial 70%: el SL del exchange se CANCELA y se repone
+#     con la qty del 30% restante. Si el resto quedaria bajo el
+#     minQty/minNotional, cierra el 100% en el TP (sin dust).
+#   - Bug fix: cierres SL/trailing ya NO borran el trade si la qty no se
+#     puede mandar (dust) -> reintenta con todo lo disponible y avisa.
+#   - Bug fix: limites canceladas con fill PARCIAL (executedQty>0) se
+#     registran como trade con TP/SL (antes quedaban invisibles).
+#   - Hedge mode: intenta pasar la cuenta a ONE-WAY; si no puede, PAUSA.
+#   - Auditoria automatica cada ~3 meses (dia random), solo con cuenta
+#     plana: pausa -> auditor v4 -> aplica lista -> avisa -> reanuda.
+#
+#  Cambios v3.1 (revision post-auditoria):
+#   - Bug fix #6: el cupo ESTRICTO de 5 senales se chequeaba solo al
+#     refrescar el grid (~30s), no al momento del fill real (~5s por el
+#     otro hilo). Si varios activos correlacionados llenaban casi al
+#     mismo tiempo, se podia superar el cupo antes de que el proximo
+#     refresh lo notara. Ahora se chequea en _registrar_fill, el unico
+#     lugar donde una senal nueva realmente nace: si el cupo ya esta
+#     lleno en ese instante, cierra la posicion de inmediato en vez de
+#     gestionarla (si el cierre de emergencia falla, cae al flujo normal
+#     -mejor vigilado que huerfano-).
+#   - RVNUSDT ajustado a pedido: long x40->x30 (SL 2.12%->2.83%, mismo
+#     colchon 0.85 recalculado a la nueva distancia de liquidacion),
+#     short x35->x40 (SL 2.51%->2.2%, mismo colchon 0.88 recalculado).
 #
 #  NO tocado a pedido: keys en codigo, filtro Telegram chat_id.
 # ==========================================================
@@ -38,39 +67,155 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_BASE_DIR, "sniper_rsi_v2.db")
 LOG_PATH = os.path.join(_BASE_DIR, "sniper_rsi_v2.log")
 
-# ========= ESTRATEGIA (validada - NO modificar) =========
+# ========= ESTRATEGIA (del AUDITOR v4 - long/short independientes) =========
 TIMEFRAME = "5m"
 RSI_LEN   = 14
 
-CONFIG = {
-    "XMRUSDT":  {"base": 18, "apal": 25},
-    "AVAXUSDT": {"base": 20, "apal": 25},
-    "ETCUSDT":  {"base": 18, "apal": 25},
-    "ATOMUSDT": {"base": 18, "apal": 25},
-    "LTCUSDT":  {"base": 18, "apal": 25},
-    "NEOUSDT":  {"base": 25, "apal": 25},
-    "DOTUSDT":  {"base": 25, "apal": 25},
-    "LINKUSDT": {"base": 18, "apal": 25},
-    "ICXUSDT":  {"base": 18, "apal": 25},
-    "QTUMUSDT": {"base": 20, "apal": 25},
-    "ZILUSDT":  {"base": 20, "apal": 25},
-    "VETUSDT":  {"base": 20, "apal": 25},
-    "RVNUSDT":  {"base": 20, "apal": 25},
-    "BABAUSDT": {"base": 20, "apal": 25},
-    "ENSUSDT":  {"base": 25, "apal": 25},
-    "XVSUSDT":  {"base": 18, "apal": 25},
-    "APTUSDT":  {"base": 25, "apal": 25},
+# Config POR LADO salida del auditor v4 (180 dias, winrate de senal completa):
+#   base   = nivel RSI de entrada de ESE lado (no espejo)
+#   apal   = apalancamiento optimo probado (25..50)
+#   tp_pct = TP en % de precio (70% del MFE medio del lado)
+#   sl_pct = SL en % de precio (colchon optimo sobre distancia a liq de ese apal)
+#   None   = lado deshabilitado (no dio estadistica confiable)
+CONFIG_SEED = {
+    "XMRUSDT": {
+        "long":  {"base": 28, "apal": 25, "tp_pct": 2.38, "sl_pct": 3.52, "winrate": 70.3, "grupo": "ampliacion"},
+        "short": {"base": 75, "apal": 25, "tp_pct": 1.82, "sl_pct": 3.4, "winrate": 66.9, "grupo": "ampliacion"},
+    },
+    "LTCUSDT": {
+        "long":  {"base": 10, "apal": 30, "tp_pct": 1.66, "sl_pct": 2.83, "winrate": 75, "grupo": "ampliacion"},
+        "short": {"base": 82, "apal": 25, "tp_pct": 1.82, "sl_pct": 3.52, "winrate": 78.3, "grupo": "ampliacion"},
+    },
+    "ICXUSDT": {
+        "long":  {"base": 15, "apal": 25, "tp_pct": 2.83, "sl_pct": 3.4, "winrate": 66.7, "grupo": "ampliacion"},
+        "short": {"base": 80, "apal": 30, "tp_pct": 2.62, "sl_pct": 2.83, "winrate": 66.7, "grupo": "ampliacion"},
+    },
+    "RVNUSDT": {
+        # ajustado a pedido: long x40->x30 (SL 2.12->2.83, colchon 0.85 igual),
+        # short x35->x40 (SL 2.51->2.2, colchon 0.88 igual)
+        "long":  {"base": 12, "apal": 30, "tp_pct": 2.14, "sl_pct": 2.83, "winrate": 91.7, "grupo": "nucleo"},
+        "short": {"base": 85, "apal": 40, "tp_pct": 3.38, "sl_pct": 2.2, "winrate": 79.2, "grupo": "ampliacion"},
+    },
+    "APTUSDT": {
+        "long":  None,
+        "short": {"base": 85, "apal": 25, "tp_pct": 2.21, "sl_pct": 3.52, "winrate": 70.8, "grupo": "ampliacion"},
+    },
+    "SOLUSDT": {
+        "long":  None,
+        "short": {"base": 80, "apal": 25, "tp_pct": 2.04, "sl_pct": 3.4, "winrate": 67.1, "grupo": "ampliacion"},
+    },
+    "OPUSDT": {
+        "long":  None,
+        "short": {"base": 82, "apal": 25, "tp_pct": 2.63, "sl_pct": 3.4, "winrate": 76.9, "grupo": "ampliacion"},
+    },
+    "AVAXUSDT": {
+        "long":  {"base": 10, "apal": 25, "tp_pct": 2.59, "sl_pct": 3.68, "winrate": 66.7, "grupo": "ampliacion"},
+        "short": {"base": 88, "apal": 25, "tp_pct": 2.76, "sl_pct": 3.4, "winrate": 73.3, "grupo": "ampliacion"},
+    },
+    "NEOUSDT": {
+        "long":  {"base": 15, "apal": 25, "tp_pct": 1.84, "sl_pct": 3.4, "winrate": 70, "grupo": "ampliacion"},
+        "short": {"base": 72, "apal": 25, "tp_pct": 2.02, "sl_pct": 3.4, "winrate": 76.1, "grupo": "ampliacion"},
+    },
+    "QTUMUSDT": {
+        "long":  None,
+        "short": {"base": 82, "apal": 25, "tp_pct": 1.8, "sl_pct": 3.4, "winrate": 69.6, "grupo": "ampliacion"},
+    },
+    "BABAUSDT": {
+        "long":  {"base": 18, "apal": 25, "tp_pct": 1.64, "sl_pct": 3.4, "winrate": 76.2, "grupo": "ampliacion"},
+        "short": {"base": 85, "apal": 25, "tp_pct": 1.53, "sl_pct": 3.4, "winrate": 81.5, "grupo": "nucleo"},
+    },
+    "SUIUSDT": {
+        "long":  None,
+        "short": {"base": 82, "apal": 25, "tp_pct": 2.32, "sl_pct": 3.4, "winrate": 72.5, "grupo": "ampliacion"},
+    },
+    "BCHUSDT": {
+        "long":  None,
+        "short": {"base": 78, "apal": 25, "tp_pct": 1.89, "sl_pct": 3.4, "winrate": 73.6, "grupo": "ampliacion"},
+    },
+    "ETCUSDT": {
+        "long":  None,
+        "short": {"base": 78, "apal": 30, "tp_pct": 1.87, "sl_pct": 2.83, "winrate": 75, "grupo": "ampliacion"},
+    },
+    "DOTUSDT": {
+        "long":  None,
+        "short": {"base": 70, "apal": 25, "tp_pct": 2.2, "sl_pct": 3.4, "winrate": 74.7, "grupo": "ampliacion"},
+    },
+    "ZILUSDT": {
+        "long":  {"base": 12, "apal": 40, "tp_pct": 2.09, "sl_pct": 2.12, "winrate": 69.2, "grupo": "ampliacion"},
+        "short": None,
+    },
+    "ENSUSDT": {
+        "long":  {"base": 10, "apal": 25, "tp_pct": 1.56, "sl_pct": 3.4, "winrate": 76.9, "grupo": "ampliacion"},
+        "short": {"base": 85, "apal": 25, "tp_pct": 2.44, "sl_pct": 3.4, "winrate": 75.8, "grupo": "ampliacion"},
+    },
+    "ETHUSDT": {
+        "long":  None,
+        "short": {"base": 85, "apal": 25, "tp_pct": 1.68, "sl_pct": 3.4, "winrate": 73.3, "grupo": "ampliacion"},
+    },
+    "ADAUSDT": {
+        "long":  None,
+        "short": {"base": 78, "apal": 25, "tp_pct": 1.89, "sl_pct": 3.4, "winrate": 78.8, "grupo": "ampliacion"},
+    },
+    "FILUSDT": {
+        "long":  None,
+        "short": {"base": 85, "apal": 25, "tp_pct": 2.49, "sl_pct": 3.4, "winrate": 70.4, "grupo": "ampliacion"},
+    },
+    "ATOMUSDT": {
+        "long":  {"base": 18, "apal": 25, "tp_pct": 2.12, "sl_pct": 3.4, "winrate": 65.1, "grupo": "ampliacion"},
+        "short": {"base": 85, "apal": 30, "tp_pct": 2.46, "sl_pct": 3.07, "winrate": 88.9, "grupo": "nucleo"},
+    },
+    "LINKUSDT": {
+        "long":  {"base": 10, "apal": 25, "tp_pct": 1.96, "sl_pct": 3.4, "winrate": 83.3, "grupo": "nucleo"},
+        "short": {"base": 70, "apal": 25, "tp_pct": 1.79, "sl_pct": 3.4, "winrate": 73.4, "grupo": "ampliacion"},
+    },
+    "VETUSDT": {
+        "long":  None,
+        "short": {"base": 80, "apal": 25, "tp_pct": 2.01, "sl_pct": 3.4, "winrate": 75.9, "grupo": "ampliacion"},
+    },
+    "XVSUSDT": {
+        "long":  {"base": 12, "apal": 25, "tp_pct": 4.45, "sl_pct": 3.4, "winrate": 78.6, "grupo": "ampliacion"},
+        "short": {"base": 85, "apal": 25, "tp_pct": 1.97, "sl_pct": 3.4, "winrate": 90, "grupo": "nucleo"},
+    },
+    "BNBUSDT": {
+        "long":  None,
+        "short": {"base": 88, "apal": 40, "tp_pct": 1.7, "sl_pct": 2.12, "winrate": 75, "grupo": "ampliacion"},
+    },
+    "DOGEUSDT": {
+        "long":  {"base": 12, "apal": 30, "tp_pct": 1.63, "sl_pct": 2.83, "winrate": 78.9, "grupo": "ampliacion"},
+        "short": None,
+    },
+    "ARBUSDT": {
+        "long":  None,
+        "short": {"base": 78, "apal": 25, "tp_pct": 2.48, "sl_pct": 3.4, "winrate": 71.3, "grupo": "ampliacion"},
+    },
+    "AAVEUSDT": {
+        "long":  {"base": 12, "apal": 30, "tp_pct": 2.82, "sl_pct": 2.83, "winrate": 66.7, "grupo": "ampliacion"},
+        "short": {"base": 78, "apal": 25, "tp_pct": 2.45, "sl_pct": 3.52, "winrate": 71.5, "grupo": "ampliacion"},
+    },
+    "LDOUSDT": {
+        "long":  None,
+        "short": {"base": 88, "apal": 30, "tp_pct": 2.39, "sl_pct": 2.83, "winrate": 80, "grupo": "nucleo"},
+    },
 }
-ACTIVOS = list(CONFIG.keys())
 
-TP_PCT = {
-    "XMRUSDT": 1.37, "AVAXUSDT": 2.56, "ETCUSDT": 1.53, "ATOMUSDT": 2.66,
-    "LTCUSDT": 1.83, "NEOUSDT": 2.12, "DOTUSDT": 2.37, "LINKUSDT": 1.96,
-    "ICXUSDT": 2.59, "QTUMUSDT": 2.69, "ZILUSDT": 2.05, "VETUSDT": 2.56,
-    "RVNUSDT": 2.56, "BABAUSDT": 1.82,
-    "ENSUSDT": 2.58, "XVSUSDT": 2.31, "APTUSDT": 2.87,
-}
-SL_PCT = 3.7
+def lados_habilitados(symbol):
+    cfg = CONFIG.get(symbol) or {}
+    return [l for l in ("long", "short") if cfg.get(l)]
+
+
+def cfg_lado(symbol, side):
+    """side BUY/SELL -> config del lado, o None si esta deshabilitado."""
+    cfg = CONFIG.get(symbol) or {}
+    return cfg.get("long" if side == "BUY" else "short")
+
+
+def winrate_max(symbol):
+    cfg = CONFIG.get(symbol) or {}
+    return max((v["winrate"] for v in cfg.values() if v), default=0.0)
+
+
+CONFIG = {s: dict(v) for s, v in CONFIG_SEED.items()}
+ACTIVOS = list(CONFIG.keys())
 
 GRID_ESCALONES = 4
 GRID_PASO      = 3
@@ -79,7 +224,8 @@ TP_PARCIAL_PCT = 0.70
 TRAILING_DIST  = 0.005
 
 PCT_CAPITAL_USABLE = 0.70
-SENALES_DISENO     = 5
+SENALES_MAX        = 5      # cupo ESTRICTO: 1 moneda con posicion = 1 senal
+SENALES_DISENO     = 5      # reparto de capital (A+C: tamano fijo por cupo)
 MAX_POSIC_TOTALES  = 40
 MIN_NOTIONAL_FALLBACK = 5.0
 
@@ -138,35 +284,53 @@ def _conn():
     return c
 
 
+def _fila_a_lado(f):
+    return {
+        "base": float(f["base"]), "apal": int(f["apal"]),
+        "tp_pct": float(f["tp_pct"]), "sl_pct": float(f["sl_pct"]),
+        "winrate": float(f["winrate"]), "grupo": f["grupo"],
+    }
+
+
 def _cargar_config_desde_db():
-    global CONFIG, TP_PCT, ACTIVOS
+    global CONFIG, ACTIVOS
     with db_lock:
         conn = _conn()
         conn.row_factory = sqlite3.Row
-        filas = conn.execute("SELECT * FROM config_activos").fetchall()
+        filas = conn.execute("SELECT * FROM config_lados").fetchall()
         if not filas:
-            for s, cfg in CONFIG.items():
-                grupo = "nucleo" if s not in ("DOTUSDT", "LINKUSDT", "ENSUSDT", "APTUSDT") else "ampliacion"
-                conn.execute(
-                    "INSERT OR REPLACE INTO config_activos VALUES (?,?,?,?,?)",
-                    (s, cfg["base"], cfg["apal"], TP_PCT.get(s, 2.0), grupo))
+            # sembrar desde CONFIG_SEED (salida del auditor v4)
+            for s, cfg in CONFIG_SEED.items():
+                for lado in ("long", "short"):
+                    v = cfg.get(lado)
+                    if not v:
+                        continue
+                    conn.execute(
+                        "INSERT OR REPLACE INTO config_lados VALUES (?,?,?,?,?,?,?,?)",
+                        (s, lado, v["base"], v["apal"], v["tp_pct"],
+                         v["sl_pct"], v["winrate"], v["grupo"]))
             conn.commit()
-            filas = conn.execute("SELECT * FROM config_activos").fetchall()
+            filas = conn.execute("SELECT * FROM config_lados").fetchall()
         conn.close()
-    CONFIG = {f["symbol"]: {"base": f["base"], "apal": int(f["apal"])} for f in filas}
-    TP_PCT = {f["symbol"]: f["tp_pct"] for f in filas}
+    nuevo = {}
+    for f in filas:
+        nuevo.setdefault(f["symbol"], {"long": None, "short": None})
+        nuevo[f["symbol"]][f["lado"]] = _fila_a_lado(f)
+    CONFIG = nuevo
     ACTIVOS = list(CONFIG.keys())
     log.info(f" Config cargada: {len(ACTIVOS)} activos ({', '.join(a.replace('USDT','') for a in ACTIVOS)})")
 
 
 def db_guardar_propuesta(propuesta):
+    """propuesta = lista de dicts {symbol, lado, base, apal, tp_pct, sl_pct, winrate, grupo}."""
     with db_lock:
         conn = _conn()
-        conn.execute("DELETE FROM propuesta")
+        conn.execute("DELETE FROM propuesta_lados")
         for p in propuesta:
             conn.execute(
-                "INSERT OR REPLACE INTO propuesta VALUES (?,?,?,?,?)",
-                (p["symbol"], p["base"], p["apal"], p["tp_pct"], p["grupo"]))
+                "INSERT OR REPLACE INTO propuesta_lados VALUES (?,?,?,?,?,?,?,?)",
+                (p["symbol"], p["lado"], p["base"], p["apal"], p["tp_pct"],
+                 p["sl_pct"], p["winrate"], p["grupo"]))
         conn.commit()
         conn.close()
 
@@ -175,7 +339,7 @@ def db_leer_propuesta():
     with db_lock:
         conn = _conn()
         conn.row_factory = sqlite3.Row
-        filas = conn.execute("SELECT * FROM propuesta").fetchall()
+        filas = conn.execute("SELECT * FROM propuesta_lados").fetchall()
         conn.close()
     return filas
 
@@ -186,15 +350,16 @@ def aplicar_propuesta():
         return 0
     with db_lock:
         conn = _conn()
-        conn.execute("DELETE FROM config_activos")
+        conn.execute("DELETE FROM config_lados")
         for f in filas:
             conn.execute(
-                "INSERT OR REPLACE INTO config_activos VALUES (?,?,?,?,?)",
-                (f["symbol"], f["base"], f["apal"], f["tp_pct"], f["grupo"]))
+                "INSERT OR REPLACE INTO config_lados VALUES (?,?,?,?,?,?,?,?)",
+                (f["symbol"], f["lado"], f["base"], f["apal"], f["tp_pct"],
+                 f["sl_pct"], f["winrate"], f["grupo"]))
         conn.commit()
         conn.close()
     _cargar_config_desde_db()
-    return len(filas)
+    return len({f["symbol"] for f in filas})
 
 
 def init_db():
@@ -211,10 +376,15 @@ def init_db():
             PRIMARY KEY (symbol, side, escalon))""")
         c.execute("""CREATE TABLE IF NOT EXISTS cierres (
             symbol TEXT, side TEXT, motivo TEXT, pnl REAL, timestamp REAL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS config_activos (
-            symbol TEXT PRIMARY KEY, base REAL, apal INTEGER, tp_pct REAL, grupo TEXT)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS propuesta (
-            symbol TEXT PRIMARY KEY, base REAL, apal INTEGER, tp_pct REAL, grupo TEXT)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS config_lados (
+            symbol TEXT, lado TEXT, base REAL, apal INTEGER, tp_pct REAL,
+            sl_pct REAL, winrate REAL, grupo TEXT, PRIMARY KEY (symbol, lado))""")
+        c.execute("""CREATE TABLE IF NOT EXISTS propuesta_lados (
+            symbol TEXT, lado TEXT, base REAL, apal INTEGER, tp_pct REAL,
+            sl_pct REAL, winrate REAL, grupo TEXT, PRIMARY KEY (symbol, lado))""")
+        # estado del planificador de auditoria (proxima fecha programada)
+        c.execute("""CREATE TABLE IF NOT EXISTS auditoria_estado (
+            k TEXT PRIMARY KEY, v REAL)""")
         # migracion suave: columna fill_order_id si falta
         cols = [r[1] for r in c.execute("PRAGMA table_info(trades)").fetchall()]
         if "fill_order_id" not in cols:
@@ -516,15 +686,32 @@ def posiciones_abiertas():
 
 
 def verificar_one_way():
-    """Al arranque: avisa si la cuenta esta en hedge (no aborta el bot)."""
+    """
+    Bug fix #5: el bot asume ONE-WAY y en hedge TODAS las ordenes fallarian
+    con -4061. Ahora: si detecta hedge, INTENTA cambiar la cuenta a one-way
+    (solo funciona sin posiciones abiertas). Si no puede, PAUSA el bot y
+    avisa: no opera hasta que lo arregles.
+    """
     code, body = _signed_request("GET", "/fapi/v1/positionSide/dual")
     if code == 200 and isinstance(body, dict):
         dual = body.get("dualSidePosition")
         if dual is True or str(dual).lower() == "true":
-            msg = ("Cuenta en HEDGE MODE. Este bot asume ONE-WAY. "
-                   "Cambiala a One-way en Binance Futures para evitar fallos.")
-            log.warning(msg)
-            tg(f"<b>HEDGE MODE detectado</b>\n{msg}")
+            log.warning("Cuenta en HEDGE MODE: intento pasar a one-way...")
+            code2, body2 = _signed_request(
+                "POST", "/fapi/v1/positionSide/dual",
+                {"dualSidePosition": "false"})
+            # -4059 = ya estaba en el modo pedido
+            if code2 == 200 or (isinstance(body2, dict) and body2.get("code") == -4059):
+                log.info("? Cuenta cambiada a ONE-WAY automaticamente")
+                tg("<b>Cuenta estaba en HEDGE</b>: la pase a ONE-WAY automaticamente.")
+                return True
+            msg = ("Cuenta en HEDGE MODE y NO pude cambiarla a one-way "
+                   f"(quiza hay posiciones abiertas): {body2}\n"
+                   "El bot queda EN PAUSA. Cambia el modo a One-way en "
+                   "Binance Futures y manda /seguir.")
+            log.error(msg)
+            tg(f"<b>HEDGE MODE - BOT PAUSADO</b>\n{msg}")
+            modo_pausa.set()
             return False
         log.info("? Position mode: ONE-WAY")
         return True
@@ -652,11 +839,14 @@ def precio_para_rsi(closes, rsi_objetivo, side, n=RSI_LEN):
 
 
 def niveles_grid_rsi(symbol, side):
-    base = CONFIG[symbol]["base"]
+    """Grid desde la base HALLADA de ese lado (auditor v4, sin espejo 100-x)."""
+    cfg = cfg_lado(symbol, side)
+    if not cfg:
+        return []
+    base = cfg["base"]
     if side == "BUY":
         return [base - i * GRID_PASO for i in range(GRID_ESCALONES)]
-    short = 100 - base
-    return [short + i * GRID_PASO for i in range(GRID_ESCALONES)]
+    return [base + i * GRID_PASO for i in range(GRID_ESCALONES)]
 
 
 def calcular_rsi_actual(df):
@@ -705,9 +895,15 @@ def max_leverage_permitido(symbol):
     return mx
 
 
-def apal_efectivo(symbol, apal_deseado=None):
-    deseado = apal_deseado if apal_deseado is not None else CONFIG[symbol]["apal"]
-    return max(1, min(int(deseado), int(max_leverage_permitido(symbol))))
+def apal_efectivo(symbol, apal_deseado=None, side=None):
+    if apal_deseado is None:
+        cfg = cfg_lado(symbol, side) if side else None
+        if cfg:
+            apal_deseado = cfg["apal"]
+        else:
+            lados = [v["apal"] for v in (CONFIG.get(symbol) or {}).values() if v]
+            apal_deseado = min(lados) if lados else 25
+    return max(1, min(int(apal_deseado), int(max_leverage_permitido(symbol))))
 
 
 def set_isolated(symbol):
@@ -891,8 +1087,42 @@ def calcular_qty_escalon(symbol, precio_entrada, apal):
 # ==========================================================
 #  GRID
 # ==========================================================
+def senales_abiertas():
+    """Simbolos DISTINTOS con posicion abierta (1 moneda = 1 senal)."""
+    return {t["symbol"] for t in db_trades_all()}
+
+
+def cancelar_limite_seguro(symbol, lim):
+    """
+    Cancela una limite y REVISA si tenia fill parcial (executedQty > 0).
+    Si lo tenia, registra ese pedazo como trade con TP/SL (bug fix #4:
+    antes esa qty quedaba como posicion invisible sin SL ni TP).
+    """
+    oid = str(lim["order_id"])
+    cancelar_orden(symbol, oid)
+    status, avg_price, exec_qty = estado_orden(symbol, oid)
+    if exec_qty and exec_qty > 0 and not db_trade_por_fill(oid):
+        _registrar_fill(symbol, lim["side"], lim["escalon"], oid,
+                        avg_price if avg_price > 0 else float(lim["precio"]),
+                        exec_qty, parcial=True)
+
+
 def refrescar_grid(symbol):
     if modo_pausa.is_set():
+        return
+
+    trades_abiertos = db_trades_symbol(symbol)
+    abiertos = len(trades_abiertos)
+    if abiertos >= GRID_ESCALONES:
+        return
+
+    # ---- CUPO ESTRICTO: 1 moneda = 1 senal, maximo SENALES_MAX ----
+    # si este simbolo NO tiene posicion y el cupo esta lleno, no deja
+    # limites de entrada puestas (las cancela si las habia)
+    if abiertos == 0 and len(senales_abiertas()) >= SENALES_MAX:
+        for lim in db_limites_symbol(symbol):
+            cancelar_limite_seguro(symbol, lim)
+        db_borrar_limites(symbol)
         return
 
     df = get_klines(symbol, 100)
@@ -900,11 +1130,6 @@ def refrescar_grid(symbol):
         return
     # velas cerradas para precio objetivo (Wilder)
     closes = df["close"].iloc[:-1].tolist()
-
-    trades_abiertos = db_trades_symbol(symbol)
-    abiertos = len(trades_abiertos)
-    if abiertos >= GRID_ESCALONES:
-        return
 
     if abiertos > 0:
         side = trades_abiertos[0]["side"]
@@ -914,13 +1139,27 @@ def refrescar_grid(symbol):
             return
         side = "BUY" if rsi_actual <= 50 else "SELL"
 
-    # cancelar limites del lado opuesto (sin mezclar long/short)
-    oids_opp = db_borrar_limites_lado(symbol, side)
-    for oid in oids_opp:
-        cancelar_orden(symbol, oid)
+    # lado deshabilitado por el auditor -> no arma grid de ese lado
+    cfg = cfg_lado(symbol, side)
+    if not cfg:
+        # limpia limites que hubieran quedado de ese lado
+        for lim in db_limites_symbol(symbol):
+            if lim["side"] == side:
+                cancelar_limite_seguro(symbol, lim)
+                db_borrar_limite(symbol, lim["escalon"], lim["side"])
+        return
 
-    apal = apal_efectivo(symbol)
+    # cancelar limites del lado opuesto (sin mezclar long/short)
+    # revisando fill parcial antes de descartarlas (bug fix #4)
+    for lim in db_limites_symbol(symbol):
+        if lim["side"] != side:
+            cancelar_limite_seguro(symbol, lim)
+    db_borrar_limites_lado(symbol, side)
+
+    apal = apal_efectivo(symbol, side=side)
     niveles = niveles_grid_rsi(symbol, side)
+    if not niveles:
+        return
 
     mtot = margen_usado_total()
     mmax = margen_max_actual()
@@ -951,7 +1190,9 @@ def refrescar_grid(symbol):
             continue
 
         if lim_vieja:
-            cancelar_orden(symbol, lim_vieja["order_id"])
+            # bug fix #4: cancelar revisando fill parcial
+            cancelar_limite_seguro(symbol, lim_vieja)
+            db_borrar_limite(symbol, esc, side)
         qty = calcular_qty_escalon(symbol, precio_obj, apal)
         if not qty:
             continue
@@ -963,6 +1204,82 @@ def refrescar_grid(symbol):
 # ==========================================================
 #  LLENADOS (idempotente por fill_order_id)
 # ==========================================================
+def _registrar_fill(symbol, side, escalon, oid, precio_exec, exec_qty, parcial=False):
+    """Registra un llenado (total o PARCIAL) como trade con TP y SL del lado.
+
+    Bug fix #6 (cupo ESTRICTO real): refrescar_grid chequea el cupo de
+    SENALES_MAX antes de poner limites nuevas, pero eso corre cada ~30s
+    mientras que los fills llegan por otro hilo cada ~5s. Si varios
+    activos correlacionados llenan casi al mismo tiempo, se puede superar
+    el cupo antes de que el proximo refresh lo note. Este es el UNICO
+    lugar donde una senal nueva realmente nace, asi que el chequeo real
+    va aca: si el simbolo no tenia posicion (senal nueva) y el cupo ya
+    esta lleno en este instante, no se gestiona como posicion normal:
+    se cierra de inmediato para no exceder el cupo. Si el cierre de
+    emergencia falla, cae al flujo normal (mejor vigilado que huerfano).
+    """
+    es_senal_nueva = not db_trades_symbol(symbol)
+    if es_senal_nueva and len(senales_abiertas()) >= SENALES_MAX:
+        cierre = "SELL" if side == "BUY" else "BUY"
+        res = orden_market(symbol, cierre, exec_qty, 1, reduce_only=True)
+        if res:
+            salida = float(res.get("avgPrice") or precio_exec)
+            pnl = (salida - precio_exec) * exec_qty if side == "BUY" else (precio_exec - salida) * exec_qty
+            db_registrar_cierre(symbol, side, "CUPO_LLENO", pnl)
+            tg(
+                f"<b>{symbol}</b> se lleno pero el cupo de {SENALES_MAX} senales ya estaba "
+                f"ocupado (fill casi simultaneo con otro activo). Cerrado de inmediato.\n"
+                f"PnL: <b>{pnl:+.2f} USDT</b>")
+            log.warning(f"[CUPO] {symbol} overflow por fill simultaneo, cerrado PnL {pnl:+.2f}")
+            return
+        log.warning(f"[CUPO] {symbol} overflow y no pude cerrarlo de inmediato; "
+                    f"lo dejo gestionado con TP/SL normal (mejor vigilado que huerfano)")
+
+    cfg = cfg_lado(symbol, side)
+    if not cfg:
+        # lado deshabilitado pero con fill real: registrar igual con defaults
+        # conservadores para que el trade quede gestionado (nunca invisible)
+        cfg = {"tp_pct": 2.0, "sl_pct": 3.4, "apal": 25}
+    apal = apal_efectivo(symbol, cfg["apal"])
+
+    tp_p = cfg["tp_pct"] / 100.0
+    sl_p = cfg["sl_pct"] / 100.0
+    if side == "BUY":
+        tp = precio_exec * (1 + tp_p)
+        sl = precio_exec * (1 - sl_p)
+    else:
+        tp = precio_exec * (1 - tp_p)
+        sl = precio_exec * (1 + sl_p)
+
+    sl_oid = poner_stop_real(symbol, side, exec_qty, sl, apal)
+    trade_id = f"{symbol}_{oid}"
+    db_guardar_trade({
+        "trade_id": trade_id,
+        "symbol": symbol,
+        "side": side,
+        "escalon": escalon + 1,  # display 1-based (igual que antes)
+        "qty": exec_qty,
+        "precio_entrada": precio_exec,
+        "tp": tp,
+        "sl": sl,
+        "apal": apal,
+        "order_id_sl": sl_oid or "",
+        "fill_order_id": oid,
+    })
+
+    tag = "LONG" if side == "BUY" else "SHORT"
+    extra = " (fill PARCIAL rescatado)" if parcial else ""
+    aviso_sl = "" if sl_oid else (
+        "\n<b>SL real no puesto</b> (queda SL virtual del monitor; "
+        "sin spam de reintentos)")
+    tg(
+        f"<b>{symbol}</b> {tag} {side} escalon {escalon+1}/{GRID_ESCALONES}{extra}\n"
+        f"Entrada: <b>{precio_exec:.5f}</b>\n"
+        f"TP: {tp:.5f} ({cfg['tp_pct']}%)  |  SL: {sl:.5f} ({cfg['sl_pct']}%)\n"
+        f"Qty: {exec_qty}  lev x{apal}{aviso_sl}")
+    log.info(f"OK {symbol} {side} E{escalon+1} @ {precio_exec} x{apal}{extra}")
+
+
 def revisar_llenados(symbol):
     limites = db_limites_symbol(symbol)
     for lim in limites:
@@ -978,49 +1295,49 @@ def revisar_llenados(symbol):
             db_borrar_limite(symbol, lim["escalon"], lim["side"])
             if db_trade_por_fill(oid):
                 continue
-
-            side = lim["side"]
-            escalon = lim["escalon"]
             precio_exec = avg_price if avg_price > 0 else float(lim["precio"])
-            apal = apal_efectivo(symbol)
-
-            tp_p = TP_PCT[symbol] / 100.0
-            sl_p = SL_PCT / 100.0
-            if side == "BUY":
-                tp = precio_exec * (1 + tp_p)
-                sl = precio_exec * (1 - sl_p)
-            else:
-                tp = precio_exec * (1 - tp_p)
-                sl = precio_exec * (1 + sl_p)
-
-            sl_oid = poner_stop_real(symbol, side, exec_qty, sl, apal)
-            trade_id = f"{symbol}_{oid}"
-            db_guardar_trade({
-                "trade_id": trade_id,
-                "symbol": symbol,
-                "side": side,
-                "escalon": escalon + 1,  # display 1-based (igual que antes)
-                "qty": exec_qty,
-                "precio_entrada": precio_exec,
-                "tp": tp,
-                "sl": sl,
-                "apal": apal,
-                "order_id_sl": sl_oid or "",
-                "fill_order_id": oid,
-            })
-
-            tag = "LONG" if side == "BUY" else "SHORT"
-            aviso_sl = "" if sl_oid else (
-                "\n<b>SL real no puesto</b> (queda SL virtual del monitor; "
-                "sin spam de reintentos)")
-            tg(
-                f"<b>{symbol}</b> {tag} {side} escalon {escalon+1}/{GRID_ESCALONES}\n"
-                f"Entrada: <b>{precio_exec:.5f}</b>\n"
-                f"TP: {tp:.5f} ({TP_PCT[symbol]}%)  |  SL: {sl:.5f} ({SL_PCT}%)\n"
-                f"Qty: {exec_qty}  lev x{apal}{aviso_sl}")
-            log.info(f"OK {symbol} {side} E{escalon+1} @ {precio_exec} x{apal}")
+            _registrar_fill(symbol, lim["side"], lim["escalon"], oid, precio_exec, exec_qty)
         elif status in ("CANCELED", "EXPIRED", "REJECTED"):
+            # bug fix #4: una limite cancelada puede haber quedado con
+            # executedQty > 0 (fill parcial). Ese pedazo ES posicion real:
+            # registrarla como trade para que tenga TP/SL/trailing.
             db_borrar_limite(symbol, lim["escalon"], lim["side"])
+            if exec_qty and exec_qty > 0 and not db_trade_por_fill(oid):
+                precio_exec = avg_price if avg_price > 0 else float(lim["precio"])
+                _registrar_fill(symbol, lim["side"], lim["escalon"], oid,
+                                precio_exec, exec_qty, parcial=True)
+
+
+# ==========================================================
+#  CIERRE SEGURO (bug fix #3: nunca borrar un trade sin cerrarlo)
+# ==========================================================
+_dust_alertado = set()
+
+
+def cerrar_market_seguro(symbol, cierre, qty_deseada, disponible, apal, trade_id):
+    """
+    Cierra a mercado con qty valida. Si el redondeo al step deja la qty en
+    None (dust bajo minQty), intenta cerrar TODO lo disponible del simbolo.
+    NUNCA borra el trade sin haber cerrado: si no se puede cerrar, devuelve
+    None y avisa UNA vez por Telegram (el monitor lo reintenta).
+    """
+    q = ajustar_qty(symbol, min(qty_deseada, disponible))
+    if not q:
+        # dust: probar con todo lo disponible en el exchange
+        q = ajustar_qty(symbol, disponible)
+    if not q:
+        if trade_id not in _dust_alertado:
+            _dust_alertado.add(trade_id)
+            tg(
+                f"<b>{symbol}</b> no puedo cerrar {qty_deseada} (bajo minQty del simbolo).\n"
+                f"El trade QUEDA monitoreado y reintento. Si persiste, cerra manual.")
+            log.warning(f"[DUST] {symbol} qty {qty_deseada} bajo minQty; trade {trade_id} retenido")
+        return None
+    res = orden_market(symbol, cierre, q, apal, reduce_only=True)
+    if not res:
+        return None
+    _dust_alertado.discard(trade_id)
+    return res, q
 
 
 # ==========================================================
@@ -1078,13 +1395,12 @@ def monitor_tp_sl():
                     toca_sl = (side == "BUY" and precio <= sl) or (side == "SELL" and precio >= sl)
 
                     if toca_sl:
-                        q = ajustar_qty(symbol, qty_cap)
-                        if not q:
-                            db_borrar_trade(t["trade_id"])
+                        # bug fix #3: cierre seguro; si no se puede, NO se
+                        # borra el trade (sigue monitoreado y reintenta)
+                        r = cerrar_market_seguro(symbol, cierre, qty_cap, disponible, apal, t["trade_id"])
+                        if not r:
                             continue
-                        res = orden_market(symbol, cierre, q, apal, reduce_only=True)
-                        if not res:
-                            continue
+                        res, q = r
                         salida = float(res.get("avgPrice") or precio)
                         pnl = (salida - ent) * q if side == "BUY" else (ent - salida) * q
                         if t["order_id_sl"]:
@@ -1104,7 +1420,32 @@ def monitor_tp_sl():
                         if not toca_tp:
                             continue
                         q_parcial = ajustar_qty(symbol, min(qty * TP_PARCIAL_PCT, qty_cap))
-                        if not q_parcial:
+                        # atencion notional (acordado): si el 30% restante
+                        # quedaria como dust (bajo minQty o bajo minNotional),
+                        # NO partir: cerrar el 100% en el TP y listo.
+                        resto_estim = qty - (q_parcial or 0)
+                        resto_valido = (
+                            q_parcial
+                            and ajustar_qty(symbol, resto_estim)
+                            and resto_estim * precio >= min_notional_symbol(symbol) * 0.99
+                        )
+                        if not resto_valido:
+                            r = cerrar_market_seguro(symbol, cierre, qty_cap, disponible, apal, t["trade_id"])
+                            if not r:
+                                continue
+                            res, q = r
+                            salida = float(res.get("avgPrice") or precio)
+                            pnl = (salida - ent) * q if side == "BUY" else (ent - salida) * q
+                            if t["order_id_sl"]:
+                                cancelar_orden(symbol, t["order_id_sl"])
+                            db_borrar_trade(t["trade_id"])
+                            db_registrar_cierre(symbol, side, "TP_FULL", pnl)
+                            disponible = max(0.0, disponible - q)
+                            tg(
+                                f"<b>{symbol}</b> TP completo (resto seria dust) escalon {t['escalon']}\n"
+                                f"Entrada {ent:.5f} ? Salida {salida:.5f}\n"
+                                f"PnL: <b>{pnl:+.2f} USDT</b>")
+                            log.info(f"{symbol} TP full (dust) PnL {pnl:+.2f}")
                             continue
                         res = orden_market(symbol, cierre, q_parcial, apal, reduce_only=True)
                         if not res:
@@ -1112,21 +1453,31 @@ def monitor_tp_sl():
                         salida = float(res.get("avgPrice") or precio)
                         pnl = (salida - ent) * q_parcial if side == "BUY" else (ent - salida) * q_parcial
                         resto = max(0.0, qty - q_parcial)
+                        # acordado: REAJUSTAR el SL del exchange a la qty
+                        # que queda (cancelar el viejo y poner uno nuevo)
+                        sl_oid_nuevo = ""
+                        if t["order_id_sl"]:
+                            cancelar_orden(symbol, t["order_id_sl"])
+                        q_resto = ajustar_qty(symbol, resto)
+                        if q_resto:
+                            sl_oid_nuevo = poner_stop_real(symbol, side, q_resto, sl, apal) or ""
                         with db_lock:
                             conn = _conn()
                             conn.execute(
-                                "UPDATE trades SET fase=1, pico=?, qty=? WHERE trade_id=?",
-                                (precio, resto, t["trade_id"]))
+                                "UPDATE trades SET fase=1, pico=?, qty=?, order_id_sl=? WHERE trade_id=?",
+                                (precio, resto, sl_oid_nuevo, t["trade_id"]))
                             conn.commit()
                             conn.close()
                         disponible = max(0.0, disponible - q_parcial)
                         db_registrar_cierre(symbol, side, "TP_PARCIAL", pnl)
+                        aviso_sl = "" if sl_oid_nuevo else "\n<b>SL del resto no puesto</b> (queda SL virtual)"
                         tg(
                             f"<b>{symbol}</b> TP parcial (70%) escalon {t['escalon']}\n"
                             f"Entrada {ent:.5f} ? Salida {salida:.5f}\n"
                             f"PnL parcial: <b>{pnl:+.2f} USDT</b>\n"
-                            f"30% restante corriendo con trailing {TRAILING_DIST*100:.1f}%")
-                        log.info(f"{symbol} TP parcial PnL {pnl:+.2f}")
+                            f"30% restante con trailing {TRAILING_DIST*100:.1f}%  "
+                            f"SL reajustado a qty {resto}{aviso_sl}")
+                        log.info(f"{symbol} TP parcial PnL {pnl:+.2f} (SL reajustado)")
                         continue
 
                     # FASE 1 trailing
@@ -1147,13 +1498,11 @@ def monitor_tp_sl():
                             conn.close()
 
                     if retroceso >= TRAILING_DIST:
-                        q = ajustar_qty(symbol, qty_cap)
-                        if not q:
-                            db_borrar_trade(t["trade_id"])
+                        # bug fix #3: mismo cierre seguro que el SL
+                        r = cerrar_market_seguro(symbol, cierre, qty_cap, disponible, apal, t["trade_id"])
+                        if not r:
                             continue
-                        res = orden_market(symbol, cierre, q, apal, reduce_only=True)
-                        if not res:
-                            continue
+                        res, q = r
                         salida = float(res.get("avgPrice") or precio)
                         pnl = (salida - ent) * q if side == "BUY" else (ent - salida) * q
                         if t["order_id_sl"]:
@@ -1308,7 +1657,10 @@ def monitor_limpieza():
 
 
 def ciclo():
-    for symbol in list(ACTIVOS):
+    # prioridad ACORDADA: cuando hay cola por el cupo de senales, los
+    # simbolos con mejor winrate refrescan primero y se llevan los slots
+    orden = sorted(list(ACTIVOS), key=winrate_max, reverse=True)
+    for symbol in orden:
         if _shutdown.is_set():
             break
         try:
@@ -1332,39 +1684,54 @@ def monitor_llenados():
             time.sleep(5)
 
 
-def _tp_medio_desde_res(res):
-    return res["tp_pct"]
+def _lado_aprobado(m, cl):
+    """Un lado entra si su clase es nucleo o ampliacion (como rankeamos)."""
+    return m is not None and cl in ("nucleo", "ampliacion")
 
 
-def correr_auditoria(universo=None, avisar_progreso=True):
+def correr_auditoria(universo=None, avisar_progreso=True, auto_aplicar=False):
+    """
+    Corre el auditor v4 (long/short independientes, apal/colchon optimos).
+    Arma la propuesta POR LADO, la guarda y avisa por Telegram.
+    Con auto_aplicar=True (auditoria trimestral) la aplica sola.
+    """
     if universo is None:
-        candidatos = [
-            "XTZUSDT", "KSMUSDT", "WAVESUSDT", "ONTUSDT", "IOTAUSDT",
-            "DGBUSDT", "ZECUSDT", "DASHUSDT", "EOSUSDT", "XLMUSDT"]
-        universo = list(dict.fromkeys(ACTIVOS + candidatos))
+        # lista vigente + universo default del auditor (17+20 conocidos)
+        universo = list(dict.fromkeys(list(ACTIVOS) + auto_auditor.universo_default()))
 
-    tg(f"<b>Auditoria iniciada</b>  {len(universo)} activos\nEsto tarda unos minutos...")
+    tg(f"<b>Auditoria iniciada</b>  {len(universo)} activos\nEsto tarda un buen rato...")
     log.info(f"AUDIT Auditoria de {len(universo)} activos arrancando")
 
     def progreso(msg):
         if avisar_progreso:
             log.info(f"[AUDIT] {msg}")
 
-    resultado = auto_auditor.auditar_universo(universo, dias=70, progreso=progreso)
+    resultado = auto_auditor.auditar_universo(universo, progreso=progreso)
 
+    # propuesta POR LADO desde el detalle v4 (mismo criterio que usamos:
+    # lado entra si clase nucleo/ampliacion; activo entra si tiene >=1 lado)
     propuesta = []
-    for grupo in ("nucleo", "ampliacion"):
-        for s in resultado.get(grupo, []):
-            r = resultado["detalle"][s]
-            if not r or r.get("error"):
+    for s, res in resultado.get("detalle", {}).items():
+        if not res or (isinstance(res, dict) and res.get("error")):
+            continue
+        if "clase_long" not in res:
+            continue
+        for lado, mkey, ckey, bkey in (
+            ("long", "long", "clase_long", "base_long"),
+            ("short", "short", "clase_short", "base_short"),
+        ):
+            m = res.get(mkey)
+            if not _lado_aprobado(m, res.get(ckey)):
                 continue
-            # apal deseado 25, el bot aplica min(25, max del simbolo) al operar
             propuesta.append({
                 "symbol": s,
-                "base": r["nivel"],
-                "apal": 25,
-                "tp_pct": _tp_medio_desde_res(r),
-                "grupo": grupo,
+                "lado": lado,
+                "base": float(res[bkey]),
+                "apal": int(m["apal"]),
+                "tp_pct": float(m["tp_pct"]),
+                "sl_pct": float(m["sl_pct"]),
+                "winrate": float(m["winrate"]),
+                "grupo": res.get(ckey),
             })
     db_guardar_propuesta(propuesta)
 
@@ -1375,18 +1742,18 @@ def correr_auditoria(universo=None, avisar_progreso=True):
     quedan = sorted(nuevos_syms & vigentes)
 
     def linea(s):
-        r = resultado["detalle"].get(s)
-        if not r or r.get("error"):
+        res = resultado["detalle"].get(s)
+        if not res or (isinstance(res, dict) and res.get("error")):
             return f"- {s.replace('USDT','')}"
-        return (
-            f"- {s.replace('USDT','')} | RSI {int(r['nivel'])}  "
-            f"ratio {r['ratio']}  exp {r['expect']}%")
+        partes = []
+        if _lado_aprobado(res.get("long"), res.get("clase_long")):
+            partes.append(f"L{int(res['base_long'])} wr{res['long']['winrate']:.0f}")
+        if _lado_aprobado(res.get("short"), res.get("clase_short")):
+            partes.append(f"S{int(res['base_short'])} wr{res['short']['winrate']:.0f}")
+        return f"- {s.replace('USDT','')} | {'  '.join(partes)}"
 
-    msg = ["<b>AUDITORA COMPLETA</b>\n"]
-    msg.append(
-        f"Propuesta: <b>{len(propuesta)} activos</b> "
-        f"({len(resultado.get('nucleo', []))} nucleo + "
-        f"{len(resultado.get('ampliacion', []))} ampliacion)\n")
+    msg = ["<b>AUDITORIA COMPLETA</b> (v4: lados independientes)\n"]
+    msg.append(f"Propuesta: <b>{len(nuevos_syms)} activos / {len(propuesta)} lados</b>\n")
     if entran:
         msg.append("<b>ENTRAN:</b>")
         msg += [linea(s) for s in entran]
@@ -1395,29 +1762,96 @@ def correr_auditoria(universo=None, avisar_progreso=True):
         msg.append("<b>SALEN:</b>")
         msg += [f"- {s.replace('USDT','')}" for s in salen]
         msg.append("")
-    msg.append(f"? Se mantienen: {len(quedan)}")
-    msg.append("\nPara aplicar: <b>/aplicar_lista</b>\nPara ignorar: no hagas nada")
+    msg.append(f"Se mantienen: {len(quedan)} (niveles/TP/SL actualizados)")
+
+    if auto_aplicar and propuesta:
+        n = aplicar_propuesta()
+        for s in list(vigentes | nuevos_syms):
+            cancelar_todas(s)
+            db_borrar_limites(s)
+        msg.append(f"\n<b>APLICADA AUTOMATICAMENTE</b>: {n} activos vigentes.")
+        msg.append("Limites viejas canceladas; se rearman con la config nueva.")
+    else:
+        msg.append("\nPara aplicar: <b>/aplicar_lista</b>\nPara ignorar: no hagas nada")
     tg("\n".join(msg))
-    log.info(f"AUDIT Auditoria lista. Entran {len(entran)}, salen {len(salen)}, quedan {len(quedan)}")
+    log.info(
+        f"AUDIT lista. Entran {len(entran)}, salen {len(salen)}, quedan {len(quedan)}"
+        f"{' (auto-aplicada)' if auto_aplicar and propuesta else ''}")
     return resultado
 
 
+def _db_get_estado(k):
+    with db_lock:
+        conn = _conn()
+        row = conn.execute("SELECT v FROM auditoria_estado WHERE k=?", (k,)).fetchone()
+        conn.close()
+    return row[0] if row else None
+
+
+def _db_set_estado(k, v):
+    with db_lock:
+        conn = _conn()
+        conn.execute("INSERT OR REPLACE INTO auditoria_estado VALUES (?,?)", (k, v))
+        conn.commit()
+        conn.close()
+
+
+def _programar_proxima_auditoria():
+    """~3 meses: 90 dias + un dia random (0..10) para que no sea predecible."""
+    import random
+    prox = time.time() + (90 + random.randint(0, 10)) * 86400
+    _db_set_estado("proxima_auditoria", prox)
+    import datetime
+    fecha = datetime.datetime.fromtimestamp(prox).strftime("%Y-%m-%d")
+    log.info(f"AUDIT proxima auditoria trimestral: {fecha}")
+    return prox
+
+
 def monitor_auditoria():
-    log.info("AUDIT Auditoria automatica programada (cada 60 dias)")
-    DIAS = 60
-    esperado = 0
+    """
+    ACORDADO: cada ~3 meses, un dia random, y SOLO cuando no hay posiciones
+    abiertas: pausa -> corre auditor v4 -> aplica la lista (pone/saca activos
+    rankeando como definimos) -> avisa -> reanuda.
+    Si al llegar la fecha hay posiciones, espera (chequea cada hora) hasta
+    que la cuenta quede plana.
+    """
+    prox = _db_get_estado("proxima_auditoria")
+    if prox is None:
+        prox = _programar_proxima_auditoria()
+    import datetime
+    log.info(f"AUDIT Auditoria automatica trimestral programada: "
+             f"{datetime.datetime.fromtimestamp(prox).strftime('%Y-%m-%d')}")
     while not _shutdown.is_set():
         _shutdown.wait(3600)
         if _shutdown.is_set():
             break
-        esperado += 1
-        if esperado >= DIAS * 24:
-            try:
-                tg("<b>Auditoria automatica de 60 dias</b>")
-                correr_auditoria()
-            except Exception as e:
-                log.warning(f"[AUDIT-AUTO] {e}")
-            esperado = 0
+        if time.time() < (_db_get_estado("proxima_auditoria") or prox):
+            continue
+        # llego la fecha: esperar cuenta plana (sin posiciones ni trades DB)
+        if db_trades_all():
+            log.info("AUDIT fecha cumplida pero hay posiciones: espero cuenta plana")
+            continue
+        pos = posiciones_abiertas()
+        if pos is None or pos:
+            continue
+        try:
+            ya_pausado = modo_pausa.is_set()
+            modo_pausa.set()
+            for s in list(ACTIVOS):
+                cancelar_todas(s)
+                db_borrar_limites(s)
+            tg("<b>Auditoria trimestral</b>: bot en pausa (sin posiciones), "
+               "corriendo el auditor v4. Aviso cuando termine y reanudo solo.")
+            correr_auditoria(auto_aplicar=True)
+            _programar_proxima_auditoria()
+            if not ya_pausado:
+                modo_pausa.clear()
+            tg("<b>Auditoria trimestral lista</b>: bot REANUDADO con la config nueva.")
+        except Exception as e:
+            log.warning(f"[AUDIT-AUTO] {e}")
+            tg(f"<b>Auditoria trimestral fallo</b>: {e}\nEl bot sigue con la config anterior.")
+            modo_pausa.clear()
+            _programar_proxima_auditoria()
 
 
 def _on_signal(signum, frame):
@@ -1440,12 +1874,14 @@ def main():
     except Exception:
         pass
 
+    n_lados = sum(len(lados_habilitados(s)) for s in ACTIVOS)
     tg(
-        "<b>SNIPER RSI v2 iniciado</b> (infra)\n"
-        f"Activos ({len(ACTIVOS)}): {', '.join(a.replace('USDT','') for a in ACTIVOS)}\n"
-        f"Margen: {PCT_CAPITAL_USABLE*100:.0f}% del saldo  "
-        f"repartido en {SENALES_DISENO} senales de {GRID_ESCALONES} escalones\n"
-        f"Grid: {GRID_ESCALONES} escalones  RSI Wilder  lev <= max del par\n"
+        "<b>SNIPER RSI v3 iniciado</b> (auditor v4: lados independientes)\n"
+        f"Activos ({len(ACTIVOS)}, {n_lados} lados): "
+        f"{', '.join(a.replace('USDT','') for a in ACTIVOS)}\n"
+        f"Cupo ESTRICTO: {SENALES_MAX} senales (1 moneda=1), prioridad por winrate\n"
+        f"Margen: {PCT_CAPITAL_USABLE*100:.0f}% del saldo en {SENALES_DISENO}x{GRID_ESCALONES} escalones\n"
+        f"TP/SL/apal/grid POR LADO segun auditor  Auditoria auto cada ~3 meses\n"
         "Escribi /ayuda para los comandos")
     log.info("=" * 56)
     log.info("START SNIPER RSI v2 - INICIADO (infra)")
