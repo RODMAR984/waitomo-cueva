@@ -24,6 +24,16 @@
 #  La expectativa en USD/ROE queda como desempate MENOR, no como motor
 #  de eleccion (no elegimos "el nivel que mas plata dio", elegimos "el
 #  nivel que revierte mas confiablemente y casi nunca liquida").
+#
+#  MEJORAS (segun SPECS_MEJORAS_AUDITOR.md):
+#   1) Apalancamiento optimo por activo — ya existia, solo se confirma
+#      (el score elige el x25..x50 que mejor rinde SEGURO, sin forzar).
+#   2) Colchon de SL probado (0.92/0.88/0.85 de la distancia a liq) —
+#      se anida al barrido de apalancamientos; el score_lado NO cambia,
+#      el colchon que menos liquida gana solo via la penalizacion de liq.
+#   3) Perfil de reversion por senal (MFE, MAE, velas hasta el MFE) con
+#      percentiles p50/p70/p90 — es SOLO informativo, no cambia el TP
+#      (el TP sigue siendo 70% del MFE promedio, calculado aparte).
 # ==========================================================
 
 from __future__ import annotations
@@ -74,13 +84,20 @@ SENALES_MAX = 5
 # Para cada uno, el SL va "un pelito antes de la liquidacion" de ESE apal.
 APALANCAMIENTOS = [25, 30, 35, 40, 50]
 
+# COLCHONES de SL a probar: fraccion de la distancia a la liquidacion.
+# 0.92 = SL al filo (colchon chico) ... 0.85 = SL con mas aire (conservador).
+COLCHONES_SL = [0.92, 0.88, 0.85]
+
+
 def liq_pct_de_apal(apal: int) -> float:
     """Distancia a la liquidacion aprox = 100/apal %."""
     return 100.0 / apal
 
-def sl_pct_de_apal(apal: int) -> float:
-    """SL un pelito ANTES de la liquidacion (92% de la distancia a liq)."""
-    return round(liq_pct_de_apal(apal) * 0.92, 2)
+
+def sl_pct_de_apal(apal: int, colchon: float = 0.92) -> float:
+    """SL un pelito ANTES de la liquidacion (colchon% de la distancia a liq)."""
+    return round(liq_pct_de_apal(apal) * colchon, 2)
+
 
 TP_FRAC_DEL_MFE = 0.70   # TP del escalon = 70% del MFE medio del lado
 TP_FALLBACK_PCT = 2.0
@@ -98,7 +115,7 @@ WINRATE_AMPLIACION = 65.0
 LIQ_MAX_TOLERABLE = 5.0   # % de senales que terminan en LIQUIDACION real; por arriba, se descarta si o si
 DIAS_DEFAULT = 180        # 6 meses (decidido con Ro)
 
-# variables de la corrida actual (las setea simular_lado segun el apal probado)
+# variables de la corrida actual (las setea simular_lado segun el apal/colchon probado)
 _APAL_ACTUAL = 25
 _SL_ACTUAL = sl_pct_de_apal(25)
 _LIQ_ACTUAL = liq_pct_de_apal(25)
@@ -310,9 +327,18 @@ class TradeCerrado:
 class Senal:
     """Una senal = UN toque del nivel, desde la primera entrada hasta que
     se cierra TODO (via TP directo, TP+grid+trailing, SL o LIQ). El
-    resultado se mide en conjunto, no escalon por escalon."""
+    resultado se mide en conjunto, no escalon por escalon.
+
+    mfe/mae/velas_hasta_mfe se miden relativos al precio de la PRIMERA
+    entrada de la senal (precio_ref), desde que arranca hasta que cierra
+    del todo — es el "perfil de reversion" de esa senal (mejora 3)."""
     pnl: float = 0.0
     tuvo_liq: bool = False
+    precio_ref: float = 0.0
+    idx_inicio: int = 0
+    mfe: float = 0.0
+    mae: float = 0.0
+    velas_hasta_mfe: int = 0
 
 
 @dataclass
@@ -404,19 +430,49 @@ def _cerrar(st, tr, sal_idx, sal_px, motivo, frac, cerrados, base_usada):
     )
 
 
+def _actualizar_perfil_senal(st, i, h, l):
+    """Mejora 3: MFE/MAE/velas-hasta-MFE de la senal activa, relativos
+    al precio de su primera entrada. Se llama una vez por vela mientras
+    la senal siga abierta (o sea, siempre que _gestionar corre)."""
+    sen = st.senal_actual
+    if sen is None or sen.precio_ref <= 0:
+        return
+    ref = sen.precio_ref
+    if st.side == "BUY":
+        fav = (h - ref) / ref * 100.0
+        con = (ref - l) / ref * 100.0
+    else:
+        fav = (ref - l) / ref * 100.0
+        con = (h - ref) / ref * 100.0
+    if fav > sen.mfe:
+        sen.mfe = fav
+        sen.velas_hasta_mfe = i - sen.idx_inicio
+    if con > sen.mae:
+        sen.mae = con
+
+
 def _gestionar(st, i, h, l, c, cerrados, base_usada):
+    _actualizar_perfil_senal(st, i, h, l)
     quedan = []
     for tr in st.trades:
         side = tr.side
         _, con = _fav_con(side, tr.ent, h, l)
 
-        if con >= _LIQ_ACTUAL:
-            sal = tr.ent * (1 - _LIQ_ACTUAL / 100) if side == "BUY" else tr.ent * (1 + _LIQ_ACTUAL / 100)
-            _cerrar(st, tr, i, aplicar_slippage(sal, side, False), "LIQ", tr.qty_frac, cerrados, base_usada)
-            continue
+        # El SL (ej x25: 3.7%) esta ANTES que la liquidacion (4%).
+        # Caso normal: el precio toca el SL primero y el STOP_MARKET cierra ahi.
+        # Caso peligroso REAL: una mecha/gap en la vela salta directo mas alla
+        # de la liquidacion. Ahi el stop no alcanza y liquida de verdad.
+        # Ese liq% es la info que sirve para elegir apalancamiento seguro.
         if con >= _SL_ACTUAL:
-            sal = tr.ent * (1 - _SL_ACTUAL / 100) if side == "BUY" else tr.ent * (1 + _SL_ACTUAL / 100)
-            _cerrar(st, tr, i, aplicar_slippage(sal, side, False), "SL", tr.qty_frac, cerrados, base_usada)
+            if con >= _LIQ_ACTUAL:
+                # el movimiento en la vela llego hasta zona de liquidacion.
+                # se cuenta como LIQ (gap que el SL no pudo frenar a tiempo).
+                sal = tr.ent * (1 - _LIQ_ACTUAL / 100) if side == "BUY" else tr.ent * (1 + _LIQ_ACTUAL / 100)
+                _cerrar(st, tr, i, aplicar_slippage(sal, side, False), "LIQ", tr.qty_frac, cerrados, base_usada)
+            else:
+                # toco el SL pero no la liquidacion: cierre normal en el stop.
+                sal = tr.ent * (1 - _SL_ACTUAL / 100) if side == "BUY" else tr.ent * (1 + _SL_ACTUAL / 100)
+                _cerrar(st, tr, i, aplicar_slippage(sal, side, False), "SL", tr.qty_frac, cerrados, base_usada)
             continue
 
         if tr.fase == 0:
@@ -481,9 +537,32 @@ def _gestionar(st, i, h, l, c, cerrados, base_usada):
         st.limites.clear()
 
 
-def _refrescar(st, base, ag_now, al_now, px_prev, rsi_now, px, side_fijo: str):
+def precalcular_precios_grid(ag_arr: np.ndarray, al_arr: np.ndarray, c: np.ndarray, base: float, side: str) -> np.ndarray:
+    """Precalcula, por cada vela, el precio objetivo de CADA escalon del
+    grid (independiente de apal/colchon). Antes se recalculaba adentro
+    de _refrescar en las 15 combinaciones (apal x colchon) que prueba
+    _eval_nivel; ahora se calcula UNA vez por nivel/lado y se reutiliza
+    en las 15, porque el precio-para-RSI no depende del apalancamiento
+    ni del colchon de SL."""
+    niveles = niveles_grid(base, side)
+    n = len(c)
+    precios = np.full((GRID_ESCALONES, n), np.nan)
+    for esc, niv in enumerate(niveles):
+        for i in range(1, n):
+            ag, al = ag_arr[i - 1], al_arr[i - 1]
+            if np.isnan(ag) or np.isnan(al):
+                continue
+            p = precio_para_rsi_rapido(c[i - 1], ag, al, niv, side)
+            if p is not None:
+                precios[esc, i] = p
+    return precios
+
+
+def _refrescar(st, i, precios_grid, rsi_now, px, side_fijo: str):
     """side_fijo = BUY o SELL: en busqueda de nivel solo ese lado.
-    ag_now/al_now: promedios Wilder ya calculados para esta vela (rapido)."""
+    precios_grid: array (GRID_ESCALONES, n_velas) precalculado por
+    precalcular_precios_grid — el precio objetivo de cada escalon en
+    esta vela, ya resuelto (no depende de apal/colchon)."""
     if st.n_abiertos >= GRID_ESCALONES:
         st.limites.clear()
         return
@@ -509,17 +588,16 @@ def _refrescar(st, base, ag_now, al_now, px_prev, rsi_now, px, side_fijo: str):
         st.limites.clear()
         return
 
-    niveles = niveles_grid(base, side)
     nuevos = {}
     for esc in range(st.n_abiertos, GRID_ESCALONES):
-        p = precio_para_rsi_rapido(px_prev, ag_now, al_now, niveles[esc], side)
-        if p is None:
+        p = precios_grid[esc, i]
+        if np.isnan(p):
             continue
         if side == "BUY" and p >= px:
             continue
         if side == "SELL" and p <= px:
             continue
-        nuevos[esc] = Limite(esc, side, p)
+        nuevos[esc] = Limite(esc, side, float(p))
     st.limites = nuevos
 
 
@@ -547,7 +625,8 @@ def _fills(st, symbol, i, h, l, tp_pct):
         )
         done.append(esc)
     if era_nueva_senal and done:
-        st.senal_actual = Senal()
+        # precio de referencia = la primera entrada de la senal (mejora 3)
+        st.senal_actual = Senal(precio_ref=st.trades[0].ent, idx_inicio=i)
     for esc in done:
         st.limites.pop(esc, None)
 
@@ -559,22 +638,23 @@ def simular_lado(
     base: float,
     side_fijo: str,
     tp_pct: float,
+    precios_grid: np.ndarray,
 ) -> Tuple[List[TradeCerrado], List[Senal]]:
     """Simula UN simbolo, UN lado, UNA base (grid desde esa base).
     Devuelve (escalones_cerrados, senales_completas) — la senal completa
-    es la unidad que importa para el winrate; el escalon es solo detalle."""
+    es la unidad que importa para el winrate; el escalon es solo detalle.
+    precios_grid: precios objetivo del grid PRECALCULADOS por
+    precalcular_precios_grid (no dependen de apal/colchon — calcularlos
+    aca adentro los repetia 15 veces por nivel/lado sin necesidad)."""
     st = SimState()
     cerrados: List[TradeCerrado] = []
     n = len(c)
-    # precalculo los promedios Wilder UNA vez (antes se recalculaba en cada vela)
-    ag_arr, al_arr = wilder_avgs(c)
     for i in range(RSI_LEN + 5, n):
         if st.trades:
             _gestionar(st, i, h[i], l[i], c[i], cerrados, base)
         r = rsi[i]
         r_val = float(r) if not np.isnan(r) else float("nan")
-        # ag/al de la vela anterior (i-1), precio previo = c[i-1]
-        _refrescar(st, base, ag_arr[i - 1], al_arr[i - 1], c[i - 1], r_val, c[i], side_fijo)
+        _refrescar(st, i, precios_grid, r_val, c[i], side_fijo)
         if st.limites:
             _fills(st, symbol, i, h[i], l[i], tp_pct)
     last = n - 1
@@ -589,14 +669,19 @@ def simular_lado(
 
 def metricas(cerrados: List[TradeCerrado], senales: List[Senal]) -> dict:
     """Metricas a nivel de SENAL COMPLETA (no de escalon). El winrate es
-    lo que decide: de cada vez que el nivel se toco, que % termino bien."""
+    lo que decide: de cada vez que el nivel se toco, que % termino bien.
+    Incluye el perfil de reversion (mejora 3): percentiles de MFE/MAE y
+    velas hasta el MFE — es informativo, NO cambia el TP ni el score."""
     n_sen = len(senales)
+    vacio = {
+        "senales": 0, "trades": len(cerrados), "winrate": 0.0,
+        "expect_roe": 0.0, "avg_win": 0.0, "avg_loss": 0.0,
+        "ratio": 0.0, "liq_pct": 0.0,
+        "mfe_prom": 0.0, "mfe_p50": 0.0, "mfe_p70": 0.0, "mfe_p90": 0.0,
+        "mfe_max": 0.0, "velas_med_mfe": 0.0, "mae_prom": 0.0, "mae_p90": 0.0,
+    }
     if n_sen == 0:
-        return {
-            "senales": 0, "trades": len(cerrados), "winrate": 0.0,
-            "expect_roe": 0.0, "avg_win": 0.0, "avg_loss": 0.0,
-            "ratio": 0.0, "liq_pct": 0.0,
-        }
+        return vacio
     ganadas = [s for s in senales if s.pnl > 0]
     perdidas = [s for s in senales if s.pnl <= 0]
     winrate = len(ganadas) / n_sen * 100.0
@@ -605,6 +690,18 @@ def metricas(cerrados: List[TradeCerrado], senales: List[Senal]) -> dict:
     avg_w = sum(s.pnl for s in ganadas) / len(ganadas) if ganadas else 0.0
     avg_l = abs(sum(s.pnl for s in perdidas) / len(perdidas)) if perdidas else 0.0
     ratio = (avg_w / avg_l) if avg_l > 0 else 0.0
+
+    mfes = np.array([s.mfe for s in senales], dtype=float)
+    maes = np.array([s.mae for s in senales], dtype=float)
+    velas_mfe = np.array([s.velas_hasta_mfe for s in senales], dtype=float)
+    # convencion (ver SPECS_MEJORAS_AUDITOR.md): "el 90% de las senales
+    # SUPERA X" = percentil 10 real de la distribucion de MFE. Para MAE
+    # es al reves: mae_p90 = percentil 90 real ("el peor 10% de sufrimiento").
+    mfe_p50 = float(np.percentile(mfes, 50))
+    mfe_p70 = float(np.percentile(mfes, 30))
+    mfe_p90 = float(np.percentile(mfes, 10))
+    mae_p90 = float(np.percentile(maes, 90))
+
     return {
         "senales": n_sen,
         "trades": len(cerrados),   # escalones ejecutados — solo informativo
@@ -615,13 +712,23 @@ def metricas(cerrados: List[TradeCerrado], senales: List[Senal]) -> dict:
         "avg_loss": round(avg_l, 3),
         "ratio": round(ratio, 2),
         "liq_pct": round(liq_pct, 1),
+        "mfe_prom": round(float(mfes.mean()), 2),
+        "mfe_p50": round(mfe_p50, 2),
+        "mfe_p70": round(mfe_p70, 2),
+        "mfe_p90": round(mfe_p90, 2),
+        "mfe_max": round(float(mfes.max()), 2),
+        "velas_med_mfe": round(float(np.median(velas_mfe)), 1),
+        "mae_prom": round(float(maes.mean()), 2),
+        "mae_p90": round(mae_p90, 2),
     }
 
 
 def score_lado(m: dict) -> float:
     """
     v4 — Elige el nivel por CONFIABILIDAD DEL REBOTE, medida en senales
-    completas, no en plata ni en escalones sueltos.
+    completas, no en plata ni en escalones sueltos. (Sin cambios por las
+    mejoras 2/3: siguen siendo solo mas combinaciones/mas info sobre la
+    misma metrica de siempre.)
 
     Prioridad real (la que pidio Ro):
       1. winrate de la SENAL completa (de cada toque, cuantas terminan
@@ -642,33 +749,51 @@ def score_lado(m: dict) -> float:
     )
 
 
-def _eval_nivel(symbol, ts, o, h, l, c, rsi, niv, side):
-    """Prueba cada apalancamiento (x25+) para este nivel y devuelve el mejor."""
+def _eval_nivel(symbol, ts, o, h, l, c, rsi, niv, side, ag_arr, al_arr):
+    """Prueba cada apalancamiento (x25+) Y cada colchon de SL para este
+    nivel, y devuelve la combinacion con mejor score (mejora 1 + 2)."""
     global _APAL_ACTUAL, _SL_ACTUAL, _LIQ_ACTUAL
     tp = estimar_tp_pct_desde_mfe(c, h, l, rsi, niv, side)
+    # el precio objetivo de cada escalon del grid NO depende de apal/colchon:
+    # se precalcula una vez por nivel/lado y se reutiliza en las 15 combos
+    precios_grid = precalcular_precios_grid(ag_arr, al_arr, c, niv, side)
     mejor_m = None
     for apal in APALANCAMIENTOS:
         _APAL_ACTUAL = apal
-        _SL_ACTUAL = sl_pct_de_apal(apal)
         _LIQ_ACTUAL = liq_pct_de_apal(apal)
-        cerr, senales = simular_lado(symbol, ts, o, h, l, c, rsi, niv, side, tp)
-        m = metricas(cerr, senales)
-        m["nivel"] = niv
-        m["tp_pct"] = round(tp, 2)
-        m["apal"] = apal
-        m["sl_pct"] = _SL_ACTUAL
-        if mejor_m is None or score_lado(m) > score_lado(mejor_m):
-            mejor_m = m
+        for colchon in COLCHONES_SL:
+            _SL_ACTUAL = sl_pct_de_apal(apal, colchon)
+            cerr, senales = simular_lado(symbol, ts, o, h, l, c, rsi, niv, side, tp, precios_grid)
+            m = metricas(cerr, senales)
+            m["nivel"] = niv
+            m["tp_pct"] = round(tp, 2)
+            m["apal"] = apal
+            m["colchon"] = colchon
+            m["sl_pct"] = _SL_ACTUAL
+            if mejor_m is None or score_lado(m) > score_lado(mejor_m):
+                mejor_m = m
     return mejor_m
+
+
+def _perfil_linea(m: dict) -> str:
+    """Linea legible con el perfil de reversion (mejora 3)."""
+    return (
+        f"MFE p90/p70/p50: {m['mfe_p90']:.1f}/{m['mfe_p70']:.1f}/{m['mfe_p50']:.1f}%  "
+        f"prom {m['mfe_prom']:.1f}%  tiempo med {m['velas_med_mfe']:.0f} velas "
+        f"({m['velas_med_mfe'] * 5:.0f}min)  MAE prom {m['mae_prom']:.1f}%"
+    )
 
 
 def auditar_activo(symbol: str, series, verbose=True) -> dict:
     ts, o, h, l, c = series
     rsi = rsi_wilder(c)
+    # promedios Wilder: no dependen de nivel/lado/apal/colchon, se calculan
+    # UNA vez por simbolo (antes se repetian 270 veces adentro de cada sim)
+    ag_arr, al_arr = wilder_avgs(c)
 
     # niveles en SERIE (sin threads anidados: el server es de 1 CPU)
-    detalle_L = [_eval_nivel(symbol, ts, o, h, l, c, rsi, niv, "BUY") for niv in NIVELES_LONG]
-    detalle_S = [_eval_nivel(symbol, ts, o, h, l, c, rsi, niv, "SELL") for niv in NIVELES_SHORT]
+    detalle_L = [_eval_nivel(symbol, ts, o, h, l, c, rsi, niv, "BUY", ag_arr, al_arr) for niv in NIVELES_LONG]
+    detalle_S = [_eval_nivel(symbol, ts, o, h, l, c, rsi, niv, "SELL", ag_arr, al_arr) for niv in NIVELES_SHORT]
 
     mejor_L_m = max(detalle_L, key=score_lado)
     mejor_S_m = max(detalle_S, key=score_lado)
@@ -720,12 +845,14 @@ def auditar_activo(symbol: str, series, verbose=True) -> dict:
     }
     if verbose:
         print(
-            f"  {symbol}: LONG RSI {mejor_L} (winrate {mejor_L_m['winrate']}%, "
-            f"liq {mejor_L_m['liq_pct']}%, n={mejor_L_m['senales']}, {cl_L}) | "
-            f"SHORT RSI {mejor_S} (winrate {mejor_S_m['winrate']}%, "
-            f"liq {mejor_S_m['liq_pct']}%, n={mejor_S_m['senales']}, {cl_S}) → {clase}"
+            f"  {symbol}: LONG RSI {mejor_L} (x{mejor_L_m['apal']},c{int(mejor_L_m['colchon']*100)}) "
+            f"winrate {mejor_L_m['winrate']}%, liq {mejor_L_m['liq_pct']}%, n={mejor_L_m['senales']}, {cl_L} | "
+            f"SHORT RSI {mejor_S} (x{mejor_S_m['apal']},c{int(mejor_S_m['colchon']*100)}) "
+            f"winrate {mejor_S_m['winrate']}%, liq {mejor_S_m['liq_pct']}%, n={mejor_S_m['senales']}, {cl_S} → {clase}"
         )
         print(f"           grid L {res['grid_long']} | grid S {res['grid_short']}")
+        print(f"           LONG  {_perfil_linea(mejor_L_m)}")
+        print(f"           SHORT {_perfil_linea(mejor_S_m)}")
     return res
 
 
@@ -738,6 +865,7 @@ def imprimir_resumen(resultados: List[dict]):
     print(f"Niveles L {NIVELES_LONG}")
     print(f"Niveles S {NIVELES_SHORT}")
     print(f"Grid: {GRID_ESCALONES} esc x paso {GRID_PASO} desde CADA base hallada")
+    print(f"Apalancamientos: {APALANCAMIENTOS}  Colchones SL: {COLCHONES_SL}")
     print("=" * 78)
 
     def bloque(titulo, pred):
@@ -754,7 +882,8 @@ def imprimir_resumen(resultados: List[dict]):
             return
         print(
             f"  {'SYM':<12} {'L':>4} {'S':>4} {'tpL':>5} {'tpS':>5} "
-            f"{'nL':>4} {'nS':>4} {'wrL':>6} {'wrS':>6} {'liqL':>5} {'liqS':>5}"
+            f"{'nL':>4} {'nS':>4} {'wrL':>6} {'wrS':>6} {'liqL':>5} {'liqS':>5} "
+            f"{'apL':>5} {'apS':>5}"
         )
         for r in items:
             L, S = r["long"], r["short"]
@@ -763,7 +892,8 @@ def imprimir_resumen(resultados: List[dict]):
                 f"{r['tp_long']:>5.2f} {r['tp_short']:>5.2f} "
                 f"{L['senales']:>4} {S['senales']:>4} "
                 f"{L['winrate']:>6.1f} {S['winrate']:>6.1f} "
-                f"{L['liq_pct']:>5.1f} {S['liq_pct']:>5.1f}"
+                f"{L['liq_pct']:>5.1f} {S['liq_pct']:>5.1f} "
+                f"x{L['apal']}/c{int(L['colchon']*100):>2} x{S['apal']}/c{int(S['colchon']*100):>2}"
             )
 
     bloque("NUCLEO (ambos lados OK)", lambda r: r["clase"] == "nucleo")
@@ -778,8 +908,14 @@ def guardar_ranking_csv(path: str, resultados: List[dict]):
     cols = [
         "symbol", "clase", "base_long", "base_short", "tp_long", "tp_short",
         "clase_long", "clase_short",
-        "apal_long", "senales_long", "winrate_long", "liq_long", "expect_long", "ratio_long",
-        "apal_short", "senales_short", "winrate_short", "liq_short", "expect_short", "ratio_short",
+        "apal_long", "colchon_long", "sl_pct_long", "senales_long", "winrate_long",
+        "liq_long", "expect_long", "ratio_long",
+        "mfe_prom_long", "mfe_p50_long", "mfe_p70_long", "mfe_p90_long", "mfe_max_long",
+        "velas_med_mfe_long", "mae_prom_long", "mae_p90_long",
+        "apal_short", "colchon_short", "sl_pct_short", "senales_short", "winrate_short",
+        "liq_short", "expect_short", "ratio_short",
+        "mfe_prom_short", "mfe_p50_short", "mfe_p70_short", "mfe_p90_short", "mfe_max_short",
+        "velas_med_mfe_short", "mae_prom_short", "mae_p90_short",
         "grid_long", "grid_short",
     ]
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -796,12 +932,22 @@ def guardar_ranking_csv(path: str, resultados: List[dict]):
                 "tp_short": r["tp_short"],
                 "clase_long": r["clase_long"],
                 "clase_short": r["clase_short"],
-                "apal_long": L["apal"], "senales_long": L["senales"],
+                "apal_long": L["apal"], "colchon_long": L["colchon"], "sl_pct_long": L["sl_pct"],
+                "senales_long": L["senales"],
                 "winrate_long": L["winrate"], "liq_long": L["liq_pct"],
                 "expect_long": L["expect_roe"], "ratio_long": L["ratio"],
-                "apal_short": S["apal"], "senales_short": S["senales"],
+                "mfe_prom_long": L["mfe_prom"], "mfe_p50_long": L["mfe_p50"],
+                "mfe_p70_long": L["mfe_p70"], "mfe_p90_long": L["mfe_p90"],
+                "mfe_max_long": L["mfe_max"], "velas_med_mfe_long": L["velas_med_mfe"],
+                "mae_prom_long": L["mae_prom"], "mae_p90_long": L["mae_p90"],
+                "apal_short": S["apal"], "colchon_short": S["colchon"], "sl_pct_short": S["sl_pct"],
+                "senales_short": S["senales"],
                 "winrate_short": S["winrate"], "liq_short": S["liq_pct"],
                 "expect_short": S["expect_roe"], "ratio_short": S["ratio"],
+                "mfe_prom_short": S["mfe_prom"], "mfe_p50_short": S["mfe_p50"],
+                "mfe_p70_short": S["mfe_p70"], "mfe_p90_short": S["mfe_p90"],
+                "mfe_max_short": S["mfe_max"], "velas_med_mfe_short": S["velas_med_mfe"],
+                "mae_prom_short": S["mae_prom"], "mae_p90_short": S["mae_p90"],
                 "grid_long": " ".join(str(int(x)) for x in r["grid_long"]),
                 "grid_short": " ".join(str(int(x)) for x in r["grid_short"]),
             })
@@ -817,7 +963,8 @@ def auditar_universo(symbols: List[str], dias: int = DIAS_DEFAULT, progreso=None
     Bridge para bot_rsi.py: audita una lista de simbolos y devuelve el
     mismo formato de salida que consumia el bot (nucleo/ampliacion/
     descartar/sin_datos/detalle), pero calculado con el motor v4
-    (winrate de senal completa, long/short independientes).
+    (winrate de senal completa, long/short independientes, colchon de
+    SL probado, perfil de reversion incluido en el detalle).
     `progreso` es un callback opcional (ej: mandar avance por Telegram).
     """
     out = {
@@ -886,6 +1033,7 @@ def main():
     print(f"Simbolos: {', '.join(s.replace('USDT','') for s in symbols)}")
     print(f"Long candidatos:  {NIVELES_LONG}")
     print(f"Short candidatos: {NIVELES_SHORT}")
+    print(f"Apalancamientos: {APALANCAMIENTOS}  Colchones SL: {COLCHONES_SL}")
 
     workers = max(1, min(args.workers, len(symbols)))
     print(f"Paralelo: {workers} workers")
@@ -909,12 +1057,16 @@ def main():
                 sym, res, msg = fut.result()
                 print(f"[{hechos}/{len(symbols)}] {sym}: {msg}", flush=True)
                 if res is not None:
+                    L, S = res["long"], res["short"]
                     print(
-                        f"           L{int(res['base_long'])}(x{res['long']['apal']})/S{int(res['base_short'])}(x{res['short']['apal']}) "
-                        f"winrate {res['long']['winrate']}/{res['short']['winrate']} "
-                        f"liq {res['long']['liq_pct']}/{res['short']['liq_pct']} "
+                        f"           L{int(res['base_long'])}(x{L['apal']},c{int(L['colchon']*100)})/"
+                        f"S{int(res['base_short'])}(x{S['apal']},c{int(S['colchon']*100)}) "
+                        f"winrate {L['winrate']}/{S['winrate']} "
+                        f"liq {L['liq_pct']}/{S['liq_pct']} "
                         f"→ {res['clase']}"
                     )
+                    print(f"           LONG  {_perfil_linea(L)}")
+                    print(f"           SHORT {_perfil_linea(S)}")
                     resultados.append(res)
             except Exception as e:
                 print(f"[{hechos}/{len(symbols)}] {s}: ERROR {e}")
